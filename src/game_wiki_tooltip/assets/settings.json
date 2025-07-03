@@ -1,0 +1,12 @@
+{
+    "hotkey": {
+        "key": "X",
+        "modifiers": ["Ctrl"]
+    },
+    "popup": {
+        "width": 800,
+        "height": 600,
+        "left": 100,
+        "top": 100
+    }
+}

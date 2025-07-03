@@ -1,0 +1,7 @@
+pywin32>=306
+pystray>=0.19
+pillow>=10
+pywebview[edgechromium]>=4.4
+beautifulsoup4>=4.12
+requests>=2.31
+brotli>=1.1.0
