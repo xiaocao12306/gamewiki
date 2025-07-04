@@ -57,10 +57,10 @@ class TrayIcon:
                     if self.icon:
                         self.icon.notify(f"热键设置成功：{hotkey_str}", "GameWikiTooltip")
                 except Exception as e:
+                    logging.error(f"热键注册失败: {e}")
                     messagebox.showerror("错误", f"热键注册失败：{str(e)}\n\n请尝试使用其他热键组合。")
-                    # 重新打开设置窗口
-                    win = configure_hotkey(self.settings_mgr, on_close=on_close, on_apply=after_apply)
-                    self._settings_window = win
+                    # 不要重新打开设置窗口，避免死循环
+                    # 让用户手动重新打开设置
 
             win = configure_hotkey(self.settings_mgr, on_close=on_close, on_apply=after_apply)
             self._settings_window = win

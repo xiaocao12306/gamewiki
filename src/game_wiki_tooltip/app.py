@@ -59,16 +59,18 @@ def main():
             time.sleep(0.2)
             if tray.icon:
                 tray.icon.notify(f"热键设置成功：{hotkey_str}\n托盘图标已显示。", "GameWikiTooltip")
-        except RuntimeError as e:
+        except Exception as e:
             # 如果热键注册失败，显示错误消息
+            logging.error(f"热键注册失败: {e}")
             messagebox.showerror("错误", f"热键注册失败：{str(e)}\n\n请尝试使用其他热键组合。")
-            # 重新打开设置窗口
-            win = configure_hotkey(settings_mgr, on_apply=after_apply)
-            win.wait_window()
+            # 不要重新打开设置窗口，避免死循环
+            # 让用户手动重新打开设置
 
     win = configure_hotkey(settings_mgr, on_apply=after_apply)
     # 阻塞直到设置窗口关闭
+    logging.info("等待设置窗口关闭...")
     win.wait_window()
+    logging.info("设置窗口已关闭")
 
     try:
         # 运行主事件循环

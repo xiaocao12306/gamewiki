@@ -13,7 +13,7 @@ from typing import Optional, Dict, Any
 import pathlib
 
 from src.game_wiki_tooltip.config import GameConfig, GameConfigManager, SettingsManager
-from src.game_wiki_tooltip.prompt import ask_keyword
+from src.game_wiki_tooltip.searchbar import ask_keyword, process_query_with_intent
 from src.game_wiki_tooltip.utils import get_foreground_title
 
 logger = logging.getLogger(__name__)
@@ -216,6 +216,95 @@ class OverlayManager:
         except Exception as e:
             logging.error(f"保存窗口几何信息失败: {e}")
 
+    def _show_guide_result(self, answer: str, geom=None):
+        """显示攻略结果窗口"""
+        w, h, x, y = (geom or (800, 600, 100, 100))
+        
+        # 创建HTML内容
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>游戏攻略</title>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 20px;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    line-height: 1.6;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 30px;
+                    border-radius: 15px;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                }}
+                h1 {{
+                    text-align: center;
+                    margin-bottom: 30px;
+                    color: #fff;
+                    font-size: 28px;
+                    font-weight: 300;
+                }}
+                .content {{
+                    white-space: pre-wrap;
+                    font-size: 16px;
+                    color: #f0f0f0;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 14px;
+                    opacity: 0.8;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎮 游戏攻略</h1>
+                <div class="content">{answer}</div>
+                <div class="footer">
+                    基于AI智能分析的游戏攻略建议
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # 创建临时HTML文件
+        import tempfile
+        import os
+        
+        temp_html = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
+        temp_html.write(html_content)
+        temp_html.close()
+        
+        # 创建窗口
+        self._current_window = webview.create_window(
+            '游戏攻略',
+            url=f"file://{temp_html.name}",
+            width=w, height=h, x=x, y=y,
+            resizable=True, text_select=True,
+            confirm_close=False,
+            js_api=self
+        )
+        
+        # 关窗时保存几何并清理临时文件
+        def on_closing():
+            self._save_geometry(self._current_window)
+            try:
+                os.unlink(temp_html.name)
+            except:
+                pass
+        
+        self._current_window.events.closing += on_closing
+
     async def on_hotkey(self):
         """Handle hotkey press."""
         try:
@@ -238,9 +327,10 @@ class OverlayManager:
             logger.info(f"游戏配置: base_url={base_url}, needs_search={needs_search}")
 
             
-            # 如果需要搜索，显示搜索框
+            # 如果需要搜索，显示搜索框并进行意图判断
             if needs_search:
-                logger.info("显示搜索框")
+                logger.info("显示搜索框并进行意图判断")
+                # 先获取用户输入
                 keyword = await ask_keyword()
                 if not keyword:
                     return
@@ -254,31 +344,48 @@ class OverlayManager:
                         return
                     url = self._last_url
                 else:
-                    # 构建Bing搜索URL
-                    import urllib.parse
-                    import uuid
+                    # 根据意图处理查询
+                    query_result = await process_query_with_intent(keyword)
+                    if not query_result:
+                        return
                     
-                    # 获取目标域名
-                    if base_url.startswith(('http://', 'https://')):
-                        from urllib.parse import urlparse
-                        domain = urlparse(base_url).hostname or ''
+                    intent = query_result.get("intent")
+                    
+                    if intent == "guide":
+                        # 查攻略 - 显示RAG结果
+                        logger.info("显示攻略结果")
+                        rag_result = query_result.get("result", {})
+                        answer = rag_result.get("answer", "抱歉，没有找到相关攻略。")
+                        
+                        # 创建结果显示窗口
+                        self._show_guide_result(answer, geom)
+                        return
                     else:
-                        # 如果没有协议前缀，直接使用base_url作为域名
-                        domain = base_url.split('/')[0]  # 移除路径部分
-                    
-                    # 构建搜索查询：关键词 site:域名
-                    search_query = f"{keyword} site:{domain}"
-                    encoded_query = urllib.parse.quote(search_query)
-                    
-                    # 生成随机ID
-                    random_id = str(uuid.uuid4()).replace('-', '').upper()[:16]
-                    
-                    # 构建完整的Bing搜索URL
-                    url = f"https://www.bing.com/search?q={encoded_query}&rdr=1&rdrig={random_id}"
-                    
-                    logger.info(f"构建Bing搜索URL: {url}")
-                    logger.info(f"搜索关键词: {keyword}")
-                    logger.info(f"目标域名: {domain}")
+                        # 查wiki - 构建Bing搜索URL
+                        import urllib.parse
+                        import uuid
+                        
+                        # 获取目标域名
+                        if base_url.startswith(('http://', 'https://')):
+                            from urllib.parse import urlparse
+                            domain = urlparse(base_url).hostname or ''
+                        else:
+                            # 如果没有协议前缀，直接使用base_url作为域名
+                            domain = base_url.split('/')[0]  # 移除路径部分
+                        
+                        # 构建搜索查询：关键词 site:域名
+                        search_query = f"{keyword} site:{domain}"
+                        encoded_query = urllib.parse.quote(search_query)
+                        
+                        # 生成随机ID
+                        random_id = str(uuid.uuid4()).replace('-', '').upper()[:16]
+                        
+                        # 构建完整的Bing搜索URL
+                        url = f"https://www.bing.com/search?q={encoded_query}&rdr=1&rdrig={random_id}"
+                        
+                        logger.info(f"构建Bing搜索URL: {url}")
+                        logger.info(f"搜索关键词: {keyword}")
+                        logger.info(f"目标域名: {domain}")
             else:
                 url = base_url
 

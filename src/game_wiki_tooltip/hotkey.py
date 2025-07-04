@@ -114,6 +114,8 @@ class HotkeyManager:
                 
             vk = self._get_virtual_key(key)
 
+            logger.info(f"尝试注册热键: modifiers={modifiers}, key={key}, mod_flags={mod_flags}, vk={vk}")
+
             # 注册热键
             if not RegisterHotKey(None, self._hotkey_id, mod_flags, vk):
                 error = ctypes.get_last_error()
@@ -131,7 +133,7 @@ class HotkeyManager:
         except HotkeyError:
             raise
         except Exception as e:
-            print(f"注册热键时发生错误: {e}")
+            logger.error(f"注册热键时发生错误: {e}")
             raise HotkeyError(f"注册热键时发生未知错误: {str(e)}")
 
     def unregister(self):

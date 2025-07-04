@@ -6,7 +6,11 @@ Returns None / "<<LAST>>" / str(keyword)
 import asyncio
 import logging
 import tkinter as tk
-from typing import Optional
+from typing import Optional, Dict, Any, Literal
+import webview
+
+from src.game_wiki_tooltip.ai.intent.intent_classifier import classify_intent, get_intent_confidence
+from src.game_wiki_tooltip.ai.rag_query import query_rag
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +138,75 @@ async def ask_keyword(placeholder: str = "") -> Optional[str]:
 
     # 等待结果
     return await fut
+
+async def ask_keyword_with_intent(placeholder: str = "") -> Optional[Dict[str, Any]]:
+    """
+    显示搜索栏并进行意图判断
+    
+    Returns:
+        None: 用户取消
+        Dict: 包含keyword和intent的结果
+    """
+    keyword = await ask_keyword(placeholder)
+    if not keyword or keyword == "<<LAST>>":
+        return keyword
+    
+    # 进行意图判断
+    intent = classify_intent(keyword)
+    confidence = get_intent_confidence(keyword)
+    
+    logger.info(f"意图判断结果: {intent}, 置信度: {confidence}")
+    
+    return {
+        "keyword": keyword,
+        "intent": intent,
+        "confidence": confidence
+    }
+
+async def process_query_with_intent(keyword: str) -> Dict[str, Any]:
+    """
+    根据意图处理用户查询
+    
+    Args:
+        keyword: 用户输入的关键词
+        
+    Returns:
+        处理结果字典
+    """
+    # 进行意图判断
+    intent = classify_intent(keyword)
+    confidence = get_intent_confidence(keyword)
+    
+    logger.info(f"处理查询: '{keyword}', 意图: {intent}, 置信度: {confidence}")
+    
+    if intent == "guide":
+        # 查攻略 - 使用RAG查询
+        logger.info("使用RAG查询攻略")
+        rag_result = await query_rag(keyword)
+        return {
+            "type": "guide",
+            "keyword": keyword,
+            "intent": intent,
+            "confidence": confidence,
+            "result": rag_result
+        }
+    elif intent == "wiki":
+        # 查wiki - 返回关键词用于搜索
+        logger.info("使用Wiki搜索")
+        return {
+            "type": "wiki", 
+            "keyword": keyword,
+            "intent": intent,
+            "confidence": confidence,
+            "result": None  # 需要外部处理wiki搜索
+        }
+    else:
+        # 未知意图 - 默认使用wiki搜索
+        logger.info("未知意图，默认使用Wiki搜索")
+        return {
+            "type": "wiki",
+            "keyword": keyword,
+            "intent": intent,
+            "confidence": confidence,
+            "result": None
+        }
