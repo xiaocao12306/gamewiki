@@ -54,11 +54,20 @@ def main():
             modifiers = hotkey_settings.get('modifiers', [])
             key = hotkey_settings.get('key', 'X')
             hotkey_str = ' + '.join(modifiers + [key])
+            
+            # 预创建搜索窗口以减少用户等待时间
+            logging.info("开始预创建搜索窗口...")
+            try:
+                overlay_mgr.precreate_search_window()
+                logging.info("预创建搜索窗口完成")
+            except Exception as e:
+                logging.warning(f"预创建搜索窗口失败: {e}")
+            
             # 系统托盘气泡通知
             # 等待托盘线程启动
             time.sleep(0.2)
             if tray.icon:
-                tray.icon.notify(f"热键设置成功：{hotkey_str}\n托盘图标已显示。", "GameWikiTooltip")
+                tray.icon.notify(f"热键设置成功：{hotkey_str}\n托盘图标已显示。\n搜索窗口已预创建，响应更快！", "GameWikiTooltip")
         except Exception as e:
             # 如果热键注册失败，显示错误消息
             logging.error(f"热键注册失败: {e}")
@@ -133,6 +142,17 @@ def main():
             hk_mgr.unregister()
         except Exception as e:
             logging.error(f"注销热键时发生错误: {e}")
+        
+        try:
+            # 清理预创建的搜索窗口
+            if overlay_mgr._precreated_search_window:
+                try:
+                    overlay_mgr._precreated_search_window.destroy()
+                    logging.info("已清理预创建的搜索窗口")
+                except Exception as e:
+                    logging.warning(f"清理预创建搜索窗口失败: {e}")
+        except Exception as e:
+            logging.error(f"清理预创建窗口时发生错误: {e}")
         
         try:
             tray.shutdown()
