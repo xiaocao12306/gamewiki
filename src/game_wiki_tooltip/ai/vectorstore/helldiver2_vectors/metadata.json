@@ -1,0 +1,3636 @@
+[
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00",
+      "end": "00:57"
+    },
+    "topic": "Introduction to Terminid Loadout Recommendations",
+    "summary": "The video introduces a guide to four different, effective loadouts for fighting the Terminid faction in Helldivers 2. These builds were tested on the highest difficulty (Helldive 10) on the new gloom-infested city maps and are designed to offer variety in playstyle.",
+    "keywords": [
+      "Terminids",
+      "loadouts",
+      "build guide",
+      "introduction",
+      "Helldive difficulty",
+      "gloom maps"
+    ],
+    "type": "Introduction"
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:58",
+      "end": "05:20"
+    },
+    "topic": "Terminid Loadout 1: The Stalwart Gunner",
+    "summary": "This build focuses on high mobility and sustained fire with the M-105 Stalwart support weapon. It uses light armor for speed and an exploding crossbow for versatile utility, making it a powerful run-and-gun setup against Terminid hordes.",
+    "keywords": [
+      "Stalwart",
+      "Gunner build",
+      "light armor",
+      "exploding crossbow",
+      "Guard Dog",
+      "Siege-Ready",
+      "crowd control",
+      "mobility",
+      "Terminids"
+    ],
+    "type": "Build_Recommendation",
+    "build": {
+      "name": "The Stalwart Gunner",
+      "focus": "High mobility and sustained fire for crowd control and objective clearing.",
+      "armor": {
+        "name": "SR-24 Street Scout",
+        "type": "Light Armor",
+        "passive": "Siege-Ready",
+        "rationale": "Provides high mobility to outrun enemies. The Siege-Ready passive grants extra ammo and faster reloads for the primary weapon and Stalwart."
+      },
+      "primary_weapon": {
+        "name": "CB-9 Exploding Crossbow",
+        "rationale": "It's a one-handed weapon allowing for shooting on the run. The explosive bolts provide crowd control, can close bug holes, and destroy secondary objectives like Spore Towers."
+      },
+      "secondary_weapon": {
+        "name": "P-72 Crisper",
+        "rationale": "A compact flamethrower for emergency close-quarters situations to create a wall of fire and deter enemies."
+      },
+      "grenade": {
+        "name": "G-23 Stun",
+        "rationale": "Excellent for crowd control, stopping large groups and Chargers in their tracks, which sets them up for stratagem kills."
+      },
+      "stratagems": [
+        {
+          "name": "M-105 Stalwart",
+          "rationale": "The core of the build. It can be reloaded while on the move, excellent for clearing smaller enemies and taking out Shriekers."
+        },
+        {
+          "name": "Eagle 500KG Bomb",
+          "rationale": "For eliminating heavy targets like Bile Titans and Impalers, and for closing large bug nests."
+        },
+        {
+          "name": "Eagle Cluster Bomb",
+          "rationale": "Provides massive area-of-effect clearing for bug breaches and large groups of weaker enemies. With upgrades, it has 5 uses before re-arm."
+        },
+        {
+          "name": "AX/AR-23 \"Guard Dog\" Rover",
+          "rationale": "Offers 360-degree protection with medium armor penetration, effective against Hive Guards and Shriekers, allowing the player to focus forward."
+        }
+      ],
+      "booster": {
+        "name": "Experimental Infusion",
+        "rationale": "Increases movement speed and damage reduction upon using a stim, a critical survivability tool for a light armor build."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "05:20",
+      "end": "08:15"
+    },
+    "topic": "Terminid Loadout 2: The Fire Build",
+    "summary": "This loadout is centered around fire damage, using the primary flamethrower and various napalm stratagems to burn through Terminid hordes. It features medium armor with fire resistance, allowing the player to stand their ground amidst the flames.",
+    "keywords": [
+      "fire build",
+      "flamethrower",
+      "napalm",
+      "Draconaught",
+      "Inflammable",
+      "area denial",
+      "incendiary",
+      "Terminids"
+    ],
+    "type": "Build_Recommendation",
+    "build": {
+      "name": "The Fire Build",
+      "focus": "Maximizing area-of-effect fire damage to control and eliminate large groups of Terminids.",
+      "armor": {
+        "name": "I-102 Draconaught",
+        "type": "Medium Armor",
+        "passive": "Inflammable",
+        "rationale": "Provides a good balance of speed and protection, with a crucial 75% fire damage resistance, allowing survival within your own area-denial fire."
+      },
+      "primary_weapon": {
+        "name": "FLAM-66 Torcher",
+        "rationale": "The primary flamethrower weapon slot allows for continuous fire damage without needing a stratagem slot for the support weapon version."
+      },
+      "secondary_weapon": {
+        "name": "GP-31 Ultimatum",
+        "rationale": "Provides a quick explosive shot to deal with armored threats like Chargers or to destroy bug holes from a distance."
+      },
+      "grenade": {
+        "name": "G-10 Incendiary",
+        "rationale": "Higher base damage than the impact version, used to create fire choke points and destroy bug holes."
+      },
+      "stratagems": [
+        {
+          "name": "Orbital Napalm Barrage",
+          "rationale": "Shuts down entire areas like bug nests and objectives with a sustained wall of fire."
+        },
+        {
+          "name": "A/FLAM-40 Flame Sentry",
+          "rationale": "Provides covering fire and acts as a decoy for larger enemies, drawing their aggro."
+        },
+        {
+          "name": "AX/LAS-5 \"Guard Dog\" Rover",
+          "rationale": "The laser rover sets enemies on fire, has nearly unlimited ammo, and protects the player's back from enemies, especially Shriekers."
+        },
+        {
+          "name": "Eagle Napalm Airstrike",
+          "rationale": "Creates a wall of fire to handle bug breaches or block off enemy approach routes."
+        }
+      ],
+      "booster": {
+        "name": "Vitality Enhancement",
+        "rationale": "Provides extra resilience to all damage sources, further helping to survive in the chaotic, fiery environments this build creates."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "08:15",
+      "end": "12:37"
+    },
+    "topic": "Terminid Loadout 3: The Gas Build",
+    "summary": "This loadout specializes in creating mass chaos and area denial through the use of toxic gas. With specialized armor for gas resistance, the player can operate within clouds of gas that confuse and kill enemies, making objectives easier to complete.",
+    "keywords": [
+      "gas build",
+      "Advanced Filtration",
+      "Orbital Gas Strike",
+      "Tesla Tower",
+      "crowd control",
+      "area denial",
+      "Quasar Cannon",
+      "Terminids"
+    ],
+    "type": "Build_Recommendation",
+    "build": {
+      "name": "The Gas Build",
+      "focus": "Controlling the battlefield with widespread gas clouds that damage, slow, and confuse enemies, allowing for safe objective completion.",
+      "armor": {
+        "name": "AF-91 Field Chemist",
+        "type": "Medium Armor",
+        "passive": "Advanced Filtration",
+        "rationale": "Grants 80% resistance to gas, allowing the player to stand inside their own gas strikes and grenades without taking significant damage."
+      },
+      "primary_weapon": {
+        "name": "SG-451 Cookout",
+        "rationale": "An incendiary shotgun that staggers enemies and adds fire damage, a deadly combination with the gas's damage-over-time effect."
+      },
+      "secondary_weapon": {
+        "name": "GP-31 Grenade Pistol",
+        "rationale": "Used to efficiently close bug holes while enemies are disoriented by the gas clouds."
+      },
+      "grenade": {
+        "name": "G-4 Gas",
+        "rationale": "The core throwable for this build. Used to constantly blanket the area in toxic gas."
+      },
+      "stratagems": [
+        {
+          "name": "Orbital Gas Strike",
+          "rationale": "Excellent stratagem for area denial, bug hole destruction, and inflicting heavy damage over a large area with a short cooldown."
+        },
+        {
+          "name": "A/ARC-3 Tesla Tower",
+          "rationale": "Synergizes perfectly with gas. Enemies disoriented by gas will not target the tower, allowing it to freely eliminate them."
+        },
+        {
+          "name": "AX/TX-13 \"Guard Dog\" Dog Breath",
+          "rationale": "A gas-spraying drone that now targets enemies not already in gas, effectively spreading the chaos."
+        },
+        {
+          "name": "LAS-99 Quasar Cannon",
+          "rationale": "Provides the necessary anti-tank capability to deal with Bile Titans and Impalers, which are immune to gas."
+        }
+      ],
+      "booster": {
+        "name": "Vitality Enhancement",
+        "rationale": "Offers general damage reduction, further increasing survivability while operating inside gas and combat zones."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "12:37",
+      "end": "15:03"
+    },
+    "topic": "Terminid Loadout 4: The Run and Gun Build",
+    "summary": "This is a high-speed, objective-focused build designed for players who want to move fast, hit hard, and stay stealthy. It relies on light scout armor and a supply pack to constantly spam grenades and stims, allowing for rapid objective completion and escapes.",
+    "keywords": [
+      "run and gun",
+      "scout armor",
+      "Grenade Launcher",
+      "Supply Pack",
+      "mobility",
+      "stealth",
+      "objective rush",
+      "Breaker Incendiary"
+    ],
+    "type": "Build_Recommendation",
+    "build": {
+      "name": "The Run and Gun Build",
+      "focus": "High-speed objective rushing and kiting, using stealth and a constant supply of explosives and stims to stay alive.",
+      "armor": {
+        "name": "SC-30 Trailblazer Scout",
+        "type": "Light Armor",
+        "passive": "Scout",
+        "rationale": "One of the fastest armors, allowing for excellent mobility. The Scout passive reduces enemy detection range, making it easier to sneak around patrols."
+      },
+      "primary_weapon": {
+        "name": "SG-225IE Breaker Incendiary",
+        "rationale": "Effective for clearing bug breaches and exceptionally good at taking down Shriekers quickly."
+      },
+      "secondary_weapon": {
+        "name": "GP-31 Grenade Pistol",
+        "rationale": "Useful for dealing with bug holes on the move, though other secondaries like the laser pistol are also viable."
+      },
+      "grenade": {
+        "name": "G-12 High Explosive",
+        "rationale": "(Inferred from gameplay, not explicitly stated). Standard choice for bug holes and crowd control, spammable via the Supply Pack."
+      },
+      "stratagems": [
+        {
+          "name": "GL-21 Grenade Launcher",
+          "rationale": "A versatile support weapon for clearing spewers, large groups, and destroying bug nests with ease."
+        },
+        {
+          "name": "B-1 Supply Pack",
+          "rationale": "The cornerstone of this build. It allows the player to continuously resupply grenades and stims, enabling a highly aggressive, mobile playstyle."
+        },
+        {
+          "name": "Orbital Napalm Barrage",
+          "rationale": "Used to clear objectives and bug nests from a safe distance, creating space to operate."
+        },
+        {
+          "name": "Orbital Railcannon Strike",
+          "rationale": "An 'oh-crap' button for instantly eliminating heavy threats like Bile Titans that pose an immediate danger."
+        }
+      ],
+      "booster": {
+        "name": "Experimental Infusion",
+        "rationale": "Synergizes perfectly with the Supply Pack, allowing for frequent stim use to gain speed boosts and damage reduction for quick escapes."
+      }
+    }
+  },
+  {
+    "chunk_id": "hd2_lowlevel_001",
+    "timestamp": {
+      "start": "00:00:00",
+      "end": "01:27:00"
+    },
+    "topic": "Introduction to the Optimal Low-Level Build",
+    "summary": "This guide presents an optimal and versatile build for Helldivers 2 players under level 10. The build is designed primarily for solo play but is also highly effective in groups. It is versatile enough to handle swarms, armored units, and even massive enemies like Bile Titans, with variations discussed for both Terminid and Automaton factions.",
+    "keywords": [
+      "beginner guide",
+      "low level build",
+      "level 10",
+      "starter build",
+      "solo play",
+      "loadout",
+      "versatile build",
+      "terminid",
+      "automaton"
+    ],
+    "type": "Build_Recommendation"
+  },
+  {
+    "chunk_id": "hd2_lowlevel_002",
+    "timestamp": {
+      "start": "01:43:00",
+      "end": "02:47:00"
+    },
+    "topic": "Primary Weapon: SG-225 Breaker Shotgun",
+    "summary": "The recommended primary weapon is the SG-225 Breaker shotgun, widely considered the best weapon in the game. It is unlocked on page 4 of the Warbond around level 7-8. It excels at clearing small enemies, has high DPS, and can handle mid-sized foes effectively. The starting Liberator rifle is a viable alternative until the Breaker is unlocked.",
+    "keywords": [
+      "SG-225 Breaker",
+      "shotgun",
+      "primary weapon",
+      "best weapon",
+      "Warbond",
+      "high DPS",
+      "crowd control"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "item_name": "SG-225 Breaker",
+      "item_type": "Primary Weapon (Shotgun)",
+      "location": "Page 4 of the standard Warbond.",
+      "requirements": "Requires approximately level 7-8 and Warbond Medals to unlock.",
+      "pros": [
+        "Highest effective DPS in the game.",
+        "One-shots most small enemies.",
+        "Excellent for crowd control."
+      ],
+      "alternative": "AR-23 Liberator (starting rifle) until unlocked."
+    }
+  },
+  {
+    "chunk_id": "hd2_lowlevel_003",
+    "timestamp": {
+      "start": "02:47:00",
+      "end": "03:25:00"
+    },
+    "topic": "Secondary Weapon: P-19 Redeemer",
+    "summary": "The P-19 Redeemer is the recommended secondary weapon, available on page 2 of the Warbond. It is a fully-automatic pistol with a very high fire rate, making it excellent for dealing with enemies when your primary runs out of ammo. It offers the best damage output for secondary weapons at this level.",
+    "keywords": [
+      "P-19 Redeemer",
+      "secondary weapon",
+      "pistol",
+      "Warbond",
+      "high fire rate",
+      "crowd control"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "item_name": "P-19 Redeemer",
+      "item_type": "Secondary Weapon (Pistol)",
+      "location": "Page 2 of the standard Warbond.",
+      "pros": [
+        "Highest damage output among early-game pistols.",
+        "Fully-automatic for emergency crowd control."
+      ],
+      "cons": [
+        "Less accurate than the starting pistol, which can be a consideration against Automatons."
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_lowlevel_004",
+    "timestamp": {
+      "start": "03:25:00",
+      "end": "04:31:00"
+    },
+    "topic": "Recommended Boosters for Each Faction",
+    "summary": "Booster selection is faction-dependent. For Terminids, use 'Hellpod Space Optimization' (Warbond page 3) to start with full supplies, crucial for solo play and destroying bug holes. For Automatons, 'Vitality Enhancement' (Warbond page 4) is better for resisting constant injuries from gunfire, thereby conserving stims.",
+    "keywords": [
+      "booster",
+      "Hellpod Space Optimization",
+      "Vitality Enhancement",
+      "Terminids",
+      "Automatons",
+      "Warbond"
+    ],
+    "type": "Item_Guide",
+    "structured_data": [
+      {
+        "item_name": "Hellpod Space Optimization",
+        "usage_scene": "Terminid missions",
+        "rationale": "Start with full ammo, grenades, and stims. Reduces need for resupply and essential for destroying bug holes with grenades."
+      },
+      {
+        "item_name": "Vitality Enhancement",
+        "usage_scene": "Automaton missions",
+        "rationale": "Helps resist frequent injuries from enemy gunfire, reducing stim usage."
+      }
+    ]
+  },
+  {
+    "chunk_id": "hd2_lowlevel_005",
+    "timestamp": {
+      "start": "04:31:00",
+      "end": "06:21:00"
+    },
+    "topic": "Armor Recommendations for Different Scenarios",
+    "summary": "Armor choice is situational. For Grouped Terminid play, use CE-35 Trench Engineer for extra grenades. For Solo Terminid play, use SC-34 Infiltrator for stealth. For Grouped Automaton play, use FS-05 Marksman for explosive resistance. For Solo Automaton play, use CM-09 Bonesnapper for extra stims.",
+    "keywords": [
+      "armor",
+      "Trench Engineer",
+      "Infiltrator",
+      "Marksman",
+      "Bonesnapper",
+      "Warbond"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": [
+      {
+        "item_name": "CE-35 Trench Engineer",
+        "usage_scene": "Grouped Terminid Missions",
+        "passive": "Engineering Kit (+2 grenades, recoil reduction)."
+      },
+      {
+        "item_name": "SC-34 Infiltrator",
+        "usage_scene": "Solo Terminid Missions",
+        "passive": "Scout (Reduces enemy detection range)."
+      },
+      {
+        "item_name": "FS-05 Marksman",
+        "usage_scene": "Grouped Automaton Missions",
+        "passive": "Fortified (+50% explosive damage resistance)."
+      },
+      {
+        "item_name": "CM-09 Bonesnapper",
+        "usage_scene": "Solo Automaton Missions",
+        "passive": "Med-Kit (+2 stims, longer stim duration)."
+      }
+    ]
+  },
+  {
+    "chunk_id": "hd2_lowlevel_006",
+    "timestamp": {
+      "start": "06:37:00",
+      "end": "07:04:00"
+    },
+    "topic": "Grenade Recommendation: G-16 Impact",
+    "summary": "The G-16 Impact grenade is the best choice for low-level players. Unlocked on page 5 of the Warbond, it functions like the starting grenade but detonates on impact, making it far more reliable for destroying bug holes and fabricators without needing to time a fuse.",
+    "keywords": [
+      "G-16 Impact",
+      "grenade",
+      "Warbond",
+      "bug holes",
+      "fabricators",
+      "explosive"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "item_name": "G-16 Impact",
+      "item_type": "Grenade",
+      "location": "Page 5 of the standard Warbond.",
+      "pros": [
+        "Detonates on impact, making it very reliable.",
+        "Excellent for quickly closing bug holes and destroying fabricators."
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_lowlevel_007",
+    "timestamp": {
+      "start": "07:05:00",
+      "end": "08:26:00"
+    },
+    "topic": "Anti-Armor Stratagems: Recoilless Rifle vs Expendable Anti-Tank",
+    "summary": "For anti-armor, the GR-8 Recoilless Rifle (Level 5) is best for group play due to its fast assisted-reload capability. For solo play, the EAT-17 Expendable Anti-Tank (Level 3) is superior because it hits harder, calls in faster, has a short cooldown, and doesn't occupy a backpack slot, allowing for greater mobility and flexibility.",
+    "keywords": [
+      "Recoilless Rifle",
+      "Expendable Anti-Tank",
+      "EAT-17",
+      "anti-armor",
+      "stratagem",
+      "support weapon"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": [
+      {
+        "stratagem_name": "GR-8 Recoilless Rifle",
+        "unlock_level": 5,
+        "usage_scene": "Group Play",
+        "rationale": "Can be reloaded quickly with a teammate's help, allowing for sustained fire against armored targets."
+      },
+      {
+        "stratagem_name": "EAT-17 Expendable Anti-Tank",
+        "unlock_level": 3,
+        "usage_scene": "Solo Play",
+        "rationale": "Provides two powerful, single-use shots on a short cooldown and does not require a backpack slot."
+      }
+    ]
+  },
+  {
+    "chunk_id": "hd2_lowlevel_008",
+    "timestamp": {
+      "start": "08:26:00",
+      "end": "09:42:00"
+    },
+    "topic": "Core Offensive Stratagems: Orbital Precision, Mortar Sentry, and Eagle Airstrike",
+    "summary": "Three essential stratagems are recommended. Orbital Precision Strike (Level 1) for single heavy targets. A/M-12 Mortar Sentry (Level 8) for destroying swarms from a distance and as a distraction. Eagle Airstrike (Level 2) is a versatile hybrid choice, effective against both swarms and armored units with multiple charges and a fast rearm time.",
+    "keywords": [
+      "Orbital Precision Strike",
+      "Mortar Sentry",
+      "Eagle Airstrike",
+      "stratagem",
+      "crowd control",
+      "area denial"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": [
+      {
+        "stratagem_name": "Orbital Precision Strike",
+        "unlock_level": 1,
+        "description": "A reliable tool for eliminating a single, tough enemy like a Charger or Hulk."
+      },
+      {
+        "stratagem_name": "A/M-12 Mortar Sentry",
+        "unlock_level": 8,
+        "description": "Extremely effective at clearing large groups of enemies from a safe distance and can serve as a distraction."
+      },
+      {
+        "stratagem_name": "Eagle Airstrike",
+        "unlock_level": 2,
+        "description": "A highly versatile hybrid stratagem that is great against both swarms and armored units, with multiple uses before needing to rearm."
+      }
+    ]
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:34",
+      "end": "02:06"
+    },
+    "topic": "Acquisitions: Warbonds Explained",
+    "summary": "This section explains that Warbonds are Helldivers 2's version of a battle pass and, importantly, they do not expire. This allows players to progress through them at their own pace without Fear Of Missing Out (FOMO). Items like weapons, armor, and cosmetics are unlocked using Medals, which are earned by completing missions and orders.",
+    "keywords": [
+      "Warbonds",
+      "Battle Pass",
+      "Acquisitions",
+      "Medals",
+      "unlocks",
+      "progression",
+      "cosmetics",
+      "weapons",
+      "no FOMO"
+    ],
+    "type": "System_Guide",
+    "structured_data": {
+      "system_name": "Acquisitions (Warbonds)",
+      "system_type": "Battle Pass / Progression",
+      "key_currency": "Medals",
+      "unlockable_items": [
+        "Weapons",
+        "Armor",
+        "Helmets",
+        "Capes",
+        "Emotes",
+        "Victory Poses",
+        "Player Cards",
+        "Super Credits"
+      ],
+      "core_mechanic": "Warbonds do not expire. Players earn Medals through gameplay to unlock items in a non-linear path. The standard 'Helldivers Mobilize!' Warbond is free with the game."
+    }
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "02:06",
+      "end": "03:12"
+    },
+    "topic": "Superstore, Super Credits, and Purchase Advice",
+    "summary": "The guide covers the Superstore, a rotating item shop for armor sets purchased with Super Credits. It emphasizes that Super Credits can be bought with real money or earned for free by finding them in missions or unlocking them in Warbonds. The creator advises new players to carefully research Premium Warbonds before purchasing and suggests they can unlock everything without spending real money.",
+    "keywords": [
+      "Superstore",
+      "Super Credits",
+      "premium currency",
+      "microtransactions",
+      "cosmetics",
+      "armor",
+      "in-game store",
+      "FOMO"
+    ],
+    "type": "System_Guide",
+    "structured_data": {
+      "system_name": "Superstore",
+      "system_type": "Rotating Item Shop",
+      "key_currency": "Super Credits (SC)",
+      "acquisition_methods": [
+        "Purchase with real money",
+        "Find in missions at Points of Interest",
+        "Unlock from Warbonds"
+      ],
+      "items_sold": "Armor sets (Helmets and Body Armor) on a daily rotation.",
+      "player_advice": "Players can earn enough Super Credits through gameplay to buy Premium Warbonds and Superstore items without spending real money. It is recommended to prioritize unlocking Warbonds over buying from the Superstore."
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "03:12",
+      "end": "07:07"
+    },
+    "topic": "Ship Management: Unlocking & Upgrading Stratagems",
+    "summary": "This explains the Ship Management terminal, where players use Requisition Slips (R-points) to buy new Stratagems and Samples (Common, Rare, Super) to buy Ship Modules. Stratagems are core abilities called in missions, while Ship Modules are permanent passive upgrades that enhance Stratagem categories (e.g., Orbital Cannons, Eagle Hangar). The grind for Samples is significant, requiring diligent searching on higher difficulties.",
+    "keywords": [
+      "Ship Management",
+      "Stratagems",
+      "Ship Modules",
+      "upgrades",
+      "Requisition Slips",
+      "Samples",
+      "passive buffs",
+      "progression",
+      "currency"
+    ],
+    "type": "Progression_Guide",
+    "structured_data": {
+      "menu": "Ship Management",
+      "unlockables": [
+        {
+          "type": "Stratagem",
+          "currency": "Requisition Slips (R-points)",
+          "description": "Active abilities, weapons, or defenses called down during missions. Many are level-gated, with the final unlocks at level 25. You can hold a maximum of 50,000 R-points."
+        },
+        {
+          "type": "Ship Module",
+          "currency": "Samples (Common/Green, Rare/Orange, Super/Pink)",
+          "description": "Permanent passive upgrades that buff categories of Stratagems. Samples are found during missions and must be successfully extracted to be kept."
+        }
+      ],
+      "player_advice": "Plan your Ship Module upgrades carefully as Samples, especially Super Samples, are rare and require playing on higher difficulties."
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "07:07",
+      "end": "09:55"
+    },
+    "topic": "Armory: Loadout Customization",
+    "summary": "Details the Armory where players equip their gear. It clarifies that while helmets and capes are cosmetic, body armor provides crucial stats (Armor Rating, Speed, Stamina Regen) and a unique passive ability. The guide shows examples of Light, Medium, and Heavy armor, explaining their trade-offs. It also covers equipping Boosters, which are team-wide buffs unlocked in Warbonds.",
+    "keywords": [
+      "Armory",
+      "Loadout",
+      "Weapons",
+      "Armor",
+      "Passive Buffs",
+      "Cosmetics",
+      "Armor Rating",
+      "Speed",
+      "Booster"
+    ],
+    "type": "Gear_Guide",
+    "structured_data": {
+      "menu": "Armory",
+      "customization_slots": [
+        "Primary Weapon",
+        "Secondary Weapon",
+        "Throwable",
+        "Body Armor",
+        "Helmet",
+        "Cape",
+        "Booster"
+      ],
+      "armor_mechanics": "Body armor provides unique passive buffs (e.g., Scout passive pings the map, Extra Padding provides higher armor rating). Helmets and Capes are purely cosmetic and offer no gameplay advantages.",
+      "booster_mechanics": "Boosters provide team-wide passive buffs for a mission. They do not stack; if multiple players equip the same one, only one is active for the squad."
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "09:55",
+      "end": "12:23"
+    },
+    "topic": "Galactic War Map & Mission Difficulty",
+    "summary": "Explains the Galactic War map for choosing missions against different factions (Terminids, Automatons, Illuminate). It highlights that difficulty scaling adds more numerous and heavily armored enemy types, along with new mission objectives, rather than just increasing health. Playing missions in a sequence (an Operation) on higher difficulties yields bonus Medal rewards.",
+    "keywords": [
+      "Galactic War",
+      "mission select",
+      "difficulty",
+      "Terminids",
+      "Automatons",
+      "planets",
+      "rewards",
+      "Samples",
+      "Operations"
+    ],
+    "type": "Gameplay_Guide",
+    "structured_data": {
+      "system_name": "Galactic War",
+      "factions": [
+        "Terminids (Bugs)",
+        "Automatons (Robots)",
+        "Illuminate"
+      ],
+      "difficulty_scaling": "Higher difficulties introduce more enemy types, heavily armored units, and additional mission objectives. They also allow for finding rarer Samples.",
+      "reward_system": "Completing all missions in an Operation rewards bonus Medals. The amount of Medals increases with difficulty."
+    }
+  },
+  {
+    "chunk_id": "unique_id_006",
+    "timestamp": {
+      "start": "12:23",
+      "end": "17:48"
+    },
+    "topic": "Essential In-Mission Tips & Mechanics",
+    "summary": "This section covers crucial in-mission mechanics. It explains how to customize weapons (fire mode, scope, flashlight) by holding the reload button. It also details the realistic reloading system where remaining bullets in a magazine are lost upon reload, and the aiming system where the weapon physically turns to meet the reticle. Movement options like diving are also demonstrated.",
+    "keywords": [
+      "gameplay tips",
+      "aiming",
+      "reloading",
+      "movement",
+      "dive",
+      "prone",
+      "weapon customization",
+      "friendly fire",
+      "controls"
+    ],
+    "type": "Tips_And_Tricks",
+    "structured_data": {
+      "mechanics": [
+        {
+          "name": "Weapon Customization",
+          "action": "Hold Reload Button",
+          "options": [
+            "Fire Mode (Auto, Semi, Burst)",
+            "Scope Zoom Level",
+            "Flashlight On/Off"
+          ]
+        },
+        {
+          "name": "Realistic Reloading",
+          "description": "Reloading a partially-used magazine discards it, losing any unspent bullets. If the chamber was loaded, you don't need to cock the weapon."
+        },
+        {
+          "name": "Physical Aiming",
+          "description": "Your weapon's physical direction lags slightly behind your crosshair movement. A player must wait for the gun to align with the reticle for full accuracy, especially after quick turns."
+        },
+        {
+          "name": "Friendly Fire",
+          "description": "Friendly fire is always on. A weapon's laser sight is visible to teammates, helping to avoid accidentally shooting them."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_007",
+    "timestamp": {
+      "start": "19:03",
+      "end": "20:25"
+    },
+    "topic": "Map Exploration and Mission Objectives",
+    "summary": "This section covers exploring the mission map to find Minor Points of Interest, which are small unmarked locations containing loot like Medals, Super Credits, Samples, or extra weapons. It also explains mission-specific stratagems, like the 'Raise Flag of Super Earth' objective, which spawns when you are near the flagpole. The guide shows that saluting the flag as it rises speeds up the process.",
+    "keywords": [
+      "Points of Interest",
+      "POI",
+      "map",
+      "exploration",
+      "loot",
+      "mission objectives",
+      "hidden mechanics",
+      "raise flag",
+      "salute"
+    ],
+    "type": "Gameplay_Guide",
+    "structured_data": {
+      "exploration": {
+        "name": "Minor Points of Interest (POIs)",
+        "description": "Unmarked locations on the map that can be discovered by getting close. Look for structures, light beams, or destructible doors. They often contain Medals, Super Credits, Samples, and weapons.",
+        "interaction": "Activating a Radar Tower objective will reveal all POIs on the map."
+      },
+      "objective_mechanic": {
+        "name": "Raise Flag of Super Earth",
+        "description": "A contextual stratagem appears when near the flagpole. After calling it in, players must defend the area while the flag raises. Using the 'Salute' emote at the flagpole makes the flag rise faster."
+      }
+    }
+  },
+  {
+    "chunk_id": "hd2_strat_guide_001",
+    "timestamp": {
+      "start": "00:00:56",
+      "end": "00:04:29"
+    },
+    "topic": "Patriotic Administration Centre Stratagems (Support Weapons)",
+    "summary": "This section provides recommendations for the best support weapon stratagems from the Patriotic Administration Centre. The top three are the Recoilless Rifle, Autocannon, and the must-have level 20 Railgun. It also explains why the Expendable Anti-Tank and Spear are generally less effective choices.",
+    "keywords": [
+      "support weapon",
+      "stratagem",
+      "Recoilless Rifle",
+      "Autocannon",
+      "Railgun",
+      "Expendable Anti-Tank",
+      "Spear",
+      "anti-armor",
+      "Patriotic Administration Centre"
+    ],
+    "type": "Stratagem_Guide",
+    "data": {
+      "category": "Patriotic Administration Centre",
+      "recommendations": [
+        {
+          "item_name": "GR-8 Recoilless Rifle",
+          "unlock_level": "Early",
+          "pros": [
+            "Most powerful low-level weapon for anti-armor."
+          ],
+          "cons": [
+            "Extremely slow solo reload, making it impractical without a teammate assisting.",
+            "Becomes obsolete once the Railgun is unlocked."
+          ],
+          "verdict": "Good for early-game co-op anti-armor, but surpassed later."
+        },
+        {
+          "item_name": "AC-8 Autocannon",
+          "unlock_level": "Early",
+          "pros": [
+            "Nearly as powerful as the Recoilless Rifle.",
+            "Faster fire rate and quick solo reload.",
+            "Larger ammo capacity."
+          ],
+          "cons": [
+            "Cannot penetrate the armor of heavy enemies like Chargers."
+          ],
+          "verdict": "Excellent for medium targets and crowd control, but not a solution for heavy armor."
+        },
+        {
+          "item_name": "RS-422 Railgun",
+          "unlock_level": 20,
+          "pros": [
+            "The best handheld anti-armor weapon.",
+            "Strips Charger armor in two shots.",
+            "Can one-shot Hulks and Bile Titans with a perfect headshot.",
+            "Does not require a backpack slot."
+          ],
+          "cons": [
+            "High-level unlock requirement."
+          ],
+          "verdict": "A top-priority purchase at level 20; it is the meta anti-heavy weapon."
+        }
+      ],
+      "honorable_mentions": [
+        {
+          "item_name": "EAT-17 Expendable Anti-Tank",
+          "unlock_level": 3,
+          "pros": [
+            "Powerful for its low unlock level."
+          ],
+          "cons": [
+            "Single-use, requiring multiple shots (3) to kill a single Charger, making it inefficient."
+          ],
+          "verdict": "Sounds better than it is; quickly outclassed by other options."
+        },
+        {
+          "item_name": "FAF-14 Spear",
+          "unlock_level": 20,
+          "pros": [
+            "Can one-shot tanks; technically the most powerful handheld weapon."
+          ],
+          "cons": [
+            "Very long reload time.",
+            "Extremely low ammo capacity (4 rockets total).",
+            "Cannot be reloaded with standard ammo packs; requires a full supply pack for one rocket.",
+            "Lock-on system fails to target enemies smaller than a Brood Commander."
+          ],
+          "verdict": "Highly impractical due to numerous drawbacks; the Railgun is far superior."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_strat_guide_002",
+    "timestamp": {
+      "start": "00:04:29",
+      "end": "00:06:57"
+    },
+    "topic": "Orbital Cannon Stratagems",
+    "summary": "This section covers Orbital Cannon stratagems. The Orbital Laser and Orbital Railcannon Strike are the top-tier recommendations for late-game. For earlier levels, the Orbital Airburst Strike is a solid choice. The 120mm and 380mm HE Barrages are advised against due to their unreliability.",
+    "keywords": [
+      "orbital cannon",
+      "stratagem",
+      "Orbital Laser",
+      "Orbital Railcannon Strike",
+      "Orbital Airburst Strike",
+      "120mm HE Barrage",
+      "380mm HE Barrage",
+      "AOE"
+    ],
+    "type": "Stratagem_Guide",
+    "data": {
+      "category": "Orbital Cannons",
+      "recommendations": [
+        {
+          "item_name": "Orbital Airburst Strike",
+          "unlock_level": 5,
+          "pros": [
+            "Excellent early-game unlock.",
+            "Fires three consecutive bursts, effective for clearing areas.",
+            "Can kill Chargers if all bursts hit their weak spot."
+          ],
+          "cons": [],
+          "verdict": "A valuable and reliable choice until the Laser and Railcannon are unlocked."
+        },
+        {
+          "item_name": "Orbital Laser",
+          "unlock_level": 15,
+          "pros": [
+            "Incredibly powerful damage-over-time.",
+            "Can eliminate multiple heavy targets like Bile Titans or Chargers in a single use.",
+            "Extremely cost-efficient for its damage output."
+          ],
+          "cons": [
+            "Limited to three uses per mission."
+          ],
+          "verdict": "An amazing 'delete button' for the toughest situations."
+        },
+        {
+          "item_name": "Orbital Railcannon Strike",
+          "unlock_level": 20,
+          "pros": [
+            "Automatically targets the largest enemy.",
+            "Guaranteed one-shot kill on almost any enemy.",
+            "Can be coordinated with teammates to eliminate multiple heavy threats quickly."
+          ],
+          "cons": [
+            "Can be inconsistent against Bile Titans if it doesn't hit the head."
+          ],
+          "verdict": "The best stratagem for guaranteed, pinpoint elimination of a single high-value target."
+        }
+      ],
+      "not_recommended": [
+        {
+          "item_name": "Orbital 120mm & 380mm HE Barrage",
+          "reason": "They are far too inconsistent and inaccurate. The random spread means they often miss critical targets entirely, making them a high-risk, low-reward option."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_strat_guide_003",
+    "timestamp": {
+      "start": "00:06:57",
+      "end": "00:09:18"
+    },
+    "topic": "Hangar (Eagle) Stratagems",
+    "summary": "This part focuses on Hangar stratagems deployed by the Eagle. The Eagle Airstrike is recommended as a versatile, must-have option from level 2. For heavy targets, the Eagle 110mm Rocket Pods and the Eagle 500kg Bomb are suggested, with the latter being best for stationary targets or spawn points.",
+    "keywords": [
+      "hangar",
+      "eagle",
+      "stratagem",
+      "Eagle Airstrike",
+      "Eagle 500kg Bomb",
+      "Eagle 110mm Rocket Pods",
+      "Eagle Napalm Airstrike",
+      "Eagle Cluster Bomb"
+    ],
+    "type": "Stratagem_Guide",
+    "data": {
+      "category": "Hangar",
+      "recommendations": [
+        {
+          "item_name": "Eagle Airstrike",
+          "unlock_level": 2,
+          "pros": [
+            "Useful from the beginning to the end of the game.",
+            "Drops armor-piercing rockets, making it effective against even Chargers and Devastators.",
+            "Extremely versatile for clearing enemies and destroying buildings."
+          ],
+          "cons": [
+            "Fewer uses (3) than the Cluster Bomb (5) when fully upgraded."
+          ],
+          "verdict": "An essential, all-purpose stratagem that should be unlocked ASAP."
+        },
+        {
+          "item_name": "Eagle 110mm Rocket Pods",
+          "unlock_level": "Higher",
+          "pros": [
+            "Targets the largest enemy near the beacon.",
+            "Effective for stripping armor and killing heavy threats."
+          ],
+          "cons": [
+            "Can be inconsistent and sometimes miss."
+          ],
+          "verdict": "A good option for focused anti-heavy damage."
+        },
+        {
+          "item_name": "Eagle 500kg Bomb",
+          "unlock_level": "Higher",
+          "pros": [
+            "Massive damage at point-blank range.",
+            "Can one-shot a Bile Titan with a direct hit."
+          ],
+          "cons": [
+            "Very small blast radius requires extreme precision.",
+            "Ineffective if it doesn't land directly on the target."
+          ],
+          "verdict": "Best used on stationary targets like Bot Drops or Bug Breaches as they spawn, not on mobile enemies."
+        }
+      ],
+      "honorable_mentions": [
+        {
+          "item_name": "Eagle Napalm Airstrike & Eagle Cluster Bomb",
+          "verdict": "Decent for low-level play but are quickly outclassed by the standard Eagle Airstrike due to its armor-piercing capabilities."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_strat_guide_004",
+    "timestamp": {
+      "start": "00:09:18",
+      "end": "00:12:45"
+    },
+    "topic": "Bridge Stratagems",
+    "summary": "This section covers Bridge stratagems, labeling it the weakest category. It strongly cautions against the Tesla Tower due to its lethal friendly fire. The Orbital Gas Strike is recommended for damage-over-time, and the Shield Generator Relay is a useful defensive tool, especially against bots.",
+    "keywords": [
+      "bridge",
+      "stratagem",
+      "Tesla Tower",
+      "Orbital Gas Strike",
+      "Shield Generator Relay",
+      "defensive stratagem",
+      "area denial"
+    ],
+    "type": "Stratagem_Guide",
+    "data": {
+      "category": "Bridge",
+      "recommendations": [
+        {
+          "item_name": "Orbital Gas Strike",
+          "unlock_level": "Mid",
+          "pros": [
+            "Damage-over-time is significantly more powerful than Napalm.",
+            "Can kill heavy enemies like Devastators if they remain in the gas.",
+            "Very short cooldown of 75 seconds."
+          ],
+          "cons": [
+            "Does not cover a huge area."
+          ],
+          "verdict": "A strong choice for area denial and damage-over-time."
+        },
+        {
+          "item_name": "FX-12 Shield Generator Relay",
+          "unlock_level": 10,
+          "pros": [
+            "Creates a stationary energy shield, providing crucial cover.",
+            "Particularly useful for defensive objectives and against bots."
+          ],
+          "cons": [
+            "The shield feels less durable than it should and can be destroyed quickly."
+          ],
+          "verdict": "A good idea for defensive situations, but its durability is a concern."
+        }
+      ],
+      "not_recommended": [
+        {
+          "item_name": "A/ARC-3 Tesla Tower",
+          "reason": "Extremely dangerous due to its high potential for friendly fire. It has a large, hard-to-judge radius and will instantly kill teammates who step too close. It is also very squishy and easily destroyed."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_strat_guide_005",
+    "timestamp": {
+      "start": "00:12:45",
+      "end": "00:16:27"
+    },
+    "topic": "Engineering Bay Stratagems",
+    "summary": "This section details Engineering Bay stratagems, advising against the unpredictable Arc Thrower. It highly recommends the Supply Pack for ammo support, the Grenade Launcher for crowd control, the Shield Generator Pack for survivability, and the laser-based 'Guard Dog' Rover for constant fire support.",
+    "keywords": [
+      "engineering bay",
+      "stratagem",
+      "Supply Pack",
+      "Grenade Launcher",
+      "Guard Dog Rover",
+      "Shield Generator Pack",
+      "Arc Thrower",
+      "backpack"
+    ],
+    "type": "Stratagem_Guide",
+    "data": {
+      "category": "Engineering Bay",
+      "recommendations": [
+        {
+          "item_name": "B-1 Supply Pack",
+          "unlock_level": "Early",
+          "pros": [
+            "Effectively triples your team's supply uses.",
+            "Essential for ammo-hungry loadouts (e.g., with the Grenade Launcher)."
+          ],
+          "cons": [
+            "Occupies the backpack slot."
+          ],
+          "verdict": "An incredibly valuable support tool."
+        },
+        {
+          "item_name": "GL-21 Grenade Launcher",
+          "unlock_level": "Mid",
+          "pros": [
+            "The best handheld weapon for crowd control.",
+            "Has 10 shots per magazine and can clear large groups of enemies in seconds."
+          ],
+          "cons": [
+            "Consumes ammo quickly, pairs well with the Supply Pack."
+          ],
+          "verdict": "A top-tier weapon for clearing bug holes and enemy swarms."
+        },
+        {
+          "item_name": "SH-32 Shield Generator Pack",
+          "unlock_level": "Higher",
+          "pros": [
+            "The best defensive backpack item.",
+            "Effectively doubles your health, allowing you to survive otherwise lethal hits.",
+            "Massively increases survivability."
+          ],
+          "cons": [],
+          "verdict": "A must-have for personal defense."
+        },
+        {
+          "item_name": "AX/LAS-5 \"Guard Dog\" Rover",
+          "unlock_level": 10,
+          "pros": [
+            "Uses a laser that almost never overheats, resulting in nearly 100% uptime.",
+            "Continuously clears smaller enemies, allowing the player to focus on larger threats.",
+            "Will significantly increase your kill count."
+          ],
+          "cons": [],
+          "verdict": "An absolute must-have for the mid-game due to its efficiency and constant support."
+        }
+      ],
+      "not_recommended": [
+        {
+          "item_name": "ARC-3 Arc Thrower",
+          "reason": "Highly inconsistent and unpredictable. It frequently misses targets, even at point-blank range, and has a high tendency to arc to and kill teammates. It is too lethal to your own team to be considered viable."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "helldivers2_stratagems_001",
+    "timestamp": {
+      "start": "00:16:27",
+      "end": "00:16:48"
+    },
+    "topic": "Robotics Workshop Stratagems: Initial Recommendations",
+    "summary": "Provides initial recommendations for the Robotics Workshop stratagems. The guide advises skipping the base Machine Gun Sentry and the standard \"Guard Dog\" as their counterparts, the Gatling Sentry and the \"Guard Dog\" Rover, are far superior direct upgrades.",
+    "keywords": [
+      "Robotics Workshop",
+      "Machine Gun Sentry",
+      "Gatling Sentry",
+      "Guard Dog",
+      "Guard Dog Rover",
+      "stratagem guide",
+      "beginner advice"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": {
+      "recommendations": [
+        {
+          "item_name": "Machine Gun Sentry",
+          "action": "Skip",
+          "reason": "The Gatling Sentry is a far superior version."
+        },
+        {
+          "item_name": "\"Guard Dog\"",
+          "action": "Skip",
+          "reason": "The 'Guard Dog' Rover is a far superior version."
+        },
+        {
+          "item_name": "Gatling Sentry",
+          "action": "Get",
+          "reason": "Direct upgrade over the Machine Gun Sentry."
+        },
+        {
+          "item_name": "'Guard Dog' Rover",
+          "action": "Get",
+          "reason": "Direct upgrade over the standard 'Guard Dog'."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "helldivers2_stratagems_002",
+    "timestamp": {
+      "start": "00:16:48",
+      "end": "00:17:20"
+    },
+    "topic": "Stratagem Analysis: A/MLS-4X Rocket Sentry (Avoid)",
+    "summary": "A detailed breakdown of why the Rocket Sentry is considered a terrible stratagem. It is inconsistent, frequently misses due to slow rocket speed, has low ammo, turns slowly, and ceases to function if enemies get too close, making it an absolute 'garbage' stratagem to avoid.",
+    "keywords": [
+      "Rocket Sentry",
+      "A/MLS-4X",
+      "stratagem review",
+      "sentry turret",
+      "anti-armor",
+      "avoid",
+      "bad stratagem"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": {
+      "item_name": "A/MLS-4X Rocket Sentry",
+      "item_type": "Stratagem (Sentry)",
+      "verdict": "Avoid",
+      "pros": [],
+      "cons": [
+        "Stops functioning if targets are too close.",
+        "Inconsistently shoots at rocks.",
+        "Frequently misses targets due to very slow rocket projectile speed.",
+        "Low ammo capacity, even with upgrades.",
+        "Slow turning speed.",
+        "Overall considered a 'garbage' stratagem."
+      ],
+      "recommended_alternative": "A/AC-8 Autocannon Sentry"
+    }
+  },
+  {
+    "chunk_id": "helldivers2_stratagems_003",
+    "timestamp": {
+      "start": "00:17:20",
+      "end": "00:18:02"
+    },
+    "topic": "Stratagem Analysis: A/AC-8 Autocannon Sentry (Recommended)",
+    "summary": "The Autocannon Sentry is presented as an excellent stratagem and a direct, superior replacement for the Rocket Sentry. It is ridiculously effective against armored targets like Chargers, has great ammo and traverse speed with ship modules, and deals decent splash damage, making it the best all-around sentry.",
+    "keywords": [
+      "Autocannon Sentry",
+      "A/AC-8",
+      "stratagem review",
+      "sentry turret",
+      "anti-armor",
+      "recommended",
+      "best sentry",
+      "Charger"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": {
+      "item_name": "A/AC-8 Autocannon Sentry",
+      "item_type": "Stratagem (Sentry)",
+      "verdict": "Highly Recommended",
+      "pros": [
+        "Extremely effective; can kill a Charger in two volleys.",
+        "Fast traverse speed (with ship modules).",
+        "Excellent ammo capacity (with ship modules).",
+        "Good splash damage.",
+        "Far superior to the Rocket Sentry in every way.",
+        "Considered the best sentry in the game for general use."
+      ],
+      "cons": [
+        "Turning speed is slow without ship module upgrades."
+      ],
+      "usage_scene": "General purpose, anti-armor, excellent for most missions."
+    }
+  },
+  {
+    "chunk_id": "helldivers2_stratagems_004",
+    "timestamp": {
+      "start": "00:18:02",
+      "end": "00:18:57"
+    },
+    "topic": "Stratagem Analysis: Mortar Sentry & EMS Mortar Sentry (Defense)",
+    "summary": "The Mortar Sentry and EMS Mortar Sentry are incredibly powerful, especially for defense missions. A full team using this combination can easily handle high-difficulty defense missions, as the sentries will win the game for them. They are fantastic for power-leveling but risky in mobile missions due to friendly fire.",
+    "keywords": [
+      "Mortar Sentry",
+      "EMS Mortar Sentry",
+      "defense missions",
+      "XP farm",
+      "leveling guide",
+      "automaton defense",
+      "AFK strategy"
+    ],
+    "type": "Stratagem_Guide",
+    "structured_data": {
+      "items": [
+        {
+          "name": "A/M-12 Mortar Sentry",
+          "unlock_level": 8
+        },
+        {
+          "name": "A/M-23 EMS Mortar Sentry",
+          "unlock_level": 20
+        }
+      ],
+      "verdict": "Highly Recommended for specific scenarios",
+      "strategy": "Combine both Mortar Sentry and EMS Mortar Sentry. In defense missions, a full 4-player team bringing these two stratagems can often win the mission without firing a single shot (AFK strategy).",
+      "pros": [
+        "Extremely powerful for area denial and static defense missions.",
+        "Excellent for fast leveling / XP farming.",
+        "Unmatched power in defense missions."
+      ],
+      "cons": [
+        "High risk of friendly fire in non-static missions."
+      ],
+      "usage_scene": "Defense missions, Eradicate Automaton Forces missions, leveling up quickly."
+    }
+  },
+  {
+    "chunk_id": "helldivers2_shipmodules_001",
+    "timestamp": {
+      "start": "00:18:57",
+      "end": "00:19:44"
+    },
+    "topic": "Ship Modules: General Upgrade Strategy",
+    "summary": "A foundational tip for upgrading ship modules is to get every single module to level 1 first. These initial upgrades are invaluable, provide significant boosts, and mostly require only common samples, which are easily farmed at lower difficulties, tying in perfectly with early-game progression.",
+    "keywords": [
+      "ship modules",
+      "upgrade guide",
+      "common samples",
+      "beginner tips",
+      "progression",
+      "resource management"
+    ],
+    "type": "Progression_Guide",
+    "structured_data": {
+      "priority_tip": "Focus on getting every ship module to Level 1 before specializing.",
+      "reasoning": "All level 1 upgrades are invaluable and provide significant boosts. They generally only require common samples, making them accessible early in the game.",
+      "resource_focus": "Common Samples (farmed at low difficulties)."
+    }
+  },
+  {
+    "chunk_id": "helldivers2_shipmodules_002",
+    "timestamp": {
+      "start": "00:19:44",
+      "end": "00:20:55"
+    },
+    "topic": "Ship Modules: Sentry-Focused Upgrade Path",
+    "summary": "For players who frequently use sentry stratagems, the Robotics Workshop ship modules are the top priority. The 'Shock Absorption Gel' (+50% ammo) and 'High-Quality Lubricant' (massively improved turret rotation speed) provide game-changing buffs that are essential for a sentry-focused playstyle.",
+    "keywords": [
+      "ship modules",
+      "sentry build",
+      "Robotics Workshop",
+      "Shock Absorption Gel",
+      "High-Quality Lubricant",
+      "defense missions",
+      "upgrade path"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "playstyle_focus": "Sentry-heavy builds / Defense mission farming",
+      "priority_modules": [
+        {
+          "module_name": "High-Quality Lubricant",
+          "effect": "Massively increases sentry rotation speed towards new targets.",
+          "tier": 3
+        },
+        {
+          "module_name": "Shock Absorption Gel",
+          "effect": "Increases ammo for all Sentry stratagems by 50%.",
+          "tier": 2
+        },
+        {
+          "module_name": "Dynamic Tracking",
+          "effect": "Reduces deployment time for all Sentry stratagems.",
+          "tier": 1
+        }
+      ],
+      "upgrade_path": "Work up to 'High-Quality Lubricant' as quickly as possible within the Robotics Workshop tree.",
+      "rationale": "These upgrades provide truly game-changing improvements to sentry performance, making them last longer and acquire targets much faster."
+    }
+  },
+  {
+    "chunk_id": "helldivers2_shipmodules_003",
+    "timestamp": {
+      "start": "00:20:55",
+      "end": "00:22:08"
+    },
+    "topic": "Ship Modules: Eagle-Focused Upgrade Path",
+    "summary": "For players who prefer Eagle stratagems, the Hangar ship modules are a high-priority upgrade path. The 'Expanded Weapons Bay' is an insane upgrade, doubling the uses of the 500kg Bomb from one to two. Combined with 'Pit Crew Hazard Pay' reducing re-arm time, these modules significantly boost the uptime and power of Eagle strikes.",
+    "keywords": [
+      "ship modules",
+      "eagle stratagems",
+      "Hangar",
+      "Expanded Weapons Bay",
+      "Pit Crew Hazard Pay",
+      "500kg Bomb",
+      "upgrade path"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "playstyle_focus": "Eagle-heavy builds (Airstrikes, 500kg Bomb)",
+      "priority_modules": [
+        {
+          "module_name": "Expanded Weapons Bay",
+          "effect": "Increases the number of Eagle stratagem uses per rearm by 1. Doubles 500kg Bomb uses from 1 to 2.",
+          "tier": 3,
+          "comment": "Described as an 'insane' upgrade."
+        },
+        {
+          "module_name": "Pit Crew Hazard Pay",
+          "effect": "Reduces Eagle Rearm time by 20%.",
+          "tier": 2
+        }
+      ],
+      "rationale": "Eagle stratagems are used far more frequently than Orbitals because they have multiple charges before a short re-arm. These upgrades maximize their effectiveness, with 'Expanded Weapons Bay' being particularly powerful."
+    }
+  },
+  {
+    "chunk_id": "helldivers2_weapons_001",
+    "timestamp": {
+      "start": "00:22:08",
+      "end": "00:22:49"
+    },
+    "topic": "Weapon Recommendations from Warbonds",
+    "summary": "The guide recommends focusing on weapons from the standard, free 'Helldivers Mobilize' Warbond, as the top three best weapons are found there. The weapons in the premium 'Steeled Veterans' Warbond are described as having lackluster damage, with their bonus effects not compensating for the power drop, making them less effective choices.",
+    "keywords": [
+      "weapons",
+      "warbonds",
+      "Helldivers Mobilize",
+      "Steeled Veterans",
+      "premium pass",
+      "best weapons",
+      "free to play"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "warbond_focus": "Helldivers Mobilize (Standard/Free Warbond)",
+      "recommendation": "The best and most effective weapons are found in the standard, free-to-play Warbond.",
+      "premium_warbond_verdict": {
+        "name": "Steeled Veterans",
+        "verdict": "Avoid for pure effectiveness.",
+        "reason": "Weapons have lackluster damage. Their unique bonus effects do not make up for the loss of damage compared to standard options."
+      }
+    }
+  },
+  {
+    "chunk_id": "hd2_domsroundtable_001",
+    "timestamp": {
+      "start": "20:42",
+      "end": "22:09"
+    },
+    "topic": "Essential Sentry and Eagle Ship Module Upgrades",
+    "summary": "This section highlights game-changing upgrades for Sentries (Shock Absorption Gel, High Quality Lubricant) and Eagles (Pit Crew Hazard Pay, Expanded Weapons Bay). These modules drastically increase the effectiveness and uptime of these stratagems, making Eagles, in particular, more valuable than Orbitals due to their multiple uses and fast rearm time.",
+    "keywords": [
+      "ship modules",
+      "upgrades",
+      "stratagems",
+      "sentry",
+      "eagle",
+      "hangar",
+      "pit crew hazard pay",
+      "expanded weapons bay",
+      "rearm time",
+      "500kg bomb"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "category": "Ship Modules",
+      "recommendations": [
+        {
+          "module_name": "Shock Absorption Gel",
+          "stratagem_group": "Sentry",
+          "rationale": "Provides game-changing health increase to sentries, making them more durable."
+        },
+        {
+          "module_name": "High Quality Lubricant",
+          "stratagem_group": "Sentry",
+          "rationale": "Increases sentry deployment speed and turning speed."
+        },
+        {
+          "module_name": "Pit Crew Hazard Pay",
+          "stratagem_group": "Eagle",
+          "rationale": "Reduces Eagle rearm time by 20%, significantly increasing their availability in a mission."
+        },
+        {
+          "module_name": "Expanded Weapons Bay",
+          "stratagem_group": "Eagle",
+          "rationale": "Increases the number of Eagle stratagem uses per rearm by 1. This doubles the uses of the 500kg Bomb (from 1 to 2) and increases charges for all other Eagle strikes."
+        }
+      ],
+      "playstyle_advice": "Prioritizing Eagle upgrades is highly recommended because Eagles have multiple charges (2-4) before needing to rearm, unlike most single-use Orbital stratagems with long cooldowns. With these upgrades, the Eagle rearm time is only about 2 minutes."
+    }
+  },
+  {
+    "chunk_id": "hd2_domsroundtable_002",
+    "timestamp": {
+      "start": "22:09",
+      "end": "25:25"
+    },
+    "topic": "Top Tier Weapon Unlocks from the Free Warbond",
+    "summary": "This section recommends three specific weapons from the free 'Helldivers Mobilise' Warbond, arguing they are superior to premium options. It covers the SMG-37 Defender for its one-handed utility, the SG-225 Breaker for crowd control, and the SG-8S Slugger for its powerful medium armor penetration.",
+    "keywords": [
+      "weapons",
+      "warbond",
+      "SMG-37 Defender",
+      "SG-225 Breaker",
+      "SG-8S Slugger",
+      "best guns",
+      "free weapons",
+      "unlock guide",
+      "medium armor penetration"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "general_advice": "Focus on unlocking weapons from the free 'Helldivers Mobilise' Warbond first. The weapons in the premium pass are not recommended as their damage is lackluster, and their bonus effects do not compensate for the loss of damage.",
+      "items": [
+        {
+          "item_name": "SMG-37 Defender",
+          "item_type": "Primary Weapon (Submachine Gun)",
+          "unlock_location": "Page 3, Helldivers Mobilise Warbond",
+          "key_trait": "One-Handed",
+          "pros": [
+            "Most powerful one-handed weapon in the game.",
+            "Allows firing while carrying objectives like SSSD hard drives.",
+            "Damage output rivals some assault rifles."
+          ],
+          "cons": []
+        },
+        {
+          "item_name": "SG-225 Breaker",
+          "item_type": "Primary Weapon (Shotgun)",
+          "unlock_location": "Page 4, Helldivers Mobilise Warbond",
+          "key_trait": "Fully-Automatic",
+          "pros": [
+            "Considered one of the best guns in the game.",
+            "High damage output.",
+            "Excellent for clearing waves of fast-moving enemies like Pouncers and Brawlers."
+          ],
+          "cons": []
+        },
+        {
+          "item_name": "SG-8S Slugger",
+          "item_type": "Primary Weapon (Shotgun)",
+          "unlock_location": "Page 8, Helldivers Mobilise Warbond",
+          "key_trait": "Medium Armor Penetration (hidden)",
+          "pros": [
+            "Despite being listed as 'Light Armour Penetrating', it can penetrate medium armor.",
+            "Effective against tough enemies like Hive Guards and Devastators.",
+            "Very ammo efficient if shots are aimed well."
+          ],
+          "cons": [
+            "Single shot, lower rate of fire.",
+            "Lower DPS compared to the Breaker."
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_domsroundtable_003",
+    "timestamp": {
+      "start": "25:25",
+      "end": "29:27"
+    },
+    "topic": "Armor Guide: Stats, Passives, and Recommendations",
+    "summary": "The guide explains that armor rating is currently bugged (at the time of recording), so players should focus on armor passives and light armor for mobility. It details the stat trade-offs between armor weights and highlights 'Democracy Protects' and 'Servo-Assisted' as the best passives. The SC-37 Legionnaire set with the Servo-Assisted passive is recommended for its stealth and utility.",
+    "keywords": [
+      "armor",
+      "armor rating",
+      "bug",
+      "light armor",
+      "medium armor",
+      "passives",
+      "servo-assisted",
+      "democracy protects",
+      "legionnaire",
+      "throwing range"
+    ],
+    "type": "Item_Guide",
+    "structured_data": {
+      "mechanic_explanation": {
+        "armor_rating_status": "Bugged at the time of video's release; does not provide the correct damage reduction. This makes Light Armor a better choice for mobility.",
+        "stat_efficiency": "Medium Armor offers the most balanced stat trade-offs. Light Armor's gain in stamina regeneration is inefficient compared to the armor rating lost. Heavy Armor is too slow for the defensive gain."
+      },
+      "recommended_passives": [
+        {
+          "passive_name": "Democracy Protects",
+          "effect": "Grants a 50% chance to survive lethal damage and prevents all damage from bleeding if chest hemorrhages. A top-tier survivability perk."
+        },
+        {
+          "passive_name": "Servo-Assisted",
+          "effect": "Increases throwing range by 30% and provides +50% limb health. The throwing range is huge for destroying objectives (nests, factories) from a safe distance (up to 66m)."
+        }
+      ],
+      "recommended_armor_set": {
+        "item_name": "SC-37 Legionnaire",
+        "item_type": "Light Armor",
+        "unlock_location": "Super Store (rotational)",
+        "passive": "Servo-Assisted",
+        "rationale": "Combines the benefits of Light Armor (speed, smaller aggro radius) with the extremely useful Servo-Assisted passive, making it a top choice for solo play and stealthy objective clearing."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00",
+      "end": "00:28"
+    },
+    "topic": "Introduction to the S-Tier Automaton Loadout",
+    "summary": "This video introduces a fast-paced, aggressive, and accuracy-rewarding loadout specifically designed to combat the Automaton faction in Helldivers 2. The build is designed to handle any situation, and the guide also includes a specific tip for newer players on how to effectively deal with the intimidating Hulk enemy.",
+    "keywords": [
+      "Automaton loadout",
+      "anti-bot build",
+      "aggressive playstyle",
+      "Helldivers 2",
+      "accuracy",
+      "S-tier loadout",
+      "Hulk tip",
+      "build guide"
+    ],
+    "type": "Build_Recommendation"
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:28",
+      "end": "01:04"
+    },
+    "topic": "Offensive Stratagems: Red Stratagems",
+    "summary": "The recommended offensive stratagems are the Eagle 500KG Bomb and the Orbital Precision Strike. The 500KG bomb provides excellent area clear and can destroy any armored Automaton unit, including structures like cannon turrets. The Orbital Precision Strike is valuable for its extremely low cooldown, allowing it to be used frequently to one-shot armored threats and fortifications, or to clear out smaller groups of Devastators and Berserkers.",
+    "keywords": [
+      "Eagle 500KG Bomb",
+      "Orbital Precision Strike",
+      "stratagems",
+      "automaton",
+      "armored enemies",
+      "fortifications",
+      "cannon turrets",
+      "Devastators",
+      "Berserkers"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "stratagems": [
+        {
+          "name": "Eagle 500KG Bomb",
+          "type": "Eagle/Hangar",
+          "rationale": "Excellent clearing potential, can obliterate any armored enemy in the Automaton arsenal, and effectively deals with cannon turrets and fortifications."
+        },
+        {
+          "name": "Orbital Precision Strike",
+          "type": "Orbital Cannon",
+          "rationale": "Features an exceptionally low cooldown, allowing it to one-shot armored threats and fortifications frequently. It's also great for clearing pockets of dangerous enemies like Devastators and Berserkers."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "01:04",
+      "end": "02:22"
+    },
+    "topic": "Support Stratagems: Blue Stratagems",
+    "summary": "This section details the core support combination of the Railgun and the Supply Backpack. The Railgun is highly effective at one-shotting key threats like Devastators, Berserkers, and even Hulks with a precise shot to their eye socket. The Supply Backpack provides a near-infinite source of ammunition for the Railgun and grenades, enabling a sustained, aggressive, and high-damage output throughout the mission. This combo is also very effective against Gunships.",
+    "keywords": [
+      "Railgun",
+      "Supply Backpack",
+      "stratagems",
+      "support weapon",
+      "anti-armor",
+      "Hulk",
+      "Gunship",
+      "Unsafe mode",
+      "Devastator",
+      "Berserker"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "stratagems": [
+        {
+          "name": "RS-422 Railgun",
+          "type": "Support Weapon",
+          "rationale": "One-shots Devastators, Berserkers, and even Hulks with a skilled shot to the eye. Effective against Gunships. Using it in 'unsafe mode' is key to maximizing its damage output."
+        },
+        {
+          "name": "B-1 Supply Pack",
+          "type": "Backpack",
+          "rationale": "Creates a synergy with the Railgun by providing a sustainable source of ammo, allowing the player to maintain high damage output and an aggressive playstyle without running out of resources."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "02:22",
+      "end": "03:09"
+    },
+    "topic": "Pro Tip: How to Defeat Automaton Hulks",
+    "summary": "This section offers several strategies for defeating Hulks, especially for players struggling to hit their moving eye weak spot. Using Stun Grenades can immobilize the Hulk for an easy shot. Alternatively, crippling its mobility by shooting its legs (around 5-6 shots with an Anti-Materiel Rifle) or disarming it by destroying its weapon arm (like the flamethrower) makes the fight much more manageable for the entire team.",
+    "keywords": [
+      "Hulk",
+      "Automaton Hulk",
+      "weak spot",
+      "enemy strategy",
+      "stun grenade",
+      "cripple",
+      "mobility",
+      "AMR-23 Anti-Materiel Rifle"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Hulk",
+      "weakness": "Glowing red eye socket on its 'head'.",
+      "strategies": [
+        {
+          "tactic": "Stun",
+          "details": "Use Stun Grenades to immobilize the Hulk, making its eye an easy, stationary target."
+        },
+        {
+          "tactic": "Cripple Legs",
+          "details": "Shoot the Hulk's legs repeatedly (e.g., 5-6 times with the AMR) to severely reduce its mobility, making it easier to aim for the weak spot."
+        },
+        {
+          "tactic": "Disarm",
+          "details": "Shoot the Hulk's weapon arm (e.g., flamethrower) to destroy it, removing a major source of its offensive threat."
+        },
+        {
+          "tactic": "Direct Kill",
+          "details": "For experienced players, the most efficient method is a direct, precise shot to the eye socket with a high-powered anti-armor weapon like the Railgun."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "03:39",
+      "end": "05:28"
+    },
+    "topic": "Weapons and Armour Recommendations",
+    "summary": "The primary weapon chosen is the SG-8P Punisher Plasma (nicknamed 'Ultimatum' in the video) for its immense stagger potential, which can stun-lock groups of Devastators and Berserkers. The G-3 Smoke or G-12 High Explosive Grenade is recommended, with the video mentioning Gas Grenades for crowd control. For armor, a Light or Medium set with the 'Med-Kit' passive is preferred for the extra stims and survivability needed for this aggressive build.",
+    "keywords": [
+      "SG-8P Punisher Plasma",
+      "Ultimatum",
+      "Gas Grenade",
+      "Medic Armour",
+      "stagger",
+      "stun-lock",
+      "Factory Strider",
+      "stim",
+      "survivability"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "primary_weapon": {
+        "name": "SG-8P Punisher Plasma (Referred to as 'Plasma Punisher' and 'Ultimatum')",
+        "rationale": "High stagger potential bullies automatons, allowing you to stun-lock Devastators and Berserkers. Can also one-shot Factory Striders with a precise shot and destroy structures like Jammers from a distance. The supply pack compensates for its lower ammo capacity."
+      },
+      "grenade": {
+        "name": "Gas Grenade (G-3 Smoke in-game) or similar crowd control grenade",
+        "rationale": "Provides ultimate crowd control (CC), trapping enemies and allowing for easy cleanup with other weapons or stratagems."
+      },
+      "armor": {
+        "class": "Light or Medium",
+        "passive": "Med-Kit",
+        "rationale": "Increases stim capacity by +2 and stim duration by 2.0s. This enhances survivability, which is crucial for an aggressive playstyle that involves getting close to enemies."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_006",
+    "timestamp": {
+      "start": "05:28",
+      "end": "05:47"
+    },
+    "topic": "Full Loadout Summary",
+    "summary": "This chunk provides a final, high-level summary of the entire recommended loadout against Automatons, displayed as text on screen.",
+    "keywords": [
+      "Loadout summary",
+      "500KG Bomb",
+      "Orbital Precision",
+      "Railgun",
+      "Supply Backpack",
+      "Plasma Punisher",
+      "Gas Grenade",
+      "Medic Armour",
+      "full build"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "loadout_recap": {
+        "stratagem_1": "Eagle 500KG Bomb",
+        "stratagem_2": "Orbital Precision Strike",
+        "stratagem_3": "RS-422 Railgun",
+        "stratagem_4": "B-1 Supply Pack",
+        "primary_weapon": "SG-8P Punisher Plasma",
+        "grenade": "Gas Grenade",
+        "armor": "Medic Armour (Light or Medium)"
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00:20",
+      "end": "00:02:03"
+    },
+    "topic": "Recommended Stratagems vs. Illuminates",
+    "summary": "This section details the recommended Offensive, Support, and Backpack stratagems for fighting the Illuminate faction. For offense, the guide suggests the Orbital Laser for large targets and the Orbital Gas Strike for crowd control. The MG-43 Machine Gun is the chosen support weapon for its damage and ammo efficiency. For the backpack slot, the video presents several options based on playstyle: the B-1 Supply Pack for sustainability, or the AX/LAS-5 'Guard Dog' Rover for extra damage, particularly against Meatballs.",
+    "keywords": [
+      "Stratagems",
+      "Orbital Laser",
+      "Orbital Gas Strike",
+      "Eagle Strafing Run",
+      "MG-43 Machine Gun",
+      "Supply Pack",
+      "Guard Dog Rover",
+      "Illuminate",
+      "build",
+      "loadout"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "stratagems": [
+        {
+          "name": "Orbital Laser",
+          "category": "Offensive",
+          "rationale": "Excellent for destroying large enemy concentrations, ships, and bigger targets like Tripods."
+        },
+        {
+          "name": "Orbital Gas Strike",
+          "category": "Offensive",
+          "rationale": "Provides incredible crowd control by blinding and slowing most enemies within a caustic cloud."
+        },
+        {
+          "name": "Eagle Strafing Run",
+          "category": "Offensive (Alternative)",
+          "rationale": "A strong alternative to the Gas Strike, specifically for destroying Leviathans easily. Less focused on general crowd control."
+        },
+        {
+          "name": "MG-43 Machine Gun",
+          "category": "Support Weapon",
+          "rationale": "The core support weapon of the build. It has great damage, good ammo economy, and is effective against all Illuminate enemies, including Squids."
+        },
+        {
+          "name": "B-1 Supply Pack",
+          "category": "Backpack",
+          "rationale": "Recommended for players who want amazing ammo sustainability, allowing them to constantly replenish ammo, stims, and grenades for themselves and their team."
+        },
+        {
+          "name": "AX/LAS-5 \"Guard Dog\" Rover",
+          "category": "Backpack",
+          "rationale": "An alternative for players wanting more passive damage. The laser is effective at burning enemies and is great for destroying Meatballs due to recent fire changes."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:02:03",
+      "end": "00:03:44"
+    },
+    "topic": "Recommended Weapons, Grenade, and Armor vs. Illuminates",
+    "summary": "This section covers the personal gear: weapons, grenade, and armor. The JAR-5 Eruptor is the recommended primary for its explosive power against groups and large targets. For secondaries, options like the P-19 Redeemer (high fire rate), LAS-58 Talon (infinite ammo), or LAS-7 Dagger (fire damage) are suggested for handling close-range threats. Gas Grenades are the best choice for their superior crowd control. The ideal armor is a medium set with the 'Extra Padding' perk, offering a balance of protection and the mobility needed to kite Illuminate forces.",
+    "keywords": [
+      "JAR-5 Eruptor",
+      "P-19 Redeemer",
+      "LAS-7 Dagger",
+      "P-72 Crisper",
+      "Gas Grenade",
+      "Medium Armor",
+      "Extra Padding",
+      "weapon",
+      "armor",
+      "build"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "primary_weapon": {
+        "name": "JAR-5 Eruptor",
+        "rationale": "Explosive rounds provide excellent area-of-effect damage, making it highly effective against Illuminate groups and for destroying structures like ships."
+      },
+      "secondary_weapons": [
+        {
+          "name": "P-19 Redeemer",
+          "rationale": "A fully-automatic pistol with a high fire rate for quickly melting enemies that get too close."
+        },
+        {
+          "name": "LAS-58 Talon",
+          "rationale": "A laser revolver with good ammo economy (uses heat sinks) and medium armor penetration."
+        },
+        {
+          "name": "P-72 Crisper",
+          "rationale": "A handgun-style flamethrower for applying burn damage, though it requires more skill to use effectively."
+        },
+        {
+          "name": "LAS-7 Dagger",
+          "rationale": "An incredible laser pistol that sets enemies on fire, considered a superior choice for applying damage-over-time."
+        }
+      ],
+      "grenade": {
+        "name": "Gas Grenade",
+        "rationale": "Provides unparalleled crowd control with its slowing and damage-over-time effects, fundamentally changing the pace of engagements."
+      },
+      "armor": {
+        "class": "Medium",
+        "perk": "Extra Padding",
+        "rationale": "Offers a perfect balance of survivability and speed. The mobility from medium armor is crucial for kiting and repositioning against fast-moving Illuminate mobs, something heavy armor struggles with."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "00:03:44",
+      "end": "10:15"
+    },
+    "topic": "Gameplay Tactics & Enemy-Specific Strategies",
+    "summary": "This segment provides a practical demonstration of the loadout's effectiveness. Key tactics include using Gas Grenades and Orbital Gas Strikes for area denial, which confuses and weakens enemy groups for easy clean-up with primary or support weapons. The Eruptor is highlighted as the main tool for destroying Tripods (2 shots to weak spots) and Illuminate Ships (2 shots to the underside). The MG-43 is used to shred Harvesters and Meatballs, especially when combined with the disorientation from gas. The video emphasizes kiting, repositioning, and creating space as central to surviving on high difficulties against the Illuminates.",
+    "keywords": [
+      "gameplay",
+      "tactics",
+      "combos",
+      "Eruptor",
+      "Gas Grenade",
+      "Tripod",
+      "Harvester",
+      "Meatball",
+      "Illuminate Ship",
+      "kiting",
+      "crowd control"
+    ],
+    "type": "Gameplay_Strategy",
+    "structured_data": {
+      "combos": [
+        {
+          "name": "Gas & Gun",
+          "description": "Throw a Gas Grenade or call an Orbital Gas Strike into a crowd. The gas confuses and damages them, making it easy to finish them off with the Eruptor or Machine Gun."
+        },
+        {
+          "name": "Eruptor & Machine Gun Synergy",
+          "description": "Fire an Eruptor shot into a large enemy like a Harvester to deal significant initial damage and stagger it, then switch to the MG-43 to finish it off while it's vulnerable."
+        },
+        {
+          "name": "Defensive Repositioning",
+          "description": "When overwhelmed, drop a Gas Grenade at your feet and immediately dive or run away. This creates a zone of control that slows pursuers, giving you time to reload, heal, or reposition."
+        }
+      ],
+      "enemy_strategies": [
+        {
+          "enemy": "Illuminate Tripod",
+          "strategy": "Use the JAR-5 Eruptor to hit its glowing weak spots. Two direct hits will destroy it. The Orbital Laser is also highly effective."
+        },
+        {
+          "enemy": "Illuminate Ship (Warp Ship)",
+          "strategy": "The JAR-5 Eruptor can destroy these ships with just two shots to their glowing underside engine."
+        },
+        {
+          "enemy": "Harvester (Meatball)",
+          "strategy": "Use the MG-43 machine gun to shred them. Alternatively, opening with a single Eruptor shot and finishing with the MG-43 is a very efficient combo. The Laser Rover backpack also deals with them effectively."
+        },
+        {
+          "enemy": "Leviathan",
+          "strategy": "The Eagle Strafing Run is the best tool for this. Otherwise, it's a low-priority target; the guide recommends avoiding it to focus on objectives."
+        },
+        {
+          "enemy": "Crowds / Flesh Mobs",
+          "strategy": "Control their movement with Gas Grenades. The Eruptor's AoE can clear a large number of them in a single shot. Use the secondary weapon to handle any that get too close."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00:00",
+      "end": "00:00:39"
+    },
+    "topic": "Introduction to Enemy Weak Points Guide",
+    "summary": "This segment introduces a comprehensive guide to all enemy weak points in Helldivers 2. The guide will cover the best places to aim, effective weapons, and alternative weak points for every enemy, starting with the Automaton faction.",
+    "keywords": [
+      "introduction",
+      "guide",
+      "enemy weak points",
+      "helldivers 2",
+      "automatons",
+      "terminids"
+    ],
+    "type": "Introductory",
+    "structured_data": {}
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:00:39",
+      "end": "03:28"
+    },
+    "topic": "Factory Strider Weak Points & Strategy",
+    "summary": "A detailed breakdown of the Factory Strider, the most complex Automaton enemy. Due to its massive 10,000 HP main health pool, players should target its fatal components instead. Key weak points include the frontal 'eye' (2500 HP), the leg joints (3000 HP), and the underside doors (2400 HP). Anti-tank class weapons are recommended for destroying these parts efficiently.",
+    "keywords": [
+      "Factory Strider",
+      "Automaton",
+      "weak point",
+      "fatal components",
+      "eye",
+      "legs",
+      "underside doors",
+      "armor class",
+      "anti-tank"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Factory Strider",
+      "faction": "Automaton",
+      "main_health": 10000,
+      "weak_points": [
+        {
+          "name": "Eye (Head)",
+          "health": 2500,
+          "armor_class": 4,
+          "note": "Fatal component. Bypasses the main head armor (Class 5). Deals 100% of its damage to the main HP pool."
+        },
+        {
+          "name": "Leg Joints/Feet",
+          "health": 3000,
+          "armor_class": 4,
+          "note": "Fatal component. Destroying the legs kills the Strider. Deals 40% of its damage to the main HP pool."
+        },
+        {
+          "name": "Underside Doors",
+          "health": 2400,
+          "armor_class": 3,
+          "note": "Fatal component but requires close range. Shares HP with the left stomach door."
+        }
+      ],
+      "recommended_weapons": [
+        "Anti-tank class weapons",
+        "Eagle 500KG Bomb"
+      ],
+      "general_strategy": "Focus fire on fatal components like the eye, legs, or underside doors. Avoid shooting the main body due to its extremely high health pool."
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "03:28",
+      "end": "04:51"
+    },
+    "topic": "Tank (Annihilator/Shredder) Weak Points & Strategy",
+    "summary": "This section explains how to destroy Automaton Tanks (Annihilator and Shredder). A patch reduced their front armor to Class 5, making them vulnerable to one-shots from the Recoilless Rifle or Spear. The primary weak point is the heatsink vent on the back of the turret, which has Class 3 armor and its destruction is fatal to the tank. This rear weak point is vulnerable to weapons like the Autocannon and Railgun.",
+    "keywords": [
+      "Tank",
+      "Annihilator Tank",
+      "Shredder Tank",
+      "Automaton",
+      "weak point",
+      "rear vent",
+      "turret",
+      "Class 5 armor",
+      "Recoilless Rifle",
+      "Spear"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Tank (Annihilator/Shredder)",
+      "faction": "Automaton",
+      "main_health": 3000,
+      "weak_points": [
+        {
+          "name": "Rear Turret Vent",
+          "health": 2100,
+          "armor_class": 3,
+          "note": "Fatal weak point that kills the entire tank upon destruction. Deals 200% damage to main HP."
+        },
+        {
+          "name": "Frontal Armor",
+          "armor_class": 5,
+          "note": "Can be one-shot by heavy anti-tank weapons like the Spear or Recoilless Rifle."
+        }
+      ],
+      "secondary_targets": [
+        {
+          "name": "Tracks",
+          "health": 750,
+          "armor_class": 3,
+          "note": "Non-lethal. Disables movement. Immune to explosions."
+        }
+      ],
+      "recommended_weapons": [
+        "Recoilless Rifle",
+        "Spear",
+        "EAT-17",
+        "Quasar Cannon",
+        "Autocannon (on rear vent)",
+        "Railgun (on rear vent)"
+      ],
+      "general_strategy": "Flank the tank to target the exposed rear vent on the turret with medium or heavy penetrating weapons. Alternatively, use heavy anti-tank weapons on the front plate."
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "04:51",
+      "end": "05:48"
+    },
+    "topic": "Rocket Strider Weak Points & Strategy",
+    "summary": "This segment details the weak points of the Rocket Strider. Its most vulnerable spot is the unarmored crotch area between the legs, which has 300 HP and Class 3 armor, leading to a fatal kill. This area is immune to explosions, making the Autocannon less effective. The AMR and Railgun can one-shot it through this weak point. Shooting the side-mounted rockets is an unreliable alternative for destruction.",
+    "keywords": [
+      "Rocket Strider",
+      "Scout Strider",
+      "Automaton",
+      "weak point",
+      "crotch",
+      "pelvis",
+      "JAR-5 Dominator",
+      "Railgun",
+      "Anti-Materiel Rifle"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Rocket Strider",
+      "faction": "Automaton",
+      "main_health": 500,
+      "weak_points": [
+        {
+          "name": "Crotch/Pelvis",
+          "health": 300,
+          "armor_class": 3,
+          "durability": "0%",
+          "note": "Fatal weak point. Immune to explosions."
+        }
+      ],
+      "secondary_targets": [
+        {
+          "name": "Side Rockets",
+          "health": 100,
+          "note": "Unreliable, but destroying them can sometimes cause a chain reaction that kills the strider."
+        }
+      ],
+      "recommended_weapons": [
+        "JAR-5 Dominator",
+        "CB-9 Exploding Crossbow",
+        "R-36 Eruptor",
+        "G-12 High-Explosive Grenade",
+        "Railgun",
+        "Anti-Materiel Rifle"
+      ],
+      "general_strategy": "Aim for the exposed, unarmored crotch area between the legs for a quick kill with medium penetrating weapons."
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "05:48",
+      "end": "06:51"
+    },
+    "topic": "Berserker Weak Points & Strategy",
+    "summary": "A guide to defeating Automaton Berserkers. They have multiple, separate health pools, so focusing fire on one part is crucial. The head (125 HP) is the fastest kill but is small. The glowing stomach (350 HP) is a larger, more reliable weak point. The torso and pelvis are also options but have more health. Weapons with high stagger or high DPS are most effective.",
+    "keywords": [
+      "Berserker",
+      "Automaton",
+      "weak point",
+      "headshot",
+      "stomach",
+      "separate health pools",
+      "stagger",
+      "Punisher Plasma"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Berserker",
+      "faction": "Automaton",
+      "main_health": 750,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 125,
+          "note": "Fastest kill but hard to hit."
+        },
+        {
+          "name": "Stomach (Glowing)",
+          "health": 350,
+          "note": "Reliable and consistent target."
+        },
+        {
+          "name": "Torso",
+          "health": 425,
+          "durability": "40%"
+        },
+        {
+          "name": "Pelvis",
+          "health": 600
+        }
+      ],
+      "recommended_weapons": [
+        "SG-8P Punisher Plasma",
+        "CB-9 Exploding Crossbow",
+        "PLAS-101 Purifier",
+        "SG-225SP Breaker Spray&Pray",
+        "SMG-72 Pummeler"
+      ],
+      "general_strategy": "Focus fire on a single body part. The head is the fastest kill, but the stomach is a more reliable and larger target."
+    }
+  },
+  {
+    "chunk_id": "unique_id_006",
+    "timestamp": {
+      "start": "06:51",
+      "end": "08:36"
+    },
+    "topic": "Devastator Weak Points & Strategy",
+    "summary": "This section covers all Devastator variants. Their primary weak point is the head (100 HP). Alternatively, the stomach (350 HP) is an unarmored weak point. Heavy Devastators have an additional fatal weak point on their backpack (600 HP, light armor). The Railgun is highly effective for a one-shot body kill, while high-stagger weapons can prevent them from attacking.",
+    "keywords": [
+      "Devastator",
+      "Heavy Devastator",
+      "Rocket Devastator",
+      "Automaton",
+      "weak point",
+      "headshot",
+      "stomach",
+      "backpack",
+      "stagger"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Devastator (all variants)",
+      "faction": "Automaton",
+      "main_health": 750,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 100,
+          "note": "Most effective weak point."
+        },
+        {
+          "name": "Stomach",
+          "health": 350,
+          "armor_class": "None",
+          "note": "Good alternative target, especially on Heavy Devastators whose shields cover the stomach."
+        },
+        {
+          "name": "Backpack (Heavy/Rocket Devastator)",
+          "health": 600,
+          "armor_class": "Light",
+          "note": "An additional fatal weak point."
+        }
+      ],
+      "recommended_weapons": [
+        "Railgun",
+        "JAR-5 Dominator",
+        "CB-9 Exploding Crossbow",
+        "Diligence Counter Sniper",
+        "Punisher Plasma"
+      ],
+      "general_strategy": "Aim for the head. If facing a Heavy Devastator from the front, target the stomach or flank it to hit the backpack. Stagger is very useful to stop its attacks."
+    }
+  },
+  {
+    "chunk_id": "unique_id_007",
+    "timestamp": {
+      "start": "08:36",
+      "end": "09:31"
+    },
+    "topic": "Gunship Weak Points & Strategy",
+    "summary": "The guide explains how to take down Automaton Gunships. The main hull has Class 4 armor and 700 HP, requiring anti-tank weapons. A more efficient strategy is to target the thrusters. The front and rear thrusters have 400 HP and Class 3 armor, making them vulnerable to weapons like the Autocannon or Railgun. Destroying a thruster destroys the entire gunship.",
+    "keywords": [
+      "Gunship",
+      "Automaton",
+      "weak point",
+      "hull",
+      "thrusters",
+      "engine",
+      "anti-tank",
+      "Autocannon"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Gunship",
+      "faction": "Automaton",
+      "main_health": 700,
+      "weak_points": [
+        {
+          "name": "Hull (Center Mass)",
+          "health": 700,
+          "armor_class": 4,
+          "note": "Target with anti-tank weapons."
+        },
+        {
+          "name": "Thrusters (Front & Rear)",
+          "health": 400,
+          "armor_class": 3,
+          "note": "Destroying any thruster is fatal. The rear thrusters have slightly lower durability (80%) than the front (85%)."
+        }
+      ],
+      "recommended_weapons": [
+        "Autocannon",
+        "Railgun",
+        "Spear",
+        "EAT-17",
+        "Recoilless Rifle",
+        "Anti-Tank weapons"
+      ],
+      "general_strategy": "Target the thrusters with Class 4 penetrating support weapons for the most ammo-efficient kill. One Autocannon shot to a thruster is enough."
+    }
+  },
+  {
+    "chunk_id": "unique_id_008",
+    "timestamp": {
+      "start": "09:31",
+      "end": "10:41"
+    },
+    "topic": "Dropship Weak Points & Strategy",
+    "summary": "This section details the strategy for destroying Automaton Dropships. Their main body has Class 5 armor, while their four thrusters are a weaker point (1500 HP each). Destroying a thruster or the main body will bring the ship down. Crucially, if the dropship is destroyed before any troops have detached, all troops on board are instantly killed, including heavy units like Factory Striders. This makes weapons like the Recoilless Rifle and Quasar Cannon extremely valuable on missions with many dropships.",
+    "keywords": [
+      "Dropship",
+      "Automaton",
+      "weak point",
+      "thrusters",
+      "reinforcements",
+      "instant kill",
+      "Recoilless Rifle",
+      "Quasar Cannon",
+      "EAT-17"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Dropship",
+      "faction": "Automaton",
+      "main_health": 2500,
+      "weak_points": [
+        {
+          "name": "Thrusters",
+          "health": 1500,
+          "note": "Destroying one of the four thrusters will destroy the entire dropship. Can be one-shot by a Quasar Cannon or EAT-17."
+        },
+        {
+          "name": "Main Body",
+          "health": 2500,
+          "armor_class": 5,
+          "note": "Can be destroyed by one Spear or Recoilless Rifle shot."
+        }
+      ],
+      "recommended_weapons": [
+        "Recoilless Rifle",
+        "Spear",
+        "EAT-17",
+        "Quasar Cannon"
+      ],
+      "general_strategy": "Destroy the dropship before it deploys troops to instantly kill all reinforcements. Target a single thruster for an efficient kill."
+    }
+  },
+  {
+    "chunk_id": "unique_id_009",
+    "timestamp": {
+      "start": "10:41",
+      "end": "11:30"
+    },
+    "topic": "Trooper Weak Points & Strategy",
+    "summary": "This section covers the basic Automaton Troopers. They are easily killed with a headshot (40 HP) from any weapon, including melee. Their body has 100 HP and can be one-shot by most primary weapons, though some variants have light armor on their torso, requiring appropriate penetration for body shots.",
+    "keywords": [
+      "Trooper",
+      "Raider",
+      "Automaton",
+      "weak point",
+      "headshot",
+      "melee",
+      "light armor",
+      "chaff"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Trooper (all variants)",
+      "faction": "Automaton",
+      "main_health": 125,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 40,
+          "armor_class": "None",
+          "note": "Instantly fatal weak point."
+        },
+        {
+          "name": "Body/Torso",
+          "health": 100,
+          "armor_class": "None or Light (variant dependent)",
+          "note": "Instantly fatal weak point."
+        }
+      ],
+      "recommended_weapons": [
+        "Any weapon"
+      ],
+      "general_strategy": "Aim for the head for an easy, instant kill. Body shots work well with most weapons, but be aware of light armor on some variants."
+    }
+  },
+  {
+    "chunk_id": "unique_id_010",
+    "timestamp": {
+      "start": "11:30",
+      "end": "11:58"
+    },
+    "topic": "Terminid: Scavenger Weak Points",
+    "summary": "The guide moves on to the Terminid faction, starting with the Scavenger. This is the weakest enemy in the game and can be one-shot by any weapon hitting anywhere on its body. A notable interaction is with the Peak Physique armor perk, which allows players to one-shot Scavengers with a melee attack to the body, not just the head.",
+    "keywords": [
+      "Scavenger",
+      "Terminid",
+      "weak",
+      "one-shot",
+      "melee",
+      "Peak Physique"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Scavenger",
+      "faction": "Terminid",
+      "main_health": 10,
+      "weak_points": [
+        {
+          "name": "Entire Body",
+          "health": 10,
+          "note": "No armor. One-shot by any damage source."
+        }
+      ],
+      "general_strategy": "Shoot them anywhere. With the Peak Physique armor, a single melee hit to the body is lethal."
+    }
+  },
+  {
+    "chunk_id": "unique_id_011",
+    "timestamp": {
+      "start": "11:58",
+      "end": "12:31"
+    },
+    "topic": "Terminid: Hunter Weak Points",
+    "summary": "This section covers the Hunter, a fast and agile Terminid. Their body has 160 HP, but their head only has 40 HP, making headshots a one-hit kill with any weapon. Hunters are extremely vulnerable to fire; a single tick of burn damage from any source is lethal. High fire rate or area-of-effect weapons are recommended for dealing with packs of Hunters.",
+    "keywords": [
+      "Hunter",
+      "Terminid",
+      "weak point",
+      "headshot",
+      "fire damage",
+      "incendiary",
+      "Breaker Incendiary"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Hunter",
+      "faction": "Terminid",
+      "main_health": 160,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 40,
+          "note": "Fatal weak point, one-shot by any weapon."
+        },
+        {
+          "name": "Body",
+          "health": 160,
+          "armor_class": "None"
+        }
+      ],
+      "weaknesses": [
+        "Fire (a single tick of burn damage is lethal)"
+      ],
+      "recommended_weapons": [
+        "Breaker Incendiary",
+        "Flamethrower",
+        "High fire-rate primaries",
+        "Area-of-effect weapons"
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_012",
+    "timestamp": {
+      "start": "12:31",
+      "end": "13:17"
+    },
+    "topic": "Terminid: Warrior Weak Points",
+    "summary": "The guide details how to defeat Terminid Warriors. Their head has 150 HP, and destroying it triggers a fast, 3-second bleed-out state where the Warrior will charge at the player. Their body has 325 HP and is unarmored. Strong chaff-clearing weapons like the Arc Thrower, Incendiary Breaker, and Grenade Launcher are effective against them.",
+    "keywords": [
+      "Warrior",
+      "Terminid",
+      "weak point",
+      "headshot",
+      "bleed-out",
+      "death charge",
+      "Arc Thrower"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Warrior",
+      "faction": "Terminid",
+      "main_health": 325,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 150,
+          "armor_class": "None",
+          "note": "Destroying the head triggers a 3-second bleed-out state and a death charge."
+        },
+        {
+          "name": "Body",
+          "health": 325,
+          "armor_class": "None"
+        }
+      ],
+      "recommended_weapons": [
+        "Arc Thrower",
+        "Breaker Incendiary",
+        "CB-9 Exploding Crossbow",
+        "Grenade Launcher"
+      ],
+      "general_strategy": "Headshots are efficient but be prepared for a death charge. Otherwise, focus fire on the body. Avoid hitting non-fatal limbs."
+    }
+  },
+  {
+    "chunk_id": "unique_id_013",
+    "timestamp": {
+      "start": "13:17",
+      "end": "13:57"
+    },
+    "topic": "Terminid: Hive Guard Weak Points",
+    "summary": "This section explains how to kill Hive Guards. Their head is covered in medium armor, but the head itself has 250 HP and triggers a bleed-out on destruction. A key weak spot is the unarmored fleshy part at the bottom of the faceplate, which shares the head's health pool, allowing any weapon to damage it. Flamethrowers are highly effective, as they cause the Hive Guard to enter a defensive stance while they burn to death.",
+    "keywords": [
+      "Hive Guard",
+      "Terminid",
+      "weak point",
+      "head",
+      "faceplate",
+      "medium armor",
+      "unarmored face",
+      "Flamethrower"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Hive Guard",
+      "faction": "Terminid",
+      "main_health": 500,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 250,
+          "armor_class": "Medium",
+          "note": "Destroying triggers a 2.7s bleed-out."
+        },
+        {
+          "name": "Lower Face (Fleshy part)",
+          "health": 250,
+          "armor_class": "None",
+          "note": "Shares health with the head; a great way to bypass the medium armor."
+        }
+      ],
+      "recommended_weapons": [
+        "Blitzer",
+        "CB-9 Exploding Crossbow",
+        "Anti-Materiel Rifle",
+        "Railgun",
+        "Flamethrower"
+      ],
+      "general_strategy": "Aim for the fleshy part of the face to bypass armor. Fire damage is excellent as it neutralizes them while they take damage."
+    }
+  },
+  {
+    "chunk_id": "unique_id_014",
+    "timestamp": {
+      "start": "13:57",
+      "end": "14:47"
+    },
+    "topic": "Terminid: Brood Commander Weak Points",
+    "summary": "The guide covers the Brood Commander, the tankiest medium-sized bug. Its main weak point is its head, which has 250 HP, light armor, and is immune to explosions. Destroying the head triggers a bleed-out state. Medium penetrating primaries or support weapons like the AMR and Railgun are ideal for securing a one-shot headshot.",
+    "keywords": [
+      "Brood Commander",
+      "Terminid",
+      "weak point",
+      "head",
+      "light armor",
+      "bleed-out",
+      "AMR",
+      "Railgun"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Brood Commander",
+      "faction": "Terminid",
+      "main_health": 1000,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 250,
+          "armor_class": "Light",
+          "durability": "70%",
+          "note": "Immune to explosions. Destruction triggers a 3s bleed-out."
+        }
+      ],
+      "recommended_weapons": [
+        "Blitzer",
+        "CB-9 Exploding Crossbow",
+        "Anti-Materiel Rifle",
+        "Railgun"
+      ],
+      "general_strategy": "Focus fire on the head with a weapon that can penetrate light armor for a quick kill via bleed-out."
+    }
+  },
+  {
+    "chunk_id": "unique_id_015",
+    "timestamp": {
+      "start": "14:47",
+      "end": "15:00"
+    },
+    "topic": "Terminid: Stalker Weak Points",
+    "summary": "This section briefly introduces the Stalker, noting its recent update that gives it a Predator-like camouflage. The primary strategy involves using high stagger or high DPS weapons to stop their relentless attacks. Their head is a fatal weak point that triggers bleed-out, making it a priority target.",
+    "keywords": [
+      "Stalker",
+      "Terminid",
+      "weak point",
+      "head",
+      "invisible",
+      "camouflage",
+      "bleed-out"
+    ],
+    "type": "Enemy_Weakpoint_Guide",
+    "structured_data": {
+      "enemy_name": "Stalker",
+      "faction": "Terminid",
+      "main_health": 450,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 200,
+          "note": "Destroying triggers a 3s bleed-out."
+        },
+        {
+          "name": "Body",
+          "health": 450,
+          "armor_class": "None"
+        }
+      ],
+      "recommended_weapons": [
+        "High stagger weapons",
+        "High DPS weapons"
+      ],
+      "general_strategy": "Stagger the Stalker to prevent it from attacking, then focus fire on its head for a fast kill. Locating their lair and destroying it is key to stopping them from spawning."
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_001",
+    "timestamp": {
+      "start": "00:14:00",
+      "end": "00:14:47"
+    },
+    "topic": "Terminid: Brood Commander Weaknesses",
+    "summary": "This section details the weaknesses of the Brood Commander. Its head has 250 HP with light armor and 70% durability, but is immune to explosions. Destroying it triggers a bleedout. Medium-penetrating primaries or support weapons like the Blitzer, Crossbow, AMR, and Railgun are most effective.",
+    "keywords": [
+      "Brood Commander",
+      "Terminid",
+      "bug weakness",
+      "headshot",
+      "light armor",
+      "explosive immunity",
+      "Blitzer",
+      "Exploding Crossbow",
+      "AMR",
+      "Railgun"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Brood Commander",
+      "faction": "Terminid",
+      "main_health": 1000,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 250,
+          "armor_class": "Light",
+          "durability": "70%",
+          "notes": "Destroying this part triggers a 3-second bleedout. This hitbox is immune to explosions. Transfers 50% damage to main HP."
+        }
+      ],
+      "recommended_weapons": [
+        "Medium Penetrating Primaries",
+        "SG-8P Punisher Plasma",
+        "ARC-12 Blitzer",
+        "CB-9 Exploding Crossbow",
+        "AMR-12 AMR (one-shots head)",
+        "RS-422 Railgun (one-shots head)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_002",
+    "timestamp": {
+      "start": "00:14:47",
+      "end": "00:16:42"
+    },
+    "topic": "Terminid: Stalker Weaknesses",
+    "summary": "This segment explains how to counter Stalkers. They have a main health pool of 800 with light armor, and all limbs except wings transfer 100% damage to it. Their head is a critical weak point with only 175 HP and no armor. When low on health, they will attempt to cloak and regenerate, making weapons with stagger or auto-targeting like the Arc Blitzer highly effective.",
+    "keywords": [
+      "Stalker",
+      "Terminid",
+      "bug weakness",
+      "cloaking",
+      "regeneration",
+      "headshot",
+      "weak point",
+      "Arc Blitzer",
+      "crowd control",
+      "stagger"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Stalker",
+      "faction": "Terminid",
+      "main_health": 800,
+      "main_armor": {
+        "class": "Light",
+        "durability": "50%"
+      },
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 175,
+          "armor_class": "None",
+          "durability": "0%",
+          "notes": "Instantly lethal if destroyed."
+        },
+        {
+          "name": "All Limbs (except wings)",
+          "notes": "All limbs are part of a single shared health pool and transfer 100% of damage taken to the main body."
+        }
+      ],
+      "key_mechanics": [
+        "Cloaks to become nearly invisible.",
+        "When HP is below 30%, it attempts to leap away, recloak, and regenerate 150 HP per second.",
+        "Cloaking ability has no internal cooldown."
+      ],
+      "recommended_weapons": [
+        "ARC-12 Blitzer (auto-targets head)",
+        "Weapons with stagger or crowd control properties"
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_003",
+    "timestamp": {
+      "start": "00:16:42",
+      "end": "00:18:31"
+    },
+    "topic": "Terminid: Bile Spewer & Nursing Spewer Weaknesses",
+    "summary": "A guide to defeating Bile Spewers and Nursing Spewers. Their most vulnerable point is their mouth, which has 300 HP and no armor, resulting in an instant kill if destroyed. The head is also a 300 HP weak point but is protected by medium armor. Explosive weapons are best for targeting their highly durable rear sections.",
+    "keywords": [
+      "Bile Spewer",
+      "Nursing Spewer",
+      "Terminid",
+      "weakness",
+      "mouth weak point",
+      "headshot",
+      "explosive weapons",
+      "Autocannon",
+      "Grenade Launcher",
+      "ICBM"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Bile Spewer / Nursing Spewer",
+      "faction": "Terminid",
+      "main_health": 750,
+      "weak_points": [
+        {
+          "name": "Mouth",
+          "health": 300,
+          "armor_class": "None",
+          "durability": "0%",
+          "notes": "Instant kill if destroyed. Best targeted when they rear up to spit."
+        },
+        {
+          "name": "Head",
+          "health": 300,
+          "armor_class": "Class 3 (Medium)",
+          "durability": "0%",
+          "notes": "Lethal if destroyed, requires medium penetrating weapons."
+        },
+        {
+          "name": "Rear Sack",
+          "health": 750,
+          "armor_class": "High",
+          "durability": "90%",
+          "notes": "Very durable against direct damage, but vulnerable to explosive damage which ignores durability."
+        }
+      ],
+      "recommended_weapons": [
+        "CB-9 Exploding Crossbow",
+        "AC-8 Autocannon",
+        "GL-21 Grenade Launcher"
+      ],
+      "notes": "ICBM launch missions on Terminid planets are guaranteed to have Spewers."
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_004",
+    "timestamp": {
+      "start": "00:18:31",
+      "end": "00:20:53"
+    },
+    "topic": "Terminid: Charger Weaknesses",
+    "summary": "This section covers strategies for killing Chargers. One-shot headshots are possible with anti-tank weapons. Alternatively, destroying their unarmored rear causes a fatal bleedout and is vulnerable to explosives. The belly has light armor and is also weak to explosives. The Flamethrower is now more effective on the head than the legs due to durability mechanics.",
+    "keywords": [
+      "Charger",
+      "Terminid",
+      "weakness",
+      "anti-tank",
+      "headshot",
+      "leg armor",
+      "bleedout",
+      "EAT",
+      "Quasar Cannon",
+      "Flamethrower",
+      "Grenade Launcher"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Charger",
+      "faction": "Terminid",
+      "main_health": 2400,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 1200,
+          "armor_class": "Class 4 (Heavy)",
+          "durability": "75%",
+          "notes": "Can be one-shot by most anti-tank launchers."
+        },
+        {
+          "name": "Rear",
+          "health": 950,
+          "armor_class": "None",
+          "durability": "80%",
+          "notes": "Destruction causes a 7.5s bleedout. Takes 150% damage. Weak to explosives."
+        },
+        {
+          "name": "Belly",
+          "health": "Tied to main HP",
+          "armor_class": "Class 2 (Light)",
+          "durability": "100%",
+          "notes": "Vulnerable to explosives like the Grenade Launcher fired underneath it."
+        },
+        {
+          "name": "Legs",
+          "notes": "Stripping the heavy armor with AT weapons reveals a weak point that can be damaged by primary weapons, but this is less efficient than targeting the head with a Flamethrower."
+        }
+      ],
+      "recommended_weapons": [
+        "Expendable Anti-Tank (EAT)",
+        "GR-8 Recoilless Rifle",
+        "LAS-99 Quasar Cannon",
+        "FLAM-40 Flamethrower (targets head)",
+        "GL-21 Grenade Launcher (targets rear or belly)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_005",
+    "timestamp": {
+      "start": "00:20:53",
+      "end": "00:21:22"
+    },
+    "topic": "Terminid: Behemoth Charger Weaknesses",
+    "summary": "The Behemoth Charger is a tougher variant with more health. Notably, its head weak point (1600 HP) and unarmored leg weak points (1000 HP) have closer effective health pools, making both viable targets for sustained fire from non-AT weapons after the armor is broken.",
+    "keywords": [
+      "Behemoth Charger",
+      "Charger Variant",
+      "Terminid",
+      "weakness",
+      "health pool",
+      "durability",
+      "leg shots",
+      "headshots"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Behemoth Charger",
+      "faction": "Terminid",
+      "main_health": 3000,
+      "weak_points": [
+        {
+          "name": "Head",
+          "health": 1600,
+          "armor_class": "Heavy",
+          "durability": "100%",
+          "notes": "Transfers 50% damage to main HP."
+        },
+        {
+          "name": "Legs (unarmored)",
+          "health": 1000,
+          "armor_class": "Heavy",
+          "durability": "80%",
+          "notes": "Transfers 60% damage to main HP. Armor must be stripped first."
+        }
+      ],
+      "notes": "The TTK difference between targeting the head and stripped legs is much smaller than on a standard Charger."
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_006",
+    "timestamp": {
+      "start": "00:21:22",
+      "end": "00:23:00"
+    },
+    "topic": "Terminid: Bile Titan Weaknesses",
+    "summary": "This guide details how to kill a Bile Titan. Its head is a critical weak point (1500 HP, Class 4 Armor) that can be one-shot by anti-tank launchers for an instant kill. The inner belly is another large weak point (4000 HP), but less efficient to target. The Orbital Laser and 500KG Bomb are highly effective stratagems.",
+    "keywords": [
+      "Bile Titan",
+      "Terminid",
+      "boss weakness",
+      "anti-tank",
+      "Orbital Laser",
+      "500kg Bomb",
+      "headshot",
+      "EAT",
+      "Quasar Cannon",
+      "Flamethrower"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Bile Titan",
+      "faction": "Terminid",
+      "main_health": 6000,
+      "weak_points": [
+        {
+          "name": "Head/Face",
+          "health": 1500,
+          "armor_class": "Class 4 (Heavy)",
+          "durability": "95%",
+          "notes": "Instant kill if destroyed. Ideal target for anti-tank launchers like EAT, Recoilless Rifle, and Quasar Cannon for a one-shot kill."
+        },
+        {
+          "name": "Inner Belly",
+          "health": 4000,
+          "armor_class": "N/A",
+          "durability": "80%",
+          "notes": "Less effective to target than the head due to higher health and 60% damage transfer."
+        }
+      ],
+      "recommended_weapons": [
+        "Expendable Anti-Tank (EAT)",
+        "GR-8 Recoilless Rifle",
+        "LAS-99 Quasar Cannon",
+        "RS-422 Railgun",
+        "FLAM-40 Flamethrower"
+      ],
+      "recommended_stratagems": [
+        "Eagle 500kg Bomb",
+        "Orbital Laser"
+      ],
+      "notes": "The Orbital Laser's damage was doubled, making it extremely effective against Bile Titans."
+    }
+  },
+  {
+    "chunk_id": "hd2_terminid_weakness_007",
+    "timestamp": {
+      "start": "00:23:01",
+      "end": "00:23:51"
+    },
+    "topic": "Terminid: Impaler Weaknesses",
+    "summary": "A guide on defeating the stationary Impaler. It has a very finicky head hitbox that, if hit with an anti-tank launcher, results in a one-shot kill. For weapons with explosive damage like the Autocannon or Grenade Launcher, targeting the back legs is a more reliable strategy. Due to its immobility, it is also highly vulnerable to offensive stratagems.",
+    "keywords": [
+      "Impaler",
+      "Terminid",
+      "weakness",
+      "stationary",
+      "headshot",
+      "anti-tank",
+      "Autocannon",
+      "Grenade Launcher",
+      "Explosive Crossbow",
+      "stratagem"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Impaler",
+      "faction": "Terminid",
+      "main_health": 4000,
+      "weak_points": [
+        {
+          "name": "Face/Head",
+          "health": 1250,
+          "armor_class": "N/A",
+          "durability": "75%",
+          "notes": "Lethal if destroyed, takes 150% damage. Hitbox is small and hard to hit. Best for one-shot AT weapons."
+        },
+        {
+          "name": "Back Legs",
+          "notes": "After breaking the heavy armor with AT, this becomes a weak point. Good target for explosive weapons as they ignore the 70% durability."
+        }
+      ],
+      "recommended_weapons": [
+        "Anti-Tank Launchers (for one-shot kill to face)",
+        "AC-8 Autocannon",
+        "GL-21 Grenade Launcher",
+        "CB-9 Exploding Crossbow"
+      ],
+      "notes": "As they are immobile, they are excellent targets for any offensive stratagem."
+    }
+  },
+  {
+    "chunk_id": "illuminate_guide_001",
+    "timestamp": {
+      "start": "00:31",
+      "end": "04:14"
+    },
+    "topic": "Illuminate Enemy Guide: Flash Mob",
+    "summary": "This chunk details the Flash Mob, a large Illuminate enemy that acts as a 'bullet sponge'. It has a very low armor value of 1, meaning any weapon can damage it, but possesses an extremely high health pool estimated at over 3000 HP. The most effective way to kill it is by targeting its glowing blue eyes/heads, which serve as weak spots; destroying them all results in an instant kill. The Flash Mob is vulnerable to fire and AoE damage but highly resistant to stuns and melee attacks, making weapons like the Flamethrower, W.A.S.P. Launcher, and Autocannon excellent choices.",
+    "keywords": [
+      "Flash Mob",
+      "Illuminate",
+      "enemy guide",
+      "weak spot",
+      "high health",
+      "bullet sponge",
+      "fire vulnerability",
+      "AoE weapons",
+      "stun resistance",
+      "W.A.S.P."
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Flash Mob",
+      "faction": "Illuminate",
+      "characteristics": [
+        {
+          "name": "Armor Value",
+          "value": "1 (Low)",
+          "description": "Can be damaged by any weapon in the game without needing special armor penetration."
+        },
+        {
+          "name": "Health Pool",
+          "value": "High (estimated 2000-3000+ HP)",
+          "description": "Acts as a 'bullet sponge'. Can even survive a direct hit from a Thermite grenade."
+        }
+      ],
+      "weaknesses": [
+        {
+          "name": "Glowing Blue Eyes/Heads",
+          "description": "Destroying all the glowing blue spots on its front and back will instantly kill it. This is the most ammo-efficient strategy."
+        },
+        {
+          "name": "Fire Damage",
+          "description": "Vulnerable to fire-based weapons like the Flamethrower and Scorcher."
+        },
+        {
+          "name": "Area of Effect (AoE) Damage",
+          "description": "Weapons with explosive or wide-area damage are effective due to its large size."
+        }
+      ],
+      "resistances": [
+        {
+          "name": "Stun/Stagger",
+          "description": "Highly resistant to stuns and staggers. Melee weapons like the Stun Lance are very ineffective."
+        }
+      ],
+      "recommended_weapons": [
+        "Scorcher",
+        "Purifier",
+        "Eruptor",
+        "Exploding Crossbow",
+        "Crisper",
+        "W.A.S.P. Launcher",
+        "Autocannon",
+        "Machine Gun",
+        "Heavy Machine Gun",
+        "Flamethrower"
+      ],
+      "ineffective_weapons": [
+        "Stun Lance",
+        "Melee Attacks",
+        "Recoilless Rifle (not a one-shot)",
+        "EAT-17 (not a one-shot)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "illuminate_guide_002",
+    "timestamp": {
+      "start": "04:15",
+      "end": "05:49"
+    },
+    "topic": "Illuminate Enemy Guide: Crescent Overseer",
+    "summary": "This section covers the Crescent Overseer, an Illuminate enemy with health and armor similar to other Overseer types. It has a distinct three-part attack pattern based on range: a long-range mortar with a small AoE, a medium-range energy blast, and a powerful close-range melee punch that can knock players down. The strategy is to treat it like other Overseers but be mindful of its versatile attack ranges, especially the long-range mortar.",
+    "keywords": [
+      "Crescent Overseer",
+      "Illuminate",
+      "enemy guide",
+      "attacks",
+      "mortar",
+      "energy blast",
+      "melee",
+      "Overseer variant"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Crescent Overseer",
+      "faction": "Illuminate",
+      "characteristics": [
+        {
+          "name": "Health & Armor",
+          "description": "Functions similarly to other existing Overseer units."
+        }
+      ],
+      "key_mechanics": [
+        {
+          "name": "Long-Range Mortar",
+          "description": "Fires a mortar at long distances with a small AoE. It is primarily poke damage, dealing about 60-70% health to a player in light armor."
+        },
+        {
+          "name": "Medium-Range Blast",
+          "description": "Fires an inaccurate but hard-hitting energy blast at medium range."
+        },
+        {
+          "name": "Close-Range Melee",
+          "description": "Performs a powerful melee punch if players get too close, knocking them over."
+        }
+      ],
+      "strategy": "Treat similarly to other Overseers. Keep an eye on the sky for its incoming mortar fire and eliminate it quickly to avoid being sniped."
+    }
+  },
+  {
+    "chunk_id": "illuminate_guide_003",
+    "timestamp": {
+      "start": "05:49",
+      "end": "08:09"
+    },
+    "topic": "Illuminate Enemy Guide: Stingray (Interloper)",
+    "summary": "A guide to the 'Stingray' (also named 'Interloper' in-game), a fast and deadly flying Illuminate unit. It functions as a glass cannon with an armor value of 3 and less than 2000 health. Its main attack is a devastating strafing run, which it telegraphs by lighting the ground blue. The W.A.S.P. launcher is the premier counter due to its lock-on, but Autocannons with flak ammo and well-aimed anti-tank rockets are also highly effective.",
+    "keywords": [
+      "Stingray",
+      "Interloper",
+      "Illuminate",
+      "flying enemy",
+      "glass cannon",
+      "W.A.S.P.",
+      "Autocannon",
+      "anti-air",
+      "armor penetration"
+    ],
+    "type": "Enemy_Strategy",
+    "structured_data": {
+      "enemy_name": "Stingray (Interloper)",
+      "faction": "Illuminate",
+      "characteristics": [
+        {
+          "name": "Type",
+          "value": "Flying"
+        },
+        {
+          "name": "Armor Value",
+          "value": "3 (Low)",
+          "description": "Requires weapons with an armor penetration value of 3 or higher to damage effectively."
+        },
+        {
+          "name": "Health Pool",
+          "value": "Low (estimated < 2000 HP)",
+          "description": "Can be one-shot by an EAT-17 or Recoilless Rifle, making it a 'glass cannon'."
+        }
+      ],
+      "key_mechanics": [
+        {
+          "name": "Strafing Run Attack",
+          "description": "Telegraphs its attack by lighting up a path on the ground in blue a few seconds before striking. Players should dive or use cover to evade."
+        },
+        {
+          "name": "Vulnerable Window",
+          "description": "Hovers stationary in mid-air for a few seconds before attacking, creating an opportunity to shoot it down."
+        },
+        {
+          "name": "Friendly Fire Capable",
+          "description": "Its attacks can damage other Illuminate enemies, which can be strategically exploited."
+        }
+      ],
+      "recommended_weapons": [
+        "W.A.S.P. Launcher (Best)",
+        "Autocannon (Flak Ammo)",
+        "Anti-Materiel Rifle (AMR)",
+        "EAT-17 (One-shot kill)",
+        "Recoilless Rifle (One-shot kill)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "illuminate_guide_004",
+    "timestamp": {
+      "start": "08:09",
+      "end": "08:48"
+    },
+    "topic": "Summary of Combat Strategy vs. The Illuminate",
+    "summary": "The introduction of the new Illuminate enemies shifts the combat meta. Heavy anti-tank is less crucial compared to fighting other factions. Instead, loadouts favoring sustained DPS (Machine Guns), AoE (Flamethrower), and anti-air capabilities (W.A.S.P., Autocannon) are now significantly more effective for dealing with the dual threats of tanky Flash Mobs and agile flying Stingrays.",
+    "keywords": [
+      "Illuminate meta",
+      "weapon choice",
+      "loadout strategy",
+      "W.A.S.P. Launcher",
+      "Autocannon",
+      "Machine Gun",
+      "anti-air",
+      "sustained DPS"
+    ],
+    "type": "Faction_Strategy_Summary",
+    "structured_data": {
+      "faction": "Illuminate",
+      "summary_of_changes": "The introduction of the Flash Mob (high health, low armor) and Stingray (flying unit) has shifted the combat meta away from a reliance on heavy anti-tank weapons.",
+      "key_takeaways": [
+        "Sustained DPS is more important than single-shot high damage for enemies like the Flash Mob.",
+        "Anti-air capability is crucial due to the Stingray.",
+        "Loadouts can be more flexible, as many Illuminate units have lower armor values."
+      ],
+      "highlighted_stratagems": [
+        {
+          "name": "W.A.S.P. Launcher",
+          "rationale": "Extremely effective against both Flash Mobs and Stingrays."
+        },
+        {
+          "name": "Autocannon",
+          "rationale": "Versatile weapon that is highly effective against the new units with the right ammo types."
+        },
+        {
+          "name": "Machine Gun / Heavy Machine Gun",
+          "rationale": "Excellent for providing sustained fire to take down the high-health Flash Mobs."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00:00",
+      "end": "00:00:36"
+    },
+    "topic": "Introduction to the Super Credit & Medal Farming Method",
+    "summary": "This guide outlines a low-effort farming method for Super Credits and Warbond Medals that can be performed solo. It clarifies that while farming isn't essential for game enjoyment, it's very effective for quickly acquiring currency for store items like armor sets.",
+    "keywords": [
+      "farming guide",
+      "Super Credits",
+      "Warbond Medals",
+      "solo farm",
+      "disclaimer",
+      "premium currency",
+      "cosmetics"
+    ],
+    "type": "Guide_Introduction"
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:00:36",
+      "end": "00:00:57"
+    },
+    "topic": "Setting Up the Farming Mission",
+    "summary": "Details the initial setup required for the farm. This involves finding a planet with good visibility (like Crimsica) to easily spot points of interest and setting the mission difficulty to '1 - Trivial' to ensure a small map size. The specific mission type is not important.",
+    "keywords": [
+      "mission setup",
+      "Trivial difficulty",
+      "planet selection",
+      "Crimsica",
+      "low difficulty",
+      "operation setup",
+      "farming prep"
+    ],
+    "type": "Farming_Strategy",
+    "structured_data": {
+      "recommended_difficulty": "1 - Trivial",
+      "recommended_planet_type": "Planet with good visibility (clear, not foggy or dark).",
+      "example_planet": "Crimsica",
+      "mission_selection": "Any mission type is acceptable."
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "00:00:57",
+      "end": "02:07"
+    },
+    "topic": "Scouting and Looting Points of Interest",
+    "summary": "Explains the core farming activity: ignore the main mission objective and explore the small map to find and loot all Points of Interest (POIs). Players should scout for crashed ship sites and bunkers, memorizing their locations to optimize repeat runs on the same map.",
+    "keywords": [
+      "points of interest",
+      "POI",
+      "map exploration",
+      "looting",
+      "crashed ships",
+      "bunkers",
+      "resource farming"
+    ],
+    "type": "Farming_Strategy",
+    "structured_data": {
+      "primary_activity": "Explore the map to locate and loot all Points of Interest.",
+      "points_of_interest": [
+        {
+          "name": "Crashed Ship Sites",
+          "description": "Small escape pod-like containers. Salute to open and get loot."
+        },
+        {
+          "name": "Bunkers / Containers",
+          "description": "Sealed doors that must be blown open with a grenade or explosive to access loot inside."
+        },
+        {
+          "name": "Friendship Bunkers",
+          "description": "Requires two players to open simultaneously; relevant for group farming."
+        }
+      ],
+      "scouting_tip": "If a generated map has few POIs, abandon the operation and find a new one until a loot-dense map is found. Memorize the layout for faster runs."
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "02:07",
+      "end": "02:40"
+    },
+    "topic": "How to Reset the Map Loot via Game Relaunch",
+    "summary": "Describes the key trick to reset the loot. After collecting everything, instead of extracting, completely quit the game. Upon relaunching, you can select the same operation, which places you on the identical map seed with all loot locations refreshed and ready to be looted again.",
+    "keywords": [
+      "map reset",
+      "game exploit",
+      "quit game",
+      "relaunch",
+      "farming loop",
+      "refresh loot",
+      "Super Credits"
+    ],
+    "type": "Farming_Strategy",
+    "structured_data": {
+      "reset_procedure": [
+        "1. Collect all loot from POIs on the map.",
+        "2. Open the menu and select 'Quit Game'. Do NOT 'Return to Ship'.",
+        "3. Relaunch Helldivers 2.",
+        "4. Select the same operation to restart on the same map with refreshed loot."
+      ],
+      "mechanic_explanation": "Super Credits and Medals are added to your inventory instantly upon pickup and do not require extraction to be saved, unlike Samples."
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "02:40",
+      "end": "03:06"
+    },
+    "topic": "Optimizing Your Loadout for Farming Speed",
+    "summary": "Provides loadout recommendations to maximize farming efficiency. It is best to use light armor with a high speed stat and equip the LIFT-850 Jump Pack stratagem for superior mobility, allowing faster traversal of the map.",
+    "keywords": [
+      "min-max",
+      "loadout",
+      "light armor",
+      "jump pack",
+      "speed farming",
+      "efficiency",
+      "stratagem"
+    ],
+    "type": "Build_Recommendation",
+    "structured_data": {
+      "recommended_armor": {
+        "type": "Light Armor",
+        "stat_focus": "High Speed and Stamina Regen."
+      },
+      "recommended_stratagem": {
+        "name": "LIFT-850 Jump Pack",
+        "purpose": "Improves mobility to traverse terrain and obstacles quickly."
+      },
+      "other_stratagems_note": "Other stratagems are unimportant due to the extremely low enemy presence on Trivial difficulty."
+    }
+  },
+  {
+    "chunk_id": "unique_id_006",
+    "timestamp": {
+      "start": "03:06",
+      "end": "04:22"
+    },
+    "topic": "Expected Farming Rates and RNG Impact",
+    "summary": "Details potential earnings from this method. A single run, including quitting and relaunching, takes about 3.5 minutes, yielding roughly 30 Super Credits and 8 Medals. This can result in over 510 Super Credits and 136 Medals per hour, though actual rates are heavily influenced by RNG, such as rare +100 Super Credit jackpot drops.",
+    "keywords": [
+      "earning rate",
+      "farm efficiency",
+      "RNG",
+      "Super Credits per hour",
+      "Medals per hour",
+      "jackpot",
+      "loot drops"
+    ],
+    "type": "Farming_Strategy",
+    "structured_data": {
+      "average_time_per_run": "~3 minutes 30 seconds",
+      "average_loot_per_run": {
+        "super_credits": "~30",
+        "medals": "~8"
+      },
+      "estimated_loot_per_hour": {
+        "super_credits": "510+",
+        "medals": "136+"
+      },
+      "rng_factors": [
+        "The number of Points of Interest on the generated map.",
+        "The amount of Super Credits dropped per loot location (can be +10 or a rare +100 jackpot)."
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_007",
+    "timestamp": {
+      "start": "04:22",
+      "end": "05:18"
+    },
+    "topic": "Analysis of Solo vs. Group Farming",
+    "summary": "Compares doing this farm solo versus in a group. Group play allows faster map clearing and access to two-person 'Friendship Bunkers', increasing potential loot. However, the downtime waiting for players to reconnect between runs can make solo farming more efficient timewise, though potentially more monotonous.",
+    "keywords": [
+      "solo farming",
+      "group farming",
+      "co-op",
+      "efficiency",
+      "friendship bunker",
+      "pros and cons",
+      "multiplayer"
+    ],
+    "type": "Farming_Strategy",
+    "structured_data": {
+      "group_farming_pros": [
+        "Can clear the map faster by splitting up.",
+        "Can open 'Friendship Bunkers' for additional loot."
+      ],
+      "group_farming_cons": [
+        "Increased downtime waiting for all players to quit, relaunch, and rejoin the lobby between runs."
+      ],
+      "conclusion": "Solo play is often more time-efficient due to less downtime. Group play is less boring and offers more loot potential per run if coordinated well."
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00:10",
+      "end": "00:02:57"
+    },
+    "topic": "Warbond Recommendation: Democratic Detonation",
+    "summary": "This Warbond is recommended as the top priority for all players. It provides exceptional value with powerful weapons like the BR-14 Adjudicator, R-36 Eruptor, and the CB-9 Exploding Crossbow. It also includes the highly effective G-12 Thermite grenade and the useful CE-27 Ground Breaker armor set.",
+    "keywords": [
+      "Democratic Detonation",
+      "best warbond",
+      "new player guide",
+      "G-12 Thermite",
+      "BR-14 Adjudicator",
+      "R-36 Eruptor",
+      "CB-9 Exploding Crossbow",
+      "Engineering Kit"
+    ],
+    "type": "Warbond_Recommendation",
+    "data": {
+      "warbond_name": "Democratic Detonation",
+      "recommendation_priority": 1,
+      "summary": "High overall value with powerful weapons and grenades, making it a top pick for all players. Its only weak point is the Booster.",
+      "notable_items": [
+        {
+          "item_name": "G-12 Thermite",
+          "item_type": "Grenade",
+          "rationale": "Sticks to enemies, burns, and explodes. Excellent for destroying objectives and killing large enemies like Chargers and Titans."
+        },
+        {
+          "item_name": "CE-27 Ground Breaker",
+          "item_type": "Armor Set",
+          "rationale": "Features the 'Engineering Kit' passive, which reduces recoil when crouching/prone and increases throwable capacity by +2."
+        },
+        {
+          "item_name": "BR-14 Adjudicator",
+          "item_type": "Primary Weapon (Assault Rifle)",
+          "rationale": "One of the best assault rifles, with medium armor penetration and high damage. Becomes very effective with recoil-reducing mods."
+        },
+        {
+          "item_name": "Expert Extraction Pilot",
+          "item_type": "Booster",
+          "rationale": "Reduces extraction shuttle time. Considered the weakest part of the Warbond, with very niche use for sample farming on Blitz missions."
+        },
+        {
+          "item_name": "R-36 Eruptor",
+          "item_type": "Primary Weapon (Explosive)",
+          "rationale": "A very solid explosive rifle that can close Bug Holes and destroy Bot Fabricators. It has been improved since its release, cycling the bolt faster."
+        },
+        {
+          "item_name": "GP-31 Grenade Pistol",
+          "item_type": "Secondary Weapon",
+          "rationale": "One of the best secondary weapons in the game, useful for destroying objectives and dealing with many enemy types."
+        },
+        {
+          "item_name": "CB-9 Exploding Crossbow",
+          "item_type": "Primary Weapon (Explosive)",
+          "rationale": "Arguably one of the best weapons in the game due to very high damage. Can be used one-handed with a ballistic shield, creating a powerful combo."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:02:57",
+      "end": "00:05:22"
+    },
+    "topic": "Warbond Recommendation: Truth Enforcers",
+    "summary": "The second recommended Warbond, which has improved significantly since its release due to buffs. It features the versatile SG-220 Halt shotgun, the hard-hitting SMG-72 Pummeler, and armor sets with the newly buffed 'Unflinching' passive. The PLAS-15 Loyalist plasma pistol is another strong secondary option.",
+    "keywords": [
+      "Truth Enforcers",
+      "warbond guide",
+      "SG-220 Halt",
+      "SMG-72 Pummeler",
+      "Unflinching armor",
+      "PLAS-15 Loyalist",
+      "weapon buffs"
+    ],
+    "type": "Warbond_Recommendation",
+    "data": {
+      "warbond_name": "Truth Enforcers",
+      "recommendation_priority": 2,
+      "summary": "A Warbond that has steadily improved with game updates, making it a strong contender with solid weapons and an improved armor passive.",
+      "notable_items": [
+        {
+          "item_name": "Dead Sprint",
+          "item_type": "Booster",
+          "rationale": "A decent booster that helps with stamina when injured, but generally outclassed by the default Stamina booster."
+        },
+        {
+          "item_name": "SG-220 Halt",
+          "item_type": "Primary Weapon (Shotgun)",
+          "rationale": "An excellent shotgun with two ammo types: stunning flashbangs for crowd control against large enemies like Chargers and Stalkers, and long-range flechettes for damage."
+        },
+        {
+          "item_name": "SMG-72 Pummeler",
+          "item_type": "Primary Weapon (SMG)",
+          "rationale": "Arguably one of the best SMGs, competing with assault rifles due to its high damage (125). It becomes very accurate with recoil-reducing mods."
+        },
+        {
+          "item_name": "UF-50 Bloodhound / UF-16 Inspector",
+          "item_type": "Armor Sets",
+          "rationale": "Features the 'Unflinching' passive, which is now much improved. It provides 100% flinch resistance, partial 'Extra Padding' benefits, and a scout ping functionality on the map."
+        },
+        {
+          "item_name": "PLAS-15 Loyalist",
+          "item_type": "Secondary Weapon (Pistol)",
+          "rationale": "A great plasma pistol with a charged shot. It has medium armor penetration and good damage (125), making it effective against most enemies."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "00:05:22",
+      "end": "00:07:30"
+    },
+    "topic": "Warbond Recommendation: Polar Patriots",
+    "summary": "This is the third recommendation, presenting a solid all-around Warbond. Key items include the AR-61 Tenderizer assault rifle, the powerful PLAS-101 Purifier energy rifle, the P-113 Verdict pistol, and armor with the useful Servo-Assisted passive. The G-13 Incendiary Impact grenade provides good area denial.",
+    "keywords": [
+      "Polar Patriots",
+      "warbond guide",
+      "AR-61 Tenderizer",
+      "PLAS-101 Purifier",
+      "P-113 Verdict",
+      "Servo-Assisted",
+      "G-13 Incendiary Impact"
+    ],
+    "type": "Warbond_Recommendation",
+    "data": {
+      "warbond_name": "Polar Patriots",
+      "recommendation_priority": 3,
+      "summary": "A solid Warbond with good weapons and a useful armor passive that enhances builds focused on throwing stratagems.",
+      "notable_items": [
+        {
+          "item_name": "CW-36 Winter Warrior",
+          "item_type": "Armor Set",
+          "rationale": "Features the 'Servo-Assisted' passive, which increases throwing range by 30% and provides extra health and limb health."
+        },
+        {
+          "item_name": "Motivational Shocks",
+          "item_type": "Booster",
+          "rationale": "An okay booster that prevents slows, but the free Muscle Enhancement booster is often more versatile."
+        },
+        {
+          "item_name": "AR-61 Tenderizer",
+          "item_type": "Primary Weapon (Assault Rifle)",
+          "rationale": "A fantastic 'Starship Troopers' style assault rifle with high damage, though limited to light armor penetration. It has become stronger with weapon upgrades."
+        },
+        {
+          "item_name": "G-13 Incendiary Impact",
+          "item_type": "Grenade",
+          "rationale": "An impact grenade that creates a fire area. Good for crowd control, trading direct single-target damage for area denial."
+        },
+        {
+          "item_name": "PLAS-101 Purifier",
+          "item_type": "Primary Weapon (Energy-Based)",
+          "rationale": "Argued to be one of the best weapons, especially against Bots. Its charged shot can two-shot Bot Gunships. It was awful at launch but is now very powerful."
+        },
+        {
+          "item_name": "P-113 Verdict",
+          "item_type": "Secondary Weapon (Pistol)",
+          "rationale": "A high-damage 'Deagle' style pistol with medium armor penetration and a large reserve ammo pool. It's essentially an upgraded version of the starting P-19 Redeemer."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "00:07:30",
+      "end": "01:10:05"
+    },
+    "topic": "Warbond Recommendation: Steeled Veterans",
+    "summary": "The fourth recommendation is the original 'Steeled Veterans' Warbond, which remains a solid choice. It offers the powerful P-4 Senator revolver, the SG-225IE Breaker Incendiary for crowd control, the versatile JAR-5 Dominator, and useful Servo-Assisted armors. Although its booster is weak, the weapons are strong and have benefited from recent game updates.",
+    "keywords": [
+      "Steeled Veterans",
+      "original warbond",
+      "P-4 Senator",
+      "JAR-5 Dominator",
+      "SG-225IE Breaker Incendiary",
+      "Servo-Assisted"
+    ],
+    "type": "Warbond_Recommendation",
+    "data": {
+      "warbond_name": "Steeled Veterans",
+      "recommendation_priority": 4,
+      "summary": "The very first premium Warbond is still a solid choice, featuring a variety of powerful and fun weapons that have been improved with game updates.",
+      "notable_items": [
+        {
+          "item_name": "Servo-Assisted Armor",
+          "item_type": "Armor Sets",
+          "rationale": "This Warbond offers a full range of light, medium, and heavy armor sets all featuring the 'Servo-Assisted' passive for increased throwing range."
+        },
+        {
+          "item_name": "P-4 Senator",
+          "item_type": "Secondary Weapon (Revolver)",
+          "rationale": "A 'pocket sniper' revolver with heavy armor penetration. It's excellent for precisely eliminating medium-tier enemies. It became a 'monster' after receiving a speed loader upgrade."
+        },
+        {
+          "item_name": "AR-23C Liberator Concussive",
+          "item_type": "Primary Weapon (Assault Rifle)",
+          "rationale": "Has improved since the weapon mod system was introduced. Its concussive effect is good for stunning bugs."
+        },
+        {
+          "item_name": "G-10 Incendiary",
+          "item_type": "Grenade",
+          "rationale": "A good grenade for area denial, similar to a Molotov. It is effective against Bugs and Illuminates (Squids) and can be used to close Bug Holes."
+        },
+        {
+          "item_name": "SG-225IE Breaker Incendiary",
+          "item_type": "Primary Weapon (Shotgun)",
+          "rationale": "A variant of the Breaker shotgun that fires incendiary rounds for crowd control. It has improved since the introduction of different magazine types."
+        },
+        {
+          "item_name": "Flexible Reinforcement Budget",
+          "item_type": "Booster",
+          "rationale": "One of the worst boosters. It only activates when your team is completely out of reinforcements, a situation that good teams should avoid, making it largely useless."
+        },
+        {
+          "item_name": "JAR-5 Dominator",
+          "item_type": "Primary Weapon (Special)",
+          "rationale": "A powerful explosive weapon with medium armor penetration and high damage. It excels at destroying Bots and has become more ergonomic thanks to the weapon mod system."
+        }
+      ]
+    }
+  }
+]

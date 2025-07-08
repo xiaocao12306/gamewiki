@@ -1,0 +1,8 @@
+{
+  "vector_store_type": "faiss",
+  "collection_name": "eldenring_vectors",
+  "model": "jina-embeddings-v4",
+  "output_dim": 768,
+  "chunk_count": 214,
+  "index_path": "src\\game_wiki_tooltip\\ai\\vectorstore\\eldenring_vectors"
+}

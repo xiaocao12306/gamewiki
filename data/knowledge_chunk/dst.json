@@ -3289,5 +3289,994 @@
       }
     }
   ]
+},{
+  "video_info": {
+    "url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "title": "EVERY Character in DST Explained (In a Nutshell)",
+    "uploader": "Jakeyosaurus",
+    "game": "Don't Starve Together",
+    "views": 1845142,
+    "upload_time": "2021-12-14"
+  },
+  "knowledge_chunks": [
+    {
+      "chunk_id": "dst_char_001_wilson",
+      "timestamp": {
+        "start": "00:00:34",
+        "end": "00:01:21"
+      },
+      "topic": "Character Guide: Wilson",
+      "summary": "Wilson is the baseline, beginner-friendly character with no significant downsides but only one unique perk: growing a beard for winter insulation. His balanced stats make him an excellent choice for learning the core mechanics of Don't Starve Together.",
+      "keywords": [
+        "Wilson",
+        "beginner character",
+        "beard",
+        "insulation",
+        "winter survival",
+        "baseline",
+        "standard stats",
+        "Don't Starve Together"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wilson",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 200,
+          "damage_multiplier": 1.0
+        },
+        "pros": [
+          "Grows a 'magnificent beard' that provides winter insulation, equivalent to 56% of a Beefalo Hat.",
+          "Has no downsides, making him the perfect vanilla character for new players."
+        ],
+        "cons": [
+          "His only unique feature is his beard, offering no other special abilities for combat or utility."
+        ],
+        "special_abilities": [
+          {
+            "name": "Grows a Magnificent Beard",
+            "description": "The beard grows over time, providing insulation against cold. It can be shaved for Beard Hair, which is useful for crafting, and helps prevent overheating in summer."
+          }
+        ],
+        "ratings": {
+          "survivability": "6/10",
+          "utility": "5/10",
+          "combat": "5/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_002_willow",
+      "timestamp": {
+        "start": "00:01:21",
+        "end": "00:02:49"
+      },
+      "topic": "Character Guide: Willow",
+      "summary": "Willow is a pyromaniac character who is immune to fire damage and gains sanity near fires. She starts with a unique lighter and has a powerful teddy bear companion, Bernie, who becomes a monstrous protector when she is insane, taunting and fighting enemies including shadow creatures.",
+      "keywords": [
+        "Willow",
+        "Bernie",
+        "pyromaniac",
+        "fire immunity",
+        "sanity gain",
+        "lighter",
+        "shadow creatures",
+        "crowd control"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Willow",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 120
+        },
+        "pros": [
+          "Starts with her unique, durable lighter.",
+          "Gains sanity while near fires.",
+          "Completely immune to fire damage.",
+          "Resistant to overheating in summer.",
+          "Her companion, Bernie, taunts and fights all enemies (including shadow creatures) when Willow is insane."
+        ],
+        "cons": [
+          "Freezes more easily in winter.",
+          "Clothing that provides insulation is less effective on her."
+        ],
+        "special_abilities": [
+          {
+            "name": "Bernie",
+            "description": "A craftable teddy bear that transforms into a large, fighting monster when Willow's sanity is low. Bernie has 2000 HP and deals 25 DPS, making him an excellent tank against shadow creatures. He can be fully repaired with a single use of a Sewing Kit."
+          },
+          {
+            "name": "Willow's Lighter",
+            "description": "A starting item that functions like a torch with higher durability but a smaller light radius."
+          }
+        ],
+        "ratings": {
+          "survivability": "6/10",
+          "utility": "6/10",
+          "combat": "6/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_003_wolfgang",
+      "timestamp": {
+        "start": "00:02:49",
+        "end": "00:04:16"
+      },
+      "topic": "Character Guide: Wolfgang",
+      "summary": "Wolfgang is a strongman whose abilities are directly tied to his hunger level. He has three forms: Wimpy, Normal, and Mighty. In Mighty form, he is a combat powerhouse with the highest potential DPS in the game, but this comes at the cost of a massive hunger drain, requiring constant food management.",
+      "keywords": [
+        "Wolfgang",
+        "Mighty form",
+        "Wimpy form",
+        "hunger management",
+        "DPS",
+        "combat character",
+        "strongman",
+        "high damage"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wolfgang",
+        "stats": {
+          "health": "Variable (150-300)",
+          "hunger": "Variable (up to 300)",
+          "sanity": 200
+        },
+        "pros": [
+          "Highest damage output in the game when in Mighty form (up to 2.0x damage).",
+          "Gains increased max health (up to 300) and movement speed (up to 1.25x) in Mighty form.",
+          "Favorite food is Cooked Potato, which is easy to mass-produce."
+        ],
+        "cons": [
+          "Becomes significantly weaker in Wimpy form (low hunger), with reduced damage and health.",
+          "Extremely high hunger drain in Mighty form (up to 3.0x), making him difficult for beginners.",
+          "Suffers a 10% higher sanity drain from all sources.",
+          "His value diminishes in larger teams where his damage is less critical."
+        ],
+        "special_abilities": [
+          {
+            "name": "Hunger-based Forms",
+            "description": "Wolfgang's stats (Health, Damage, Speed, Hunger Drain) scale linearly based on his current hunger level, transitioning between Wimpy, Normal, and Mighty states."
+          }
+        ],
+        "ratings": {
+          "survivability": "8/10",
+          "utility": "6/10",
+          "combat": "10/10"
+        },
+        "notes": "The video was recorded prior to the Wolfgang rework. A pop-up in the video notes that his mechanics have since changed to be controlled by a 'Might Meter' rather than being directly tied to hunger."
+      }
+    },
+    {
+      "chunk_id": "dst_char_004_wendy",
+      "timestamp": {
+        "start": "00:04:16",
+        "end": "00:06:06"
+      },
+      "topic": "Character Guide: Wendy",
+      "summary": "Wendy is a morbid character defined by her ghostly twin sister, Abigail. While Wendy herself deals reduced damage, Abigail provides powerful Area of Effect (AoE) damage, making her exceptionally good at crowd control and farming groups of small mobs like spiders. Her effectiveness wanes against single, powerful bosses.",
+      "keywords": [
+        "Wendy",
+        "Abigail",
+        "ghost",
+        "twin sister",
+        "AoE damage",
+        "crowd control",
+        "mob farming",
+        "Sisturn"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wendy",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 200,
+          "damage_multiplier": 0.75
+        },
+        "pros": [
+          "Accompanied by Abigail, who deals excellent AoE damage.",
+          "Superb at crowd control and farming resources from mobs like spiders.",
+          "Suffers 25% less sanity drain.",
+          "Can craft a 'Sisturn' to level up Abigail and provide a sanity aura.",
+          "Can craft various potions to buff Abigail's abilities."
+        ],
+        "cons": [
+          "Deals 25% less damage herself, making her weak in direct combat.",
+          "Abigail can die quickly against bosses unless specific strategies are used.",
+          "Struggles against nightmare creatures as Abigail cannot attack them."
+        ],
+        "special_abilities": [
+          {
+            "name": "Abigail",
+            "description": "A ghostly companion summoned via Abigail's Flower. She levels up to increase her HP (150/300/600) and deals AoE damage that scales with the time of day (15 Day, 25 Dusk, 40 Night/Caves). When Abigail hits an enemy, she 'vexes' them, causing them to take 1.1x more damage from all sources. Wendy herself deals 1.4x damage to vexed enemies."
+          }
+        ],
+        "ratings": {
+          "survivability": "7/10",
+          "utility": "8/10",
+          "combat": "7/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_005_wx78",
+      "timestamp": {
+        "start": "00:06:06",
+        "end": "00:07:37"
+      },
+      "topic": "Character Guide: WX-78",
+      "summary": "WX-78 is a robot character that can upgrade their stats by eating gears. When fully upgraded, WX-78 has some of the best stats in the game. They can also become 'overcharged' by lightning, granting significant speed, light, and freezing immunity buffs.",
+      "keywords": [
+        "WX-78",
+        "robot",
+        "gears",
+        "upgrade",
+        "overcharge",
+        "lightning",
+        "high stats",
+        "Wickerbottom synergy"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "WX-78",
+        "stats": {
+          "health": "150 base, up to 400",
+          "hunger": "150 base, up to 200",
+          "sanity": "150 base, up to 300"
+        },
+        "pros": [
+          "Can eat gears to permanently upgrade max stats (15 gears for full upgrade).",
+          "Eating gears restores a large amount of stats (60 HP, 75 Hunger, 50 Sanity).",
+          "Becomes 'overcharged' by lightning, gaining 1.5x movement speed, emitting light, and becoming immune to freezing.",
+          "Ignores food penalties from stale or spoiled food."
+        ],
+        "cons": [
+          "Max stats are reset upon death.",
+          "Drops only half of the gears used for upgrades upon death.",
+          "Takes small, continuous damage when wet or in the rain without protection.",
+          "It's hard to keep WX-78 constantly overcharged without a Wickerbottom player."
+        ],
+        "special_abilities": [
+          {
+            "name": "System Upgrade",
+            "description": "Consumes gears to increase maximum Health, Hunger, and Sanity. Requires 15 gears to reach maximum potential."
+          },
+          {
+            "name": "System Overload",
+            "description": "Getting struck by lightning overcharges WX-78, providing a 1.5x speed boost, a personal light source (making them immune to Charlie), and immunity to freezing."
+          }
+        ],
+        "ratings": {
+          "survivability": "7/10",
+          "utility": "7/10",
+          "combat": "7/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_006_wickerbottom",
+      "timestamp": {
+        "start": "00:07:37",
+        "end": "00:09:29"
+      },
+      "topic": "Character Guide: Wickerbottom",
+      "summary": "Wickerbottom is the librarian, a powerful support character who can craft magical books with unique and potent effects. These books allow for mass resource generation, crowd control, and providing buffs to teammates, making her an incredible asset for any team. Her main downsides are her inability to sleep and taking penalties from stale/spoiled food.",
+      "keywords": [
+        "Wickerbottom",
+        "books",
+        "librarian",
+        "support",
+        "utility",
+        "resource farming",
+        "The End is Nigh",
+        "Applied Horticulture"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wickerbottom",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 250
+        },
+        "pros": [
+          "Can craft powerful books with unique effects (e.g., spawning birds, tentacles, lightning, growing plants).",
+          "Can craft Science Machine and Alchemy Engine recipes one tier early.",
+          "Excellent for creating large-scale farms (Feathers, Krampus Sacks, Lureplants).",
+          "Can consistently overcharge a WX-78 player using 'The End is Nigh'."
+        ],
+        "cons": [
+          "Cannot sleep in tents or bed rolls to regain health/sanity.",
+          "Takes reduced nutrition from stale and spoiled food.",
+          "Reading books costs a significant amount of sanity."
+        ],
+        "special_abilities": [
+          {
+            "name": "Bookcrafting",
+            "description": "Can craft several unique books: 'Birds of the World' (spawns 20-30 birds), 'On Tentacles' (spawns up to 3 tentacles), 'Sleepytime Stories' (puts mobs to sleep), 'The End is Nigh' (causes 16 lightning strikes), 'Applied Horticulture Abridged' (grows up to 10 edible plants), and 'Applied Silviculture' (grows non-edible plants)."
+          }
+        ],
+        "ratings": {
+          "survivability": "5/10",
+          "utility": "9/10",
+          "combat": "5/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_007_woodie",
+      "timestamp": {
+        "start": "00:09:29",
+        "end": "00:11:12"
+      },
+      "topic": "Character Guide: Woodie",
+      "summary": "Woodie is a versatile character who can transform into three different 'were' forms: Werebeaver, Weremoose, and Weregoose. Each form excels at a specific task—gathering wood, combat, and exploration, respectively. He manages these transformations with a 'weremeter' and can craft idols to choose his form.",
+      "keywords": [
+        "Woodie",
+        "werebeaver",
+        "weremoose",
+        "weregoose",
+        "transformation",
+        "versatile",
+        "resource gathering",
+        "Lucy the Axe"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Woodie",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 200
+        },
+        "pros": [
+          "Starts with his infinite durability axe, Lucy.",
+          "Chops trees faster and more efficiently.",
+          "Can transform into three specialized forms for gathering, fighting, and exploring.",
+          "All forms have night vision.",
+          "Permanent beard provides winter insulation."
+        ],
+        "cons": [
+          "Full moon transforms him into a random form.",
+          "His were-forms cannot interact with inventory (cannot eat or pick up items).",
+          "Isn't the absolute best at any single thing, but is good at many."
+        ],
+        "special_abilities": [
+          {
+            "name": "Were-Forms",
+            "description": "Can transform into a Werebeaver (chops/mines efficiently), a Weremoose (high damage reduction and powerful charge attack for combat), or a Weregoose (fastest character, can walk on water, good for scouting)."
+          },
+          {
+            "name": "Idols",
+            "description": "Can craft idols to choose which were-form to transform into by eating them."
+          }
+        ],
+        "ratings": {
+          "survivability": "6/10",
+          "utility": "6/10",
+          "combat": "5/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_008_wes",
+      "timestamp": {
+        "start": "00:11:12",
+        "end": "00:12:02"
+      },
+      "topic": "Character Guide: Wes",
+      "summary": "Wes is the mime character, designed to be a challenge. He has low stats, deals less damage, and has a faster hunger drain. His only unique ability is crafting balloons, which offer minor utility like a small speed boost or AoE sanity healing.",
+      "keywords": [
+        "Wes",
+        "mime",
+        "challenge character",
+        "hard mode",
+        "balloons",
+        "low stats",
+        "debuffs"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wes",
+        "stats": {
+          "health": 75,
+          "hunger": 75,
+          "sanity": 75,
+          "damage_multiplier": 0.75
+        },
+        "pros": [
+          "Can craft various balloons with minor effects, such as the Speedy Balloon which gives a 1.3x speed bonus.",
+          "Tools and weapons durability is drained slower because his actions take longer."
+        ],
+        "cons": [
+          "Extremely low stats (75 HP, 75 Hunger, 75 Sanity).",
+          "Deals 25% less damage.",
+          "Overheats and freezes easier.",
+          "Takes longer to mine, chop, hammer, etc.",
+          "Hounds and lightning are more likely to target him.",
+          "Doesn't speak, so he provides no audible warnings for events like hound attacks."
+        ],
+        "special_abilities": [
+          {
+            "name": "Pile o' Balloons",
+            "description": "Can craft various balloons, including a Speedy Balloon, an AoE Sanity healing balloon, and bait balloons."
+          }
+        ],
+        "ratings": {
+          "survivability": "1/10",
+          "utility": "6/10",
+          "combat": "3/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_009_maxwell",
+      "timestamp": {
+        "start": "00:12:02",
+        "end": "00:13:00"
+      },
+      "topic": "Character Guide: Maxwell",
+      "summary": "Maxwell is a character focused on resource gathering through his ability to summon shadow puppets. He has very high passive sanity regeneration but extremely low maximum health. His puppets can chop, mine, and dig for him, making him one of the best wood gatherers in the game.",
+      "keywords": [
+        "Maxwell",
+        "shadow puppets",
+        "Codex Umbra",
+        "sanity regeneration",
+        "resource gathering",
+        "wood farming",
+        "low health"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Maxwell",
+        "stats": {
+          "health": 75,
+          "hunger": 150,
+          "sanity": 200
+        },
+        "pros": [
+          "Has the highest passive sanity regeneration in the game (6.75/minute).",
+          "Can summon shadow puppets to perform tasks like chopping, mining, and digging.",
+          "One of the best wood gatherers in the game with 3 chopper puppets and 1 digger puppet.",
+          "Can read Wickerbottom's books."
+        ],
+        "cons": [
+          "Extremely low maximum health (75 HP), making him very fragile."
+        ],
+        "special_abilities": [
+          {
+            "name": "Shadow Puppets",
+            "description": "Using the Codex Umbra and Nightmare Fuel, Maxwell can summon up to four shadow puppets (Miners, Loggers, Diggers, Duelists) that perform tasks automatically. The workers have 1 HP but last forever unless damaged. The duelist has 75 HP and regenerates health."
+          }
+        ],
+        "ratings": {
+          "survivability": "4/10",
+          "utility": "9/10",
+          "combat": "5/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_010_wigfrid",
+      "timestamp": {
+        "start": "00:13:00",
+        "end": "00:13:43"
+      },
+      "topic": "Character Guide: Wigfrid",
+      "summary": "Wigfrid is a performance artist who believes she is a Valkyrie. She is a powerful combat-focused character with inherent damage bonuses and damage reduction. She can craft her own unique battle gear and gains health and sanity from fighting, but is restricted to eating only meat.",
+      "keywords": [
+        "Wigfrid",
+        "Valkyrie",
+        "combat",
+        "Battle Helm",
+        "Battle Spear",
+        "meat only",
+        "tank",
+        "life steal"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wigfrid",
+        "stats": {
+          "health": 200,
+          "hunger": 120,
+          "sanity": 120,
+          "damage_multiplier": 1.25,
+          "damage_taken_modifier": 0.75
+        },
+        "pros": [
+          "Deals 25% more damage and takes 25% less damage.",
+          "Can craft her own Battle Spear and high-durability Battle Helm (80% damage reduction).",
+          "Restores Health and Sanity while fighting.",
+          "Gains 'Inspiration' while fighting, which can be used to perform powerful battle songs that buff herself and her team."
+        ],
+        "cons": [
+          "Can only eat meat and meat-based crockpot dishes.",
+          "Teaches bad habits to new players by allowing them to tank hits without learning to kite.",
+          "Highly not recommended for beginners due to the meat-only diet."
+        ],
+        "special_abilities": [
+          {
+            "name": "Battle Songs",
+            "description": "Craftable songs that use 'Inspiration' to provide various buffs, such as increasing weapon durability, causing life steal on hit, or providing a sanity aura."
+          }
+        ],
+        "ratings": {
+          "survivability": "10/10",
+          "utility": "7/10",
+          "combat": "6/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_011_webber",
+      "timestamp": {
+        "start": "00:13:43",
+        "end": "00:14:34"
+      },
+      "topic": "Character Guide: Webber",
+      "summary": "Webber is a spider-child who can befriend spiders, eat monster meat without penalty, and grow a silk beard. He is neutral to spiders and can upgrade their dens. His playstyle revolves around creating and commanding a spider army for farming and combat.",
+      "keywords": [
+        "Webber",
+        "spider",
+        "spider army",
+        "monster meat",
+        "silk beard",
+        "spider den",
+        "befriend spiders"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Webber",
+        "stats": {
+          "health": 175,
+          "hunger": 175,
+          "sanity": 100
+        },
+        "pros": [
+          "Is a spider, making him neutral to other spiders.",
+          "Can befriend spiders by feeding them meat (4 spiders for 1 monster meat).",
+          "Can eat monster foods without any negative health or sanity effects.",
+          "Grows a beard made of silk, which can be shaved for silk.",
+          "Can upgrade spider dens with silk.",
+          "Can craft various 'Spider Gadgets' to manage his spider followers."
+        ],
+        "cons": [
+          "Mobs that are aggressive to spiders (Pigs, Bunnymen, Catcoons) are also aggressive to Webber.",
+          "Cannot befriend mobs like Pigs or Bunnymen."
+        ],
+        "special_abilities": [
+          {
+            "name": "Spider Ally",
+            "description": "Can befriend spiders to create a large army. Can use a 'Webby Whistle' to call spiders, a 'Shoo Box' to dismiss them, and 'Switcherdoodles' to change a spider's type."
+          }
+        ],
+        "ratings": {
+          "survivability": "6/10",
+          "utility": "6/10",
+          "combat": "6/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_012_winona",
+      "timestamp": {
+        "start": "00:14:34",
+        "end": "00:15:30"
+      },
+      "topic": "Character Guide: Winona",
+      "summary": "Winona is a factory worker and engineer who can build unique gadgets like catapults and spotlights. She can also craft items faster by consuming hunger, but crafts slower when her hunger is low. Her gadgets are excellent for creating automated farms and base defenses.",
+      "keywords": [
+        "Winona",
+        "engineer",
+        "gadgets",
+        "catapult",
+        "spotlight",
+        "generator",
+        "automated farms",
+        "base defense"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Winona",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 200
+        },
+        "pros": [
+          "Can craft items faster at the cost of hunger.",
+          "Can dodge the first hit from Charlie (the dark).",
+          "Can craft unique, powerful gadgets: Catapults, Spotlights, Generators, and G.E.M.erators.",
+          "Her gadgets are excellent for building automated farms (Varg, Bunny/Bee, Spider/Silk farms)."
+        ],
+        "cons": [
+          "Crafts slower than normal if her hunger is below 50.",
+          "Her catapults can be replaced by the Houndius Shootius in the late game for some farms."
+        ],
+        "special_abilities": [
+          {
+            "name": "Engineering Tab",
+            "description": "A unique crafting tab containing: Winona's Catapult (17 DPS AoE turret), Winona's Spotlight (follows player with light), Winona's Generator (powers gadgets, fueled by Nitre), and Winona's G.E.M.erator (powers gadgets, fueled by gems)."
+          },
+          {
+            "name": "Trusty Tape",
+            "description": "A craftable item that repairs clothing, equivalent to one use of a Sewing Kit."
+          }
+        ],
+        "ratings": {
+          "survivability": "5/10",
+          "utility": "9/10",
+          "combat": "6/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_013_warly",
+      "timestamp": {
+        "start": "00:15:30",
+        "end": "00:16:52"
+      },
+      "topic": "Character Guide: Warly",
+      "summary": "Warly is a chef with his own portable cooking equipment. He can cook unique, powerful dishes and spices that provide significant buffs to himself and his teammates. However, he has a faster hunger drain, can only eat crockpot food, and gets diminishing returns from eating the same meal repeatedly.",
+      "keywords": [
+        "Warly",
+        "chef",
+        "crockpot",
+        "spices",
+        "food buffs",
+        "team support",
+        "unique dishes",
+        "Volt Goat Chaud-Froid"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Warly",
+        "stats": {
+          "health": 150,
+          "hunger": 200,
+          "sanity": 200
+        },
+        "pros": [
+          "His unique crockpots cook 20% faster.",
+          "Can cook exclusive dishes with powerful buffs (e.g., Volt Goat Chaud-Froid for electric damage, Fish Cordon Bleu for wetness immunity).",
+          "Can craft spices to add to any crockpot dish, providing extra buffs (damage, work efficiency, health gain, damage reduction)."
+        ],
+        "cons": [
+          "Has a 1.2x faster hunger drain.",
+          "Can only eat crockpot foods.",
+          "Gains less nutrition from eating the same food within a 2-day period.",
+          "Some unique ingredients/spices are difficult to mass produce in the early game."
+        ],
+        "special_abilities": [
+          {
+            "name": "Unique Cookware & Recipes",
+            "description": "Starts with a Portable Crock Pot, Grinding Mill, and Seasoning Station. Can cook powerful dishes like Volt Goat Chaud-Froid, which grants electric damage and a 1.5x damage multiplier (or 2.5x if the target is wet)."
+          }
+        ],
+        "ratings": {
+          "survivability": "5/10",
+          "utility": "10/10",
+          "combat": "8/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_014_wortox",
+      "timestamp": {
+        "start": "00:16:52",
+        "end": "00:17:59"
+      },
+      "topic": "Character Guide: Wortox",
+      "summary": "Wortox is an imp-like monster who feeds on souls dropped by deceased creatures. He can use these souls to heal himself and his team with an AoE effect, or to teleport short distances. His main drawback is that he only receives half the benefits from normal food, making him reliant on soul farming.",
+      "keywords": [
+        "Wortox",
+        "imp",
+        "souls",
+        "teleport",
+        "soul hop",
+        "AoE healing",
+        "team healer",
+        "monster"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wortox",
+        "stats": {
+          "health": 175,
+          "hunger": 200,
+          "sanity": 150
+        },
+        "pros": [
+          "Gains souls when mobs die nearby.",
+          "Can eat souls for hunger at the cost of a small amount of sanity.",
+          "Can drop a soul for AoE healing (13-20 HP) for the team.",
+          "Can use a soul to teleport (Soul Hop) anywhere on screen.",
+          "Easy to farm souls from small creatures like butterflies."
+        ],
+        "cons": [
+          "Is a monster, so Pigs and Bunnymen are aggressive towards him.",
+          "Gains only half the effectiveness from all food items.",
+          "Can only hold 20 souls at a time; holding more causes him to drop them and lose sanity.",
+          "Souls can only be stored in his inventory."
+        ],
+        "special_abilities": [
+          {
+            "name": "Soul-Powered",
+            "description": "Collects souls from dead creatures. Souls can be consumed for 18.75 hunger (-5 sanity), dropped for AoE healing, or used to perform a short-range teleport (Soul Hop)."
+          }
+        ],
+        "ratings": {
+          "survivability": "9/10",
+          "utility": "7/10",
+          "combat": "6/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_015_wormwood",
+      "timestamp": {
+        "start": "00:17:59",
+        "end": "00:19:35"
+      },
+      "topic": "Character Guide: Wormwood",
+      "summary": "Wormwood is a plant-like character with a focus on farming and nature. He cannot heal from food and must use items like Manure or his own craftable Compost Wrap. He has a unique 'Green Thumb' tab for crafting plant-related items like Living Logs and armor, and he enters a blooming state in Spring, gaining bonuses.",
+      "keywords": [
+        "Wormwood",
+        "plant",
+        "farming",
+        "Green Thumb",
+        "Living Log",
+        "Bramble Husk",
+        "blooming",
+        "no food healing"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wormwood",
+        "stats": {
+          "health": 150,
+          "hunger": 150,
+          "sanity": 200
+        },
+        "pros": [
+          "Has a unique 'Green Thumb' crafting tab.",
+          "Can craft Living Logs at the cost of health.",
+          "Can plant seeds anywhere without tilling turf.",
+          "Gains sanity when planting.",
+          "Enters a 'blooming' state in Spring (or with fertilizer), gaining increased speed and hunger drain, and automatically tending to crops.",
+          "Immune to hostile weeds in farm plots.",
+          "Eyeplants are neutral to him."
+        ],
+        "cons": [
+          "Cannot heal from any food items (except Jellybeans).",
+          "Loses sanity when digging up or chopping down plants.",
+          "Takes extra damage from fire."
+        ],
+        "special_abilities": [
+          {
+            "name": "Green Thumb Crafting",
+            "description": "Can craft Living Logs, Compost Wrap (healing item), Bramble Trap (AoE trap), and Bramble Husk (armor that damages attackers and provides damage reduction)."
+          }
+        ],
+        "ratings": {
+          "survivability": "4/10",
+          "utility": "7/10",
+          "combat": "4/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_016_wurt",
+      "timestamp": {
+        "start": "00:19:35",
+        "end": "00:20:51"
+      },
+      "topic": "Character Guide: Wurt",
+      "summary": "Wurt is a Merm who can befriend other Merms, build a Merm kingdom, and eventually summon the powerful Merm King. She is a vegetarian and is targeted by pigs. Her playstyle is weak early on but becomes incredibly powerful in the late game once her Merm army and king are established.",
+      "keywords": [
+        "Wurt",
+        "Merm",
+        "Merm King",
+        "vegetarian",
+        "late game",
+        "Merm army",
+        "swamp"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wurt",
+        "stats": {
+          "health": "150 (250 with King)",
+          "hunger": "200 (250 with King)",
+          "sanity": "150 (200 with King)"
+        },
+        "pros": [
+          "Can befriend Merms.",
+          "Can build Merm structures, including houses for spawning Merms and fortifications for Royal Merm Guards.",
+          "Can summon the Merm King, who provides massive stat buffs to Wurt and all Merms.",
+          "Walks 30% faster on marsh turf.",
+          "Gains 33% extra hunger from eating vegetables, fruits, and butterfly wings.",
+          "Holding a fish in her inventory provides a sanity aura (3.3/min)."
+        ],
+        "cons": [
+          "Is a vegetarian and cannot eat meat or meat dishes.",
+          "Pigs are aggressive towards her, and she cannot trade with the Pig King.",
+          "Holding a dead fish causes sanity drain.",
+          "Very expensive and resource-intensive to establish her Merm Kingdom, making her a late-game character."
+        ],
+        "special_abilities": [
+          {
+            "name": "The Merm King",
+            "description": "A powerful ally that can be summoned. The King provides buffs to Wurt's stats and to all Merms on the map, and can be given fish to provide unique buffs to the entire team."
+          }
+        ],
+        "ratings": {
+          "survivability": "5/10",
+          "utility": "6/10",
+          "combat": "5/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_017_walter",
+      "timestamp": {
+        "start": "00:20:51",
+        "end": "00:22:53"
+      },
+      "topic": "Character Guide: Walter",
+      "summary": "Walter is a boy scout accompanied by his unkillable pet dog, Woby. He is not afraid of the dark or monsters but loses sanity when he takes damage. He uses a special Slingshot for ranged combat and can craft a portable camper's tent.",
+      "keywords": [
+        "Walter",
+        "Woby",
+        "slingshot",
+        "ranged combat",
+        "sanity loss",
+        "boy scout",
+        "camper's tent"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Walter",
+        "stats": {
+          "health": 130,
+          "hunger": 110,
+          "sanity": 200
+        },
+        "pros": [
+          "Has an unkillable pet dog, Woby, with 9 inventory slots.",
+          "Woby can be transformed into a large, ridable mount by feeding him monster meat.",
+          "Has a special Slingshot weapon with various ammo types for ranged combat.",
+          "Can craft a portable Camper's Tent.",
+          "Does not lose sanity from darkness or sanity auras from monsters.",
+          "Gains sanity when near 5+ trees."
+        ],
+        "cons": [
+          "Loses sanity whenever he takes health damage (-1 health = -2 sanity).",
+          "Sanity loss from damage can cause a downward spiral if not managed.",
+          "Does not gain sanity from equipment like the Tam o' Shanter.",
+          "Takes an extra 10 damage from all bee attacks, which ignores armor.",
+          "The Slingshot's fire rate is slow, resulting in lower DPS than many melee weapons."
+        ],
+        "special_abilities": [
+          {
+            "name": "Woby",
+            "description": "Walter's loyal pet dog who functions as a mobile chest. Can be ridden when fed monster meat."
+          },
+          {
+            "name": "Trusty Slingshot",
+            "description": "Walter's unique ranged weapon. Can fire various ammo types like Pebbles, Gold Rounds, Marble Pellets, and special rounds with freezing or slowing effects."
+          }
+        ],
+        "ratings": {
+          "survivability": "4/10",
+          "utility": "6/10",
+          "combat": "4/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_018_wanda",
+      "timestamp": {
+        "start": "00:22:53",
+        "end": "00:25:09"
+      },
+      "topic": "Character Guide: Wanda",
+      "summary": "Wanda is a time-traveler who uses an age meter instead of a health bar. She starts at age 20 and dies at 80. She deals more damage with shadow weapons the older she is, making her a high-risk, high-reward glass cannon. Her powerful utility comes from various craftable watches that allow her to reverse damage, revive teammates, and teleport.",
+      "keywords": [
+        "Wanda",
+        "age meter",
+        "glass cannon",
+        "high damage",
+        "teleport",
+        "watches",
+        "time travel",
+        "Alarming Clock"
+      ],
+      "type": "Character_Guide",
+      "character_data": {
+        "character_name": "Wanda",
+        "stats": {
+          "health": "Age Meter (20-80 years)",
+          "hunger": 175,
+          "sanity": 200
+        },
+        "pros": [
+          "Has an Age Meter instead of Health, where 1 Age = 2.5 Health (effectively 150 max HP).",
+          "Deals significantly more damage with shadow weapons as she gets older (up to 1.75x multiplier).",
+          "Can craft her own powerful weapon, the Alarming Clock, which attacks faster than a spear and has high DPS when she is old.",
+          "Has powerful utility watches: Ageless Watch (reverses aging), Backstep Watch (short-range teleport/dodge), and Backtrek Watch (long-range teleport)."
+        ],
+        "cons": [
+          "Must be close to death (old age) to deal her best damage, making her a high-risk character.",
+          "Requires high damage reduction (e.g., Night Armor) to play effectively without constant risk.",
+          "Crafting her watches requires Thulecite Fragments, which can be hard to get in the early game.",
+          "Teleports require Mactusk drops to craft."
+        ],
+        "special_abilities": [
+          {
+            "name": "Age Meter",
+            "description": "Replaces health. Starts at age 20, dies at age 80. Taking damage increases age, and she ages naturally over time (1 year every 40 seconds)."
+          },
+          {
+            "name": "Timepiece Crafting",
+            "description": "Can craft various watches: Ageless Watch (reduces age by 8), Backstep Watch (short teleport dodge), Backtrek Watch (sets a teleport anchor), and Alarming Clock (powerful personal weapon)."
+          }
+        ],
+        "ratings": {
+          "survivability": "6/10",
+          "utility": "10/10",
+          "combat": "9/10"
+        }
+      }
+    },
+    {
+      "chunk_id": "dst_char_019_beginner_recommendations",
+      "timestamp": {
+        "start": "00:25:34",
+        "end": "00:25:52"
+      },
+      "topic": "Beginner Character Recommendations",
+      "summary": "For new players, the video recommends starting with Wilson, Wendy, Willow, or Woodie. These characters are considered good for learning the game's fundamentals without overly complex or punishing mechanics, providing a sincere Don't Starve experience.",
+      "keywords": [
+        "beginner",
+        "new player",
+        "recommendation",
+        "starting character",
+        "Wilson",
+        "Wendy",
+        "Willow",
+        "Woodie"
+      ],
+      "type": "Recommendation",
+      "recommendations": {
+        "audience": "Beginners",
+        "characters": [
+          {
+            "name": "Wilson",
+            "reason": "The baseline character, good for learning core mechanics."
+          },
+          {
+            "name": "Wendy",
+            "reason": "Her companion Abigail helps with early game combat and farming."
+          },
+          {
+            "name": "Willow",
+            "reason": "Her immunity to fire and companion Bernie offer good survivability aids."
+          },
+          {
+            "name": "Woodie",
+            "reason": "His versatile forms teach different aspects of the game (gathering, combat, exploration)."
+          }
+        ],
+        "overall_advice": "These characters teach the right habits and provide a sincere Don't Starve experience, as other characters can drastically change the gameplay."
+      }
+    }
+  ]
 }
 ]

@@ -157,7 +157,7 @@ class HotkeyManager:
             try:
                 # 使用 asyncio.run_coroutine_threadsafe 来在事件循环中运行协程
                 future = asyncio.run_coroutine_threadsafe(self.on_trigger(), self._loop)
-                # 不等待协程完成，让它异步执行
+                # 等待协程完成，然后启动webview
                 future.add_done_callback(lambda f: self._handle_callback_result(f))
             except Exception as e:
                 logger.error(f"热键回调执行失败: {e}", exc_info=True)
@@ -166,5 +166,27 @@ class HotkeyManager:
         """处理回调结果"""
         try:
             future.result()  # 检查是否有异常
+            # 在主线程中启动webview
+            import webview
+            import threading
+            
+            def start_webview():
+                try:
+                    print("=== 开始启动webview ===")
+                    webview.start()
+                    print("=== webview启动完成 ===")
+                except Exception as e:
+                    logger.error(f"启动webview失败: {e}", exc_info=True)
+                    print(f"启动webview失败: {e}")
+            
+            # 在主线程中启动webview
+            if threading.current_thread() is threading.main_thread():
+                start_webview()
+            else:
+                # 如果不在主线程，使用Tk的after方法在主线程中执行
+                import tkinter as tk
+                if tk._default_root:
+                    tk._default_root.after(100, start_webview)  # 延迟100ms确保窗口已创建
+                    
         except Exception as e:
             logger.error(f"热键回调执行失败: {e}", exc_info=True)

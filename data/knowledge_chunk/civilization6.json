@@ -1,4 +1,78 @@
 [{
+  "videos": [
+    {
+      "keyword": "文明6 新手教程",
+      "url": "https://www.youtube.com/watch?v=A0tZZIPw5d0",
+      "title": "文明帝國六｜1~29回合，初期策略選擇的實戰講解｜教學系列｜EP1",
+      "views": 286058,
+      "upload_time": "2021-02-17"
+    },
+    {
+      "keyword": "文明6 前期玩法",
+      "url": "https://www.youtube.com/watch?v=eYgW-SD3k00",
+      "title": "【文明帝國6】【新手到老手】10分鐘了解生產概念：為什麼你應該要砍樹？建造者真的超好用！【柴丸】",
+      "views": 73313,
+      "upload_time": "2021-07-26"
+    },
+    {
+      "keyword": "文明6 区域规划",
+      "url": "https://www.youtube.com/watch?v=lu1f8nnk_u0",
+      "title": "【文明帝國6】【新手到老手】10分鐘了解區域規劃加成佈局：科技 / 文化 / 宗教 / 生產 / 經濟區域一次懂【柴丸】",
+      "views": 68548,
+      "upload_time": "2021-07-21"
+    },
+    {
+      "keyword": "文明6 胜利条件",
+      "url": "https://www.youtube.com/watch?v=6nReqvsEUTU",
+      "title": "【文明帝國6】【新手到老手】六種勝利條件快速介紹，拖到500回合一事無成也有機會贏【柴丸】",
+      "views": 15691,
+      "upload_time": "2021-05-21"
+    },
+    {
+      "keyword": "文明6 科技胜利",
+      "url": "https://www.youtube.com/watch?v=qMUYy9wUAH0",
+      "title": "如何200回科技勝：早期資源追逐、重點奇觀搭配、政策卡牌選擇、城市區域規劃｜#文明帝國6｜#初心者｜柴丸",
+      "views": 24241,
+      "upload_time": "2023-03-25"
+    },
+    {
+      "keyword": "文明6 文化胜利",
+      "url": "https://www.youtube.com/watch?v=rIByJ7Tg0Ec",
+      "title": "【文明帝國6】【新手到老手】最和平勝利模式！20分鐘講解文化勝利定義和玩法【柴丸】",
+      "views": 36403,
+      "upload_time": "2021-05-26"
+    },
+    {
+      "keyword": "文明6 征服胜利",
+      "url": "https://www.youtube.com/watch?v=o0LqfZPjFk",
+      "title": "【文明帝國6】【新手到老手】暴力即是美學？！10分鐘了解統治勝利基本定義和關鍵概念【柴丸】",
+      "views": 37011,
+      "upload_time": "2021-05-28"
+    },
+    {
+      "keyword": "文明6 宗教胜利",
+      "url": "https://www.youtube.com/watch?v=vAWWUxgckHs",
+      "title": "【文明帝國6】【新手到老手】全世界都在信教，12分鐘了解宗教勝利概念和重點推薦【柴丸】",
+      "views": 26824,
+      "upload_time": "2021-06-02"
+    },
+    {
+      "keyword": "文明6 神级难度",
+      "url": "https://www.youtube.com/watch?v=xqc2YtDqz9E",
+      "title": "The First 50 Turns on DEITY - Civilization 6 Tutorial",
+      "views": 89822,
+      "upload_time": "2021-07-12"
+    },
+    {
+      "keyword": "文明6 铺城 种田",
+      "url": "https://www.youtube.com/watch?v=MyEUiK-DNDE",
+      "title": "PRECISELY How Many Settlers to Produce in Civ 6!",
+      "views": 157647,
+      "upload_time": "2024-01-05"
+    }
+  ]
+},
+  {
   "video_info": {
     "url": "https://www.youtube.com/watch?v=cLDkjB9fhbM",
     "title": "The 2024 Complete Beginners Guide to Civilization VI",
@@ -1175,4 +1249,148 @@
       }
     }
   ]
-} ]
+},
+{
+  "video_info": {
+    "url": "https://www.youtube.com/watch?v=FjIu0024GfQ",
+    "title": "文明帝國6教學 俄羅斯(彼得)實戰演練 EP.1 初探世界",
+    "uploader": "安迪遊戲頻道",
+    "game": "Sid Meier's Civilization VI",
+    "views": null,
+    "upload_time": null
+  },
+  "knowledge_chunks": [
+    {
+      "chunk_id": "unique_id_001",
+      "timestamp": {
+        "start": "00:08",
+        "end": "01:26"
+      },
+      "topic": "Beginner's Guide: Game Setup Recommendations",
+      "summary": "This segment explains the recommended settings for starting a new game in Civilization VI, aimed at beginners for a tutorial playthrough. It covers selecting difficulty, map type, game modes, and civilization choice to ensure a balanced and educational experience.",
+      "keywords": [
+        "Game Setup",
+        "New Game",
+        "Difficulty Level",
+        "Prince Difficulty",
+        "Map Type",
+        "Continents Map",
+        "Game Modes",
+        "Secret Societies",
+        "Heroes & Legends"
+      ],
+      "type": "Game_Setup_Guide",
+      "data": {
+        "recommended_difficulty": "王子 (Prince)",
+        "difficulty_rationale": "This level is suitable for a tutorial as it provides a standard challenge without the extreme bonuses AI gets on higher difficulties like Deity.",
+        "recommended_civilization": "隨機的領袖 (Random Leader)",
+        "civilization_rationale": "Choosing a random leader makes the tutorial more universally applicable and demonstrates how to adapt to any civilization's strengths.",
+        "recommended_map_type": "大陸 (Continents)",
+        "recommended_map_size": "標準 (Standard)",
+        "recommended_game_speed": "標準 (Standard)",
+        "enabled_game_modes": [
+          "秘密結社 (Secret Societies)",
+          "英雄與傳奇 (Heroes & Legends)",
+          "獨占與企業 (Monopolies and Corporations)"
+        ],
+        "disaster_intensity": 2
+      }
+    },
+    {
+      "chunk_id": "unique_id_002",
+      "timestamp": {
+        "start": "01:27",
+        "end": "05:04"
+      },
+      "topic": "Early Game Strategy: Russia (Peter) for Religious Victory",
+      "summary": "This part details the early-game strategy for Russia, led by Peter. The guide analyzes Russia's unique abilities, such as the Lavra district and bonuses on Tundra tiles, to formulate a plan for a Religious Victory. It covers settling the first city, selecting initial research (Astrology and Code of Laws), and exploring the map to find Tribal Villages and plan for expansion.",
+      "keywords": [
+        "Russia",
+        "Peter",
+        "Early Game Strategy",
+        "Religious Victory",
+        "Civilization Abilities",
+        "Lavra",
+        "Cossack",
+        "Astrology",
+        "Exploration",
+        "Saint Petersburg"
+      ],
+      "type": "Civilization_Guide",
+      "data": {
+        "civilization": "俄羅斯帝國 (Russian Empire)",
+        "leader": "彼得 (Peter)",
+        "leader_ability": {
+          "name": "大使館 (Grand Embassy)",
+          "effect": "Receives Science and Culture from trade routes to more advanced civilizations."
+        },
+        "civilization_ability": {
+          "name": "俄羅斯母親 (Mother Russia)",
+          "effect": "Founded cities gain extra territory. Tundra tiles provide +1 Faith and +1 Production. Units are immune to blizzard damage."
+        },
+        "unique_unit": {
+          "name": "哥薩克騎兵 (Cossack)",
+          "replaces": "Cavalry",
+          "era": "Industrial",
+          "effect": "Stronger than Cavalry, gains +5 Combat Strength when fighting in or adjacent to home territory. Can move after attacking if movement points remain."
+        },
+        "unique_district": {
+          "name": "拉夫拉 (Lavra)",
+          "replaces": "Holy Site",
+          "effect": "Cheaper to build. The city's cultural border expands by one tile each time a Great Person is expended in this city."
+        },
+        "recommended_victory_type": "宗教勝利 (Religious Victory)",
+        "victory_rationale": "Leverages the powerful and cheaper Lavra unique district for Faith generation and Great Person points.",
+        "initial_actions": {
+          "city_settlement": "Settle the first city, Saint Petersburg, on a tile with good initial yields (2 Food, 1 Production).",
+          "technology_research": "Research 'Astrology' first to unlock the Lavra (Holy Site).",
+          "civic_research": "Research 'Code of Laws' as the first civic.",
+          "unit_movement": "Use the starting Warrior and Scout (obtained from a Tribal Village) to explore the surrounding area to find more villages and plan future city locations."
+        }
+      }
+    },
+    {
+      "chunk_id": "unique_id_003",
+      "timestamp": {
+        "start": "05:05",
+        "end": "09:03"
+      },
+      "topic": "Early Game Execution and Expansion Planning",
+      "summary": "The guide demonstrates the first few turns of gameplay, focusing on exploration and planning for a second city. The player uses units to reveal the map, finding a city-state (Mohenjo-Daro) and tribal villages which provide bonuses like a free Scout and Era Score. The video explains the importance of Era Score and planning city placement based on available resources and fresh water access, using map pins to mark potential locations.",
+      "keywords": [
+        "Exploration",
+        "Tribal Village",
+        "City-State",
+        "Mohenjo-Daro",
+        "Era Score",
+        "Expansion",
+        "Settler",
+        "City Planning",
+        "Map Pins"
+      ],
+      "type": "Gameplay_Walkthrough",
+      "data": {
+        "key_events": [
+          {
+            "turn": "2",
+            "description": "Found the city of Saint Petersburg. Encountered a tribal village, which granted a free Scout unit and Era Score."
+          },
+          {
+            "turn": "4",
+            "description": "Became the first to meet the Mohenjo-Daro city-state, gaining a free Envoy and +1 Culture from its unique bonus."
+          },
+          {
+            "turn": "5",
+            "description": "Discovered another tribal village, which granted the 'Heroes & Legends' game mode discovery, providing the first Hero, Oya."
+          }
+        ],
+        "strategic_decisions": {
+          "production_queue": "Start producing a Slinger, then a Settler to expand quickly. The video later changes production to a Builder to improve tiles after the population grows.",
+          "exploration_tactic": "Use the Warrior and Scouts to explore different directions to maximize map vision and find valuable resources or locations early.",
+          "expansion_planning": "Use the 'Settler' lens and map pins to identify optimal locations for new cities. Key considerations are access to fresh water (for +3 Housing), different luxury resources, and strategic placement."
+        },
+        "governor_choice": "Initially recommends Pingala for boosting Culture and Science or Magnus for increasing yields from harvesting resources, but no governor is appointed yet."
+      }
+    }
+  ]
+}]

@@ -54,17 +54,9 @@ class TrayIcon:
                     key = hotkey_settings.get('key', 'X')
                     hotkey_str = ' + '.join(modifiers + [key])
                     
-                    # 预创建搜索窗口以减少用户等待时间
-                    logging.info("开始预创建搜索窗口...")
-                    try:
-                        self.overlay_mgr.precreate_search_window()
-                        logging.info("预创建搜索窗口完成")
-                    except Exception as e:
-                        logging.warning(f"预创建搜索窗口失败: {e}")
-                    
                     # 系统托盘气泡通知
                     if self.icon:
-                        self.icon.notify(f"热键设置成功：{hotkey_str}\n搜索窗口已预创建，响应更快！", "GameWikiTooltip")
+                        self.icon.notify(f"热键设置成功：{hotkey_str}", "GameWikiTooltip")
                 except Exception as e:
                     logging.error(f"热键注册失败: {e}")
                     messagebox.showerror("错误", f"热键注册失败：{str(e)}\n\n请尝试使用其他热键组合。")
