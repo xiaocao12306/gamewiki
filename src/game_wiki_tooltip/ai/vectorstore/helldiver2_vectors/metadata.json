@@ -1,23 +1,4 @@
-[
-  {
-    "chunk_id": "unique_id_001",
-    "timestamp": {
-      "start": "00:00",
-      "end": "00:57"
-    },
-    "topic": "Introduction to Terminid Loadout Recommendations",
-    "summary": "The video introduces a guide to four different, effective loadouts for fighting the Terminid faction in Helldivers 2. These builds were tested on the highest difficulty (Helldive 10) on the new gloom-infested city maps and are designed to offer variety in playstyle.",
-    "keywords": [
-      "Terminids",
-      "loadouts",
-      "build guide",
-      "introduction",
-      "Helldive difficulty",
-      "gloom maps"
-    ],
-    "type": "Introduction"
-  },
-  {
+[{
     "chunk_id": "unique_id_002",
     "timestamp": {
       "start": "00:58",

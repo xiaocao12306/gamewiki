@@ -254,7 +254,7 @@ class BatchEmbeddingProcessor:
                           output_path: Path,
                           batch_size: int,
                           collection_name: str) -> str:
-        """构建FAISS索引"""
+        """构建FAISS索引和BM25索引"""
         all_vectors = []
         all_metadatas = []
         
@@ -292,6 +292,24 @@ class BatchEmbeddingProcessor:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(all_metadatas, f, ensure_ascii=False, indent=2)
         
+        # 构建BM25索引
+        logger.info("开始构建BM25索引...")
+        try:
+            from .bm25_indexer import BM25Indexer
+            
+            bm25_indexer = BM25Indexer()
+            bm25_indexer.build_index(chunks)
+            
+            # 保存BM25索引
+            bm25_path = index_path / "bm25_index.pkl"
+            bm25_indexer.save_index(str(bm25_path))
+            
+            logger.info(f"BM25索引构建完成，保存到: {bm25_path}")
+            
+        except Exception as e:
+            logger.error(f"构建BM25索引失败: {e}")
+            bm25_path = None
+        
         # 保存配置
         config = {
             "vector_store_type": "faiss",
@@ -299,7 +317,9 @@ class BatchEmbeddingProcessor:
             "model": self.model,
             "output_dim": self.output_dim,
             "chunk_count": len(chunks),
-            "index_path": str(index_path)
+            "index_path": str(index_path),
+            "bm25_index_path": str(bm25_path) if bm25_path else None,
+            "hybrid_search_enabled": bm25_path is not None
         }
         
         config_path = output_path / f"{collection_name}_config.json"
@@ -307,7 +327,7 @@ class BatchEmbeddingProcessor:
             json.dump(config, f, ensure_ascii=False, indent=2)
         
         logger.info(f"FAISS索引构建完成，保存到: {index_path}")
-        return str(index_path)
+        return str(config_path)
     
     def load_vector_store(self, config_path: str):
         """
@@ -319,6 +339,9 @@ class BatchEmbeddingProcessor:
         Returns:
             向量库实例
         """
+        # 保存配置文件路径供其他方法使用
+        self._config_file_path = config_path
+        
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
@@ -340,8 +363,28 @@ class BatchEmbeddingProcessor:
         if not FAISS_AVAILABLE:
             raise ImportError("faiss-cpu未安装")
         
-        index_path = Path(config["index_path"])
+        # 获取配置文件所在的目录
+        if hasattr(self, '_config_file_path') and self._config_file_path:
+            config_dir = Path(self._config_file_path).parent
+            index_path = config_dir / Path(config["index_path"]).name
+        else:
+            # 如果没有配置文件路径，尝试构建绝对路径
+            index_path_str = config["index_path"]
+            if not Path(index_path_str).is_absolute():
+                # 使用当前文件的位置来构建绝对路径
+                current_dir = Path(__file__).parent
+                index_path = current_dir / "vectorstore" / Path(index_path_str).name
+            else:
+                index_path = Path(index_path_str)
+        
         metadata_path = index_path / "metadata.json"
+        
+        logger.info(f"尝试加载FAISS存储，索引路径: {index_path}")
+        logger.info(f"元数据路径: {metadata_path}")
+        
+        if not metadata_path.exists():
+            logger.error(f"元数据文件不存在: {metadata_path}")
+            raise FileNotFoundError(f"元数据文件不存在: {metadata_path}")
         
         with open(metadata_path, 'r', encoding='utf-8') as f:
             metadata = json.load(f)

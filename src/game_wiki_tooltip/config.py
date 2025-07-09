@@ -7,10 +7,46 @@ from __future__ import annotations
 import json
 import pathlib
 import shutil
+import os
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional
 
 from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
+
+
+# ---------- LLM Configuration ----------
+
+@dataclass
+class LLMConfig:
+    """LLM配置类"""
+    model: str = "gemini-1.5-flash"
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    max_tokens: int = 1000
+    temperature: float = 0.7
+    timeout: int = 30
+    enable_cache: bool = True
+    cache_ttl: int = 3600  # 缓存TTL，秒
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    
+    def is_valid(self) -> bool:
+        """检查配置是否有效"""
+        api_key = self.get_api_key()
+        return bool(api_key and self.model)
+    
+    def get_api_key(self) -> Optional[str]:
+        """获取API密钥，优先从环境变量获取"""
+        if self.api_key:
+            return self.api_key
+        
+        # 根据模型类型从环境变量获取
+        if "gemini" in self.model.lower():
+            return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        elif "gpt" in self.model.lower() or "openai" in self.model.lower():
+            return os.getenv("OPENAI_API_KEY")
+        
+        return None
 
 
 # ---------- App-settings ----------
