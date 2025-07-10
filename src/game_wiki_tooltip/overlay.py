@@ -486,9 +486,20 @@ class OverlayManager:
             # 获取基础URL和搜索需求
             base_url = game_config.BaseUrl
             needs_search = game_config.NeedsSearch
+            
+            # 提取游戏名称（从窗口标题中推断，或使用游戏配置的第一个匹配的名称）
+            game_name = None
+            for config_name, cfg in self.game_cfg_mgr._configs.items():
+                if cfg == game_config:
+                    game_name = config_name
+                    break
+            
+            # 如果没有找到配置名称，使用窗口标题
+            if not game_name:
+                game_name = current_title
 
-            logger.info(f"游戏配置: base_url={base_url}, needs_search={needs_search}")
-            print(f"游戏配置: base_url={base_url}, needs_search={needs_search}")
+            logger.info(f"游戏配置: game_name={game_name}, base_url={base_url}, needs_search={needs_search}")
+            print(f"游戏配置: game_name={game_name}, base_url={base_url}, needs_search={needs_search}")
 
             
             # 如果需要搜索，显示搜索框并进行意图判断
@@ -515,8 +526,8 @@ class OverlayManager:
                     url = self._last_url
                 else:
                     print("=== 开始意图判断 ===")
-                    # 根据意图处理查询
-                    query_result = await process_query_with_intent(keyword)
+                    # 根据意图处理查询（传递游戏名称）
+                    query_result = await process_query_with_intent(keyword, game_name)
                     print(f"意图判断结果: {query_result}")
                     if not query_result:
                         print("意图判断失败")
@@ -555,9 +566,26 @@ class OverlayManager:
                             # 如果没有协议前缀，直接使用base_url作为域名
                             domain = base_url.split('/')[0]  # 移除路径部分
                         
-                        logger.info(f"搜索关键词: {keyword}")
+                        # 根据意图选择搜索关键词
+                        intent = query_result.get("intent", "wiki")
+                        if intent == "wiki":
+                            # wiki意图：使用原始查询（保持用户真实意图）
+                            search_keyword = keyword
+                        else:
+                            # guide意图：使用重写后的查询
+                            search_keyword = query_result.get("rewritten_query", keyword)
+                        
+                        search_optimization = query_result.get("search_optimization", "hybrid")
+                        
+                        logger.info(f"原始关键词: {keyword}")
+                        logger.info(f"意图类型: {intent}")
+                        logger.info(f"搜索关键词: {search_keyword}")
+                        logger.info(f"搜索优化: {search_optimization}")
                         logger.info(f"目标域名: {domain}")
-                        print(f"搜索关键词: {keyword}")
+                        print(f"原始关键词: {keyword}")
+                        print(f"意图类型: {intent}")
+                        print(f"搜索关键词: {search_keyword}")
+                        print(f"搜索优化: {search_optimization}")
                         print(f"目标域名: {domain}")
                         
                         # 获取保存的窗口设置
@@ -586,23 +614,23 @@ class OverlayManager:
                         # 2. 尝试DuckDuckGo快速链接
                         print("=== 尝试DuckDuckGo快速链接 ===")
                         logger.info("尝试DuckDuckGo快速链接...")
-                        duckduckgo_success = self._try_duckduckgo_quick_link(keyword, domain, geom)
+                        duckduckgo_success = self._try_duckduckgo_quick_link(search_keyword, domain, geom)
                         print(f"DuckDuckGo快速链接结果: {duckduckgo_success}")
                         
                         if duckduckgo_success:
                             print("=== DuckDuckGo成功 ===")
                             logger.info("DuckDuckGo快速链接成功！")
                             # 记录最后访问的URL
-                            self._last_url = f"duckduckgo_success_{keyword}"
+                            self._last_url = f"duckduckgo_success_{search_keyword}"
                         else:
                             print("=== 回退到Bing搜索 ===")
                             logger.info("DuckDuckGo快速链接失败，回退到Bing搜索")
                             # 3. 如果DuckDuckGo失败，回退到原来的Bing搜索逻辑
-                            self._fallback_to_bing_search(keyword, domain, geom)
+                            self._fallback_to_bing_search(search_keyword, domain, geom)
                             # 记录Bing搜索URL
                             import urllib.parse
                             import uuid
-                            search_query = f"{keyword} site:{domain}"
+                            search_query = f"{search_keyword} site:{domain}"
                             encoded_query = urllib.parse.quote(search_query)
                             random_id = str(uuid.uuid4()).replace('-', '').upper()[:16]
                             self._last_url = f"https://www.bing.com/search?q={encoded_query}&rdr=1&rdrig={random_id}"

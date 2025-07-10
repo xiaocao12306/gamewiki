@@ -30,5 +30,13 @@
     "Don't Starve": {
         "BaseUrl": "dontstarve.huijiwiki.com",
         "NeedsSearch": true
+    },
+    "Elden Ring": {
+        "BaseUrl": "wiki.biligame.com/eldenring",
+        "NeedsSearch": true
+    },
+    "HELLDIVERS 2": {
+        "BaseUrl": "helldivers.wiki.gg",
+        "NeedsSearch": true
     }
 }

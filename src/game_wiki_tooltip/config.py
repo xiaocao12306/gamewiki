@@ -19,7 +19,7 @@ from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
 @dataclass
 class LLMConfig:
     """LLM配置类"""
-    model: str = "gemini-1.5-flash"
+    model: str = "gemini-2.5-flash-lite-preview-06-17"
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     max_tokens: int = 1000

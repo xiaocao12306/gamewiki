@@ -237,7 +237,7 @@ class EnhancedRagQuery:
     def _initialize_hybrid_retriever(self):
         """初始化混合检索器"""
         if not self.config or not self.config.get("hybrid_search_enabled", False):
-            logger.info("混合搜索未启用或BM25索引不存在")
+            logger.warning("混合搜索未启用，将仅使用向量搜索")
             return
         
         try:
@@ -245,7 +245,13 @@ class EnhancedRagQuery:
             
             bm25_index_path = self.config.get("bm25_index_path")
             if not bm25_index_path:
-                logger.warning("BM25索引路径未找到")
+                logger.warning("BM25索引路径未找到，将仅使用向量搜索")
+                return
+            
+            # 检查BM25索引文件是否存在
+            from pathlib import Path
+            if not Path(bm25_index_path).exists():
+                logger.warning(f"BM25索引文件不存在: {bm25_index_path}，将仅使用向量搜索")
                 return
             
             # 创建向量检索器适配器
@@ -269,6 +275,7 @@ class EnhancedRagQuery:
             
         except Exception as e:
             logger.error(f"混合检索器初始化失败: {e}")
+            logger.info("将回退到仅使用向量搜索模式")
     
     def _initialize_summarizer(self):
         """初始化Gemini摘要器"""
