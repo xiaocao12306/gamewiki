@@ -574,31 +574,37 @@ class EnhancedRagQuery:
             return "😔 抱歉，我没有找到相关的游戏攻略信息。可以试试换个关键词问我哦！"
         
         try:
-            # 准备知识块数据
+            # 准备知识块数据，包含完整的结构化信息
             chunks = []
             for result in results:
                 chunk_data = result["chunk"]
-                chunks.append({
+                
+                # 传递完整的 chunk 数据，包括 structured_data
+                chunk_for_summary = {
                     "topic": chunk_data.get("topic", "未知主题"),
                     "summary": chunk_data.get("summary", ""),
                     "keywords": chunk_data.get("keywords", []),
+                    "type": chunk_data.get("type", "General"),
+                    "structured_data": chunk_data.get("structured_data", {}),
                     "score": result.get("score", 0),
                     "content": chunk_data.get("summary", "")
-                })
+                }
+                
+                chunks.append(chunk_for_summary)
             
             # 获取游戏上下文
             game_context = None
             if hasattr(self, 'config') and self.config:
                 game_context = self.config.get("game_name", None)
             
-            # 调用摘要器生成对话式回复
+            # 调用摘要器生成结构化回复
             summary_result = self.summarizer.summarize_chunks(
                 chunks=chunks,
                 query=question,
                 context=game_context
             )
             
-            # 直接返回摘要内容（对话式格式）
+            # 直接返回摘要内容（一句话总结+详细讲解格式）
             return summary_result["summary"]
             
         except Exception as e:

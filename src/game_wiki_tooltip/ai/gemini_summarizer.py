@@ -92,73 +92,215 @@ class GeminiSummarizer:
         # Detect language from query or use config
         language = self._detect_language(query) if self.config.language == "auto" else self.config.language
         
-        # Format chunks for the prompt
-        chunks_text = self._format_chunks_for_prompt(chunks)
+        # Format chunks for the prompt with structured data
+        chunks_text = self._format_chunks_with_structured_data(chunks)
         
         # Build language-specific prompt
         if language == "zh":
-            prompt = f"""你是一个友好的游戏攻略助手。请根据检索到的游戏信息，为玩家提供一个对话式的回答。
+            prompt = f"""你是一个专业的游戏攻略助手。请根据检索到的游戏信息，为玩家提供一个结构化的回答。
 
-玩家说：{query}
+玩家问题：{query}
 
-相关游戏信息：
+可用的游戏信息：
 {chunks_text}
 
 回答要求：
-1. **首先筛选信息**：仔细分析哪些信息块真正与玩家问题相关，忽略不相关的内容
-2. **配装细节**：如果涉及装备配置、build、套装等内容，必须提供具体的装备名称、属性数值、搭配理由，不要只说配装名称
-3. 用友好、对话的语气回答，就像在和朋友聊天
-4. 如果是推荐类问题，明确给出推荐顺序和理由
-5. 保持简洁，重点突出（{self.config.max_summary_length}字以内）
-6. 可以使用表情符号让回答更生动
-7. 用"推荐："、"提示："等标记重要信息
+1. **首先给出一句话总结**：用一句简洁的话概括最佳解决方案或推荐
+2. **然后提供详细原因讲解**：基于structured_data中的具体信息进行深入解释
 
-注意：只基于真正相关的信息回答，如果某个信息块与问题无关就不要使用它。
+格式要求：
+• 一句话总结：直接给出最核心的建议
+• 详细讲解：包含具体的装备名称、数值、搭配理由等
+• 如果是配装推荐，必须列出完整的装备配置和选择理由
+• 如果是敌人攻略，必须包含弱点位置、血量、推荐武器等
+• 保持友好的对话语气，可以使用适当的表情符号
+
+注意：
+- 只基于提供的信息回答，不要编造内容
+- 优先使用structured_data中的详细信息
+- 如果信息不相关，请明确说明
 
 你的回答："""
         else:
-            prompt = f"""You are a friendly game guide assistant. Based on the retrieved game information, provide a conversational response to the player.
+            prompt = f"""You are a professional game guide assistant. Based on the retrieved game information, provide a structured response to the player.
 
-Player says: {query}
+Player question: {query}
 
-Related game information:
+Available game information:
 {chunks_text}
 
 Response requirements:
-1. **Filter information first**: Carefully analyze which information chunks are truly relevant to the player's question, ignore irrelevant content
-2. **Build details**: For equipment builds, loadouts, or gear configurations, provide specific item names, stat values, and synergy explanations, not just build names
-3. Use a friendly, conversational tone like chatting with a friend
-4. For recommendation questions, clearly state the order and reasons
-5. Keep it concise and focused (within {self.config.max_summary_length} words)
-6. Use emoji to make the response more engaging
-7. Use markers like "Recommendation:", "Tip:" for important info
+1. **Start with a one-sentence summary**: Give a concise recommendation or solution
+2. **Then provide detailed explanation**: Use specific information from structured_data for in-depth analysis
 
-Note: Only answer based on truly relevant information. If an information chunk is unrelated to the question, don't use it.
+Format requirements:
+• One-sentence summary: Direct core recommendation
+• Detailed explanation: Include specific equipment names, stats, synergy reasons
+• For build recommendations, must list complete loadout configuration and selection rationale
+• For enemy guides, must include weak point locations, HP values, recommended weapons
+• Maintain friendly conversational tone with appropriate emojis
+
+Note:
+- Only answer based on provided information, don't fabricate content
+- Prioritize detailed information from structured_data
+- If information is irrelevant, clearly state so
 
 Your response:"""
         
         return prompt
     
-    def _format_chunks_for_prompt(self, chunks: List[Dict[str, Any]]) -> str:
-        """Format chunks for inclusion in the prompt"""
+    def _format_chunks_with_structured_data(self, chunks: List[Dict[str, Any]]) -> str:
+        """Format chunks including structured_data for inclusion in the prompt"""
         formatted_chunks = []
         
         for i, chunk in enumerate(chunks, 1):
-            # Extract relevant information from chunk
+            # Extract basic information
             topic = chunk.get("topic", "Unknown Topic")
-            summary = chunk.get("summary", chunk.get("content", ""))
+            summary = chunk.get("summary", "")
             keywords = chunk.get("keywords", [])
+            chunk_type = chunk.get("type", "General")
             
-            # Format individual chunk
+            # Extract structured_data if available
+            structured_data = chunk.get("structured_data", {})
+            
+            # Format basic chunk info
             chunk_text = f"""
-[知识块 {i}] {topic}
-内容：{summary}
+[知识块 {i}] {topic} (类型: {chunk_type})
+概述：{summary}
 关键词：{', '.join(keywords) if keywords else 'N/A'}
 相关度分数：{chunk.get('score', 0):.2f}
 """
+            
+            # Add structured data details if available
+            if structured_data:
+                structured_text = self._format_structured_data(structured_data, chunk_type)
+                if structured_text:
+                    chunk_text += f"\n详细结构化信息：\n{structured_text}"
+            
             formatted_chunks.append(chunk_text.strip())
         
         return "\n\n".join(formatted_chunks)
+    
+    def _format_structured_data(self, structured_data: Dict[str, Any], chunk_type: str) -> str:
+        """Format structured_data based on chunk type"""
+        if not structured_data:
+            return ""
+        
+        formatted_parts = []
+        
+        # Handle different types of structured data
+        if chunk_type == "Build_Recommendation":
+            # Format build information
+            if "loadout_recap" in structured_data:
+                loadout = structured_data["loadout_recap"]
+                formatted_parts.append("完整配装：")
+                for key, value in loadout.items():
+                    formatted_parts.append(f"  • {key}: {value}")
+            
+            if "stratagems" in structured_data:
+                formatted_parts.append("\n战略支援详情：")
+                for stratagem in structured_data["stratagems"]:
+                    name = stratagem.get("name", "Unknown")
+                    category = stratagem.get("category", "Unknown")
+                    rationale = stratagem.get("rationale", "No reason provided")
+                    formatted_parts.append(f"  • {name} ({category}): {rationale}")
+            
+            if "primary_weapon" in structured_data:
+                weapon = structured_data["primary_weapon"]
+                if isinstance(weapon, dict):
+                    name = weapon.get("name", "Unknown")
+                    rationale = weapon.get("rationale", "No reason provided")
+                    formatted_parts.append(f"\n主武器: {name}")
+                    formatted_parts.append(f"  选择理由: {rationale}")
+                else:
+                    formatted_parts.append(f"\n主武器: {weapon}")
+            
+            if "secondary_weapons" in structured_data:
+                formatted_parts.append("\n副武器选择：")
+                for weapon in structured_data["secondary_weapons"]:
+                    name = weapon.get("name", "Unknown")
+                    rationale = weapon.get("rationale", "No reason provided")
+                    formatted_parts.append(f"  • {name}: {rationale}")
+            
+            if "grenade" in structured_data:
+                grenade = structured_data["grenade"]
+                if isinstance(grenade, dict):
+                    name = grenade.get("name", "Unknown")
+                    rationale = grenade.get("rationale", "No reason provided")
+                    formatted_parts.append(f"\n手雷: {name}")
+                    formatted_parts.append(f"  选择理由: {rationale}")
+                else:
+                    formatted_parts.append(f"\n手雷: {grenade}")
+            
+            if "armor" in structured_data:
+                armor = structured_data["armor"]
+                if isinstance(armor, dict):
+                    armor_class = armor.get("class", "Unknown")
+                    perk = armor.get("perk", "Unknown")
+                    rationale = armor.get("rationale", "No reason provided")
+                    formatted_parts.append(f"\n护甲: {armor_class}级护甲 ({perk})")
+                    formatted_parts.append(f"  选择理由: {rationale}")
+                else:
+                    formatted_parts.append(f"\n护甲: {armor}")
+        
+        elif chunk_type == "Enemy_Weakpoint_Guide":
+            # Format enemy weakpoint information
+            if "enemy_name" in structured_data:
+                enemy_name = structured_data["enemy_name"]
+                faction = structured_data.get("faction", "Unknown")
+                main_health = structured_data.get("main_health", "Unknown")
+                formatted_parts.append(f"敌人: {enemy_name} ({faction})")
+                formatted_parts.append(f"主要血量: {main_health}")
+            
+            if "weak_points" in structured_data:
+                formatted_parts.append("\n弱点详情：")
+                for wp in structured_data["weak_points"]:
+                    name = wp.get("name", "Unknown")
+                    health = wp.get("health", "Unknown")
+                    armor_class = wp.get("armor_class", "Unknown")
+                    note = wp.get("note", "")
+                    formatted_parts.append(f"  • {name}: {health}血量, {armor_class}级护甲")
+                    if note:
+                        formatted_parts.append(f"    说明: {note}")
+            
+            if "recommended_weapons" in structured_data:
+                weapons = structured_data["recommended_weapons"]
+                formatted_parts.append(f"\n推荐武器: {', '.join(weapons)}")
+            
+            if "general_strategy" in structured_data:
+                strategy = structured_data["general_strategy"]
+                formatted_parts.append(f"\n总体策略: {strategy}")
+        
+        elif chunk_type == "Gameplay_Strategy":
+            # Format gameplay strategy information
+            if "combos" in structured_data:
+                formatted_parts.append("战术组合：")
+                for combo in structured_data["combos"]:
+                    name = combo.get("name", "Unknown")
+                    description = combo.get("description", "No description")
+                    formatted_parts.append(f"  • {name}: {description}")
+            
+            if "enemy_strategies" in structured_data:
+                formatted_parts.append("\n敌人应对策略：")
+                for strategy in structured_data["enemy_strategies"]:
+                    enemy = strategy.get("enemy", "Unknown")
+                    tactic = strategy.get("strategy", "No strategy provided")
+                    formatted_parts.append(f"  • {enemy}: {tactic}")
+        
+        # Handle any other structured data generically
+        for key, value in structured_data.items():
+            if key not in ["loadout_recap", "stratagems", "primary_weapon", "secondary_weapons", 
+                          "grenade", "armor", "enemy_name", "faction", "main_health", 
+                          "weak_points", "recommended_weapons", "general_strategy", 
+                          "combos", "enemy_strategies"]:
+                if isinstance(value, (str, int, float)):
+                    formatted_parts.append(f"{key}: {value}")
+                elif isinstance(value, list):
+                    formatted_parts.append(f"{key}: {', '.join(map(str, value))}")
+                elif isinstance(value, dict):
+                    formatted_parts.append(f"{key}: {str(value)}")
+        
+        return "\n".join(formatted_parts)
     
     def _format_summary_response(
         self, 
@@ -193,24 +335,47 @@ Your response:"""
         query: str
     ) -> Dict[str, Any]:
         """Fallback summary when Gemini fails"""
-        # Simple concatenation of top chunks
+        # Simple concatenation of top chunks with structured data
         summary_parts = []
         
-        for i, chunk in enumerate(chunks[:3], 1):  # Use top 3 chunks
+        for i, chunk in enumerate(chunks[:2], 1):  # Use top 2 chunks
             topic = chunk.get("topic", "")
             content = chunk.get("summary", chunk.get("content", ""))
             
+            # Add basic info
             if topic:
-                summary_parts.append(f"{topic}: {content}")
-            else:
-                summary_parts.append(content)
+                summary_parts.append(f"💡 {topic}")
+            
+            summary_parts.append(content)
+            
+            # Add key structured data if available
+            structured_data = chunk.get("structured_data", {})
+            if structured_data:
+                # Extract key recommendations
+                if "loadout_recap" in structured_data:
+                    loadout = structured_data["loadout_recap"]
+                    key_items = []
+                    for key, value in list(loadout.items())[:3]:  # Top 3 items
+                        key_items.append(f"{key}: {value}")
+                    if key_items:
+                        summary_parts.append(f"🔧 推荐配置: {'; '.join(key_items)}")
+                
+                elif "weak_points" in structured_data:
+                    weak_points = structured_data["weak_points"]
+                    if weak_points:
+                        main_weakness = weak_points[0]
+                        name = main_weakness.get("name", "Unknown")
+                        health = main_weakness.get("health", "Unknown")
+                        summary_parts.append(f"🎯 主要弱点: {name} ({health}血量)")
+            
+            summary_parts.append("")  # Add spacing between chunks
         
-        summary = "\n\n".join(summary_parts)
+        summary = "\n".join(summary_parts).strip()
         
         return {
             "summary": summary,
-            "chunks_used": min(3, len(chunks)),
-            "sources": [{"index": i+1, "topic": c.get("topic", "")} for i, c in enumerate(chunks[:3])],
+            "chunks_used": min(2, len(chunks)),
+            "sources": [{"index": i+1, "topic": c.get("topic", "")} for i, c in enumerate(chunks[:2])],
             "model": "fallback",
             "language": self._detect_language(summary)
         }

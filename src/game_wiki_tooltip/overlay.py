@@ -119,6 +119,7 @@ class OverlayManager:
                 width=w, height=h, x=x, y=y,
                 resizable=True, text_select=True,
                 confirm_close=False,
+                on_top=True,
                 js_api=self
             )
             # 关窗时保存几何
@@ -142,6 +143,7 @@ class OverlayManager:
                 width=w, height=h, x=x, y=y,
                 resizable=True, text_select=True,
                 confirm_close=False,
+                on_top=True,
                 js_api=self
             )
             
@@ -207,6 +209,7 @@ class OverlayManager:
             width=w, height=h, x=x, y=y,
             resizable=True, text_select=True,
             confirm_close=False,
+            on_top=True,
             js_api=self
         )
         # 关窗时保存几何
@@ -338,6 +341,7 @@ class OverlayManager:
             width=w, height=h, x=x, y=y,
             resizable=True, text_select=True,
             confirm_close=False,
+            on_top=True,
             js_api=self
         )
         
@@ -666,6 +670,7 @@ class OverlayManager:
                     width=geom[0], height=geom[1], x=geom[2], y=geom[3],
                     resizable=True, text_select=True,
                     confirm_close=False,
+                    on_top=True,
                     js_api=self
                 )
                 # 关窗时保存几何

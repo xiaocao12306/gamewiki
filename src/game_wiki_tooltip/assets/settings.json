@@ -8,5 +8,14 @@
         "height": 600,
         "left": 100,
         "top": 100
+    },
+    "summarization": {
+        "enabled": true,
+        "api_key": "",
+        "model_name": "gemini-2.5-flash-lite-preview-06-17",
+        "max_summary_length": 300,
+        "temperature": 0.3,
+        "include_sources": true,
+        "language": "auto"
     }
 }
