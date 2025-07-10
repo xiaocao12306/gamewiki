@@ -39,11 +39,11 @@ pyinstaller app.spec
 # Build vector index for a specific game
 python src/game_wiki_tooltip/ai/build_vector_index.py --game helldiver2
 
-# Build for all games
+# Build for all evaluate_report
 python src/game_wiki_tooltip/ai/build_vector_index.py --game all
 
-# List available games
-python src/game_wiki_tooltip/ai/build_vector_index.py --list-games
+# List available evaluate_report
+python src/game_wiki_tooltip/ai/build_vector_index.py --list-evaluate_report
 ```
 
 ## Architecture Overview

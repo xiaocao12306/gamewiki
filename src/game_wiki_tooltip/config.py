@@ -140,7 +140,7 @@ class GameConfig:
 class GameConfigManager:
     def __init__(self, path: pathlib.Path):
         # 获取默认游戏配置文件路径
-        default_games_path = package_file("games.json")
+        default_games_path = package_file("evaluate_report.json")
         
         # 如果目标文件不存在，或者默认文件比目标文件新，则复制默认文件
         if not path.exists() or default_games_path.stat().st_mtime > path.stat().st_mtime:

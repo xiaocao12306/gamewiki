@@ -77,7 +77,7 @@ class GameAwareQueryProcessor:
         """加载游戏特定知识库"""
         try:
             # 加载游戏配置
-            from ..assets import package_file
+            from ..utils import package_file
             games_config_path = package_file("games.json")
             
             if games_config_path.exists():
@@ -302,14 +302,13 @@ class GameAwareQueryProcessor:
   - "hybrid": 两者都适合
 
 **特殊规则：**
-- **wiki意图**：rewritten_query应该与translated_query相同，不添加额外内容
+- **wiki意图**：rewritten_query应该与初始query相同，不添加额外内容
 - **guide意图**：可以适当添加相关关键词，如"guide"、"strategy"、"tips"等
 - 对于推荐类查询，优先考虑为guide意图
 - 对于"什么是"类查询，优先考虑为wiki意图
 - 如果没有游戏上下文，保持查询的通用性
 
 **示例（针对{game_name or '某游戏'}）：**
-- 输入："法师职业介绍" → wiki意图，重写："mage class introduction"（保持简洁）
 - 输入："怎么打最终boss" → guide意图，重写："final boss strategy guide tips"
 - 输入："推荐下一个解锁什么" → guide意图，重写："next unlock recommendation progression guide"
 

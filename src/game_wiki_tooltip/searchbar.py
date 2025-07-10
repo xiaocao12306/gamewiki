@@ -208,7 +208,7 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
         logger.info(f"翻译: '{result.translated_query}' -> 重写: '{result.rewritten_query}'")
         
         if result.intent == "guide":
-            # 查攻略 - 使用RAG查询
+            # 查攻略 - 使用RAG查询，启用与evaluation相同的高级功能
             logger.info("使用RAG查询攻略")
             # 使用重写后的查询进行RAG搜索
             rag_query = result.rewritten_query if result.rewrite_applied else result.translated_query
@@ -217,7 +217,36 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
             mapped_game_name = map_window_title_to_game_name(game_name) if game_name else None
             logger.info(f"游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             
-            rag_result = await query_rag(rag_query, mapped_game_name)
+            # 使用与evaluation相同的高级配置
+            from .ai.rag_query import query_enhanced_rag
+            from .config import LLMConfig
+            
+            rag_result = await query_enhanced_rag(
+                question=rag_query,
+                game_name=mapped_game_name,
+                top_k=3,
+                enable_hybrid_search=True,  # 启用混合搜索
+                hybrid_config={
+                    "fusion_method": "rrf",
+                    "vector_weight": 0.5,  # 与evaluation相同的权重
+                    "bm25_weight": 0.5,    # 与evaluation相同的权重
+                    "rrf_k": 60
+                },
+                llm_config=LLMConfig(),
+                enable_summarization=True,  # 启用Gemini摘要
+                summarization_config={
+                    "model_name": "gemini-2.0-flash-exp",
+                    "max_summary_length": 300,
+                    "temperature": 0.3,
+                    "include_sources": True,
+                    "language": "auto"
+                },
+                enable_intent_reranking=True,  # 启用意图重排序
+                reranking_config={
+                    "intent_weight": 0.4,
+                    "semantic_weight": 0.6
+                }
+            )
             
             return {
                 "type": "guide",
@@ -274,13 +303,43 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
         logger.info(f"基础处理查询: '{keyword}', 意图: {intent}, 置信度: {confidence}")
         
         if intent == "guide":
-            # 查攻略 - 使用RAG查询
+            # 查攻略 - 使用RAG查询，同样启用高级功能
             logger.info("使用RAG查询攻略")
             # 将游戏名称映射到向量库文件名
             mapped_game_name = map_window_title_to_game_name(game_name) if game_name else None
             logger.info(f"游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             
-            rag_result = await query_rag(keyword, mapped_game_name)
+            # 使用与evaluation相同的高级配置
+            from .ai.rag_query import query_enhanced_rag
+            from .config import LLMConfig
+            
+            rag_result = await query_enhanced_rag(
+                question=keyword,
+                game_name=mapped_game_name,
+                top_k=3,
+                enable_hybrid_search=True,  # 启用混合搜索
+                hybrid_config={
+                    "fusion_method": "rrf",
+                    "vector_weight": 0.5,  # 与evaluation相同的权重
+                    "bm25_weight": 0.5,    # 与evaluation相同的权重
+                    "rrf_k": 60
+                },
+                llm_config=LLMConfig(),
+                enable_summarization=True,  # 启用Gemini摘要
+                summarization_config={
+                    "model_name": "gemini-2.0-flash-exp",
+                    "max_summary_length": 300,
+                    "temperature": 0.3,
+                    "include_sources": True,
+                    "language": "auto"
+                },
+                enable_intent_reranking=True,  # 启用意图重排序
+                reranking_config={
+                    "intent_weight": 0.4,
+                    "semantic_weight": 0.6
+                }
+            )
+            
             return {
                 "type": "guide",
                 "keyword": keyword,

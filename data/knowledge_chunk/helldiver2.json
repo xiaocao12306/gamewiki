@@ -2180,6 +2180,77 @@
       }
     },
     {
+      "chunk_id": "hd2_automaton_weakness_001",
+      "timestamp": {
+        "start": "null",
+        "end": "null"
+      },
+      "topic": "Automaton: Hulk Weaknesses",
+      "summary": "This guide details how to kill an Automaton Hulk. Its head/visor is a critical weak point (250 HP, Class 4 Armor) that can be destroyed by anti-tank weapons for an instant kill. The glowing heat vent on its back is another major weak point (950 HP, Unarmored) that can be damaged by any weapon, with explosives being particularly effective. Destroying its arms will disable its weapons.",
+      "keywords": [
+        "Hulk",
+        "Automaton",
+        "boss weakness",
+        "anti-tank",
+        "headshot",
+        "EAT",
+        "Quasar Cannon",
+        "Autocannon",
+        "Railgun",
+        "Orbital Railcannon Strike"
+      ],
+      "type": "Enemy_Strategy",
+      "structured_data": {
+        "enemy_name": "Hulk",
+        "faction": "Automaton",
+        "main_health": 1800,
+        "weak_points": [
+          {
+            "name": "Head/Visor",
+            "health": 250,
+            "armor_class": "Class 4 (Heavy)",
+            "durability": "25%",
+            "notes": "Instant kill if destroyed. The primary target for anti-tank weapons like the EAT, Quasar Cannon, Recoilless Rifle, or Railgun for a one-shot kill. Two direct hits from an Autocannon also work."
+          },
+          {
+            "name": "Back (Heat Vent)",
+            "health": 900,
+            "armor_class": "Class 1 (Unarmored)",
+            "durability": "60%",
+            "notes": "Large, glowing weak point. Can be damaged by any weapon. Destroying it causes a fatal bleedout. As noted, \"Explosives own it\"; grenades and explosive weapons are highly effective."
+          },
+          {
+            "name": "Arms",
+            "health": 500,
+            "armor_class": "Class 4 (Heavy)",
+            "durability": "70%",
+            "notes": "Difficult to destroy due to high health and heavy armor. Destroying an arm disables its respective weapon. Generally not worth targeting over the head or back vent."
+          },
+          {
+            "name": "Legs",
+            "health": 500,
+            "armor_class": "Class 4 (Heavy)",
+            "durability": "80%",
+            "notes": "Destroying one leg will severely slow the Hulk, making other weak points easier to target. Destroying both legs will kill it."
+          }
+        ],
+        "recommended_weapons": [
+          "Expendable Anti-Tank (EAT)",
+          "GR-8 Recoilless Rifle",
+          "LAS-99 Quasar Cannon",
+          "RS-422 Railgun",
+          "AC-8 Autocannon"
+        ],
+        "recommended_stratagems": [
+          "Orbital Railcannon Strike",
+          "Orbital Laser",
+          "Eagle 500kg Bomb",
+          "G-23 Stun Grenade"
+        ],
+        "notes": "Hulks are heavily armored from the front. Use Stun Grenades to immobilize them, creating an easy opportunity to hit the head visor or circle around to the back vent. The Orbital Railcannon Strike is a guaranteed one-shot kill."
+      }
+    },
+    {
       "chunk_id": "unique_id_004",
       "timestamp": {
         "start": "04:51",

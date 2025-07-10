@@ -292,22 +292,22 @@ class BatchEmbeddingProcessor:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(all_metadatas, f, ensure_ascii=False, indent=2)
         
-        # 构建BM25索引
-        logger.info("开始构建BM25索引...")
+        # 构建增强BM25索引
+        logger.info("开始构建增强BM25索引...")
         try:
-            from .bm25_indexer import BM25Indexer
+            from .enhanced_bm25_indexer import EnhancedBM25Indexer
             
-            bm25_indexer = BM25Indexer()
-            bm25_indexer.build_index(chunks)
+            enhanced_bm25_indexer = EnhancedBM25Indexer()
+            enhanced_bm25_indexer.build_index(chunks)
             
-            # 保存BM25索引
-            bm25_path = index_path / "bm25_index.pkl"
-            bm25_indexer.save_index(str(bm25_path))
+            # 保存增强BM25索引
+            bm25_path = index_path / "enhanced_bm25_index.pkl"
+            enhanced_bm25_indexer.save_index(str(bm25_path))
             
-            logger.info(f"BM25索引构建完成，保存到: {bm25_path}")
+            logger.info(f"增强BM25索引构建完成，保存到: {bm25_path}")
             
         except Exception as e:
-            logger.error(f"构建BM25索引失败: {e}")
+            logger.error(f"构建增强BM25索引失败: {e}")
             bm25_path = None
         
         # 保存配置
@@ -317,8 +317,8 @@ class BatchEmbeddingProcessor:
             "model": self.model,
             "output_dim": self.output_dim,
             "chunk_count": len(chunks),
-            "index_path": str(index_path),
-            "bm25_index_path": str(bm25_path) if bm25_path else None,
+            "index_path": str(index_path.resolve()),  # 使用绝对路径
+            "bm25_index_path": str(bm25_path.resolve()) if bm25_path else None,  # 使用绝对路径
             "hybrid_search_enabled": bm25_path is not None
         }
         

@@ -236,7 +236,7 @@ class EnhancedRagQuery:
     
     def _initialize_hybrid_retriever(self):
         """初始化混合检索器"""
-        if not self.config or not self.config.get("hybrid_search_enabled", False):
+        if not self.enable_hybrid_search:
             logger.warning("混合搜索未启用，将仅使用向量搜索")
             return
         
@@ -248,11 +248,27 @@ class EnhancedRagQuery:
                 logger.warning("BM25索引路径未找到，将仅使用向量搜索")
                 return
             
-            # 检查BM25索引文件是否存在
+            # 检查BM25索引文件是否存在 - 修复路径解析问题
             from pathlib import Path
-            if not Path(bm25_index_path).exists():
-                logger.warning(f"BM25索引文件不存在: {bm25_index_path}，将仅使用向量搜索")
+            bm25_path = Path(bm25_index_path)
+            
+            # 如果是相对路径，基于当前文件位置构建绝对路径
+            if not bm25_path.is_absolute():
+                # 使用当前文件所在目录作为基础
+                current_dir = Path(__file__).parent
+                # 尝试基于当前目录构建路径
+                bm25_path = current_dir.parent.parent.parent / bm25_index_path
+                # 如果找不到，尝试基于vectorstore目录
+                if not bm25_path.exists():
+                    bm25_path = current_dir / "vectorstore" / Path(bm25_index_path).name
+            
+            if not bm25_path.exists():
+                logger.warning(f"BM25索引文件不存在: {bm25_path}，将仅使用向量搜索")
                 return
+            
+            # 使用解析后的绝对路径
+            bm25_index_path = str(bm25_path)
+            logger.info(f"找到BM25索引文件: {bm25_index_path}")
             
             # 创建向量检索器适配器
             vector_retriever = VectorRetrieverAdapter(self)
