@@ -838,9 +838,9 @@ async def query_enhanced_rag(question: str,
                            enable_hybrid_search: bool = True,
                            hybrid_config: Optional[Dict] = None,
                            llm_config: Optional[LLMConfig] = None,
-                           enable_summarization: bool = False,
+                           enable_summarization: bool = True,
                            summarization_config: Optional[Dict] = None,
-                           enable_intent_reranking: bool = None,
+                           enable_intent_reranking: bool = True,
                            reranking_config: Optional[Dict] = None) -> Dict[str, Any]:
     """
     执行增强RAG查询的便捷函数

@@ -12,6 +12,8 @@ import webview
 from src.game_wiki_tooltip.ai.intent.intent_classifier import classify_intent, get_intent_confidence
 from src.game_wiki_tooltip.ai.rag_query import query_rag, map_window_title_to_game_name
 from src.game_wiki_tooltip.ai.game_aware_query_processor import process_game_aware_query, GameAwareQueryResult
+from src.game_wiki_tooltip.ai.rag_engine_factory import get_rag_engine
+from src.game_wiki_tooltip.ai.rag_config import get_global_rag_config
 
 logger = logging.getLogger(__name__)
 
@@ -217,35 +219,24 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
             mapped_game_name = map_window_title_to_game_name(game_name) if game_name else None
             logger.info(f"游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             
-            # 使用与evaluation相同的高级配置
-            from .ai.rag_query import query_enhanced_rag
+            # 使用RAG工厂获取引擎，确保与evaluation使用相同的配置
             from .config import LLMConfig
             
-            rag_result = await query_enhanced_rag(
-                question=rag_query,
+            # 获取与evaluation相同配置的RAG引擎
+            rag_engine = await get_rag_engine(
                 game_name=mapped_game_name,
-                top_k=3,
-                enable_hybrid_search=True,  # 启用混合搜索
-                hybrid_config={
-                    "fusion_method": "rrf",
-                    "vector_weight": 0.5,  # 与evaluation相同的权重
-                    "bm25_weight": 0.5,    # 与evaluation相同的权重
-                    "rrf_k": 60
-                },
-                llm_config=LLMConfig(),
-                enable_summarization=True,  # 启用Gemini摘要
-                summarization_config={
-                    "model_name": "gemini-2.0-flash-exp",
-                    "max_summary_length": 300,
-                    "temperature": 0.3,
-                    "include_sources": True,
-                    "language": "auto"
-                },
-                enable_intent_reranking=True,  # 启用意图重排序
-                reranking_config={
-                    "intent_weight": 0.4,
-                    "semantic_weight": 0.6
-                }
+                use_case="searchbar",  # 使用searchbar配置（与evaluation相同）
+                llm_config=LLMConfig()
+            )
+            
+            # 获取全局配置中的top_k值
+            config = get_global_rag_config()
+            top_k = config.retrieval_config.get("top_k", 3)
+            
+            # 使用引擎执行查询
+            rag_result = await rag_engine.query(
+                query=rag_query,
+                top_k=top_k
             )
             
             return {
@@ -312,7 +303,9 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
             # 使用与evaluation相同的高级配置
             from .ai.rag_query import query_enhanced_rag
             from .config import LLMConfig
-            
+
+
+
             rag_result = await query_enhanced_rag(
                 question=keyword,
                 game_name=mapped_game_name,

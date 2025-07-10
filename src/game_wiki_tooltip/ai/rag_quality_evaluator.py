@@ -22,6 +22,7 @@ try:
     from .unified_query_processor import UnifiedQueryProcessor
     from .hybrid_retriever import HybridSearchRetriever
     from .gemini_summarizer import create_gemini_summarizer
+    from .rag_engine_factory import get_rag_engine
     from ..config import LLMConfig
 except ImportError:
     # 相对导入失败，使用绝对导入（直接运行脚本）
@@ -37,6 +38,7 @@ except ImportError:
     from src.game_wiki_tooltip.ai.unified_query_processor import UnifiedQueryProcessor
     from src.game_wiki_tooltip.ai.hybrid_retriever import HybridSearchRetriever
     from src.game_wiki_tooltip.ai.gemini_summarizer import create_gemini_summarizer
+    from src.game_wiki_tooltip.ai.rag_engine_factory import get_rag_engine
     from src.game_wiki_tooltip.config import LLMConfig
 
 logger = logging.getLogger(__name__)
@@ -98,20 +100,12 @@ class RAGQualityEvaluator:
     async def initialize(self):
         """初始化RAG引擎和评估LLM"""
         try:
-            # 初始化RAG引擎（启用混合搜索和增强功能）
-            self.rag_engine = EnhancedRagQuery(
-                enable_summarization=True,
-                enable_hybrid_search=True,   # 启用混合搜索
-                enable_intent_reranking=True,  # 启用意图重排序
-                llm_config=self.llm_config,
-                hybrid_config={
-                    "fusion_method": "rrf",
-                    "vector_weight": 0.5,
-                    "bm25_weight": 0.5,
-                    "rrf_k": 60
-                }
+            # 使用工厂获取RAG引擎，确保配置一致性
+            self.rag_engine = await get_rag_engine(
+                game_name=self.game,
+                use_case="evaluation",
+                llm_config=self.llm_config
             )
-            await self.rag_engine.initialize(game_name=self.game)
             logger.info(f"RAG引擎初始化成功: {self.game}")
             
             # 初始化评估LLM (Gemini-2.5-pro)
@@ -152,7 +146,8 @@ class RAGQualityEvaluator:
         
         try:
             # 执行RAG查询
-            result = await self.rag_engine.query(query)
+            # 使用RAG引擎执行查询
+            result = await self.rag_engine.query(query, top_k=3)
             
             # 计算处理时间
             processing_time = asyncio.get_event_loop().time() - start_time
