@@ -1,0 +1,22 @@
+[
+  {
+    "query": "what is the best loadout for automatons",
+    "answer": "**Principle:** Use cover. Prioritize armor penetration and hitting weak spots (glowing red parts).\n\n**Armor:**\n• **Heavy Armor** with the **\"Fortified\"** passive (50% explosive resistance) is highly recommended to survive rockets and explosions.[1]\n\n**Suggested Loadout:**\n• **Primary:** **R-36 Eruptor** or **JAR-5 Dominator**. Both have explosive rounds good for medium-armored enemies.[2, 3]\n• **Support Weapon:** **LAS-99 Quasar Cannon** (for Hulks/Tanks) or **AC-8 Autocannon** (versatile for Devastators and Fabricators from a distance).[2, 4]\n• **Grenade:** **G-23 Stun Grenade** (to freeze Hulks for easy weak spot hits) or **G-16 Impact Grenade** (to quickly kill Devastators).[2, 5]\n• **Stratagems:**\n  - **SH-32 Shield Generator Pack:** Essential for survival against laser fire.[2]\n  - **Eagle Airstrike:** Excellent for destroying Automaton Fabricators.[2]\n  - **Orbital Railcannon Strike:** A reliable \"delete button\" for a single Hulk or Tank.[2, 3]"
+  },
+  {
+    "query": "what is the best loadout for terminids",
+    "answer": "**Suggested Loadout:**\n• **Primary:** **SG-225 Breaker** (shotgun for high damage up close) or **LAS-16 Sickle** (great for ammo efficiency against swarms).[1, 6]\n• **Support Weapon:** **FLAM-40 Flamethrower** (melts swarms and kills Chargers by hitting their fleshy rear) or **GR-8 Grenade Launcher** (clears bug holes and groups of medium enemies).[7, 1]\n• **Grenade:** **G-16 Impact Grenade** for quickly closing bug holes.\n• **Stratagems:**\n  - **Eagle Cluster Bomb:** The best tool for clearing large groups of small bugs.[8]\n  - **Eagle 500KG Bomb:** Your dedicated Bile Titan killer.\n  - **AX/LAS-5 \"Guard Dog\" Rover:** Passively kills small bugs, letting you focus on bigger threats.[9]"
+  },
+  {
+    "query": "where to use samples on my ship",
+    "answer": "**How to Use:**\n1. Interact with any of the four consoles.\n2. Navigate to the **\"Ship Modules\"** tab.\n3. Here, you can spend your Common (green), Rare (orange), and Super (pink) samples to buy permanent upgrades for your Stratagems.\n4. These upgrades provide powerful bonuses, like reducing cooldowns, increasing bomb counts, and more.\n\n**IMPORTANT:** You only keep the samples you collect if you **successfully extract** from the mission.[13, 14]"
+  },
+  {
+    "query": "what do boosters do / which are best",
+    "answer": "**Top-Tier Boosters to Get First:**\n• **Hellpod Space Optimization:** Everyone spawns with full ammo, stims, and grenades. Essential for starting strong and after reinforcing.[5, 6, 7]\n• **Stamina Enhancement:** Increases stamina capacity and recovery. Crucial for mobility, kiting enemies, and traversing difficult terrain.[5, 6]\n• **Vitality Enhancement:** Helps resist injuries to limbs and chest, keeping you fighting effectively. Also provides a small health increase.[6, 8]\n• **Muscle Enhancement:** Lets you move through difficult terrain like mud and deep snow with less of a speed penalty.[5, 6]\n• **Localization Confusion:** Increases the time between enemy patrols spawning, allowing for more stealth and less fighting between objectives.[5]"
+  },
+  {
+    "query": "what are armor passives / which armor is best",
+    "answer": "**Top-Tier Armor Passives:**\n• **Med-Kit:** +2 stims and +2 seconds stim duration. The best for overall survivability.[10, 11]\n• **Engineering Kit:** +2 grenade capacity. More grenades means more utility for closing bug holes or destroying fabricators.[10, 11, 12]\n• **Fortified:** 50% resistance to explosive damage. A must-have against Automatons to survive their rockets and explosions.[9, 10, 12]\n• **Servo-Assisted:** +30% throwing range and +50% limb health. Excellent for throwing stratagems from a safer distance and resisting slows from leg damage.[10, 11, 12]\n• **Scout:** Enemies detect you 30% slower and pinging the map reveals nearby enemies. Great for stealth approaches.[10, 11, 12]"
+  }
+]

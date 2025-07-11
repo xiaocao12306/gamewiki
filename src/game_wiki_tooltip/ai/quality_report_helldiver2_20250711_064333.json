@@ -1,0 +1,98 @@
+{
+  "total_cases": 1,
+  "average_score": 8.0,
+  "scores_by_dimension": {
+    "accuracy": 8.0,
+    "completeness": 6.0,
+    "relevance": 10.0,
+    "practicality": 8.0,
+    "clarity": 9.0
+  },
+  "common_issues": [
+    "知识库内容可能缺乏深度和广度，特别是关于不同Warbonds的详细比较信息。",
+    "检索算法可能未能有效检索到所有相关的知识块，导致答案不完整。",
+    "答案生成模型可能未能充分利用检索到的信息，进行更深入的分析和比较，而是倾向于给出简短的结论。",
+    "Lacks the depth of the expected answer, providing only one main recommendation.",
+    "Could benefit from mentioning alternative Warbonds and comparing them more directly."
+  ],
+  "improvement_suggestions": [
+    "扩展知识库，增加关于不同Warbonds的详细信息，包括优缺点、适用场景、价格、解锁条件等。特别要增加不同Warbonds之间的直接比较信息。",
+    "审查现有知识库内容，确保信息的准确性和一致性。可以考虑引入专家审核机制。",
+    "优化检索算法，使其能够更有效地检索到与用户查询相关的知识块。可以尝试使用更复杂的语义搜索算法，例如基于Transformer的模型。",
+    "调整检索参数，例如增加检索结果的数量，以确保检索到更多潜在相关的知识块。",
+    "优化答案生成模型，使其能够更好地利用检索到的信息，进行更深入的分析和比较。可以尝试使用更强大的生成模型，例如基于Transformer的模型，并进行微调。",
+    "引入提示工程（Prompt Engineering），引导答案生成模型提供更全面、更深入的答案。例如，可以在提示中明确要求模型比较不同Warbonds的优缺点。",
+    "细化评估指标，增加对答案深度、广度和比较能力的评估。例如，可以引入专门评估答案是否包含足够多的信息点、是否进行了充分比较的指标。",
+    "知识库内容较少，建议增加更多游戏攻略内容"
+  ],
+  "detailed_results": [
+    {
+      "query": "best warbond to buy first",
+      "expected_answer": "**#1 PRIORITY: Democratic Detonation**\n• **Why:** Unlocks new ways to destroy objectives (bug holes/fabricators) without using your standard grenades or support weapons.\n• **Key Unlocks:**\n  - **GP-31 Grenade Pistol:** Destroys objectives, freeing up your grenade slot.[1, 2, 3]\n  - **R-36 Eruptor:** Explosive rifle that destroys objectives from a safe distance.\n  - **G-123 Thermite Grenade:** Sticks to and kills heavy enemies like Chargers and Hulks.\n\n**STRONG ALTERNATIVES:**\n**• Cutting Edge:**\n  - **Why:** Get a top-tier primary weapon and the best utility grenade.\n  - **LAS-16 Sickle:** Excellent all-around weapon with near-infinite ammo.[4, 5, 3]\n  - **G-23 Stun Grenade:** Freezes all enemies, including Hulks and Titans, creating easy kill windows. Many consider this item worth the price alone.[4, 3]\n\n**• Polar Patriots:**\n  - **Why:** Great for armor variety and powerful weapons.\n  - **PLAS-101 Purifier:** A top-tier explosive primary weapon.\n  - **3 Different Armor Passives:** Get access to Scout, Servo-Assisted, and Fortified perks in one bond, great for new players.[1]\n\n**Pro-Tip:** Try weapons from fallen teammates before you buy a Warbond to see what you like.[5]",
+      "generated_answer": "Here's my recommendation for the best Warbond to buy first: The 'Steeled Veterans' Warbond is a solid choice for new players due to its powerful and versatile weapons. 🎖️\n\nHere's why:\n\n*   **Steeled Veterans Warbond:** This Warbond offers a strong set of weapons that have become even better with recent game updates. Key highlights include:\n    *   **P-4 Senator:** A powerful revolver. 🔫\n    *   **SG-225IE Breaker Incendiary:** Excellent for crowd control. 🔥\n    *   **JAR-5 Dominator:** A versatile weapon suitable for various combat situations. 🎯\n    *   **Servo-Assisted armors:** Provides useful armor sets.🛡️\n\nWhile the 'Truth Enforcers' Warbond is also a good option with weapons like the SG-220 Halt shotgun and SMG-72 Pummeler, the Steeled Veterans offers a more immediately impactful set of tools for a wider range of situations. Remember, you can earn Super Credits in-game to unlock Warbonds without spending real money! 💰",
+      "scores": {
+        "accuracy": 8,
+        "completeness": 6,
+        "relevance": 10,
+        "practicality": 8,
+        "clarity": 9
+      },
+      "overall_score": 8,
+      "evaluation_reasoning": "The answer is relevant and directly addresses the user's question by recommending the 'Steeled Veterans' Warbond. It provides clear reasons for the recommendation, highlighting specific weapons and armor sets. The accuracy is good, as the mentioned items are indeed part of the 'Steeled Veterans' Warbond and are generally considered useful. However, it lacks the depth and breadth of the expected answer, which provides multiple options and more detailed explanations for each. The answer also provides a helpful tip about earning Super Credits. Overall, it's a good, practical answer, but could be more comprehensive.",
+      "issues": [
+        "Lacks the depth of the expected answer, providing only one main recommendation.",
+        "Could benefit from mentioning alternative Warbonds and comparing them more directly."
+      ],
+      "suggestions": [
+        "Include a brief mention of other viable Warbonds and why 'Steeled Veterans' might be preferred over them.",
+        "Provide more specific details about the strengths and weaknesses of the recommended weapons and armor.",
+        "Consider adding a pro-tip similar to the one in the expected answer (e.g., trying out weapons before purchasing)."
+      ],
+      "rag_metadata": {
+        "answer": "Here's my recommendation for the best Warbond to buy first: The 'Steeled Veterans' Warbond is a solid choice for new players due to its powerful and versatile weapons. 🎖️\n\nHere's why:\n\n*   **Steeled Veterans Warbond:** This Warbond offers a strong set of weapons that have become even better with recent game updates. Key highlights include:\n    *   **P-4 Senator:** A powerful revolver. 🔫\n    *   **SG-225IE Breaker Incendiary:** Excellent for crowd control. 🔥\n    *   **JAR-5 Dominator:** A versatile weapon suitable for various combat situations. 🎯\n    *   **Servo-Assisted armors:** Provides useful armor sets.🛡️\n\nWhile the 'Truth Enforcers' Warbond is also a good option with weapons like the SG-220 Halt shotgun and SMG-72 Pummeler, the Steeled Veterans offers a more immediately impactful set of tools for a wider range of situations. Remember, you can earn Super Credits in-game to unlock Warbonds without spending real money! 💰",
+        "sources": [
+          "Superstore, Super Credits, and Purchase Advice",
+          "Warbond Recommendation: Steeled Veterans",
+          "Warbond Recommendation: Truth Enforcers"
+        ],
+        "confidence": 6.67740905617177,
+        "query_time": 30.53478489999543,
+        "results_count": 3,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 5,
+          "bm25_results_count": 6,
+          "final_results_count": 3,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 1,
+              "unified_successful": 1,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 1.4978809356689453
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 30.535038899979554
+      },
+      "processing_time": 30.535038899979554
+    }
+  ],
+  "metadata": {
+    "game": "helldiver2",
+    "rag_config": {
+      "hybrid_search": true,
+      "intent_reranking": true,
+      "summarization": true
+    },
+    "knowledge_base_info": {
+      "total_chunks": 81,
+      "unique_topics": 81,
+      "average_summary_length": 343.82716049382714,
+      "has_keywords": true
+    }
+  },
+  "generated_at": "2025-07-11T06:43:33.994781"
+}

@@ -148,10 +148,12 @@ class RAGQualityEvaluator:
     
     async def run_rag_query(self, query: str) -> Dict[str, Any]:
         """运行RAG查询并返回结果及元数据"""
+        print(f"🧪 [EVALUATOR-DEBUG] 运行RAG查询: '{query}'")
         start_time = asyncio.get_event_loop().time()
         
         try:
             # 执行RAG查询
+            print(f"🔍 [EVALUATOR-DEBUG] 调用rag_engine.query")
             result = await self.rag_engine.query(query)
             
             # 计算处理时间
@@ -160,9 +162,13 @@ class RAGQualityEvaluator:
             # 添加处理时间到结果
             result['processing_time'] = processing_time
             
+            print(f"📊 [EVALUATOR-DEBUG] RAG查询结果: 置信度={result.get('confidence', 0):.3f}, 结果数={result.get('results_count', 0)}")
+            print(f"⏱️ [EVALUATOR-DEBUG] 查询耗时: {processing_time:.3f}秒")
+            
             return result
             
         except Exception as e:
+            print(f"❌ [EVALUATOR-DEBUG] RAG查询失败: {e}")
             logger.error(f"RAG查询失败: {e}")
             return {
                 "answer": f"查询失败: {str(e)}",

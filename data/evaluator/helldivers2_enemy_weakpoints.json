@@ -1,0 +1,302 @@
+[
+  {
+    "chunk_id": "enhanced_bile_titan_001",
+    "topic": "Terminid: Bile Titan Complete Weakness Guide",
+    "summary": "Comprehensive guide to defeating Bile Titans. The forehead plate is the most critical weak point (1500 HP) that results in instant kill when destroyed. The belly sacs (4000 HP) can disable acid attacks when destroyed. Timing and positioning are crucial for success.",
+    "keywords": [
+      "Bile Titan", "BT", "forehead plate", "green belly", "acid spit", "weak point", 
+      "anti-tank", "instant kill", "headshot", "belly sacs", "positioning", "timing"
+    ],
+    "type": "Enemy_Weakness_Guide",
+    "structured_data": {
+      "enemy_name": "Bile Titan",
+      "faction": "Terminid",
+      "threat_level": "Boss",
+      "main_health": 6000,
+      "weak_points": [
+        {
+          "name": "Forehead Plate",
+          "health": 1500,
+          "armor_class": "Heavy (Class 4)",
+          "durability": "95%",
+          "location": "Center of the head, glowing orange plate",
+          "notes": "Primary weak point. Destroying this results in instant kill. Vulnerable window when rearing up to spit.",
+          "optimal_weapons": ["EAT-17", "Recoilless Rifle", "Quasar Cannon", "Railgun"],
+          "timing": "Best targeted when Bile Titan is stationary or rearing up for acid attack"
+        },
+        {
+          "name": "Green Belly Sacs",
+          "health": 4000,
+          "armor_class": "Unarmored",
+          "durability": "80%",
+          "location": "Two large green sacs on the underside",
+          "notes": "Destroying both sacs disables acid spit attack permanently. Less efficient than headshot but safer approach.",
+          "optimal_weapons": ["Grenade Launcher", "Autocannon", "Explosive Crossbow"],
+          "timing": "Target when Bile Titan is moving or when underneath it"
+        }
+      ],
+      "recommended_weapons": [
+        {
+          "weapon": "EAT-17 Expendable Anti-Tank",
+          "effectiveness": "Excellent",
+          "notes": "One-shot kill to forehead plate. Quick deployment and high damage."
+        },
+        {
+          "weapon": "GR-8 Recoilless Rifle", 
+          "effectiveness": "Excellent",
+          "notes": "One-shot kill to forehead plate. Requires teammate reload for efficiency."
+        },
+        {
+          "weapon": "LAS-99 Quasar Cannon",
+          "effectiveness": "Excellent", 
+          "notes": "One-shot kill to forehead plate. No ammo concerns but longer charge time."
+        },
+        {
+          "weapon": "RS-422 Railgun",
+          "effectiveness": "Very Good",
+          "notes": "Can one-shot forehead plate in unsafe mode. Fast firing rate."
+        }
+      ],
+      "recommended_stratagems": [
+        {
+          "stratagem": "Eagle 500KG Bomb",
+          "effectiveness": "Excellent",
+          "notes": "Instant kill with direct hit. Best used on stationary targets or spawn points."
+        },
+        {
+          "stratagem": "Orbital Railcannon Strike", 
+          "effectiveness": "Very Good",
+          "notes": "Auto-targets largest enemy. Reliable but may not always hit the head."
+        },
+        {
+          "stratagem": "Orbital Laser",
+          "effectiveness": "Excellent",
+          "notes": "Sustained damage can kill multiple Bile Titans. Recent damage buff makes it very effective."
+        }
+      ],
+      "tactical_approach": {
+        "positioning": "Maintain distance of 30-40 meters. Use elevation when possible. Avoid standing directly in front.",
+        "timing": "Wait for the rearing animation when preparing to spit acid. This exposes the forehead plate clearly.",
+        "team_coordination": "Assign one player with anti-tank weapon to focus on Bile Titans while others handle smaller enemies.",
+        "common_mistakes": [
+          "Shooting the mouth during acid spit (mouth is armored during attack)",
+          "Standing too close and getting caught in acid pools", 
+          "Wasting ammo on heavily armored body parts",
+          "Not coordinating team fire on single target"
+        ]
+      }
+    }
+  },
+  {
+    "chunk_id": "enhanced_hulk_001", 
+    "topic": "Automaton: Hulk Complete Weakness Guide",
+    "summary": "Detailed guide for defeating Hulks efficiently. The eye socket is the primary weak point requiring precision weapons. Alternative strategies include leg crippling and weapon arm destruction for tactical advantages.",
+    "keywords": [
+      "Hulk", "eye socket", "red eye", "precision targeting", "leg joints", "weapon arm", 
+      "stun grenade", "mobility disable", "flamethrower arm", "anti-materiel rifle"
+    ],
+    "type": "Enemy_Weakness_Guide", 
+    "structured_data": {
+      "enemy_name": "Hulk",
+      "faction": "Automaton",
+      "threat_level": "Heavy",
+      "main_health": 2000,
+      "weak_points": [
+        {
+          "name": "Eye Socket",
+          "health": 300,
+          "armor_class": "Unarmored",
+          "location": "Narrow red glowing slit on the 'head' area",
+          "notes": "Primary weak point. Very small target requiring precision. Instant kill when destroyed.",
+          "optimal_weapons": ["Anti-Materiel Rifle", "Autocannon", "Railgun", "Diligence Counter Sniper"],
+          "timing": "Best targeted when Hulk is stationary or moving slowly"
+        },
+        {
+          "name": "Leg Joints",
+          "health": 800,
+          "armor_class": "Medium",
+          "location": "Hip and knee joint areas on both legs",
+          "notes": "Destroying legs severely reduces mobility. Makes eye targeting much easier.",
+          "optimal_weapons": ["Autocannon", "Anti-Materiel Rifle", "Railgun"],
+          "timing": "Target when Hulk is moving or turning"
+        },
+        {
+          "name": "Weapon Arm",
+          "health": 600, 
+          "armor_class": "Medium",
+          "location": "Right arm carrying flamethrower or other weapons",
+          "notes": "Destroys primary weapon threat. Reduces Hulk's offensive capability significantly.",
+          "optimal_weapons": ["Autocannon", "Anti-Materiel Rifle"],
+          "timing": "Target when Hulk is preparing to attack"
+        }
+      ],
+      "recommended_weapons": [
+        {
+          "weapon": "AMR-12 Anti-Materiel Rifle",
+          "effectiveness": "Excellent",
+          "notes": "Perfect for eye shots. 2 shots to disable legs. High precision and penetration."
+        },
+        {
+          "weapon": "AC-8 Autocannon",
+          "effectiveness": "Very Good", 
+          "notes": "Versatile against all weak points. Good sustained fire for leg targeting."
+        },
+        {
+          "weapon": "RS-422 Railgun",
+          "effectiveness": "Very Good",
+          "notes": "One-shot potential to eye in unsafe mode. Fast follow-up shots."
+        }
+      ],
+      "tactical_approach": {
+        "precision_targeting": "Use scope weapons for eye shots. Take time to line up shots rather than spray.",
+        "alternative_strategy": "If eye shots are difficult, focus on legs first to immobilize, then target eye on stationary Hulk.",
+        "stun_tactics": "Stun Grenades freeze Hulk for 3-4 seconds, providing easy eye shot opportunity.",
+        "positioning": "Maintain 40-50 meter distance. Use cover and elevation. Avoid close quarters combat.",
+        "team_coordination": "One player focuses on precision shots while others provide covering fire and crowd control."
+      },
+      "advanced_strategies": [
+        {
+          "strategy": "Stun and Execute",
+          "description": "Throw Stun Grenade to freeze Hulk, then immediately line up eye shot with precision weapon.",
+          "success_rate": "95%",
+          "requirements": "Stun Grenades, precision weapon"
+        },
+        {
+          "strategy": "Leg Cripple Method", 
+          "description": "Target both legs with sustained fire to immobilize, then safely target eye.",
+          "success_rate": "90%",
+          "requirements": "High-penetration weapon with good ammo capacity"
+        },
+        {
+          "strategy": "Disarm and Flank",
+          "description": "Destroy weapon arm first to reduce threat, then flank for better eye angle.",
+          "success_rate": "85%",
+          "requirements": "Team coordination, medium-penetration weapons"
+        }
+      ],
+      "hulk_variants": [
+        {
+          "variant": "Standard Hulk",
+          "primary_weapon": "Flamethrower",
+          "special_notes": "Most common variant. Flamethrower has limited range but high damage."
+        },
+        {
+          "variant": "Hulk Bruiser", 
+          "primary_weapon": "Melee attacks",
+          "special_notes": "Faster movement. More aggressive melee combat. Same weak points apply."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "enhanced_charger_001",
+    "topic": "Terminid: Charger Advanced Tactics",
+    "summary": "Advanced strategies for handling Chargers, focusing on armor stripping, rear targeting, and mobility disruption. Multiple approaches for different weapons and team compositions.",
+    "keywords": [
+      "Charger", "armor stripping", "rear weak point", "leg targeting", "mobility", 
+      "bleed out", "grenade launcher", "flamethrower", "positioning"
+    ],
+    "type": "Enemy_Weakness_Guide",
+    "structured_data": {
+      "enemy_name": "Charger", 
+      "faction": "Terminid",
+      "threat_level": "Heavy",
+      "main_health": 2400,
+      "weak_points": [
+        {
+          "name": "Unarmored Rear",
+          "health": 950,
+          "armor_class": "Unarmored", 
+          "location": "Back section behind the armored carapace",
+          "notes": "Destroying triggers 7.5 second bleed out. Most reliable weak point for most weapons.",
+          "optimal_weapons": ["GL-21 Grenade Launcher", "Explosive Crossbow", "Impact Grenades"],
+          "timing": "Target when Charger has passed by or is turning around"
+        },
+        {
+          "name": "Head (Armored)",
+          "health": 1200,
+          "armor_class": "Heavy",
+          "location": "Front of creature",
+          "notes": "Requires anti-tank weapons. One-shot potential but heavily armored.",
+          "optimal_weapons": ["EAT-17", "Recoilless Rifle", "Quasar Cannon"],
+          "timing": "Best when Charger is charging directly at you"
+        },
+        {
+          "name": "Leg Armor Points",
+          "health": "Variable",
+          "armor_class": "Heavy → Unarmored",
+          "location": "Six legs, armor can be stripped",
+          "notes": "Strip armor first with AT weapons, then use regular weapons on exposed areas.",
+          "optimal_weapons": ["Anti-tank for stripping, then primary weapons"],
+          "timing": "Target legs when Charger is stationary or moving slowly"
+        }
+      ],
+      "weapon_specific_strategies": [
+        {
+          "weapon_category": "Grenade Launcher",
+          "strategy": "Focus on rear area. 2-3 grenades typically needed. Safe distance engagement.",
+          "pros": ["High damage to rear", "Safe range", "Area damage"],
+          "cons": ["Limited ammo", "Friendly fire risk"]
+        },
+        {
+          "weapon_category": "Flamethrower", 
+          "strategy": "Target head/face area. Continuous damage ignores armor durability mechanics.",
+          "pros": ["Ignores armor", "Continuous damage", "Good vs groups"],
+          "cons": ["Requires close range", "Dangerous positioning"]
+        },
+        {
+          "weapon_category": "Anti-Tank",
+          "strategy": "One-shot to head when charging. Save ammo for multiple Chargers.",
+          "pros": ["Instant kill", "Reliable", "Long range"],
+          "cons": ["Limited ammo", "Overkill for single target"]
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "enhanced_general_tactics_001",
+    "topic": "Enemy Engagement Priority and General Tactics",
+    "summary": "Strategic guide for prioritizing threats and managing multiple enemy encounters. Covers target priority, resource management, and team coordination principles.",
+    "keywords": [
+      "target priority", "threat assessment", "resource management", "team coordination",
+      "anti-tank usage", "crowd control", "positioning", "tactical withdrawal"
+    ],
+    "type": "General_Strategy_Guide",
+    "structured_data": {
+      "threat_priority_list": [
+        {
+          "priority": 1,
+          "enemies": ["Bile Titan", "Impaler"],
+          "rationale": "Highest damage potential, area denial capabilities",
+          "recommended_response": "Immediate anti-tank focus, team coordination required"
+        },
+        {
+          "priority": 2, 
+          "enemies": ["Hulk", "Factory Strider", "Charger"],
+          "rationale": "High damage, mobile threats that can disrupt team positioning",
+          "recommended_response": "Precision weapons or coordinated anti-tank fire"
+        },
+        {
+          "priority": 3,
+          "enemies": ["Devastator", "Gunship", "Tank"],
+          "rationale": "Moderate threat, manageable with appropriate weapons",
+          "recommended_response": "Medium-penetration weapons, tactical positioning"
+        }
+      ],
+      "resource_management": {
+        "anti_tank_conservation": "Reserve AT weapons for Priority 1 and 2 threats. Use alternatives when possible.",
+        "ammo_efficiency": "Target weak points to maximize damage per shot. Avoid shooting armored areas.",
+        "stratagem_timing": "Save powerful stratagems (500kg, Orbital Laser) for multiple high-value targets.",
+        "team_ammo_sharing": "Coordinate supply drops and ammo distribution based on role assignments."
+      },
+      "engagement_principles": [
+        "Always identify weak points before engaging",
+        "Maintain appropriate distance for your weapon type", 
+        "Use terrain and cover to your advantage",
+        "Focus fire on single targets rather than spreading damage",
+        "Have exit strategy planned before engaging",
+        "Coordinate team roles: precision shooter, crowd control, support"
+      ]
+    }
+  }
+] 
