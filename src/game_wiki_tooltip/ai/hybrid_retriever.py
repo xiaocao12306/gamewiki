@@ -250,15 +250,54 @@ class HybridSearchRetriever:
         # 执行混合搜索
         try:
             # 向量搜索
+            print(f"🔍 [HYBRID-DEBUG] 开始向量搜索: query='{final_query}', top_k={top_k * 2}")
             vector_results = self.vector_retriever.search(final_query, top_k * 2)
+            print(f"📊 [HYBRID-DEBUG] 向量搜索结果数量: {len(vector_results)}")
+            
+            if vector_results:
+                print(f"   📋 [HYBRID-DEBUG] 向量搜索Top3结果:")
+                for i, result in enumerate(vector_results[:3]):
+                    chunk = result.get("chunk", {})
+                    print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
+                    print(f"         分数: {result.get('score', 0):.4f}")
+                    print(f"         摘要: {chunk.get('summary', '')[:80]}...")
             
             # BM25搜索
             bm25_results = []
             if self.bm25_indexer:
+                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索: query='{final_query}', top_k={top_k * 2}")
                 bm25_results = self.bm25_indexer.search(final_query, top_k * 2)
+                print(f"📊 [HYBRID-DEBUG] BM25搜索结果数量: {len(bm25_results)}")
+                
+                if bm25_results:
+                    print(f"   📋 [HYBRID-DEBUG] BM25搜索Top3结果:")
+                    for i, result in enumerate(bm25_results[:3]):
+                        chunk = result.get("chunk", {})
+                        print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
+                        print(f"         分数: {result.get('score', 0):.4f}")
+                        print(f"         摘要: {chunk.get('summary', '')[:80]}...")
+                        if "match_info" in result:
+                            print(f"         匹配信息: {result['match_info'].get('relevance_reason', 'N/A')}")
+            else:
+                print(f"⚠️ [HYBRID-DEBUG] BM25索引器未初始化，跳过BM25搜索")
             
             # 分数融合
+            print(f"🔄 [HYBRID-DEBUG] 开始分数融合: 方法={self.fusion_method}")
+            print(f"   - 向量权重: {self.vector_weight}")
+            print(f"   - BM25权重: {self.bm25_weight}")
+            print(f"   - RRF_K: {self.rrf_k}")
+            
             final_results = self._fuse_results(vector_results, bm25_results, top_k)
+            
+            print(f"✅ [HYBRID-DEBUG] 分数融合完成，最终结果数量: {len(final_results)}")
+            if final_results:
+                print(f"   📋 [HYBRID-DEBUG] 融合后Top3结果:")
+                for i, result in enumerate(final_results[:3]):
+                    chunk = result.get("chunk", {})
+                    print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
+                    print(f"         融合分数: {result.get('fusion_score', 0):.4f}")
+                    print(f"         向量分数: {result.get('vector_score', 0):.4f}")
+                    print(f"         BM25分数: {result.get('bm25_score', 0):.4f}")
             
             # 构建返回结果
             return {
@@ -274,6 +313,7 @@ class HybridSearchRetriever:
             }
             
         except Exception as e:
+            print(f"❌ [HYBRID-DEBUG] 混合搜索执行失败: {e}")
             logger.error(f"混合搜索执行失败: {e}")
             return {
                 "results": [],
@@ -310,13 +350,22 @@ class HybridSearchRetriever:
         """
         使用倒数排名融合(RRF)算法融合结果
         """
+        print(f"🔄 [FUSION-DEBUG] 开始RRF融合: 向量结果={len(vector_results)}, BM25结果={len(bm25_results)}, k={self.rrf_k}")
+        
         # 创建文档ID到分数的映射
         doc_scores = {}
         
         # 处理向量搜索结果
+        print(f"   📊 [FUSION-DEBUG] 处理向量搜索结果:")
         for rank, result in enumerate(vector_results, 1):
-            doc_id = result.get("chunk_id", f"vector_{rank}")
+            chunk = result.get("chunk", {})
+            doc_id = chunk.get("chunk_id", f"vector_{rank}")
             rrf_score = 1.0 / (self.rrf_k + rank)
+            
+            print(f"      {rank}. ID: {doc_id}")
+            print(f"         原始分数: {result.get('score', 0):.4f}")
+            print(f"         RRF分数: {rrf_score:.4f}")
+            print(f"         主题: {chunk.get('topic', 'Unknown')}")
             
             if doc_id not in doc_scores:
                 doc_scores[doc_id] = {
@@ -328,9 +377,16 @@ class HybridSearchRetriever:
             doc_scores[doc_id]["rrf_score"] += rrf_score
         
         # 处理BM25搜索结果
+        print(f"   📊 [FUSION-DEBUG] 处理BM25搜索结果:")
         for rank, result in enumerate(bm25_results, 1):
-            doc_id = result.get("chunk_id", f"bm25_{rank}")
+            chunk = result.get("chunk", {})
+            doc_id = chunk.get("chunk_id", f"bm25_{rank}")
             rrf_score = 1.0 / (self.rrf_k + rank)
+            
+            print(f"      {rank}. ID: {doc_id}")
+            print(f"         原始分数: {result.get('score', 0):.4f}")
+            print(f"         RRF分数: {rrf_score:.4f}")
+            print(f"         主题: {chunk.get('topic', 'Unknown')}")
             
             if doc_id not in doc_scores:
                 doc_scores[doc_id] = {
@@ -347,6 +403,14 @@ class HybridSearchRetriever:
         # 按RRF分数排序并返回top_k结果
         sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
         
+        print(f"   📊 [FUSION-DEBUG] 融合后排序结果:")
+        for i, (doc_id, scores) in enumerate(sorted_docs[:min(5, len(sorted_docs))]):
+            print(f"      {i+1}. ID: {doc_id}")
+            print(f"         最终RRF分数: {scores['rrf_score']:.4f}")
+            print(f"         向量分数: {scores['vector_score']:.4f}")
+            print(f"         BM25分数: {scores['bm25_score']:.4f}")
+            print(f"         主题: {scores['result'].get('chunk', {}).get('topic', 'Unknown')}")
+        
         final_results = []
         for doc_id, scores in sorted_docs[:top_k]:
             result = scores["result"].copy()
@@ -356,6 +420,7 @@ class HybridSearchRetriever:
             result["fusion_method"] = "rrf"
             final_results.append(result)
         
+        print(f"✅ [FUSION-DEBUG] RRF融合完成，返回 {len(final_results)} 个结果")
         return final_results
     
     def _weighted_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:

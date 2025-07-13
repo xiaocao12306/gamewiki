@@ -8,7 +8,7 @@ def package_file(relative_path: str) -> Path:
     返回打包在 game_wiki_tooltip/assets 里的文件的临时拷贝路径。
     （importlib.resources 会在需要时解压到临时文件夹）
     """
-    return resources.files("game_wiki_tooltip.assets").joinpath(relative_path)
+    return resources.files("src.game_wiki_tooltip.assets").joinpath(relative_path)
 
 # ---- constants ----
 APPDATA_DIR = Path.home() / "AppData" / "Roaming" / "GameWikiTooltip"

@@ -27,7 +27,15 @@ try:
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
         QPalette, QIcon, QPixmap, QPainterPath
     )
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
+    # Try to import WebEngine, but handle gracefully if it fails
+    try:
+        from PyQt6.QtWebEngineWidgets import QWebEngineView
+        WEBENGINE_AVAILABLE = True
+    except ImportError as e:
+        print(f"Warning: PyQt6 WebEngine not available: {e}")
+        print("Wiki view functionality will be disabled. Using fallback text view.")
+        WEBENGINE_AVAILABLE = False
+        QWebEngineView = None
 except ImportError:
     from PyQt5.QtCore import (
         Qt, QTimer, QPropertyAnimation, QRect, QSize, QPoint,
@@ -37,13 +45,21 @@ except ImportError:
     from PyQt5.QtWidgets import (
         QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
-        QScrollArea, QSizePolicy, QGraphicsOpacityEffect
+        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit
     )
     from PyQt5.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
         QPalette, QIcon, QPixmap, QPainterPath
     )
-    from PyQt5.QtWebEngineWidgets import QWebEngineView
+    # Try to import WebEngine for PyQt5, but handle gracefully if it fails
+    try:
+        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        WEBENGINE_AVAILABLE = True
+    except ImportError as e:
+        print(f"Warning: PyQt5 WebEngine not available: {e}")
+        print("Wiki view functionality will be disabled. Using fallback text view.")
+        WEBENGINE_AVAILABLE = False
+        QWebEngineView = None
 
 
 class WindowMode(Enum):
@@ -480,20 +496,83 @@ class WikiView(QWidget):
         self.title_label = QLabel()
         self.title_label.setStyleSheet("color: #5f6368; margin-left: 10px;")
         
+        # Open in browser button (when WebEngine not available)
+        self.open_browser_button = QPushButton("Open in Browser")
+        self.open_browser_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4096ff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #2d7ff9;
+            }
+        """)
+        self.open_browser_button.clicked.connect(self.open_in_browser)
+        
         toolbar_layout.addWidget(self.back_button)
         toolbar_layout.addWidget(self.title_label)
         toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self.open_browser_button)
         
-        # Web view
-        self.web_view = QWebEngineView()
+        # Content area
+        if WEBENGINE_AVAILABLE and QWebEngineView:
+            # Use WebEngine view
+            self.web_view = QWebEngineView()
+            self.content_widget = self.web_view
+        else:
+            # Fallback to text view
+            self.content_widget = QTextEdit()
+            self.content_widget.setReadOnly(True)
+            self.content_widget.setStyleSheet("""
+                QTextEdit {
+                    background-color: white;
+                    border: none;
+                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                    font-size: 14px;
+                    line-height: 1.6;
+                }
+            """)
+            self.web_view = None
         
         layout.addWidget(toolbar)
-        layout.addWidget(self.web_view)
+        layout.addWidget(self.content_widget)
+        
+        # Store current URL and title
+        self.current_url = ""
+        self.current_title = ""
         
     def load_wiki(self, url: str, title: str):
         """Load a wiki page"""
+        self.current_url = url
+        self.current_title = title
         self.title_label.setText(title)
-        self.web_view.load(QUrl(url))
+        
+        if self.web_view:
+            # Use WebEngine
+            self.web_view.load(QUrl(url))
+        else:
+            # Show fallback message
+            fallback_text = f"""
+            <h2>{title}</h2>
+            <p><strong>URL:</strong> <a href="{url}">{url}</a></p>
+            <hr>
+            <p>WebEngine is not available. Please click "Open in Browser" to view this page in your default browser.</p>
+            <p>Alternatively, you can copy and paste the URL above into your browser.</p>
+            """
+            self.content_widget.setHtml(fallback_text)
+            
+    def open_in_browser(self):
+        """Open the current URL in default browser"""
+        if self.current_url:
+            import webbrowser
+            try:
+                webbrowser.open(self.current_url)
+            except Exception as e:
+                print(f"Failed to open browser: {e}")
 
 
 class UnifiedAssistantWindow(QMainWindow):
@@ -706,15 +785,24 @@ class AssistantController:
         
     def show_mini(self):
         """Show mini assistant"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("show_mini() called")
         if not self.mini_window:
+            logger.info("Creating new MiniAssistant window")
             self.mini_window = MiniAssistant()
             self.mini_window.clicked.connect(self.expand_to_chat)
+        logger.info("Showing mini window")
         self.mini_window.show()
         self.current_mode = WindowMode.MINI
         
     def expand_to_chat(self):
         """Expand from mini to chat window with animation"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("expand_to_chat() called")
         if not self.main_window:
+            logger.info("Creating new UnifiedAssistantWindow")
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.window_closing.connect(self.show_mini)

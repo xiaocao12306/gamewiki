@@ -357,14 +357,21 @@ class EnhancedRagQuery:
         Returns:
             检索结果列表
         """
+        print(f"🔍 [VECTOR-DEBUG] 开始FAISS向量检索: query='{query}', top_k={top_k}")
+        
         if not self.vector_store or not self.metadata:
+            print(f"⚠️ [VECTOR-DEBUG] 向量库或元数据未初始化")
+            logger.warning("向量库或元数据未初始化")
             return []
         
         try:
             # 获取查询向量
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
+            print(f"📄 [VECTOR-DEBUG] 构建查询文本: '{query_text[:100]}...'")
+            
             query_vectors = self.processor.embed_batch([query_text])
             query_vector = np.array(query_vectors[0], dtype=np.float32).reshape(1, -1)
+            print(f"🔢 [VECTOR-DEBUG] 查询向量维度: {query_vector.shape}, 前5个值: {query_vector[0][:5]}")
             
             # 构建正确的索引文件路径
             # 使用与BatchEmbeddingProcessor._load_faiss_store相同的路径逻辑
@@ -377,33 +384,59 @@ class EnhancedRagQuery:
                 index_path = Path(index_path_str)
             
             index_file_path = index_path / "index.faiss"
+            print(f"📂 [VECTOR-DEBUG] FAISS索引文件路径: {index_file_path}")
             logger.info(f"尝试加载FAISS索引文件: {index_file_path}")
             
             if not index_file_path.exists():
+                print(f"❌ [VECTOR-DEBUG] FAISS索引文件不存在: {index_file_path}")
                 logger.error(f"FAISS索引文件不存在: {index_file_path}")
                 return []
             
             # 加载FAISS索引
             index = faiss.read_index(str(index_file_path))
+            print(f"📊 [VECTOR-DEBUG] FAISS索引信息: 总向量数={index.ntotal}, 维度={index.d}")
             
             # 执行检索
             scores, indices = index.search(query_vector, top_k)
+            print(f"🔍 [VECTOR-DEBUG] FAISS检索原始结果:")
+            print(f"   - 检索到的索引: {indices[0]}")
+            print(f"   - 相似度分数: {scores[0]}")
             
             # 返回结果
             results = []
             for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
                 if idx < len(self.metadata):
                     chunk = self.metadata[idx]
-                    results.append({
+                    chunk_info = {
                         "chunk": chunk,
                         "score": float(score),
                         "rank": i + 1
-                    })
+                    }
+                    results.append(chunk_info)
+                    
+                    # 详细的结果调试信息
+                    print(f"   📋 [VECTOR-DEBUG] 结果 {i+1}:")
+                    print(f"      - 相似度分数: {score:.4f}")
+                    print(f"      - 索引ID: {idx}")
+                    print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
+                    print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
+                    print(f"      - 关键词: {chunk.get('keywords', [])}")
+                    
+                    # 如果是结构化数据，显示敌人信息
+                    if "structured_data" in chunk:
+                        structured = chunk["structured_data"]
+                        if "enemy_name" in structured:
+                            print(f"      - 敌人名称: {structured['enemy_name']}")
+                        if "weak_points" in structured:
+                            weak_points = [wp.get("name", "Unknown") for wp in structured["weak_points"]]
+                            print(f"      - 弱点: {weak_points}")
             
+            print(f"✅ [VECTOR-DEBUG] FAISS检索完成，找到 {len(results)} 个结果")
             logger.info(f"FAISS检索完成，找到 {len(results)} 个结果")
             return results
             
         except Exception as e:
+            print(f"❌ [VECTOR-DEBUG] FAISS检索失败: {e}")
             logger.error(f"FAISS检索失败: {e}")
             return []
     
@@ -418,33 +451,64 @@ class EnhancedRagQuery:
         Returns:
             检索结果列表
         """
+        print(f"🔍 [VECTOR-DEBUG] 开始Qdrant向量检索: query='{query}', top_k={top_k}")
+        
         if not self.vector_store or not QDRANT_AVAILABLE:
+            print(f"⚠️ [VECTOR-DEBUG] Qdrant向量库未初始化或不可用")
+            logger.warning("Qdrant向量库未初始化或不可用")
             return []
         
         try:
             # 获取查询向量
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
+            print(f"📄 [VECTOR-DEBUG] 构建查询文本: '{query_text[:100]}...'")
+            
             query_vectors = self.processor.embed_batch([query_text])
+            query_vector = query_vectors[0]
+            print(f"🔢 [VECTOR-DEBUG] 查询向量维度: {len(query_vector)}, 前5个值: {query_vector[:5]}")
             
             # 执行检索
+            print(f"🔍 [VECTOR-DEBUG] 调用Qdrant搜索: collection={self.config['collection_name']}")
             results = self.vector_store.search(
                 collection_name=self.config["collection_name"],
-                query_vector=query_vectors[0],
+                query_vector=query_vector,
                 limit=top_k
             )
+            
+            print(f"📊 [VECTOR-DEBUG] Qdrant检索原始结果数量: {len(results)}")
             
             # 格式化结果
             formatted_results = []
             for i, result in enumerate(results):
-                formatted_results.append({
+                chunk_info = {
                     "chunk": result.payload,
                     "score": result.score,
                     "rank": i + 1
-                })
+                }
+                formatted_results.append(chunk_info)
+                
+                # 详细的结果调试信息
+                print(f"   📋 [VECTOR-DEBUG] 结果 {i+1}:")
+                print(f"      - 相似度分数: {result.score:.4f}")
+                print(f"      - 主题: {result.payload.get('topic', 'Unknown')}")
+                print(f"      - 摘要: {result.payload.get('summary', '')[:100]}...")
+                print(f"      - 关键词: {result.payload.get('keywords', [])}")
+                
+                # 如果是结构化数据，显示敌人信息
+                if "structured_data" in result.payload:
+                    structured = result.payload["structured_data"]
+                    if "enemy_name" in structured:
+                        print(f"      - 敌人名称: {structured['enemy_name']}")
+                    if "weak_points" in structured:
+                        weak_points = [wp.get("name", "Unknown") for wp in structured["weak_points"]]
+                        print(f"      - 弱点: {weak_points}")
             
+            print(f"✅ [VECTOR-DEBUG] Qdrant检索完成，找到 {len(formatted_results)} 个结果")
+            logger.info(f"Qdrant检索完成，找到 {len(formatted_results)} 个结果")
             return formatted_results
             
         except Exception as e:
+            print(f"❌ [VECTOR-DEBUG] Qdrant检索失败: {e}")
             logger.error(f"Qdrant检索失败: {e}")
             return []
     
