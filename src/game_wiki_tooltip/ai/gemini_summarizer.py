@@ -59,27 +59,82 @@ class GeminiSummarizer:
         Returns:
             Dictionary with summary and metadata
         """
+        print(f"📝 [SUMMARY-DEBUG] 开始Gemini摘要生成")
+        print(f"   - 查询: '{query}'")
+        print(f"   - 知识块数量: {len(chunks)}")
+        print(f"   - 上下文: {context or 'None'}")
+        print(f"   - 模型: {self.config.model_name}")
+        
         if not chunks:
+            print(f"⚠️ [SUMMARY-DEBUG] 没有知识块可用于摘要")
             return {
                 "summary": "No relevant information found.",
                 "chunks_used": 0,
                 "sources": []
             }
         
+        # 显示知识块信息
+        print(f"📋 [SUMMARY-DEBUG] 输入知识块详情:")
+        for i, chunk in enumerate(chunks, 1):
+            print(f"   {i}. 主题: {chunk.get('topic', 'Unknown')}")
+            print(f"      分数: {chunk.get('score', 0):.4f}")
+            print(f"      类型: {chunk.get('type', 'General')}")
+            print(f"      关键词: {chunk.get('keywords', [])}")
+            print(f"      摘要: {chunk.get('summary', '')[:100]}...")
+            
+            # 如果有结构化数据，显示关键信息
+            if "structured_data" in chunk:
+                structured = chunk["structured_data"]
+                if "enemy_name" in structured:
+                    print(f"      敌人: {structured['enemy_name']}")
+                if "loadout_recap" in structured:
+                    print(f"      配装数: {len(structured['loadout_recap'])} 项")
+                if "stratagems" in structured:
+                    print(f"      策略数: {len(structured['stratagems'])} 项")
+        
         try:
+            # 检测语言
+            language = self._detect_language(query) if self.config.language == "auto" else self.config.language
+            print(f"🌐 [SUMMARY-DEBUG] 检测到语言: {language}")
+            
             # Build the summarization prompt
+            print(f"📝 [SUMMARY-DEBUG] 构建摘要提示词")
             prompt = self._build_summarization_prompt(chunks, query, context)
+            print(f"   - 提示词长度: {len(prompt)} 字符")
+            print(f"   - 温度设置: {self.config.temperature}")
+            print(f"   - 最大输出tokens: {self.config.max_summary_length * 2}")
             
             # Generate summary
+            print(f"🤖 [SUMMARY-DEBUG] 调用Gemini生成摘要")
             response = self.model.generate_content(prompt)
             
+            print(f"✅ [SUMMARY-DEBUG] Gemini响应成功")
+            print(f"   - 响应长度: {len(response.text)} 字符")
+            print(f"   - 响应预览: {response.text[:200]}...")
+            
             # Parse and format the response
-            return self._format_summary_response(response.text, chunks)
+            formatted_response = self._format_summary_response(response.text, chunks)
+            
+            print(f"📊 [SUMMARY-DEBUG] 摘要生成完成")
+            print(f"   - 使用的知识块数: {formatted_response['chunks_used']}")
+            print(f"   - 来源数: {len(formatted_response['sources'])}")
+            print(f"   - 最终摘要长度: {len(formatted_response['summary'])} 字符")
+            
+            return formatted_response
             
         except Exception as e:
+            print(f"❌ [SUMMARY-DEBUG] 摘要生成失败: {e}")
             logger.error(f"Error in summarization: {str(e)}")
+            
             # Fallback to simple concatenation
-            return self._fallback_summary(chunks, query)
+            print(f"🔄 [SUMMARY-DEBUG] 使用降级摘要策略")
+            fallback_result = self._fallback_summary(chunks, query)
+            
+            print(f"📊 [SUMMARY-DEBUG] 降级摘要完成")
+            print(f"   - 使用的知识块数: {fallback_result['chunks_used']}")
+            print(f"   - 降级摘要长度: {len(fallback_result['summary'])} 字符")
+            
+            return fallback_result
     
     def _build_summarization_prompt(
         self, 

@@ -12,8 +12,6 @@ import webview
 from src.game_wiki_tooltip.ai.intent.intent_classifier import classify_intent, get_intent_confidence
 from src.game_wiki_tooltip.ai.rag_query import query_rag, map_window_title_to_game_name
 from src.game_wiki_tooltip.ai.game_aware_query_processor import process_game_aware_query, GameAwareQueryResult
-from src.game_wiki_tooltip.ai.rag_engine_factory import get_rag_engine
-from src.game_wiki_tooltip.ai.rag_config import get_global_rag_config
 
 logger = logging.getLogger(__name__)
 
@@ -211,33 +209,56 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
         
         if result.intent == "guide":
             # 查攻略 - 使用RAG查询，启用与evaluation相同的高级功能
+            print(f"🎯 [SEARCHBAR-DEBUG] 使用RAG查询攻略")
             logger.info("使用RAG查询攻略")
             # 使用重写后的查询进行RAG搜索
             rag_query = result.rewritten_query if result.rewrite_applied else result.translated_query
             
             # 将游戏名称映射到向量库文件名
             mapped_game_name = map_window_title_to_game_name(game_name) if game_name else None
+            print(f"🎮 [SEARCHBAR-DEBUG] 游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             logger.info(f"游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             
-            # 使用RAG工厂获取引擎，确保与evaluation使用相同的配置
+            # 使用与evaluation相同的高级配置
+            from .ai.rag_query import query_enhanced_rag
             from .config import LLMConfig
             
-            # 获取与evaluation相同配置的RAG引擎
-            rag_engine = await get_rag_engine(
+            print(f"📋 [SEARCHBAR-DEBUG] 调用query_enhanced_rag，使用以下配置:")
+            print(f"   - 查询: '{rag_query}'")
+            print(f"   - 游戏: {mapped_game_name}")
+            print(f"   - 混合搜索: 启用 (vector_weight=0.5, bm25_weight=0.5)")
+            print(f"   - 摘要: 启用 (gemini-2.0-flash-exp)")
+            print(f"   - 重排序: 启用 (intent_weight=0.4)")
+            
+            rag_result = await query_enhanced_rag(
+                question=rag_query,
                 game_name=mapped_game_name,
-                use_case="searchbar",  # 使用searchbar配置（与evaluation相同）
-                llm_config=LLMConfig()
+                top_k=3,
+                enable_hybrid_search=True,  # 启用混合搜索
+                hybrid_config={
+                    "fusion_method": "rrf",
+                    "vector_weight": 0.5,  # 与evaluation相同的权重
+                    "bm25_weight": 0.5,    # 与evaluation相同的权重
+                    "rrf_k": 60
+                },
+                llm_config=LLMConfig(),
+                enable_summarization=True,  # 启用Gemini摘要
+                summarization_config={
+                    "model_name": "gemini-2.0-flash-exp",
+                    "max_summary_length": 300,
+                    "temperature": 0.3,
+                    "include_sources": True,
+                    "language": "auto"
+                },
+                enable_intent_reranking=True,  # 启用意图重排序
+                reranking_config={
+                    "intent_weight": 0.4,
+                    "semantic_weight": 0.6
+                }
             )
             
-            # 获取全局配置中的top_k值
-            config = get_global_rag_config()
-            top_k = config.retrieval_config.get("top_k", 3)
-            
-            # 使用引擎执行查询
-            rag_result = await rag_engine.query(
-                query=rag_query,
-                top_k=top_k
-            )
+            print(f"📊 [SEARCHBAR-DEBUG] RAG查询结果: 置信度={rag_result.get('confidence', 0):.3f}, 结果数={rag_result.get('results_count', 0)}")
+            print(f"⏱️ [SEARCHBAR-DEBUG] 查询耗时: {rag_result.get('query_time', 0):.3f}秒")
             
             return {
                 "type": "guide",
@@ -286,26 +307,35 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
             }
             
     except Exception as e:
+        print(f"⚠️ [SEARCHBAR-DEBUG] 游戏感知处理失败，降级到基础处理: {e}")
         logger.error(f"游戏感知处理失败，使用基础处理: {e}")
         # 降级到基础处理
         intent = classify_intent(keyword)
         confidence = get_intent_confidence(keyword)
         
+        print(f"🔄 [SEARCHBAR-DEBUG] 基础处理查询: '{keyword}', 意图: {intent}, 置信度: {confidence}")
         logger.info(f"基础处理查询: '{keyword}', 意图: {intent}, 置信度: {confidence}")
         
         if intent == "guide":
             # 查攻略 - 使用RAG查询，同样启用高级功能
+            print(f"🎯 [SEARCHBAR-DEBUG] 使用RAG查询攻略（降级模式）")
             logger.info("使用RAG查询攻略")
             # 将游戏名称映射到向量库文件名
             mapped_game_name = map_window_title_to_game_name(game_name) if game_name else None
+            print(f"🎮 [SEARCHBAR-DEBUG] 游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             logger.info(f"游戏名称映射: '{game_name}' -> '{mapped_game_name}'")
             
             # 使用与evaluation相同的高级配置
             from .ai.rag_query import query_enhanced_rag
             from .config import LLMConfig
-
-
-
+            
+            print(f"📋 [SEARCHBAR-DEBUG] 调用query_enhanced_rag（降级模式），使用以下配置:")
+            print(f"   - 查询: '{keyword}'")
+            print(f"   - 游戏: {mapped_game_name}")
+            print(f"   - 混合搜索: 启用 (vector_weight=0.5, bm25_weight=0.5)")
+            print(f"   - 摘要: 启用 (gemini-2.0-flash-exp)")
+            print(f"   - 重排序: 启用 (intent_weight=0.4)")
+            
             rag_result = await query_enhanced_rag(
                 question=keyword,
                 game_name=mapped_game_name,
@@ -333,6 +363,9 @@ async def process_query_with_intent(keyword: str, game_name: Optional[str] = Non
                 }
             )
             
+            print(f"📊 [SEARCHBAR-DEBUG] RAG查询结果（降级模式）: 置信度={rag_result.get('confidence', 0):.3f}, 结果数={rag_result.get('results_count', 0)}")
+            print(f"⏱️ [SEARCHBAR-DEBUG] 查询耗时: {rag_result.get('query_time', 0):.3f}秒")
+        
             return {
                 "type": "guide",
                 "keyword": keyword,

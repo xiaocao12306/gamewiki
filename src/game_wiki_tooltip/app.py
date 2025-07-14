@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.DEBUG,
                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 SETTINGS_PATH = APPDATA_DIR / "settings.json"
-GAMES_CONFIG_PATH = APPDATA_DIR / "evaluate_report.json"
+GAMES_CONFIG_PATH = APPDATA_DIR / "games.json"
 
 
 def main():

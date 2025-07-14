@@ -174,9 +174,11 @@ class EnhancedRagQuery:
             game_name: 游戏名称，用于自动查找向量库
         """
         try:
+            print(f"🔧 [RAG-DEBUG] 开始初始化RAG系统 - 游戏: {game_name}")
             logger.info("初始化增强RAG系统...")
             
             if not BATCH_EMBEDDING_AVAILABLE:
+                print(f"⚠️ [RAG-DEBUG] 批量嵌入模块不可用，使用模拟模式")
                 logger.warning("批量嵌入模块不可用，使用模拟模式")
                 self.is_initialized = True
                 return
@@ -188,18 +190,22 @@ class EnhancedRagQuery:
                 current_dir = Path(__file__).parent
                 vector_dir = current_dir / "vectorstore"
                 
+                print(f"🔍 [RAG-DEBUG] 查找向量库目录: {vector_dir}")
                 logger.info(f"查找向量库目录: {vector_dir}")
                 config_files = list(vector_dir.glob(f"{game_name}_vectors_config.json"))
                 
                 if config_files:
                     self.vector_store_path = str(config_files[0])
+                    print(f"✅ [RAG-DEBUG] 找到向量库配置: {self.vector_store_path}")
                     logger.info(f"找到向量库配置: {self.vector_store_path}")
                 else:
+                    print(f"❌ [RAG-DEBUG] 未找到游戏 {game_name} 的向量库")
                     logger.warning(f"未找到游戏 {game_name} 的向量库，搜索路径: {vector_dir}")
                     logger.warning(f"查找模式: {game_name}_vectors_config.json")
                     # 列出现有的文件用于调试
                     try:
                         existing_files = list(vector_dir.glob("*_vectors_config.json"))
+                        print(f"📁 [RAG-DEBUG] 现有向量库文件: {[f.name for f in existing_files]}")
                         logger.info(f"现有的向量库配置文件: {[f.name for f in existing_files]}")
                     except Exception as e:
                         logger.error(f"列出现有文件失败: {e}")
@@ -351,14 +357,21 @@ class EnhancedRagQuery:
         Returns:
             检索结果列表
         """
+        print(f"🔍 [VECTOR-DEBUG] 开始FAISS向量检索: query='{query}', top_k={top_k}")
+        
         if not self.vector_store or not self.metadata:
+            print(f"⚠️ [VECTOR-DEBUG] 向量库或元数据未初始化")
+            logger.warning("向量库或元数据未初始化")
             return []
         
         try:
             # 获取查询向量
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
+            print(f"📄 [VECTOR-DEBUG] 构建查询文本: '{query_text[:100]}...'")
+            
             query_vectors = self.processor.embed_batch([query_text])
             query_vector = np.array(query_vectors[0], dtype=np.float32).reshape(1, -1)
+            print(f"🔢 [VECTOR-DEBUG] 查询向量维度: {query_vector.shape}, 前5个值: {query_vector[0][:5]}")
             
             # 构建正确的索引文件路径
             # 使用与BatchEmbeddingProcessor._load_faiss_store相同的路径逻辑
@@ -371,33 +384,59 @@ class EnhancedRagQuery:
                 index_path = Path(index_path_str)
             
             index_file_path = index_path / "index.faiss"
+            print(f"📂 [VECTOR-DEBUG] FAISS索引文件路径: {index_file_path}")
             logger.info(f"尝试加载FAISS索引文件: {index_file_path}")
             
             if not index_file_path.exists():
+                print(f"❌ [VECTOR-DEBUG] FAISS索引文件不存在: {index_file_path}")
                 logger.error(f"FAISS索引文件不存在: {index_file_path}")
                 return []
             
             # 加载FAISS索引
             index = faiss.read_index(str(index_file_path))
+            print(f"📊 [VECTOR-DEBUG] FAISS索引信息: 总向量数={index.ntotal}, 维度={index.d}")
             
             # 执行检索
             scores, indices = index.search(query_vector, top_k)
+            print(f"🔍 [VECTOR-DEBUG] FAISS检索原始结果:")
+            print(f"   - 检索到的索引: {indices[0]}")
+            print(f"   - 相似度分数: {scores[0]}")
             
             # 返回结果
             results = []
             for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
                 if idx < len(self.metadata):
                     chunk = self.metadata[idx]
-                    results.append({
+                    chunk_info = {
                         "chunk": chunk,
                         "score": float(score),
                         "rank": i + 1
-                    })
+                    }
+                    results.append(chunk_info)
+                    
+                    # 详细的结果调试信息
+                    print(f"   📋 [VECTOR-DEBUG] 结果 {i+1}:")
+                    print(f"      - 相似度分数: {score:.4f}")
+                    print(f"      - 索引ID: {idx}")
+                    print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
+                    print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
+                    print(f"      - 关键词: {chunk.get('keywords', [])}")
+                    
+                    # 如果是结构化数据，显示敌人信息
+                    if "structured_data" in chunk:
+                        structured = chunk["structured_data"]
+                        if "enemy_name" in structured:
+                            print(f"      - 敌人名称: {structured['enemy_name']}")
+                        if "weak_points" in structured:
+                            weak_points = [wp.get("name", "Unknown") for wp in structured["weak_points"]]
+                            print(f"      - 弱点: {weak_points}")
             
+            print(f"✅ [VECTOR-DEBUG] FAISS检索完成，找到 {len(results)} 个结果")
             logger.info(f"FAISS检索完成，找到 {len(results)} 个结果")
             return results
             
         except Exception as e:
+            print(f"❌ [VECTOR-DEBUG] FAISS检索失败: {e}")
             logger.error(f"FAISS检索失败: {e}")
             return []
     
@@ -412,33 +451,64 @@ class EnhancedRagQuery:
         Returns:
             检索结果列表
         """
+        print(f"🔍 [VECTOR-DEBUG] 开始Qdrant向量检索: query='{query}', top_k={top_k}")
+        
         if not self.vector_store or not QDRANT_AVAILABLE:
+            print(f"⚠️ [VECTOR-DEBUG] Qdrant向量库未初始化或不可用")
+            logger.warning("Qdrant向量库未初始化或不可用")
             return []
         
         try:
             # 获取查询向量
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
+            print(f"📄 [VECTOR-DEBUG] 构建查询文本: '{query_text[:100]}...'")
+            
             query_vectors = self.processor.embed_batch([query_text])
+            query_vector = query_vectors[0]
+            print(f"🔢 [VECTOR-DEBUG] 查询向量维度: {len(query_vector)}, 前5个值: {query_vector[:5]}")
             
             # 执行检索
+            print(f"🔍 [VECTOR-DEBUG] 调用Qdrant搜索: collection={self.config['collection_name']}")
             results = self.vector_store.search(
                 collection_name=self.config["collection_name"],
-                query_vector=query_vectors[0],
+                query_vector=query_vector,
                 limit=top_k
             )
+            
+            print(f"📊 [VECTOR-DEBUG] Qdrant检索原始结果数量: {len(results)}")
             
             # 格式化结果
             formatted_results = []
             for i, result in enumerate(results):
-                formatted_results.append({
+                chunk_info = {
                     "chunk": result.payload,
                     "score": result.score,
                     "rank": i + 1
-                })
+                }
+                formatted_results.append(chunk_info)
+                
+                # 详细的结果调试信息
+                print(f"   📋 [VECTOR-DEBUG] 结果 {i+1}:")
+                print(f"      - 相似度分数: {result.score:.4f}")
+                print(f"      - 主题: {result.payload.get('topic', 'Unknown')}")
+                print(f"      - 摘要: {result.payload.get('summary', '')[:100]}...")
+                print(f"      - 关键词: {result.payload.get('keywords', [])}")
+                
+                # 如果是结构化数据，显示敌人信息
+                if "structured_data" in result.payload:
+                    structured = result.payload["structured_data"]
+                    if "enemy_name" in structured:
+                        print(f"      - 敌人名称: {structured['enemy_name']}")
+                    if "weak_points" in structured:
+                        weak_points = [wp.get("name", "Unknown") for wp in structured["weak_points"]]
+                        print(f"      - 弱点: {weak_points}")
             
+            print(f"✅ [VECTOR-DEBUG] Qdrant检索完成，找到 {len(formatted_results)} 个结果")
+            logger.info(f"Qdrant检索完成，找到 {len(formatted_results)} 个结果")
             return formatted_results
             
         except Exception as e:
+            print(f"❌ [VECTOR-DEBUG] Qdrant检索失败: {e}")
             logger.error(f"Qdrant检索失败: {e}")
             return []
     
@@ -453,7 +523,10 @@ class EnhancedRagQuery:
         Returns:
             混合搜索结果（包含元数据）
         """
+        print(f"🔍 [RAG-DEBUG] 进入混合搜索: query='{query}', top_k={top_k}")
+        
         if not self.hybrid_retriever:
+            print(f"⚠️ [RAG-DEBUG] 混合检索器未初始化，回退到向量搜索")
             logger.warning("混合检索器未初始化，回退到向量搜索")
             results = self._search_faiss(query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(query, top_k)
             return {
@@ -473,10 +546,14 @@ class EnhancedRagQuery:
         
         # 执行混合搜索
         try:
+            print(f"🚀 [RAG-DEBUG] 开始执行混合搜索")
             search_response = self.hybrid_retriever.search(query, top_k)
-            logger.info(f"混合搜索完成，找到 {len(search_response.get('results', []))} 个结果")
+            result_count = len(search_response.get('results', []))
+            print(f"✅ [RAG-DEBUG] 混合搜索完成，找到 {result_count} 个结果")
+            logger.info(f"混合搜索完成，找到 {result_count} 个结果")
             return search_response
         except Exception as e:
+            print(f"❌ [RAG-DEBUG] 混合搜索失败: {e}")
             logger.error(f"混合搜索失败: {e}")
             # 回退到向量搜索
             results = self._search_faiss(query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(query, top_k)
@@ -657,19 +734,20 @@ class EnhancedRagQuery:
             await self.initialize()
         
         try:
-            logger.info(f"RAG查询: {question}")
+            print(f"🔍 [RAG-DEBUG] 开始RAG查询: {question}")
             start_time = asyncio.get_event_loop().time()
             
             # 执行检索
             if self.vector_store and self.config:
                 # 选择搜索方式
                 if self.enable_hybrid_search and self.hybrid_retriever:
+                    print(f"�� [RAG-DEBUG] 使用混合搜索")
                     search_response = self._search_hybrid(question, top_k)
                     results = search_response.get("results", [])
                     
                     # 应用意图感知重排序
                     if self.enable_intent_reranking and self.reranker and results:
-                        logger.info("应用意图感知重排序")
+                        print(f"🔄 [RAG-DEBUG] 应用意图感知重排序")
                         results = self.reranker.rerank_results(
                             results, 
                             question,
@@ -682,8 +760,10 @@ class EnhancedRagQuery:
                     
                     # 格式化答案（使用摘要或原始格式）
                     if self.enable_summarization and self.summarizer and len(results) > 1:
+                        print(f"💬 [RAG-DEBUG] 使用Gemini摘要格式化答案")
                         answer = await self._format_answer_with_summary(search_response, question)
                     else:
+                        print(f"💬 [RAG-DEBUG] 使用原始格式化答案")
                         answer = self._format_answer(search_response, question)
                     
                     confidence = max([r["score"] for r in results]) if results else 0.0
@@ -694,6 +774,7 @@ class EnhancedRagQuery:
                     
                 else:
                     # 单一搜索
+                    print(f"🔍 [RAG-DEBUG] 使用单一向量搜索")
                     if self.config["vector_store_type"] == "faiss":
                         results = self._search_faiss(question, top_k)
                     else:
@@ -701,7 +782,7 @@ class EnhancedRagQuery:
                     
                     # 应用意图感知重排序
                     if self.enable_intent_reranking and self.reranker and results:
-                        logger.info("应用意图感知重排序（单一搜索模式）")
+                        print(f"🔄 [RAG-DEBUG] 应用意图感知重排序（单一搜索模式）")
                         results = self.reranker.rerank_results(
                             results, 
                             question,
@@ -728,8 +809,10 @@ class EnhancedRagQuery:
                     
                     # 格式化答案（使用摘要或原始格式）
                     if self.enable_summarization and self.summarizer and len(results) > 1:
+                        print(f"💬 [RAG-DEBUG] 使用Gemini摘要格式化答案")
                         answer = await self._format_answer_with_summary(search_response, question)
                     else:
+                        print(f"💬 [RAG-DEBUG] 使用原始格式化答案")
                         answer = self._format_answer(search_response, question)
                     
                     confidence = max([r["score"] for r in results]) if results else 0.0
@@ -740,6 +823,7 @@ class EnhancedRagQuery:
                 # 检查是否是因为向量库不存在
                 if hasattr(self, 'vector_store_path') and self.vector_store_path is None:
                     # 没有找到对应的向量库
+                    print(f"❌ [RAG-DEBUG] 向量库未找到: {self.vector_store_path}")
                     return {
                         "answer": "抱歉，暂时没有找到该游戏的攻略数据库。\n\n目前支持攻略查询的游戏：\n• 地狱潜兵2 - 可以询问武器配装、敌人攻略等\n• 艾尔登法环 - 可以询问Boss攻略、装备推荐等\n• 饥荒联机版 - 可以询问生存技巧、角色攻略等\n• 文明6 - 可以询问文明特色、胜利策略等\n• 七日杀 - 可以询问建筑、武器制作等",
                         "sources": [],
@@ -750,6 +834,7 @@ class EnhancedRagQuery:
                     }
                 else:
                     # 其他情况，回退到模拟模式
+                    print(f"🔄 [RAG-DEBUG] 回退到模拟模式")
                     await asyncio.sleep(0.5)
                     answer = self._get_mock_answer(question)
                     confidence = 0.8
@@ -770,6 +855,7 @@ class EnhancedRagQuery:
             if 'search_metadata' in locals():
                 response["search_metadata"] = search_metadata
             
+            print(f"✅ [RAG-DEBUG] RAG查询完成，耗时: {query_time:.2f}秒")
             return response
             
         except Exception as e:
@@ -860,6 +946,8 @@ async def query_enhanced_rag(question: str,
     Returns:
         查询结果字典
     """
+    print(f"🎯 [RAG-DEBUG] 调用query_enhanced_rag - 问题: '{question}', 游戏: {game_name}")
+    print(f"🔧 [RAG-DEBUG] 配置 - 混合搜索: {enable_hybrid_search}, 摘要: {enable_summarization}, 重排序: {enable_intent_reranking}")
     # 从配置文件加载设置
     import os
     from pathlib import Path
@@ -905,6 +993,7 @@ async def query_enhanced_rag(question: str,
                     "semantic_weight": reranking_settings.get("semantic_weight", 0.6)
                 }
     
+    print(f"🔧 [RAG-DEBUG] 创建EnhancedRagQuery实例")
     rag_query = EnhancedRagQuery(
         enable_hybrid_search=enable_hybrid_search,
         hybrid_config=hybrid_config,
@@ -915,8 +1004,13 @@ async def query_enhanced_rag(question: str,
         reranking_config=reranking_config
     )
     
+    print(f"🔧 [RAG-DEBUG] 初始化RAG引擎")
     await rag_query.initialize(game_name)
-    return await rag_query.query(question, top_k)
+    
+    print(f"🔍 [RAG-DEBUG] 执行RAG查询")
+    result = await rag_query.query(question, top_k)
+    print(f"✅ [RAG-DEBUG] query_enhanced_rag完成")
+    return result
 
 
 class SimpleRagQuery(EnhancedRagQuery):

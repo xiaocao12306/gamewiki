@@ -5,6 +5,9 @@ pywebview[edgechromium]>=4.4
 beautifulsoup4>=4.12
 requests>=2.31
 brotli>=1.1.0
+PyQt6>=6.4.0
+PyQt6-WebEngine>=6.4.0
+python-dotenv>=1.0.0
 
 # 批量嵌入和向量库相关依赖
 numpy>=1.24.0

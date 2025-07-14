@@ -1,0 +1,103 @@
+{
+  "total_cases": 1,
+  "average_score": 7.0,
+  "scores_by_dimension": {
+    "accuracy": 7.0,
+    "completeness": 5.0,
+    "relevance": 9.0,
+    "practicality": 8.0,
+    "clarity": 9.0
+  },
+  "common_issues": [
+    "Knowledge base lacks sufficient detail on specific weapons, warbonds, and unlock requirements.",
+    "Retrieval algorithm struggles to identify the most relevant chunks for complex queries involving recommendations, alternatives, and key features.",
+    "Answer generation fails to synthesize information from multiple chunks into a structured and comprehensive response.",
+    "Query understanding may not be accurately capturing the user's intent, leading to irrelevant or incomplete results.",
+    "Inaccurate weapon recommendation (BR-14 Adjudicator)",
+    "Lacks the structured format of the expected answer (alternative options, key unlocks)",
+    "Missing key selling points of the recommended warbond (grenade pistol)"
+  ],
+  "improvement_suggestions": [
+    "Expand the knowledge base with more detailed information on each weapon, including its strengths, weaknesses, recommended use cases, and unlock requirements. Include specific details about warbonds, highlighting key selling points and alternative options.",
+    "Improve the structure of the knowledge base to facilitate easier retrieval of specific information. Consider using a more granular chunking strategy or adding more metadata to each chunk to improve searchability.",
+    "Experiment with different retrieval algorithms, such as hybrid approaches combining semantic search with keyword-based search, to improve the accuracy and relevance of retrieved chunks. Fine-tune the algorithm's parameters to prioritize chunks containing specific keywords related to the user's query.",
+    "Implement a re-ranking mechanism to prioritize the most relevant chunks after the initial retrieval. This can involve using a separate model to score the relevance of each chunk based on the query and the content of the chunk.",
+    "Implement query rewriting techniques to clarify the user's intent and improve the accuracy of the search query. This can involve expanding abbreviations, correcting spelling errors, and adding synonyms to the query.",
+    "Train the answer generation model to produce more structured and comprehensive responses. This can involve using techniques such as chain-of-thought prompting or fine-tuning the model on a dataset of question-answer pairs with structured outputs.",
+    "Implement a mechanism to identify and extract key information from the retrieved chunks and present it in a concise and informative summary. This can involve using techniques such as extractive summarization or abstractive summarization.",
+    "Develop more granular evaluation metrics to assess the performance of the RAG system. This can involve measuring the accuracy, completeness, and relevance of the generated answers for specific types of queries.",
+    "知识库内容较少，建议增加更多游戏攻略内容",
+    "答案完整性不足，建议改进检索策略或增加相关内容"
+  ],
+  "detailed_results": [
+    {
+      "query": "best warbond to buy first",
+      "expected_answer": "**#1 PRIORITY: Democratic Detonation**\n• **Why:** Unlocks new ways to destroy objectives (bug holes/fabricators) without using your standard grenades or support weapons.\n• **Key Unlocks:**\n  - **GP-31 Grenade Pistol:** Destroys objectives, freeing up your grenade slot.[1, 2, 3]\n  - **R-36 Eruptor:** Explosive rifle that destroys objectives from a safe distance.\n  - **G-123 Thermite Grenade:** Sticks to and kills heavy enemies like Chargers and Hulks.\n\n**STRONG ALTERNATIVES:**\n**• Cutting Edge:**\n  - **Why:** Get a top-tier primary weapon and the best utility grenade.\n  - **LAS-16 Sickle:** Excellent all-around weapon with near-infinite ammo.[4, 5, 3]\n  - **G-23 Stun Grenade:** Freezes all enemies, including Hulks and Titans, creating easy kill windows. Many consider this item worth the price alone.[4, 3]\n\n**• Polar Patriots:**\n  - **Why:** Great for armor variety and powerful weapons.\n  - **PLAS-101 Purifier:** A top-tier explosive primary weapon.\n  - **3 Different Armor Passives:** Get access to Scout, Servo-Assisted, and Fortified perks in one bond, great for new players.[1]\n\n**Pro-Tip:** Try weapons from fallen teammates before you buy a Warbond to see what you like.[5]",
+      "generated_answer": "Hey there, Helldiver! 👋 For your first Warbond purchase, I highly recommend the **Democratic Detonation** Warbond! 💥\n\nThis Warbond is an absolute must-have for all players and offers incredible value right out of the gate. You'll get your hands on some seriously powerful weapons like the **BR-14 Adjudicator** and the **R-36 Eruptor**, which are fantastic for taking down enemies. Plus, the **CB-9 Exploding Crossbow** is a unique and effective option. Don't forget the **G-12 Thermite** grenade for some excellent area denial and the **CE-27 Ground Breaker** armor set, which is very useful for your loadout. It's a fantastic starting point for any Helldiver! 👍",
+      "scores": {
+        "accuracy": 7,
+        "completeness": 5,
+        "relevance": 9,
+        "practicality": 8,
+        "clarity": 9
+      },
+      "overall_score": 7,
+      "evaluation_reasoning": "The generated answer is relevant and clear, directly addressing the user's question about the best Warbond to buy first. It recommends \"Democratic Detonation\" and provides reasons for the recommendation, highlighting specific weapons and items. However, it lacks the structured breakdown of alternatives and key unlocks found in the expected answer, making it less complete. The accuracy is generally good, but it mentions the \"BR-14 Adjudicator\" which is not actually in the Democratic Detonation warbond. It also doesn't mention the grenade pistol, which is a key selling point of that warbond.",
+      "issues": [
+        "Inaccurate weapon recommendation (BR-14 Adjudicator)",
+        "Lacks the structured format of the expected answer (alternative options, key unlocks)",
+        "Missing key selling points of the recommended warbond (grenade pistol)"
+      ],
+      "suggestions": [
+        "Verify the accuracy of weapon recommendations within the specified Warbond.",
+        "Incorporate a more structured format, perhaps listing key unlocks and alternative Warbond options.",
+        "Highlight the most impactful items within the recommended Warbond, such as the grenade pistol."
+      ],
+      "rag_metadata": {
+        "answer": "Hey there, Helldiver! 👋 For your first Warbond purchase, I highly recommend the **Democratic Detonation** Warbond! 💥\n\nThis Warbond is an absolute must-have for all players and offers incredible value right out of the gate. You'll get your hands on some seriously powerful weapons like the **BR-14 Adjudicator** and the **R-36 Eruptor**, which are fantastic for taking down enemies. Plus, the **CB-9 Exploding Crossbow** is a unique and effective option. Don't forget the **G-12 Thermite** grenade for some excellent area denial and the **CE-27 Ground Breaker** armor set, which is very useful for your loadout. It's a fantastic starting point for any Helldiver! 👍",
+        "sources": [
+          "Warbond Recommendation: Democratic Detonation",
+          "Warbond Recommendation: Truth Enforcers",
+          "Warbond Recommendation: Polar Patriots"
+        ],
+        "confidence": 5.634501148286671,
+        "query_time": 15.286008100025356,
+        "results_count": 3,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 5,
+          "bm25_results_count": 6,
+          "final_results_count": 3,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 1,
+              "unified_successful": 1,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 1.0969171524047852
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 15.286212799954228
+      },
+      "processing_time": 15.286212799954228
+    }
+  ],
+  "metadata": {
+    "game": "helldiver2",
+    "rag_config": {
+      "hybrid_search": true,
+      "intent_reranking": true,
+      "summarization": true
+    },
+    "knowledge_base_info": {
+      "total_chunks": 81,
+      "unique_topics": 81,
+      "average_summary_length": 343.82716049382714,
+      "has_keywords": true
+    }
+  },
+  "generated_at": "2025-07-13T23:32:08.780343"
+}

@@ -396,32 +396,63 @@ class EnhancedBM25Indexer:
             logger.warning("查询预处理后为空")
             return []
         
+        print(f"🔍 [BM25-DEBUG] 增强BM25搜索 - 原始查询: {query}")
+        print(f"   📝 [BM25-DEBUG] 标准化查询: {normalized_query}")
+        print(f"   🔤 [BM25-DEBUG] 权重化分词: {tokenized_query}")
         logger.info(f"增强BM25搜索 - 原始查询: {query}")
         logger.info(f"标准化查询: {normalized_query}")
         logger.info(f"权重化分词: {tokenized_query}")
         
         # 获取分数
         scores = self.bm25.get_scores(tokenized_query)
+        print(f"   📊 [BM25-DEBUG] 所有文档分数范围: {scores.min():.4f} - {scores.max():.4f}")
         
         # 获取top_k结果
         top_indices = scores.argsort()[-top_k:][::-1]
+        print(f"   📋 [BM25-DEBUG] Top {top_k} 索引: {top_indices}")
+        print(f"   📋 [BM25-DEBUG] 对应分数: {scores[top_indices]}")
         
         results = []
         for i, idx in enumerate(top_indices):
             score = scores[idx]
             if score > 0:
                 chunk = self.documents[idx]
-                results.append({
+                match_info = {
+                    "topic": chunk.get("topic", ""),
+                    "enemy": self._extract_enemy_from_chunk(chunk),
+                    "relevance_reason": self._explain_relevance(tokenized_query, chunk)
+                }
+                result = {
                     "chunk": chunk,
                     "score": float(score),
                     "rank": i + 1,
-                    "match_info": {
-                        "topic": chunk.get("topic", ""),
-                        "enemy": self._extract_enemy_from_chunk(chunk),
-                        "relevance_reason": self._explain_relevance(tokenized_query, chunk)
-                    }
-                })
+                    "match_info": match_info
+                }
+                results.append(result)
+                
+                # 详细的匹配调试信息
+                print(f"   📋 [BM25-DEBUG] 结果 {i+1}:")
+                print(f"      - 索引: {idx}")
+                print(f"      - 分数: {score:.4f}")
+                print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
+                print(f"      - 敌人: {match_info['enemy']}")
+                print(f"      - 匹配理由: {match_info['relevance_reason']}")
+                print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
+                
+                # 显示关键词权重匹配信息
+                chunk_text = self.build_enhanced_text(chunk).lower()
+                matched_keywords = []
+                for token in set(tokenized_query):
+                    if token in chunk_text:
+                        weight = self.keyword_weights.get(token, 1.0)
+                        if weight > 1.0:
+                            matched_keywords.append(f"{token}({weight}x)")
+                        else:
+                            matched_keywords.append(token)
+                if matched_keywords:
+                    print(f"      - 匹配关键词: {', '.join(matched_keywords[:10])}")
         
+        print(f"✅ [BM25-DEBUG] 增强BM25搜索完成，找到 {len(results)} 个结果")
         logger.info(f"增强BM25搜索完成，找到 {len(results)} 个结果")
         return results
     

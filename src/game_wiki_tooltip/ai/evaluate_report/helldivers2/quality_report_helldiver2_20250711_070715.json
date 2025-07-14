@@ -1,0 +1,324 @@
+{
+  "total_cases": 5,
+  "average_score": 5.6,
+  "scores_by_dimension": {
+    "accuracy": 5.2,
+    "completeness": 4.4,
+    "relevance": 6.6,
+    "practicality": 6.4,
+    "clarity": 9.0
+  },
+  "common_issues": [
+    "Knowledge base lacks specific details on certain topics (e.g., armored mouth, green belly sacs, multiplayer etiquette details).",
+    "Retrieval algorithm fails to identify and retrieve the most relevant chunks for specific queries, leading to missing information and low relevance.",
+    "Query understanding and rewriting may not be effectively capturing the nuances of the user's intent, resulting in the retrieval of generic information instead of specific details.",
+    "Answer generation struggles to synthesize information from multiple chunks effectively, leading to incomplete and inaccurate answers.",
+    "Missing information about the armored mouth during acid spit.",
+    "Missing information about the green belly sacs and their function.",
+    "Low accuracy: The answer doesn't accurately reflect the specific multiplayer etiquette rules."
+  ],
+  "improvement_suggestions": [
+    "Expand the knowledge base with more detailed information on specific topics mentioned in the common issues, such as the armored mouth, green belly sacs, and specific multiplayer etiquette rules. Focus on adding granular details and examples.",
+    "Improve the quality of existing knowledge base chunks by ensuring they are accurate, comprehensive, and well-structured. Review and revise existing content to address gaps in information and improve clarity.",
+    "Enhance keyword tagging within the knowledge base to improve the searchability of specific topics. Ensure that all relevant keywords are associated with each chunk, including synonyms and related terms.",
+    "Fine-tune the retrieval algorithm to prioritize chunks that are highly relevant to the user's query. Experiment with different ranking strategies, such as semantic similarity, keyword matching, and hybrid approaches.",
+    "Implement a more sophisticated retrieval strategy that considers the context of the query and the relationships between different chunks. Explore techniques like graph-based retrieval or hierarchical retrieval to improve the accuracy and completeness of the retrieved information.",
+    "Improve the query understanding module to better capture the user's intent and identify the specific information they are seeking. Implement techniques like named entity recognition, intent classification, and query expansion to enhance query understanding.",
+    "Develop a query rewriting module that can reformulate the user's query into a more precise and effective search query. This could involve adding keywords, clarifying ambiguous terms, or breaking down complex queries into simpler sub-queries.",
+    "Enhance the answer generation module to synthesize information from multiple chunks more effectively. Implement techniques like summarization, paraphrasing, and information fusion to create coherent and comprehensive answers.",
+    "Train the answer generation module to prioritize accuracy and completeness over brevity. Encourage the model to include all relevant information from the retrieved chunks, even if it means generating longer answers.",
+    "知识库内容较少，建议增加更多游戏攻略内容",
+    "答案完整性不足，建议改进检索策略或增加相关内容"
+  ],
+  "detailed_results": [
+    {
+      "query": "how to kill bile titan",
+      "expected_answer": "• NOTE: Do NOT shoot its mouth while it's spitting acid; the mouth is armored during the attack. Aim for the forehead plate before or after.[5, 6]\n\n**Weak Spot 2: Green Belly Sacs**\n• Destroying the two green sacs underneath its body will stop its acid spit attack.[7, 8, 9]\n\n**Best Stratagems**\n• Orbital Railcannon Strike.[5, 8]\n• Eagle 500KG Bomb (must be placed precisely).[5, 10]",
+      "generated_answer": "Here's how to squash those pesky Bile Titans, Helldiver! 🐜\n\n**One-sentence summary:** Target the Bile Titan's head with anti-tank weaponry for a one-shot kill, or use powerful stratagems like the Orbital Laser or 500KG Bomb.\n\n**Detailed Explanation:**\n\nTo effectively eliminate a Bile Titan, focus on these key strategies:\n\n*   **Weak Points:**\n    *   **Head:** This is the most efficient target. It has 1500 HP and Class 4 Armor. A direct hit with an anti-tank weapon will result in an instant kill 💥.\n    *   **Inner Belly:** While it has a large weak point (4000 HP), it's less efficient to target compared to the head.\n\n*   **Recommended Stratagems:**\n    *   **Orbital Laser:** The Orbital Laser is now extremely effective due to a damage buff, making it a top-tier choice against Bile Titans 🚀.\n    *   **Eagle 500KG Bomb:** This stratagem can deliver a massive payload, dealing significant damage to the Bile Titan 💣.\n\n*   **Weapons:**\n    *   While not explicitly stated for Bile Titans, the provided information suggests that anti-tank weapons like the EAT and Quasar Cannon are effective against heavily armored targets, making them viable options for targeting the Bile Titan's head.\n\nGood luck out there, Helldiver! 🫡",
+      "scores": {
+        "accuracy": 7,
+        "completeness": 6,
+        "relevance": 9,
+        "practicality": 8,
+        "clarity": 9
+      },
+      "overall_score": 7,
+      "evaluation_reasoning": "The generated answer is generally helpful and relevant. It correctly identifies the head as a weak point and suggests effective stratagems like the Orbital Laser and 500KG Bomb. The one-sentence summary is a nice touch. However, it misses some key information from the expected answer, specifically the importance of not shooting the mouth while it's spitting acid and the existence of the green belly sacs as a weak point. While the head is a good target, the belly sacs are crucial for stopping the acid attack, which is a significant tactical advantage. The answer also provides HP values for the weak points, which is useful but not essential. The recommendation of anti-tank weapons is reasonable, although the EAT and Quasar Cannon are not explicitly mentioned in the provided context as being effective against Bile Titans, it's a logical inference. The tone is engaging and appropriate for the target audience.",
+      "issues": [
+        "Missing information about the armored mouth during acid spit.",
+        "Missing information about the green belly sacs and their function."
+      ],
+      "suggestions": [
+        "Include information about the armored mouth during the acid spit attack.",
+        "Include information about the green belly sacs and their function in stopping the acid attack.",
+        "Consider adding a section on weapon recommendations, explicitly mentioning weapons known to be effective against Bile Titans."
+      ],
+      "rag_metadata": {
+        "answer": "Here's how to squash those pesky Bile Titans, Helldiver! 🐜\n\n**One-sentence summary:** Target the Bile Titan's head with anti-tank weaponry for a one-shot kill, or use powerful stratagems like the Orbital Laser or 500KG Bomb.\n\n**Detailed Explanation:**\n\nTo effectively eliminate a Bile Titan, focus on these key strategies:\n\n*   **Weak Points:**\n    *   **Head:** This is the most efficient target. It has 1500 HP and Class 4 Armor. A direct hit with an anti-tank weapon will result in an instant kill 💥.\n    *   **Inner Belly:** While it has a large weak point (4000 HP), it's less efficient to target compared to the head.\n\n*   **Recommended Stratagems:**\n    *   **Orbital Laser:** The Orbital Laser is now extremely effective due to a damage buff, making it a top-tier choice against Bile Titans 🚀.\n    *   **Eagle 500KG Bomb:** This stratagem can deliver a massive payload, dealing significant damage to the Bile Titan 💣.\n\n*   **Weapons:**\n    *   While not explicitly stated for Bile Titans, the provided information suggests that anti-tank weapons like the EAT and Quasar Cannon are effective against heavily armored targets, making them viable options for targeting the Bile Titan's head.\n\nGood luck out there, Helldiver! 🫡",
+        "sources": [
+          "Terminid: Bile Titan Weaknesses",
+          "Dropship Weak Points & Strategy",
+          "Terminid: Impaler Weaknesses",
+          "Weapons and Armour Recommendations",
+          "Terminid: Charger Weaknesses"
+        ],
+        "confidence": 18.23981133639183,
+        "query_time": 18.406500200013397,
+        "results_count": 5,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 10,
+          "bm25_results_count": 10,
+          "final_results_count": 5,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 1,
+              "unified_successful": 1,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 1.5021255016326904
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 18.40661010000622
+      },
+      "processing_time": 18.40661010000622
+    },
+    {
+      "query": "how to kill hulk",
+      "expected_answer": "**Secondary Weak Spot: Front Eye**\n• From the front, shoot the narrow, glowing red eye slit.[13, 11]\n• Requires precise weapons like the Autocannon or Anti-Materiel Rifle (2 shots).[11]\n\n**Pro-Tip: Use Stun Grenades**\n• A Stun Grenade will freeze the Hulk for several seconds, giving you a clear shot at either weak spot.[11]",
+      "generated_answer": "Here's how to take down those pesky Automaton Hulks, Helldiver! 🤖💥\n\nTo effectively eliminate Hulks, focus on exploiting their weak points and mobility.\n\n**Detailed Explanation:**\n\n*   **Weak Spot:** The Hulk's primary weakness is the glowing red eye socket on its \"head.\" 🎯\n\n*   **Strategies:**\n\n    *   **Stun:** Use Stun Grenades to immobilize the Hulk, making it an easy target for a precise shot at its eye. 😵‍💫\n    *   **Cripple Legs:** Repeatedly shoot the Hulk's legs (approximately 5-6 shots with the AMR-23 Anti-Materiel Rifle) to significantly reduce its mobility. This makes aiming for the weak spot much easier. 🦵💥\n    *   **Disarm:** Target the Hulk's weapon arm (e.g., the flamethrower arm) to destroy it. This removes a major source of its offensive capabilities. 🔥➡️🗑️\n    *   **Direct Kill:** For experienced players, a direct, precise shot to the eye socket with a high-powered anti-armor weapon like the Railgun is the most efficient method. ⚡\n\n*While a specific loadout isn't detailed for fighting Hulks directly, consider these elements from the provided information to enhance your anti-Automaton capabilities:*\n\n    *   **Primary Weapon:** The SG-8P Punisher Plasma ('Ultimatum') is excellent for staggering Automatons, potentially disrupting their attacks and creating openings. 💥\n    *   **Grenades:** Gas Grenades (G-3 Smoke) provide excellent crowd control, which can be useful for managing groups of enemies while focusing on the Hulk. 💨\n    *   **Armor:** Light or Medium armor with the 'Med-Kit' passive provides extra stims and increased stim duration, enhancing survivability during aggressive engagements. 🛡️\n    *   **Stratagems:** The Supply Pack ensures you have enough ammo to sustain your attacks, while the Grenade Launcher can help with crowd control. The Shield Generator Pack can increase your survivability. 🎒\n\nGood luck out there, Helldiver! 🫡",
+      "scores": {
+        "accuracy": 9,
+        "completeness": 8,
+        "relevance": 10,
+        "practicality": 10,
+        "clarity": 10
+      },
+      "overall_score": 9,
+      "evaluation_reasoning": "The generated answer is excellent. It accurately describes how to kill the Hulk enemy in the game, focusing on the weak spot (eye) and providing practical strategies like using stun grenades and targeting the legs/weapon arm. It also suggests useful equipment and stratagems to enhance the player's anti-Automaton capabilities. The answer is well-organized, clear, and directly relevant to the user's question. It goes beyond the expected answer by providing additional helpful information, such as alternative weapons and tactics.",
+      "issues": [],
+      "suggestions": [],
+      "rag_metadata": {
+        "answer": "Here's how to take down those pesky Automaton Hulks, Helldiver! 🤖💥\n\nTo effectively eliminate Hulks, focus on exploiting their weak points and mobility.\n\n**Detailed Explanation:**\n\n*   **Weak Spot:** The Hulk's primary weakness is the glowing red eye socket on its \"head.\" 🎯\n\n*   **Strategies:**\n\n    *   **Stun:** Use Stun Grenades to immobilize the Hulk, making it an easy target for a precise shot at its eye. 😵‍💫\n    *   **Cripple Legs:** Repeatedly shoot the Hulk's legs (approximately 5-6 shots with the AMR-23 Anti-Materiel Rifle) to significantly reduce its mobility. This makes aiming for the weak spot much easier. 🦵💥\n    *   **Disarm:** Target the Hulk's weapon arm (e.g., the flamethrower arm) to destroy it. This removes a major source of its offensive capabilities. 🔥➡️🗑️\n    *   **Direct Kill:** For experienced players, a direct, precise shot to the eye socket with a high-powered anti-armor weapon like the Railgun is the most efficient method. ⚡\n\n*While a specific loadout isn't detailed for fighting Hulks directly, consider these elements from the provided information to enhance your anti-Automaton capabilities:*\n\n    *   **Primary Weapon:** The SG-8P Punisher Plasma ('Ultimatum') is excellent for staggering Automatons, potentially disrupting their attacks and creating openings. 💥\n    *   **Grenades:** Gas Grenades (G-3 Smoke) provide excellent crowd control, which can be useful for managing groups of enemies while focusing on the Hulk. 💨\n    *   **Armor:** Light or Medium armor with the 'Med-Kit' passive provides extra stims and increased stim duration, enhancing survivability during aggressive engagements. 🛡️\n    *   **Stratagems:** The Supply Pack ensures you have enough ammo to sustain your attacks, while the Grenade Launcher can help with crowd control. The Shield Generator Pack can increase your survivability. 🎒\n\nGood luck out there, Helldiver! 🫡",
+        "sources": [
+          "Pro Tip: How to Defeat Automaton Hulks",
+          "Introduction to the S-Tier Automaton Loadout",
+          "Weapons and Armour Recommendations",
+          "Engineering Bay Stratagems",
+          "Map Exploration and Mission Objectives"
+        ],
+        "confidence": 51.197608956967436,
+        "query_time": 55.086690199997975,
+        "results_count": 5,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 10,
+          "bm25_results_count": 10,
+          "final_results_count": 5,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 2,
+              "unified_successful": 2,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 1.131029486656189
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 55.0869961999997
+      },
+      "processing_time": 55.0869961999997
+    },
+    {
+      "query": "multiplayer etiquette quick rules",
+      "expected_answer": "• **Support Weapons (dropped on death):** DO NOT take a teammate's support weapon (e.g., Railgun, Grenade Launcher) unless they ping it for you. It's a key part of their loadout.[15] Regular primary/secondary guns are fine.\n• **Resupply Pods:** Take only ONE supply pack each. The pod contains four packs, one for each Helldiver.[15]\n• **Extraction:** DO NOT call for extraction without asking the team, especially if you are not the host. The team may want to complete more objectives or find samples.[16, 17]",
+      "generated_answer": "Here's a quick guide to multiplayer etiquette in missions based on the available info! 🤝\n\n**One-sentence summary:** Be mindful of friendly fire, coordinate with your team, and understand the benefits and drawbacks of group play.\n\n**Detailed Explanation:**\n\n*   **Friendly Fire:** Friendly fire is always on, so be extra careful when shooting! 💥 The laser sight on your weapon is visible to teammates, use it to help avoid accidental shots.\n*   **Weapon Customization:** Remember you can customize your weapon by holding the reload button to change fire mode (Auto, Semi, Burst), scope zoom level, and toggle your flashlight.🔦\n*   **Realistic Reloading:** Reloading discards any remaining bullets in your magazine, so be mindful of when you reload. If the chamber was loaded, you don't need to cock the weapon.\n*   **Group Farming:** Playing with a group lets you clear maps faster and access 'Friendship Bunkers' for more loot. However, waiting for players to reconnect between runs can be time-consuming. Solo farming can be more efficient if you're focused on speed. 🧑‍🌾\n*   **Communication & Coordination:** While not explicitly stated, the benefits of group play imply the importance of communication. Discuss strategies, call out enemy positions, and coordinate stratagem usage to maximize efficiency and minimize friendly fire incidents.",
+      "scores": {
+        "accuracy": 3,
+        "completeness": 2,
+        "relevance": 4,
+        "practicality": 5,
+        "clarity": 8
+      },
+      "overall_score": 4,
+      "evaluation_reasoning": "The generated answer provides general multiplayer tips, but fails to address the specific etiquette rules requested in the prompt. While the information provided is generally accurate and helpful for new players, it misses the core aspects of multiplayer etiquette in the game, such as respecting support weapons, resupply pods, and extraction protocols. The answer is only weakly relevant to the user's query.",
+      "issues": [
+        "Low accuracy: The answer doesn't accurately reflect the specific multiplayer etiquette rules.",
+        "Low completeness: The answer omits key etiquette points regarding support weapons, resupply pods, and extraction.",
+        "Weak relevance: The answer provides general multiplayer tips instead of directly addressing the requested etiquette rules."
+      ],
+      "suggestions": [
+        "Improve retrieval: Ensure the RAG system retrieves documents specifically addressing multiplayer etiquette rules.",
+        "Prioritize specific rules: Focus the generated answer on the most important and frequently violated etiquette rules.",
+        "Include examples: Provide concrete examples of good and bad etiquette to illustrate the rules.",
+        "Consider adding a section on communication and coordination, specifically related to the game's mechanics."
+      ],
+      "rag_metadata": {
+        "answer": "Here's a quick guide to multiplayer etiquette in missions based on the available info! 🤝\n\n**One-sentence summary:** Be mindful of friendly fire, coordinate with your team, and understand the benefits and drawbacks of group play.\n\n**Detailed Explanation:**\n\n*   **Friendly Fire:** Friendly fire is always on, so be extra careful when shooting! 💥 The laser sight on your weapon is visible to teammates, use it to help avoid accidental shots.\n*   **Weapon Customization:** Remember you can customize your weapon by holding the reload button to change fire mode (Auto, Semi, Burst), scope zoom level, and toggle your flashlight.🔦\n*   **Realistic Reloading:** Reloading discards any remaining bullets in your magazine, so be mindful of when you reload. If the chamber was loaded, you don't need to cock the weapon.\n*   **Group Farming:** Playing with a group lets you clear maps faster and access 'Friendship Bunkers' for more loot. However, waiting for players to reconnect between runs can be time-consuming. Solo farming can be more efficient if you're focused on speed. 🧑‍🌾\n*   **Communication & Coordination:** While not explicitly stated, the benefits of group play imply the importance of communication. Discuss strategies, call out enemy positions, and coordinate stratagem usage to maximize efficiency and minimize friendly fire incidents.",
+        "sources": [
+          "Essential In-Mission Tips & Mechanics",
+          "Analysis of Solo vs. Group Farming",
+          "Map Exploration and Mission Objectives",
+          "Weapons and Armour Recommendations",
+          "Warbond Recommendation: Democratic Detonation"
+        ],
+        "confidence": 5.285776903408628,
+        "query_time": 14.392105699982494,
+        "results_count": 5,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 10,
+          "bm25_results_count": 3,
+          "final_results_count": 5,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 3,
+              "unified_successful": 3,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 1.0207022031148274
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 14.392276300000958
+      },
+      "processing_time": 14.392276300000958
+    },
+    {
+      "query": "how to farm samples fast",
+      "expected_answer": "• **Mission:** \"Blitz: Search and Destroy\" against Terminids (Bugs).[18]\n• **Strategy:** Map is small. Rush to bug nests, destroy them, and grab all nearby samples. Ignore other objectives. Extract when the timer runs out.[18]\n\n**Super (Pink) Samples:**\n• **Difficulty:** 7 (Suicide Mission) or higher.[19, 18]\n• **Strategy:** Search the map for a specific landmark: a tall, thin, silver/grey rock that looks like a rooster's comb. Super Samples are at the base of this rock. Grab them and extract immediately.[18]",
+      "generated_answer": "Okay, here's how to quickly farm resources based on the information I have! 🚀\n\n**One-sentence summary:** To efficiently farm Super Credits and Medals, select a Trivial difficulty mission on a planet with good visibility like Crimsica, then rapidly loot Points of Interest (POIs) such as crashed ships and bunkers, focusing on solo play to minimize downtime.\n\n**Detailed Explanation:**\n\nTo maximize your farming efficiency, follow these steps:\n\n1.  **Mission Setup:**\n    *   Set the mission difficulty to \"1 - Trivial\". This ensures a small map size, reducing travel time.\n    *   Choose a planet with good visibility, such as Crimsica, to easily spot POIs. Avoid planets with fog or darkness.\n    *   The specific mission type doesn't matter, so pick whichever is available.\n\n2.  **Farming Strategy:**\n    *   **Ignore the main mission objective.** Your primary goal is to loot all Points of Interest (POIs) on the map. 🗺️\n    *   **Scout for crashed ship sites and bunkers.** These locations contain loot, including Super Credits and Medals.\n        *   **Crashed Ship Sites:** Look for small, escape pod-like containers. Salute to open them and collect the loot.\n        *   **Bunkers/Containers:** These sealed doors require a grenade or other explosive to open.\n    *   **Memorize POI locations** to optimize repeat runs on the same map. 🧠\n    *   **If a generated map has few POIs, abandon the operation** and start a new one until you find a loot-dense map.\n\n3.  **Solo vs. Group Farming:**\n    *   While group play allows for faster map clearing and access to \"Friendship Bunkers\" (which require two players to open), the downtime waiting for players to reconnect between runs can make solo farming more efficient timewise. 🧑‍🤝‍🧑\n    *   **Solo play is often more time-efficient** due to less downtime.\n\n4.  **Expected Earnings and RNG:**\n    *   A single run, including quitting and relaunching, takes about 3.5 minutes. ⏱️\n    *   Each run yields roughly 30 Super Credits and 8 Medals.\n    *   This can result in over 510 Super Credits and 136 Medals per hour. 💰\n    *   **However, actual rates are heavily influenced by RNG.** Factors include:\n        *   The number of Points of Interest on the generated map.\n        *   The amount of Super Credits dropped per loot location (can be +10 or a rare +100 jackpot). 🍀\n\nBy following these steps, you can efficiently farm Super Credits and Medals to acquire store items and cosmetics. Happy",
+      "scores": {
+        "accuracy": 1,
+        "completeness": 1,
+        "relevance": 1,
+        "practicality": 1,
+        "clarity": 9
+      },
+      "overall_score": 1,
+      "evaluation_reasoning": "The answer is completely inaccurate and irrelevant to the user's question. The user asked about farming 'samples,' which are a specific resource in Helldivers 2 used for ship upgrades. The answer instead describes how to farm 'Super Credits' and 'Medals,' which are different resources used for purchasing cosmetics and Warbond progress, respectively. While the answer is clearly written, its complete lack of accuracy and relevance makes it essentially useless to the user.",
+      "issues": [
+        "Inaccurate information: Focuses on Super Credits and Medals instead of Samples.",
+        "Irrelevant information: Does not address the user's question about farming Samples.",
+        "Misinterpretation of the user's query."
+      ],
+      "suggestions": [
+        "Improve the RAG system's ability to distinguish between different types of resources in the game.",
+        "Ensure the system prioritizes information directly related to the user's query about 'samples'.",
+        "Implement better keyword recognition and semantic understanding to avoid misinterpreting the user's intent."
+      ],
+      "rag_metadata": {
+        "answer": "Okay, here's how to quickly farm resources based on the information I have! 🚀\n\n**One-sentence summary:** To efficiently farm Super Credits and Medals, select a Trivial difficulty mission on a planet with good visibility like Crimsica, then rapidly loot Points of Interest (POIs) such as crashed ships and bunkers, focusing on solo play to minimize downtime.\n\n**Detailed Explanation:**\n\nTo maximize your farming efficiency, follow these steps:\n\n1.  **Mission Setup:**\n    *   Set the mission difficulty to \"1 - Trivial\". This ensures a small map size, reducing travel time.\n    *   Choose a planet with good visibility, such as Crimsica, to easily spot POIs. Avoid planets with fog or darkness.\n    *   The specific mission type doesn't matter, so pick whichever is available.\n\n2.  **Farming Strategy:**\n    *   **Ignore the main mission objective.** Your primary goal is to loot all Points of Interest (POIs) on the map. 🗺️\n    *   **Scout for crashed ship sites and bunkers.** These locations contain loot, including Super Credits and Medals.\n        *   **Crashed Ship Sites:** Look for small, escape pod-like containers. Salute to open them and collect the loot.\n        *   **Bunkers/Containers:** These sealed doors require a grenade or other explosive to open.\n    *   **Memorize POI locations** to optimize repeat runs on the same map. 🧠\n    *   **If a generated map has few POIs, abandon the operation** and start a new one until you find a loot-dense map.\n\n3.  **Solo vs. Group Farming:**\n    *   While group play allows for faster map clearing and access to \"Friendship Bunkers\" (which require two players to open), the downtime waiting for players to reconnect between runs can make solo farming more efficient timewise. 🧑‍🤝‍🧑\n    *   **Solo play is often more time-efficient** due to less downtime.\n\n4.  **Expected Earnings and RNG:**\n    *   A single run, including quitting and relaunching, takes about 3.5 minutes. ⏱️\n    *   Each run yields roughly 30 Super Credits and 8 Medals.\n    *   This can result in over 510 Super Credits and 136 Medals per hour. 💰\n    *   **However, actual rates are heavily influenced by RNG.** Factors include:\n        *   The number of Points of Interest on the generated map.\n        *   The amount of Super Credits dropped per loot location (can be +10 or a rare +100 jackpot). 🍀\n\nBy following these steps, you can efficiently farm Super Credits and Medals to acquire store items and cosmetics. Happy",
+        "sources": [
+          "Introduction to the Super Credit & Medal Farming Method",
+          "Analysis of Solo vs. Group Farming",
+          "Expected Farming Rates and RNG Impact",
+          "Scouting and Looting Points of Interest",
+          "Setting Up the Farming Mission"
+        ],
+        "confidence": 4.460654120346851,
+        "query_time": 26.478794800001197,
+        "results_count": 5,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 10,
+          "bm25_results_count": 10,
+          "final_results_count": 5,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 4,
+              "unified_successful": 4,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 0.990466296672821
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 26.478994800010696
+      },
+      "processing_time": 26.478994800010696
+    },
+    {
+      "query": "best warbond to buy first",
+      "expected_answer": "**#1 PRIORITY: Democratic Detonation**\n• **Why:** Unlocks new ways to destroy objectives (bug holes/fabricators) without using your standard grenades or support weapons.\n• **Key Unlocks:**\n  - **GP-31 Grenade Pistol:** Destroys objectives, freeing up your grenade slot.[1, 2, 3]\n  - **R-36 Eruptor:** Explosive rifle that destroys objectives from a safe distance.\n  - **G-123 Thermite Grenade:** Sticks to and kills heavy enemies like Chargers and Hulks.\n\n**STRONG ALTERNATIVES:**\n**• Cutting Edge:**\n  - **Why:** Get a top-tier primary weapon and the best utility grenade.\n  - **LAS-16 Sickle:** Excellent all-around weapon with near-infinite ammo.[4, 5, 3]\n  - **G-23 Stun Grenade:** Freezes all enemies, including Hulks and Titans, creating easy kill windows. Many consider this item worth the price alone.[4, 3]\n\n**• Polar Patriots:**\n  - **Why:** Great for armor variety and powerful weapons.\n  - **PLAS-101 Purifier:** A top-tier explosive primary weapon.\n  - **3 Different Armor Passives:** Get access to Scout, Servo-Assisted, and Fortified perks in one bond, great for new players.[1]\n\n**Pro-Tip:** Try weapons from fallen teammates before you buy a Warbond to see what you like.[5]",
+      "generated_answer": "Here's the best Warbond to buy first: Democratic Detonation! 💥\n\nDemocratic Detonation is the top priority Warbond for all players due to its exceptional value. It comes packed with powerful weapons like the BR-14 Adjudicator, a hard-hitting rifle, the R-36 Eruptor, which is likely an explosive weapon, and the CB-9 Exploding Crossbow for some explosive fun! 🏹\n\nBeyond weapons, it also includes the highly effective G-12 Thermite grenade 🔥 and the useful CE-27 Ground Breaker armor set. This armor set might give you an edge in survivability or offer other beneficial stats. The \"Engineering Kit\" is also associated with this Warbond, though its specific function isn't detailed here, it likely provides some utility or bonus related to engineering tasks. 🛠️",
+      "scores": {
+        "accuracy": 6,
+        "completeness": 5,
+        "relevance": 9,
+        "practicality": 8,
+        "clarity": 9
+      },
+      "overall_score": 7,
+      "evaluation_reasoning": "The generated answer is relevant and clear, directly addressing the user's question about the best Warbond to buy first. It correctly identifies Democratic Detonation as a top priority. However, it lacks the depth and detail of the expected answer. While it mentions some weapons and items from the Warbond, it doesn't explain *why* Democratic Detonation is so good (e.g., its ability to destroy objectives without using grenades). It also misses the strong alternatives mentioned in the expected answer (Cutting Edge, Polar Patriots). The accuracy is somewhat questionable as it mentions the BR-14 Adjudicator, which is not part of the Democratic Detonation warbond. The inclusion of emojis enhances clarity and engagement.",
+      "issues": [
+        "Inaccurate weapon information (BR-14 Adjudicator)",
+        "Lacks detailed explanation of why Democratic Detonation is a top priority",
+        "Omits alternative Warbond recommendations",
+        "Missing key unlocks like GP-31 Grenade Pistol and R-36 Eruptor"
+      ],
+      "suggestions": [
+        "Verify and correct weapon information.",
+        "Provide more detailed explanations of the benefits of each Warbond, especially why Democratic Detonation is recommended.",
+        "Include alternative Warbond recommendations with brief explanations.",
+        "Incorporate key unlocks and their functions for each recommended Warbond."
+      ],
+      "rag_metadata": {
+        "answer": "Here's the best Warbond to buy first: Democratic Detonation! 💥\n\nDemocratic Detonation is the top priority Warbond for all players due to its exceptional value. It comes packed with powerful weapons like the BR-14 Adjudicator, a hard-hitting rifle, the R-36 Eruptor, which is likely an explosive weapon, and the CB-9 Exploding Crossbow for some explosive fun! 🏹\n\nBeyond weapons, it also includes the highly effective G-12 Thermite grenade 🔥 and the useful CE-27 Ground Breaker armor set. This armor set might give you an edge in survivability or offer other beneficial stats. The \"Engineering Kit\" is also associated with this Warbond, though its specific function isn't detailed here, it likely provides some utility or bonus related to engineering tasks. 🛠️",
+        "sources": [
+          "Superstore, Super Credits, and Purchase Advice",
+          "Warbond Recommendation: Democratic Detonation",
+          "Warbond Recommendation: Truth Enforcers",
+          "Warbond Recommendation: Steeled Veterans",
+          "Essential Sentry and Eagle Ship Module Upgrades"
+        ],
+        "confidence": 6.67740905617177,
+        "query_time": 40.215961000008974,
+        "results_count": 5,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 9,
+          "bm25_results_count": 10,
+          "final_results_count": 5,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 5,
+              "unified_successful": 5,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 0.9698328018188477
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 40.216098200005945
+      },
+      "processing_time": 40.216098200005945
+    }
+  ],
+  "metadata": {
+    "game": "helldiver2",
+    "rag_config": {
+      "hybrid_search": true,
+      "intent_reranking": true,
+      "summarization": true
+    },
+    "knowledge_base_info": {
+      "total_chunks": 81,
+      "unique_topics": 81,
+      "average_summary_length": 343.82716049382714,
+      "has_keywords": true
+    }
+  },
+  "generated_at": "2025-07-11T07:07:15.790573"
+}

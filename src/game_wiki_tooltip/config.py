@@ -66,9 +66,16 @@ class PopupConfig:
 
 
 @dataclass
+class ApiConfig:
+    google_api_key: str = ""
+    jina_api_key: str = ""
+
+
+@dataclass
 class AppSettings:
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
     popup: PopupConfig = field(default_factory=PopupConfig)
+    api: ApiConfig = field(default_factory=ApiConfig)
 
 
 class SettingsManager:
@@ -99,9 +106,12 @@ class SettingsManager:
         # 更新热键设置
         if 'hotkey' in new_settings:
             self._settings.hotkey = HotkeyConfig(**new_settings['hotkey'])
-            # 更新弹窗设置
+        # 更新弹窗设置
         if 'popup' in new_settings:
             self._settings.popup = PopupConfig(**new_settings['popup'])
+        # 更新API设置
+        if 'api' in new_settings:
+            self._settings.api = ApiConfig(**new_settings['api'])
         self.save()
 
     # ---- internal ----
@@ -123,7 +133,8 @@ class SettingsManager:
             # 关键改动！
             hotkey = HotkeyConfig(**data.get('hotkey', {}))
             popup = PopupConfig(**data.get('popup', {}))
-            return AppSettings(hotkey=hotkey, popup=popup)
+            api = ApiConfig(**data.get('api', {}))
+            return AppSettings(hotkey=hotkey, popup=popup, api=api)
         except Exception as e:
             print(f"加载设置文件失败: {e}")
             return AppSettings()

@@ -176,28 +176,40 @@ class IntentAwareReranker:
         Returns:
             (意图类型, 置信度)
         """
+        print(f"🎯 [INTENT-DEBUG] 开始意图识别: query='{query}'")
+        
         query_lower = query.lower()
         intent_scores = {}
         
+        print(f"   📊 [INTENT-DEBUG] 各意图模式匹配结果:")
         for pattern in self.intent_patterns:
             score = 0.0
+            matches = []
             
             # 关键词匹配
             keyword_matches = sum(1 for keyword in pattern.keywords if keyword in query_lower)
             if keyword_matches > 0:
-                score += keyword_matches * 0.3 * pattern.weight
+                keyword_score = keyword_matches * 0.3 * pattern.weight
+                score += keyword_score
+                matches.append(f"关键词匹配: {keyword_matches}个, 得分: {keyword_score:.3f}")
             
             # 正则模式匹配
             for regex_pattern in pattern.patterns:
                 if re.search(regex_pattern, query_lower, re.IGNORECASE):
-                    score += 0.5 * pattern.weight
+                    regex_score = 0.5 * pattern.weight
+                    score += regex_score
+                    matches.append(f"正则匹配: '{regex_pattern}', 得分: {regex_score:.3f}")
                     break
             
             if score > 0:
                 intent_scores[pattern.intent] = score
+                print(f"      {pattern.intent.value}: 总分={score:.3f}")
+                for match in matches:
+                    print(f"         - {match}")
         
         # 如果没有匹配到任何意图，返回通用意图
         if not intent_scores:
+            print(f"   ⚠️ [INTENT-DEBUG] 没有匹配到任何意图，返回通用意图")
             return QueryIntent.GENERAL, 0.5
         
         # 返回得分最高的意图
@@ -205,6 +217,17 @@ class IntentAwareReranker:
         
         # 归一化置信度到0-1之间
         confidence = min(best_intent[1] / 2.0, 1.0)
+        
+        print(f"   🏆 [INTENT-DEBUG] 最佳意图: {best_intent[0].value}")
+        print(f"      - 原始分数: {best_intent[1]:.3f}")
+        print(f"      - 置信度: {confidence:.3f}")
+        
+        # 显示其他候选意图
+        sorted_intents = sorted(intent_scores.items(), key=lambda x: x[1], reverse=True)
+        if len(sorted_intents) > 1:
+            print(f"   📋 [INTENT-DEBUG] 其他候选意图:")
+            for i, (intent, score) in enumerate(sorted_intents[1:3], 2):
+                print(f"      {i}. {intent.value}: {score:.3f}")
         
         logger.info(f"意图识别: {query} -> {best_intent[0].value} (置信度: {confidence:.2f})")
         return best_intent[0], confidence
@@ -283,19 +306,30 @@ class IntentAwareReranker:
         Returns:
             重排序后的结果
         """
+        print(f"🔄 [RERANK-DEBUG] 开始意图重排序: query='{query}', 结果数量={len(results)}")
+        
         if not results:
+            print(f"⚠️ [RERANK-DEBUG] 没有结果需要重排序")
             return results
         
         # 识别查询意图
         intent, intent_confidence = self.identify_query_intent(query)
+        print(f"🎯 [RERANK-DEBUG] 识别查询意图: {intent.value}, 置信度: {intent_confidence:.3f}")
         
         # 动态调整权重：意图置信度越高，意图权重越大
         adjusted_intent_weight = intent_weight * (0.5 + intent_confidence * 0.5)
         adjusted_semantic_weight = 1.0 - adjusted_intent_weight
         
+        print(f"⚖️ [RERANK-DEBUG] 权重调整:")
+        print(f"   - 原始意图权重: {intent_weight:.3f}")
+        print(f"   - 调整后意图权重: {adjusted_intent_weight:.3f}")
+        print(f"   - 语义权重: {adjusted_semantic_weight:.3f}")
+        
         # 计算每个结果的综合得分
         scored_results = []
-        for result in results:
+        print(f"📊 [RERANK-DEBUG] 计算每个结果的综合得分:")
+        
+        for i, result in enumerate(results):
             # 获取原始的语义相似度分数
             semantic_score = result.get("score", 0.0)
             
@@ -318,14 +352,29 @@ class IntentAwareReranker:
             reranked_result["intent_confidence"] = intent_confidence
             
             scored_results.append(reranked_result)
+            
+            # 调试信息
+            print(f"   {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
+            print(f"      - 原始分数: {semantic_score:.4f}")
+            print(f"      - 意图分数: {intent_score:.4f}")
+            print(f"      - 综合分数: {combined_score:.4f}")
+            print(f"      - 计算: {semantic_score:.4f} × {adjusted_semantic_weight:.3f} + {intent_score:.4f} × {adjusted_intent_weight:.3f} = {combined_score:.4f}")
         
         # 按综合得分排序
         scored_results.sort(key=lambda x: x["combined_score"], reverse=True)
+        
+        print(f"📈 [RERANK-DEBUG] 重排序后的结果:")
+        for i, result in enumerate(scored_results):
+            chunk = result.get("chunk", result)
+            print(f"   {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
+            print(f"      - 最终分数: {result['combined_score']:.4f}")
+            print(f"      - 排名变化: {result.get('rank', 'N/A')} -> {i+1}")
         
         # 更新score字段为combined_score
         for result in scored_results:
             result["score"] = result["combined_score"]
         
+        print(f"✅ [RERANK-DEBUG] 重排序完成")
         logger.info(f"重排序完成 - 意图: {intent.value}, 置信度: {intent_confidence:.2f}")
         logger.info(f"权重调整 - 意图权重: {adjusted_intent_weight:.2f}, 语义权重: {adjusted_semantic_weight:.2f}")
         

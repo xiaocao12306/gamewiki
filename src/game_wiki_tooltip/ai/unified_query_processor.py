@@ -308,24 +308,40 @@ Please provide a JSON response with the following structure:
         Returns:
             UnifiedQueryResult: 统一处理结果
         """
+        print(f"🔄 [QUERY-DEBUG] 开始统一查询处理: '{query}'")
+        
         start_time = time.time()
         self.stats["total_queries"] += 1
         
         # 检查缓存
         cached_result = self._get_cached_result(query)
         if cached_result:
+            print(f"💾 [QUERY-DEBUG] 使用缓存结果")
+            print(f"   - 原始查询: '{cached_result.original_query}'")
+            print(f"   - 翻译结果: '{cached_result.translated_query}'")
+            print(f"   - 重写结果: '{cached_result.rewritten_query}'")
+            print(f"   - 意图: {cached_result.intent} (置信度: {cached_result.confidence:.3f})")
             logger.info(f"使用缓存结果: {query}")
             return cached_result
         
         # 如果LLM不可用，使用基础处理
         if not self.llm_client:
+            print(f"⚠️ [QUERY-DEBUG] LLM不可用，使用基础处理")
             result = self._basic_processing(query)
+            print(f"   - 检测语言: {result.detected_language}")
+            print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
+            print(f"   - 重写查询: '{result.rewritten_query}'")
+            print(f"   - 重写应用: {result.rewrite_applied}")
             self._cache_result(query, result)
             return result
         
         try:
             # 使用LLM进行统一处理
+            print(f"🤖 [QUERY-DEBUG] 调用LLM进行统一处理")
             prompt = self._create_unified_prompt(query)
+            print(f"   - 使用模型: {self.llm_config.model}")
+            print(f"   - 提示词长度: {len(prompt)} 字符")
+            
             llm_response = self._call_llm_with_retry(prompt)
             
             if llm_response:
@@ -335,6 +351,15 @@ Please provide a JSON response with the following structure:
                 rewritten_query = llm_response.get("rewritten_query", translated_query)
                 
                 processing_time = time.time() - start_time
+                
+                print(f"✅ [QUERY-DEBUG] LLM处理成功:")
+                print(f"   - 检测语言: {detected_language}")
+                print(f"   - 翻译结果: '{translated_query}'")
+                print(f"   - 重写结果: '{rewritten_query}'")
+                print(f"   - 意图: {llm_response.get('intent', 'guide')} (置信度: {llm_response.get('confidence', 0.7):.3f})")
+                print(f"   - 搜索类型: {llm_response.get('search_type', 'hybrid')}")
+                print(f"   - 处理时间: {processing_time:.3f}秒")
+                print(f"   - 推理过程: {llm_response.get('reasoning', 'LLM统一处理')}")
                 
                 result = UnifiedQueryResult(
                     original_query=query,
@@ -355,13 +380,23 @@ Please provide a JSON response with the following structure:
                 
             else:
                 # LLM调用失败，使用基础处理
+                print(f"❌ [QUERY-DEBUG] LLM调用失败，使用基础处理")
                 result = self._basic_processing(query)
+                print(f"   - 检测语言: {result.detected_language}")
+                print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
+                print(f"   - 重写查询: '{result.rewritten_query}'")
+                print(f"   - 重写应用: {result.rewrite_applied}")
                 self.stats["failed_processing"] += 1
                 logger.warning(f"LLM统一处理失败，使用基础处理: {query}")
                 
         except Exception as e:
+            print(f"❌ [QUERY-DEBUG] 统一处理异常: {e}")
             logger.error(f"统一处理异常: {e}")
             result = self._basic_processing(query)
+            print(f"   - 降级到基础处理")
+            print(f"   - 检测语言: {result.detected_language}")
+            print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
+            print(f"   - 重写查询: '{result.rewritten_query}'")
             self.stats["failed_processing"] += 1
         
         # 更新平均处理时间
@@ -369,6 +404,12 @@ Please provide a JSON response with the following structure:
             (self.stats["average_processing_time"] * (self.stats["total_queries"] - 1) + 
              result.processing_time) / self.stats["total_queries"]
         )
+        
+        print(f"📊 [QUERY-DEBUG] 查询处理完成，缓存结果")
+        print(f"   - 总查询数: {self.stats['total_queries']}")
+        print(f"   - 缓存命中数: {self.stats['cache_hits']}")
+        print(f"   - 成功处理数: {self.stats['successful_processing']}")
+        print(f"   - 失败处理数: {self.stats['failed_processing']}")
         
         # 缓存结果
         self._cache_result(query, result)

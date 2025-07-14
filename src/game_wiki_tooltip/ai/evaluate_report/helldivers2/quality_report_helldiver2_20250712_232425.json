@@ -1,0 +1,86 @@
+{
+  "total_cases": 1,
+  "average_score": 0.0,
+  "scores_by_dimension": {
+    "accuracy": 0.0,
+    "completeness": 0.0,
+    "relevance": 0.0,
+    "practicality": 0.0,
+    "clarity": 0.0
+  },
+  "common_issues": [
+    "评估过程出错"
+  ],
+  "improvement_suggestions": [
+    "优化知识库内容",
+    "改进检索算法",
+    "增强查询理解能力"
+  ],
+  "detailed_results": [
+    {
+      "query": "best warbond to buy first",
+      "expected_answer": "**#1 PRIORITY: Democratic Detonation**\n• **Why:** Unlocks new ways to destroy objectives (bug holes/fabricators) without using your standard grenades or support weapons.\n• **Key Unlocks:**\n  - **GP-31 Grenade Pistol:** Destroys objectives, freeing up your grenade slot.[1, 2, 3]\n  - **R-36 Eruptor:** Explosive rifle that destroys objectives from a safe distance.\n  - **G-123 Thermite Grenade:** Sticks to and kills heavy enemies like Chargers and Hulks.\n\n**STRONG ALTERNATIVES:**\n**• Cutting Edge:**\n  - **Why:** Get a top-tier primary weapon and the best utility grenade.\n  - **LAS-16 Sickle:** Excellent all-around weapon with near-infinite ammo.[4, 5, 3]\n  - **G-23 Stun Grenade:** Freezes all enemies, including Hulks and Titans, creating easy kill windows. Many consider this item worth the price alone.[4, 3]\n\n**• Polar Patriots:**\n  - **Why:** Great for armor variety and powerful weapons.\n  - **PLAS-101 Purifier:** A top-tier explosive primary weapon.\n  - **3 Different Armor Passives:** Get access to Scout, Servo-Assisted, and Fortified perks in one bond, great for new players.[1]\n\n**Pro-Tip:** Try weapons from fallen teammates before you buy a Warbond to see what you like.[5]",
+      "generated_answer": "💡 Ship Management: Unlocking & Upgrading Stratagems\nThis explains the Ship Management terminal, where players use Requisition Slips (R-points) to buy new Stratagems and Samples (Common, Rare, Super) to buy Ship Modules. Stratagems are core abilities called in missions, while Ship Modules are permanent passive upgrades that enhance Stratagem categories (e.g., Orbital Cannons, Eagle Hangar). The grind for Samples is significant, requiring diligent searching on higher difficulties.\n\n💡 Warbond Recommendation: Truth Enforcers\nThe second recommended Warbond, which has improved significantly since its release due to buffs. It features the versatile SG-220 Halt shotgun, the hard-hitting SMG-72 Pummeler, and armor sets with the newly buffed 'Unflinching' passive. The PLAS-15 Loyalist plasma pistol is another strong secondary option.",
+      "scores": {
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "relevance": 0.0,
+        "practicality": 0.0,
+        "clarity": 0.0
+      },
+      "overall_score": 0.0,
+      "evaluation_reasoning": "评估失败: Timeout of 600.0s exceeded, last exception: 503 failed to connect to all addresses; last error: UNAVAILABLE: ipv4:142.251.215.234:443: ConnectEx: Connection timed out (A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.\r\n -- 10060)",
+      "issues": [
+        "评估过程出错"
+      ],
+      "suggestions": [
+        "检查LLM配置和响应格式"
+      ],
+      "rag_metadata": {
+        "answer": "💡 Ship Management: Unlocking & Upgrading Stratagems\nThis explains the Ship Management terminal, where players use Requisition Slips (R-points) to buy new Stratagems and Samples (Common, Rare, Super) to buy Ship Modules. Stratagems are core abilities called in missions, while Ship Modules are permanent passive upgrades that enhance Stratagem categories (e.g., Orbital Cannons, Eagle Hangar). The grind for Samples is significant, requiring diligent searching on higher difficulties.\n\n💡 Warbond Recommendation: Truth Enforcers\nThe second recommended Warbond, which has improved significantly since its release due to buffs. It features the versatile SG-220 Halt shotgun, the hard-hitting SMG-72 Pummeler, and armor sets with the newly buffed 'Unflinching' passive. The PLAS-15 Loyalist plasma pistol is another strong secondary option.",
+        "sources": [
+          "Ship Management: Unlocking & Upgrading Stratagems",
+          "Warbond Recommendation: Truth Enforcers",
+          "Warbond Recommendation: Steeled Veterans"
+        ],
+        "confidence": 4.6524500213510995,
+        "query_time": 2386.3129999999946,
+        "results_count": 3,
+        "search_metadata": {
+          "fusion_method": "rrf",
+          "vector_results_count": 5,
+          "bm25_results_count": 6,
+          "final_results_count": 3,
+          "processing_stats": {
+            "method": "unified_processing",
+            "stats": {
+              "total_queries": 1,
+              "unified_successful": 1,
+              "unified_failed": 0,
+              "cache_hits": 0,
+              "average_processing_time": 0.001
+            }
+          },
+          "reranking_applied": true
+        },
+        "processing_time": 2386.3129999999946
+      },
+      "processing_time": 2386.3129999999946
+    }
+  ],
+  "metadata": {
+    "game": "helldiver2",
+    "rag_config": {
+      "hybrid_search": true,
+      "intent_reranking": true,
+      "summarization": true
+    },
+    "knowledge_base_info": {
+      "total_chunks": 81,
+      "unique_topics": 81,
+      "average_summary_length": 343.82716049382714,
+      "has_keywords": true
+    }
+  },
+  "generated_at": "2025-07-12T23:24:25.708356"
+}
