@@ -49,10 +49,11 @@ class QueryWorker(QThread):
     guide_chunk = pyqtSignal(str)  # streaming chunk
     error_occurred = pyqtSignal(str)  # error message
     
-    def __init__(self, rag_integration, query: str, parent=None):
+    def __init__(self, rag_integration, query: str, game_context: str = None, parent=None):
         super().__init__(parent)
         self.rag_integration = rag_integration
         self.query = query
+        self.game_context = game_context
         self._stop_requested = False
         
     def run(self):
@@ -75,8 +76,11 @@ class QueryWorker(QThread):
     async def _process_query(self):
         """Process the query asynchronously"""
         try:
-            # Detect intent
-            intent = await self.rag_integration.process_query_async(self.query)
+            # Detect intent with game context
+            intent = await self.rag_integration.process_query_async(
+                self.query, 
+                game_context=self.game_context
+            )
             self.intent_detected.emit(intent)
             
             if intent.intent_type == "wiki":
@@ -86,9 +90,10 @@ class QueryWorker(QThread):
                 )
                 self.wiki_result.emit(url, title)
             else:
-                # Generate guide - this will emit chunks via signals
+                # Generate guide with game context - this will emit chunks via signals
                 await self.rag_integration.generate_guide_async(
-                    intent.rewritten_query or self.query
+                    intent.rewritten_query or self.query,
+                    game_context=self.game_context
                 )
                 
         except Exception as e:
@@ -140,15 +145,27 @@ class RAGIntegration(QObject):
             if GameAwareQueryProcessor:
                 self.query_processor = GameAwareQueryProcessor(llm_config=llm_config)
             
-            # Initialize RAG engine for current game
+            # 智能初始化RAG引擎
             game_title = get_selected_game_title()
             if game_title:
-                self._init_rag_for_game(game_title, llm_config, jina_api_key)
+                # 使用窗口标题映射到向量库名称
+                from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+                vector_game_name = map_window_title_to_game_name(game_title)
+                
+                if vector_game_name:
+                    logger.info(f"检测到游戏窗口 '{game_title}' -> 向量库: {vector_game_name}")
+                    self._init_rag_for_game(vector_game_name, llm_config, jina_api_key)
+                else:
+                    logger.info(f"当前窗口 '{game_title}' 不是支持的游戏，跳过RAG初始化")
+                    logger.info("RAG引擎将在用户首次查询时根据游戏窗口动态初始化")
+                    # 不初始化RAG引擎，等待用户查询时动态检测
+            else:
+                logger.info("未检测到前台窗口，跳过RAG初始化")
                 
         except Exception as e:
             logger.error(f"Failed to initialize AI components: {e}")
             
-    def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, jina_api_key: str):
+    def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, jina_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
         try:
             if not (get_default_config and EnhancedRagQuery):
@@ -178,10 +195,16 @@ class RAGIntegration(QObject):
                 try:
                     loop.run_until_complete(self.rag_engine.initialize(game_name))
                     logger.info(f"RAG engine initialized for game: {game_name}")
+                    self._rag_init_complete = True
                 except Exception as e:
                     logger.error(f"Failed to initialize RAG for {game_name}: {e}")
+                    self.rag_engine = None
+                    self._rag_init_complete = False
                 finally:
                     loop.close()
+            
+            # 重置初始化状态
+            self._rag_init_complete = False
             
             # Run initialization in a separate thread
             import threading
@@ -189,21 +212,32 @@ class RAGIntegration(QObject):
             init_thread.daemon = True
             init_thread.start()
             
+            # 如果需要等待初始化完成
+            if wait_for_init:
+                # 等待初始化完成，最多等待5秒
+                import time
+                start_time = time.time()
+                while not hasattr(self, '_rag_init_complete') or not self._rag_init_complete:
+                    if time.time() - start_time > 5:  # 超时
+                        logger.warning("RAG初始化超时")
+                        break
+                    time.sleep(0.1)
+            
         except Exception as e:
             logger.error(f"Failed to initialize RAG for {game_name}: {e}")
             
-    async def process_query_async(self, query: str) -> QueryIntent:
+    async def process_query_async(self, query: str, game_context: str = None) -> QueryIntent:
         """Process query to detect intent"""
         if not self.query_processor:
             # Fallback to simple detection
             return self._simple_intent_detection(query)
             
         try:
-            # Use game-aware processor
+            # Use game-aware processor with provided game context
             result = await asyncio.to_thread(
                 self.query_processor.process_query,
                 query,
-                game_context=get_selected_game_title()
+                game_name=game_context  # 修正参数名
             )
             
             return QueryIntent(
@@ -263,11 +297,42 @@ class RAGIntegration(QObject):
             logger.error(f"Wiki search failed: {e}")
             return "", query
             
-    async def generate_guide_async(self, query: str):
+    async def generate_guide_async(self, query: str, game_context: str = None):
         """Generate guide response with streaming"""
         if not self.rag_engine:
-            self.error_occurred.emit("RAG引擎未初始化，请检查API配置")
-            return
+            # 尝试为指定游戏初始化RAG引擎
+            if game_context:
+                from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+                vector_game_name = map_window_title_to_game_name(game_context)
+                
+                if vector_game_name:
+                    logger.info(f"RAG引擎未初始化，尝试为游戏 '{vector_game_name}' 初始化")
+                    
+                    # 获取API设置
+                    settings = self.settings_manager.get()
+                    api_settings = settings.get('api', {})
+                    google_api_key = api_settings.get('google_api_key', '')
+                    jina_api_key = api_settings.get('jina_api_key', '')
+                    
+                    if google_api_key:
+                        llm_config = LLMConfig(
+                            api_key=google_api_key,
+                            model='gemini-2.5-flash-lite-preview-06-17'
+                        )
+                        self._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
+                        
+                        if not self.rag_engine:
+                            self.error_occurred.emit(f"无法为游戏 '{vector_game_name}' 初始化RAG引擎")
+                            return
+                    else:
+                        self.error_occurred.emit("RAG引擎未初始化，请检查API配置")
+                        return
+                else:
+                    self.error_occurred.emit(f"当前游戏 '{game_context}' 暂不支持攻略查询")
+                    return
+            else:
+                self.error_occurred.emit("RAG引擎未初始化，且未提供游戏上下文")
+                return
             
         try:
             # Query RAG engine (it's already async)
@@ -303,6 +368,26 @@ class IntegratedAssistantController(AssistantController):
         self._setup_connections()
         self._current_worker = None
         
+    def set_current_game_window(self, game_window_title: str):
+        """重写父类方法，设置当前游戏窗口并处理RAG引擎初始化"""
+        super().set_current_game_window(game_window_title)
+        
+        # 检查是否需要初始化或切换RAG引擎
+        from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+        vector_game_name = map_window_title_to_game_name(game_window_title)
+        
+        if vector_game_name:
+            logger.info(f"🎮 检测到游戏窗口，准备初始化RAG引擎: {vector_game_name}")
+            # 检查是否需要切换游戏
+            if not hasattr(self, '_current_vector_game') or self._current_vector_game != vector_game_name:
+                logger.info(f"🔄 切换RAG引擎: {getattr(self, '_current_vector_game', 'None')} -> {vector_game_name}")
+                self._current_vector_game = vector_game_name
+                self._reinitialize_rag_for_game(vector_game_name)
+            else:
+                logger.info(f"✓ 游戏未切换，继续使用当前RAG引擎: {vector_game_name}")
+        else:
+            logger.info(f"⚠️ 窗口 '{game_window_title}' 不是支持的游戏")
+        
     def _setup_connections(self):
         """Setup signal connections"""
         self.rag_integration.streaming_chunk_ready.connect(
@@ -328,8 +413,18 @@ class IntegratedAssistantController(AssistantController):
             self._current_worker.stop()
             self._current_worker.wait()
         
-        # Create and start new worker
-        self._current_worker = QueryWorker(self.rag_integration, query)
+        # 使用已记录的游戏窗口标题（在热键触发时记录）
+        if hasattr(self, 'current_game_window') and self.current_game_window:
+            logger.info(f"🎮 使用已记录的游戏窗口: '{self.current_game_window}'")
+        else:
+            logger.warning("⚠️ 未记录游戏窗口，可能是程序异常状态")
+        
+        # Create and start new worker with game context
+        self._current_worker = QueryWorker(
+            self.rag_integration, 
+            query, 
+            game_context=self.current_game_window
+        )
         self._current_worker.intent_detected.connect(self._on_intent_detected)
         self._current_worker.wiki_result.connect(self._on_wiki_result_from_worker)
         self._current_worker.guide_chunk.connect(self._on_guide_chunk)
@@ -421,22 +516,46 @@ class IntegratedAssistantController(AssistantController):
             f"❌ {error_msg}"
         )
         
+    def _reinitialize_rag_for_game(self, vector_game_name: str):
+        """重新初始化RAG引擎为特定向量库（参数已经是向量库名称，无需再次映射）"""
+        try:
+            logger.info(f"🚀 开始为向量库 '{vector_game_name}' 重新初始化RAG引擎")
+            
+            # 获取API设置
+            settings = self.settings_manager.get()
+            api_settings = settings.get('api', {})
+            google_api_key = api_settings.get('google_api_key', '')
+            jina_api_key = api_settings.get('jina_api_key', '')
+            
+            if google_api_key:
+                llm_config = LLMConfig(
+                    api_key=google_api_key,
+                    model='gemini-2.5-flash-lite-preview-06-17'
+                )
+                
+                # 重新初始化RAG引擎（等待初始化完成）
+                self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
+                logger.info(f"✅ RAG引擎已重新初始化为向量库: {vector_game_name}")
+            else:
+                logger.warning("❌ Google API密钥未配置，无法重新初始化RAG引擎")
+                
+        except Exception as e:
+            logger.error(f"❌ 重新初始化RAG引擎失败: {e}")
+        
     def switch_game(self, game_name: str):
-        """Switch to a different game"""
+        """Switch to a different game (game_name应该是窗口标题)"""
         # Stop current worker
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.stop()
             self._current_worker.wait()
             
-        # Reinitialize RAG for new game
-        settings = self.settings_manager.get()
-        api_settings = settings.get('api', {})
-        google_api_key = api_settings.get('google_api_key', '')
-        jina_api_key = api_settings.get('jina_api_key', '')
+        # 先映射窗口标题到向量库名称
+        from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+        vector_game_name = map_window_title_to_game_name(game_name)
         
-        if google_api_key:
-            llm_config = LLMConfig(
-                api_key=google_api_key,
-                model='gemini-2.5-flash-lite-preview-06-17'
-            )
-            self.rag_integration._init_rag_for_game(game_name, llm_config, jina_api_key)
+        if vector_game_name:
+            logger.info(f"🔄 手动切换游戏: '{game_name}' -> 向量库: {vector_game_name}")
+            # 使用映射后的向量库名称重新初始化
+            self._reinitialize_rag_for_game(vector_game_name)
+        else:
+            logger.warning(f"⚠️ 游戏 '{game_name}' 不支持，无法切换RAG引擎")

@@ -234,7 +234,7 @@ class GameAwareQueryProcessor:
         self.query_cache[cache_key] = (result, time.time())
     
     def _create_game_aware_prompt(self, query: str, game_name: Optional[str] = None) -> str:
-        """创建游戏感知的统一处理提示词"""
+        """创建游戏感知的统一处理提示词（仅翻译和意图判断，不进行查询重写）"""
         
         # 获取游戏特定信息
         game_info = ""
@@ -249,11 +249,10 @@ class GameAwareQueryProcessor:
 - 搜索建议: {', '.join(game_knowledge.get('search_tips', []))}
 """
         
-        prompt = f"""你是一个专业的游戏Wiki和攻略搜索助手。你需要分析用户的查询，并在一次响应中完成以下三个任务：
+        prompt = f"""你是一个专业的游戏Wiki和攻略搜索助手。你需要分析用户的查询，并在一次响应中完成以下两个任务：
 
 1. **语言检测和翻译**：如果查询是中文，翻译为英文
 2. **意图判断**：判断用户是想查询wiki信息还是攻略指南
-3. **查询重写**：根据游戏上下文优化查询，使其更适合搜索
 
 **用户查询：** "{query}"
 
@@ -266,12 +265,10 @@ class GameAwareQueryProcessor:
     "translated_query": "英文翻译（如果需要）或原查询",
     "intent": "wiki|guide|unknown",
     "confidence": 0.0-1.0,
-    "rewritten_query": "优化后的搜索查询",
-    "search_type": "google|rag|hybrid",
-    "reasoning": "分析和优化的详细说明",
-    "search_optimization": "google|rag|hybrid",
-    "suggested_keywords": ["关键词1", "关键词2"],
-    "alternative_queries": ["备选查询1", "备选查询2"]
+    "reasoning": "分析的详细说明",
+    "search_optimization": "hybrid",
+    "suggested_keywords": [],
+    "alternative_queries": []
 }}
 ```
 
@@ -292,25 +289,14 @@ class GameAwareQueryProcessor:
   - 关键词：how、best、recommend、next、怎么、推荐、攻略
   - 特别注意：询问"下一个"、"推荐"、"选择"的都是guide意图
 
-**3. 查询重写和优化**
-- **wiki意图**：保持原始查询不变，不进行重写（用户的原始输入往往最准确）
-- **guide意图**：进行优化重写，添加相关关键词提高搜索效果
-- **游戏术语优化**：仅对guide查询使用游戏中的标准术语
-- **搜索类型选择**：
-  - "google": 适合在线搜索的查询
-  - "rag": 适合向量搜索的查询（重点是概念和关键词）
-  - "hybrid": 两者都适合
-
 **特殊规则：**
-- **wiki意图**：rewritten_query应该与初始query相同，不添加额外内容
-- **guide意图**：可以适当添加相关关键词，如"guide"、"strategy"、"tips"等
 - 对于推荐类查询，优先考虑为guide意图
 - 对于"什么是"类查询，优先考虑为wiki意图
 - 如果没有游戏上下文，保持查询的通用性
 
 **示例（针对{game_name or '某游戏'}）：**
-- 输入："怎么打最终boss" → guide意图，重写："final boss strategy guide tips"
-- 输入："推荐下一个解锁什么" → guide意图，重写："next unlock recommendation progression guide"
+- 输入："怎么打最终boss" → guide意图，翻译："how to beat final boss"
+- 输入："推荐下一个解锁什么" → guide意图，翻译："recommend next unlock"
 
 请严格按照JSON格式回复，不要包含其他内容。"""
         
@@ -369,20 +355,8 @@ class GameAwareQueryProcessor:
             intent = "guide"
             confidence = 0.8
         
-        # 基础重写 - 根据意图处理
+        # 禁用查询重写 - 保持原始查询不变
         rewritten_query = query
-        
-        # 根据意图进行不同的处理
-        if intent == "wiki":
-            # wiki意图：保持原始查询不变，不添加额外内容
-            rewritten_query = query
-        elif intent == "guide":
-            # guide意图：进行优化重写
-            if game_name and game_name.lower() not in query.lower():
-                rewritten_query = f"{game_name} {query}"
-            
-            if not any(word in rewritten_query.lower() for word in ["guide", "strategy", "tips", "攻略"]):
-                rewritten_query += " guide"
         
         return GameAwareQueryResult(
             original_query=query,
@@ -394,7 +368,7 @@ class GameAwareQueryProcessor:
             search_type="hybrid",
             reasoning="基础处理模式 - LLM不可用",
             translation_applied=False,
-            rewrite_applied=rewritten_query != query,
+            rewrite_applied=False,  # 查询重写已禁用
             processing_time=0.001,
             game_name=game_name,
             game_context=self.game_knowledge.get(game_name.lower(), {}) if game_name else {},
@@ -439,7 +413,7 @@ class GameAwareQueryProcessor:
                 # 解析LLM响应
                 detected_language = llm_response.get("detected_language", "en")
                 translated_query = llm_response.get("translated_query", query)
-                rewritten_query = llm_response.get("rewritten_query", translated_query)
+                rewritten_query = translated_query  # 禁用查询重写，保持与翻译结果一致
                 
                 processing_time = time.time() - start_time
                 
@@ -463,7 +437,7 @@ class GameAwareQueryProcessor:
                 )
                 
                 self.stats["successful_processing"] += 1
-                logger.info(f"游戏感知处理成功: '{query}' (游戏: {game_name}) -> 翻译: '{translated_query}' -> 重写: '{rewritten_query}'")
+                logger.info(f"游戏感知处理成功: '{query}' (游戏: {game_name}) -> 翻译: '{translated_query}' (重写已禁用)")
                 
             else:
                 # LLM调用失败，使用基础处理

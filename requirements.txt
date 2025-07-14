@@ -10,7 +10,7 @@ PyQt6-WebEngine>=6.4.0
 python-dotenv>=1.0.0
 
 # 批量嵌入和向量库相关依赖
-numpy>=1.24.0,<2.0
+numpy>=1.24.0
 tqdm>=4.65.0
 faiss-cpu>=1.7.4
 qdrant-client>=1.7.0

@@ -140,12 +140,17 @@ class HybridSearchRetriever:
         
         Args:
             query: 查询文本
-            top_k: 返回结果数量
+            top_k: 返回结果数量（保留参数兼容性，但内部逻辑固定为5）
             
         Returns:
             搜索结果字典，包含结果列表和元数据
         """
         logger.info(f"开始混合搜索: {query}")
+        
+        # 固定搜索参数：向量和BM25各返回10个，最终融合后返回5个
+        vector_search_count = 10
+        bm25_search_count = 10
+        final_result_count = 5
         
         # 更新统计
         if self.enable_unified_processing:
@@ -249,9 +254,9 @@ class HybridSearchRetriever:
         
         # 执行混合搜索
         try:
-            # 向量搜索
-            print(f"🔍 [HYBRID-DEBUG] 开始向量搜索: query='{final_query}', top_k={top_k * 2}")
-            vector_results = self.vector_retriever.search(final_query, top_k * 2)
+            # 向量搜索 - 固定返回10个结果
+            print(f"🔍 [HYBRID-DEBUG] 开始向量搜索: query='{final_query}', top_k={vector_search_count}")
+            vector_results = self.vector_retriever.search(final_query, vector_search_count)
             print(f"📊 [HYBRID-DEBUG] 向量搜索结果数量: {len(vector_results)}")
             
             if vector_results:
@@ -262,11 +267,11 @@ class HybridSearchRetriever:
                     print(f"         分数: {result.get('score', 0):.4f}")
                     print(f"         摘要: {chunk.get('summary', '')[:80]}...")
             
-            # BM25搜索
+            # BM25搜索 - 固定返回10个结果
             bm25_results = []
             if self.bm25_indexer:
-                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索: query='{final_query}', top_k={top_k * 2}")
-                bm25_results = self.bm25_indexer.search(final_query, top_k * 2)
+                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索: query='{final_query}', top_k={bm25_search_count}")
+                bm25_results = self.bm25_indexer.search(final_query, bm25_search_count)
                 print(f"📊 [HYBRID-DEBUG] BM25搜索结果数量: {len(bm25_results)}")
                 
                 if bm25_results:
@@ -281,18 +286,19 @@ class HybridSearchRetriever:
             else:
                 print(f"⚠️ [HYBRID-DEBUG] BM25索引器未初始化，跳过BM25搜索")
             
-            # 分数融合
+            # 分数融合 - 固定返回5个结果
             print(f"🔄 [HYBRID-DEBUG] 开始分数融合: 方法={self.fusion_method}")
             print(f"   - 向量权重: {self.vector_weight}")
             print(f"   - BM25权重: {self.bm25_weight}")
             print(f"   - RRF_K: {self.rrf_k}")
+            print(f"   - 最终返回结果数: {final_result_count}")
             
-            final_results = self._fuse_results(vector_results, bm25_results, top_k)
+            final_results = self._fuse_results(vector_results, bm25_results, final_result_count)
             
             print(f"✅ [HYBRID-DEBUG] 分数融合完成，最终结果数量: {len(final_results)}")
             if final_results:
-                print(f"   📋 [HYBRID-DEBUG] 融合后Top3结果:")
-                for i, result in enumerate(final_results[:3]):
+                print(f"   📋 [HYBRID-DEBUG] 融合后Top5结果:")
+                for i, result in enumerate(final_results):
                     chunk = result.get("chunk", {})
                     print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
                     print(f"         融合分数: {result.get('fusion_score', 0):.4f}")
@@ -308,6 +314,9 @@ class HybridSearchRetriever:
                     "vector_results_count": len(vector_results),
                     "bm25_results_count": len(bm25_results),
                     "final_results_count": len(final_results),
+                    "vector_search_count": vector_search_count,
+                    "bm25_search_count": bm25_search_count,
+                    "target_final_count": final_result_count,
                     "processing_stats": self._get_processing_stats()
                 }
             }
@@ -320,6 +329,9 @@ class HybridSearchRetriever:
                 "query": query_metadata,
                 "metadata": {
                     "error": str(e),
+                    "vector_search_count": vector_search_count,
+                    "bm25_search_count": bm25_search_count,
+                    "target_final_count": final_result_count,
                     "processing_stats": self._get_processing_stats()
                 }
             }

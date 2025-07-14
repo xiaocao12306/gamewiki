@@ -152,7 +152,12 @@ class MiniAssistant(QWidget):
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "AI")
         
     def mousePressEvent(self, event):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("MiniAssistant: mousePressEvent triggered")
+        
         if event.button() == Qt.MouseButton.LeftButton:
+            logger.info("MiniAssistant: Left button pressed, starting drag")
             self.dragging = True
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.click_time = event.timestamp()
@@ -162,13 +167,28 @@ class MiniAssistant(QWidget):
             self.move(event.globalPosition().toPoint() - self.drag_position)
             
     def mouseReleaseEvent(self, event):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("MiniAssistant: mouseReleaseEvent triggered")
+        
         if event.button() == Qt.MouseButton.LeftButton:
             # Check if it was a click (not drag)
-            if event.timestamp() - self.click_time < 200:  # 200ms threshold
+            time_diff = event.timestamp() - self.click_time
+            logger.info(f"MiniAssistant: Time diff: {time_diff}ms")
+            
+            if time_diff < 200:  # 200ms threshold
                 drag_distance = (event.globalPosition().toPoint() - 
                                (self.frameGeometry().topLeft() + self.drag_position)).manhattanLength()
+                logger.info(f"MiniAssistant: Drag distance: {drag_distance}px")
+                
                 if drag_distance < 5:  # 5 pixel threshold
+                    logger.info("MiniAssistant: Emitting clicked signal")
                     self.clicked.emit()
+                else:
+                    logger.info("MiniAssistant: Not a click - drag distance too large")
+            else:
+                logger.info("MiniAssistant: Not a click - time too long")
+            
             self.dragging = False
             
     def enterEvent(self, event):
@@ -782,32 +802,63 @@ class AssistantController:
         self.mini_window = None
         self.main_window = None
         self.current_mode = WindowMode.MINI
+        self.current_game_window = None  # 记录当前游戏窗口标题
         
     def show_mini(self):
         """Show mini assistant"""
         import logging
         logger = logging.getLogger(__name__)
         logger.info("show_mini() called")
+        
         if not self.mini_window:
             logger.info("Creating new MiniAssistant window")
             self.mini_window = MiniAssistant()
             self.mini_window.clicked.connect(self.expand_to_chat)
+            logger.info("MiniAssistant created and signal connected")
+        
+        # 确保窗口显示在屏幕上
         logger.info("Showing mini window")
         self.mini_window.show()
+        self.mini_window.raise_()
+        self.mini_window.activateWindow()
+        
+        # 如果有主窗口，隐藏它
+        if self.main_window:
+            logger.info("Hiding main window")
+            self.main_window.hide()
+        
         self.current_mode = WindowMode.MINI
+        logger.info("show_mini() completed")
+        
+    def set_current_game_window(self, game_window_title: str):
+        """设置当前游戏窗口标题"""
+        self.current_game_window = game_window_title
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
         
     def expand_to_chat(self):
         """Expand from mini to chat window with animation"""
         import logging
         logger = logging.getLogger(__name__)
         logger.info("expand_to_chat() called")
+        
         if not self.main_window:
             logger.info("Creating new UnifiedAssistantWindow")
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.window_closing.connect(self.show_mini)
+            logger.info("UnifiedAssistantWindow created and signals connected")
+        
+        # 确保窗口显示
+        logger.info("Showing main window")
+        self.main_window.show()
+        self.main_window.raise_()
+        self.main_window.activateWindow()
         
         if self.mini_window:
+            logger.info("Mini window exists, starting animation")
+            
             # Get screen geometry
             screen = QApplication.primaryScreen().geometry()
             
@@ -828,11 +879,12 @@ class AssistantController:
             target_y = max(30, min(mini_pos.y() - (target_height - 60) // 2, 
                                   screen.height() - target_height - 40))
             
+            logger.info(f"Animation: from ({mini_pos.x()}, {mini_pos.y()}, 60, 60) to ({target_x}, {target_y}, {target_width}, {target_height})")
+            
             # Set initial position and size
             self.main_window.setGeometry(
                 mini_pos.x(), mini_pos.y(), 60, 60
             )
-            self.main_window.show()
             
             # Hide mini window
             self.mini_window.hide()
@@ -850,10 +902,21 @@ class AssistantController:
             )
             self.expand_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
             self.expand_animation.start()
+            
+            logger.info("Animation started")
         else:
-            self.main_window.show()
+            logger.info("No mini window, directly showing main window")
+            # 确保窗口在屏幕中央
+            screen = QApplication.primaryScreen().geometry()
+            target_width = 500
+            target_height = 700
+            target_x = (screen.width() - target_width) // 2
+            target_y = (screen.height() - target_height) // 2
+            
+            self.main_window.setGeometry(target_x, target_y, target_width, target_height)
             
         self.current_mode = WindowMode.CHAT
+        logger.info("expand_to_chat() completed")
         
     def handle_query(self, query: str):
         """Handle user query"""
