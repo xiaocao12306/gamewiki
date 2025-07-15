@@ -6,10 +6,27 @@ Provides mini assistant and expandable chat window functionality.
 import sys
 import asyncio
 import json
+import ctypes
+import logging
+import re
+import time
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
 from dataclasses import dataclass, field
+
+# 导入 markdown 支持
+try:
+    import markdown
+    MARKDOWN_AVAILABLE = True
+    
+    # 禁用markdown库的调试日志输出，避免大量debug信息
+    markdown_logger = logging.getLogger('markdown')
+    markdown_logger.setLevel(logging.WARNING)
+    
+except ImportError:
+    print("Warning: markdown library not available. Markdown content will be displayed as plain text.")
+    MARKDOWN_AVAILABLE = False
 
 # Try PyQt6 first, fall back to PyQt5
 try:
@@ -62,6 +79,22 @@ except ImportError:
         QWebEngineView = None
 
 
+def _get_scale() -> float:
+    """获取显示器缩放因子（仅 Windows）"""
+    try:
+        shcore = ctypes.windll.shcore
+        hMonitor = ctypes.windll.user32.MonitorFromWindow(
+            None,   # 传 None 拿到主显示器
+            1       # MONITOR_DEFAULTTOPRIMARY
+        )
+        factor = ctypes.c_uint()
+        if shcore.GetScaleFactorForMonitor(hMonitor, ctypes.byref(factor)) == 0:
+            return factor.value / 100.0
+    except Exception:
+        pass
+    return 1.0
+
+
 class WindowMode(Enum):
     """Window display modes"""
     MINI = "mini"
@@ -95,6 +128,103 @@ class TransitionMessages:
     GUIDE_GENERATING = "Generating guide content..."
     ERROR_NOT_FOUND = "Sorry, no relevant information found"
     ERROR_TIMEOUT = "Request timeout, please try again later"
+    
+    # 简化的状态提示信息
+    QUERY_RECEIVED = "🔍 正在分析您的问题..."
+    DB_SEARCHING = "📚 检索相关知识库..."
+    AI_SUMMARIZING = "📝 智能总结生成中..."
+    COMPLETED = "✨ 回答生成完成"
+
+
+def detect_markdown_content(text: str) -> bool:
+    """
+    检测文本是否包含markdown格式
+    
+    Args:
+        text: 要检测的文本
+        
+    Returns:
+        True如果文本包含markdown格式，否则False
+    """
+    if not text:
+        return False
+        
+    # 检测常见的markdown模式
+    markdown_patterns = [
+        r'\*\*.*?\*\*',  # 粗体 **text**
+        r'\*.*?\*',      # 斜体 *text*
+        r'#{1,6}\s',     # 标题 # ## ### 等
+        r'^\s*[-\*\+]\s', # 无序列表
+        r'^\s*\d+\.\s',  # 有序列表
+        r'`.*?`',        # 行内代码
+        r'```.*?```',    # 代码块
+        r'\[.*?\]\(.*?\)', # 链接 [text](url)
+    ]
+    
+    for pattern in markdown_patterns:
+        if re.search(pattern, text, re.MULTILINE | re.DOTALL):
+            return True
+            
+    return False
+
+
+def convert_markdown_to_html(text: str) -> str:
+    """
+    将markdown文本转换为HTML
+    
+    Args:
+        text: markdown文本
+        
+    Returns:
+        转换后的HTML文本
+    """
+    if not MARKDOWN_AVAILABLE or not text:
+        return text
+        
+    try:
+        # 配置markdown转换器，使用基础扩展（避免依赖可能不存在的扩展）
+        available_extensions = []
+        
+        # 尝试添加可用的扩展
+        try:
+            import markdown.extensions.extra
+            available_extensions.append('extra')
+        except ImportError:
+            pass
+            
+        try:
+            import markdown.extensions.nl2br
+            available_extensions.append('nl2br')
+        except ImportError:
+            pass
+            
+        # 如果没有可用的扩展，使用基础配置
+        if available_extensions:
+            md = markdown.Markdown(extensions=available_extensions)
+        else:
+            md = markdown.Markdown()
+        
+        # 转换markdown到HTML
+        html = md.convert(text)
+        
+        # 添加一些基础样式，让HTML显示更好看
+        styled_html = f"""
+        <div style="
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 100%;
+            word-wrap: break-word;
+        ">
+            {html}
+        </div>
+        """
+        
+        return styled_html
+        
+    except Exception as e:
+        # 静默处理markdown转换失败，避免过多日志输出
+        return text
 
 
 class MiniAssistant(QWidget):
@@ -218,6 +348,118 @@ class MiniAssistant(QWidget):
         self.hover_animation.start()
 
 
+class StatusMessageWidget(QFrame):
+    """专门用于显示状态信息的消息组件"""
+    
+    def __init__(self, message: str, parent=None):
+        super().__init__(parent)
+        self.current_message = message
+        self.init_ui()
+        
+        # 动画定时器
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.update_animation)
+        self.animation_dots = 0
+        self.animation_timer.start(500)  # 每500ms更新一次动画
+        
+    def init_ui(self):
+        """初始化状态消息UI"""
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
+        
+        # 创建状态气泡
+        bubble = QFrame()
+        bubble.setObjectName("statusBubble")
+        bubble.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum
+        )
+        bubble_layout = QVBoxLayout(bubble)
+        bubble_layout.setContentsMargins(12, 8, 12, 8)
+        
+        # 状态文本标签
+        self.status_label = QLabel()
+        self.status_label.setWordWrap(True)
+        self.status_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.status_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum
+        )
+        
+        # 设置状态样式
+        self.status_label.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+                line-height: 1.5;
+                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                color: #666;
+                font-style: italic;
+            }
+        """)
+        
+        # 设置气泡样式
+        bubble.setStyleSheet("""
+            QFrame#statusBubble {
+                background-color: #f0f8ff;
+                border: 1px solid #e0e8f0;
+                border-radius: 18px;
+                padding: 4px;
+            }
+        """)
+        
+        bubble_layout.addWidget(self.status_label)
+        layout.addWidget(bubble)
+        layout.addStretch()
+        
+        self.update_display()
+        
+    def update_status(self, new_message: str):
+        """更新状态信息"""
+        self.current_message = new_message
+        self.animation_dots = 0  # 重置动画
+        self.update_display()
+        # 确保动画继续运行
+        if not self.animation_timer.isActive():
+            self.animation_timer.start(500)
+        
+    def update_animation(self):
+        """更新动画效果"""
+        self.animation_dots = (self.animation_dots + 1) % 4
+        self.update_display()
+        
+    def update_display(self):
+        """更新显示内容"""
+        dots = "." * self.animation_dots
+        display_text = f"{self.current_message}{dots}"
+        self.status_label.setText(display_text)
+        self.status_label.adjustSize()
+        self.adjustSize()
+        
+        # 确保父容器也更新布局
+        if self.parent():
+            self.parent().adjustSize()
+        
+    def stop_animation(self):
+        """停止动画"""
+        if self.animation_timer.isActive():
+            self.animation_timer.stop()
+            
+    def hide_with_fadeout(self):
+        """淡出隐藏"""
+        self.stop_animation()
+        # 简单的隐藏，可以后续添加淡出动画
+        self.hide()
+
+
 class MessageWidget(QFrame):
     """Individual chat message widget"""
     
@@ -229,7 +471,7 @@ class MessageWidget(QFrame):
     def init_ui(self):
         """Initialize the message UI"""
         self.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,  # 改为Expanding以占满可用宽度
             QSizePolicy.Policy.Minimum
         )
         layout = QHBoxLayout(self)
@@ -239,9 +481,11 @@ class MessageWidget(QFrame):
         bubble = QFrame()
         bubble.setObjectName("messageBubble")
         bubble.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Minimum
         )
+        # 设置最大宽度为父容器的80%，留出边距
+        bubble.setMaximumWidth(9999)  # 先设置一个大值，后续会动态调整
         bubble_layout = QVBoxLayout(bubble)
         bubble_layout.setContentsMargins(12, 8, 12, 8)
         
@@ -267,6 +511,17 @@ class MessageWidget(QFrame):
             )
             self.content_label.setText(html_content)
             self.content_label.setTextFormat(Qt.TextFormat.RichText)
+        elif self.message.type == MessageType.AI_RESPONSE:
+            # AI回复可能包含markdown格式，需要检测和转换
+            if detect_markdown_content(self.message.content):
+                # 转换markdown到HTML
+                html_content = convert_markdown_to_html(self.message.content)
+                self.content_label.setText(html_content)
+                self.content_label.setTextFormat(Qt.TextFormat.RichText)
+            else:
+                # 普通文本
+                self.content_label.setText(self.message.content)
+                self.content_label.setTextFormat(Qt.TextFormat.PlainText)
         else:
             self.content_label.setText(self.message.content)
             self.content_label.setTextFormat(Qt.TextFormat.PlainText)
@@ -333,16 +588,69 @@ class MessageWidget(QFrame):
         if self.message.type == MessageType.WIKI_LINK:
             self.content_label.linkActivated.connect(self.on_link_clicked)
             
+        # 设置初始宽度
+        self._set_initial_width()
+            
+    def _set_initial_width(self):
+        """设置消息的初始宽度，基于父容器"""
+        # 这个方法会在添加到聊天视图后被_update_message_width方法覆盖
+        # 但是可以提供一个合理的初始值
+        bubble = self.findChild(QFrame, "messageBubble")
+        if bubble:
+            bubble.setMaximumWidth(500)  # 设置一个合理的初始最大宽度
+            
     def on_link_clicked(self, url):
         """Handle wiki link clicks"""
-        # Emit signal to parent to handle wiki navigation
-        if hasattr(self.parent(), 'show_wiki'):
-            self.parent().show_wiki(url, self.message.content)
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔗 Wiki链接被点击: {url}")
+        logger.info(f"消息内容: {self.message.content}")
+        logger.info(f"消息元数据: {self.message.metadata}")
+        
+        # 优化标题传递：优先使用消息内容，如果内容为空则从URL提取
+        title = self.message.content
+        if not title or title.strip() == "":
+            # 如果没有标题，从URL中提取
+            try:
+                from urllib.parse import unquote
+                title = unquote(url.split('/')[-1]).replace('_', ' ')
+            except:
+                title = "Wiki页面"
+        
+        logger.info(f"使用标题: {title}")
+        
+        # 向上查找ChatView实例
+        chat_view = self._find_chat_view()
+        if chat_view:
+            logger.info(f"找到ChatView实例，调用显示Wiki页面")
+            chat_view.show_wiki(url, title)
+        else:
+            logger.warning(f"未找到ChatView实例")
             
+    def _find_chat_view(self):
+        """向上查找ChatView实例"""
+        parent = self.parent()
+        while parent:
+            if isinstance(parent, ChatView):
+                return parent
+            parent = parent.parent()
+        return None
+        
     def update_content(self, new_content: str):
         """Update message content"""
         self.message.content = new_content
-        self.content_label.setText(new_content)
+        
+        # 如果是AI回复，检测并转换markdown
+        if self.message.type == MessageType.AI_RESPONSE:
+            if detect_markdown_content(new_content):
+                html_content = convert_markdown_to_html(new_content)
+                self.content_label.setText(html_content)
+                self.content_label.setTextFormat(Qt.TextFormat.RichText)
+            else:
+                self.content_label.setText(new_content)
+                self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+        else:
+            self.content_label.setText(new_content)
+            
         self.content_label.adjustSize()
         self.adjustSize()
 
@@ -355,6 +663,17 @@ class StreamingMessageWidget(MessageWidget):
         self.full_text = ""
         self.display_index = 0
         
+        # Markdown渲染控制
+        self.last_render_index = 0  # 上次渲染时的字符位置
+        self.render_interval = 80   # 每80个字符进行一次markdown渲染（减少频率，避免闪烁）
+        self.last_render_time = 0   # 上次渲染时间
+        self.render_time_interval = 1.5  # 最长1.5秒进行一次渲染
+        self.is_markdown_detected = False  # 缓存markdown检测结果
+        self.current_format = Qt.TextFormat.PlainText  # 当前文本格式
+        
+        # 优化流式消息的布局，防止闪烁
+        self._optimize_for_streaming()
+        
         # Typing animation timer
         self.typing_timer = QTimer()
         self.typing_timer.timeout.connect(self.show_next_char)
@@ -364,12 +683,73 @@ class StreamingMessageWidget(MessageWidget):
         self.dots_count = 0
         self.dots_timer.timeout.connect(self.update_dots)
         self.dots_timer.start(500)
+    
+    def _optimize_for_streaming(self):
+        """优化流式消息的布局，防止闪烁"""
+        # 找到消息气泡
+        bubble = self.findChild(QFrame, "messageBubble")
+        if bubble:
+            # 使用QSizePolicy.Fixed防止重排，但宽度将动态设置
+            bubble.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        
+        # 优化content_label设置
+        if hasattr(self, 'content_label'):
+            # 禁用自动调整大小，避免频繁重排
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            # 设置文本换行和固定宽度
+            self.content_label.setWordWrap(True)
+            self.content_label.setScaledContents(False)
+            
+        # 初始设置宽度（基于父容器）
+        self._update_bubble_width()
+    
+    def _update_bubble_width(self):
+        """根据聊天窗口宽度动态设置对话框宽度"""
+        # 获取聊天视图的宽度
+        chat_view = self.parent()
+        if chat_view and hasattr(chat_view, 'viewport'):
+            viewport_width = chat_view.viewport().width()
+        else:
+            # 如果无法获取聊天视图宽度，尝试从父容器获取
+            parent_widget = self.parent()
+            viewport_width = parent_widget.width() if parent_widget else 500
+        
+        # 计算对话框宽度（聊天视图宽度的80%，但不超过600px，不少于300px）
+        bubble_width = max(300, min(600, int(viewport_width * 0.8)))
+        content_width = bubble_width - 24  # 减去边距
+        
+        # 更新气泡和内容宽度
+        bubble = self.findChild(QFrame, "messageBubble")
+        if bubble:
+            bubble.setFixedWidth(bubble_width)
+            
+        if hasattr(self, 'content_label'):
+            self.content_label.setFixedWidth(content_width)
+            
+        # 调试信息
+        print(f"💬 消息宽度更新: 视图宽度={viewport_width}px, 消息宽度={bubble_width}px")
+    
+    def set_render_params(self, char_interval: int = 80, time_interval: float = 1.5):
+        """
+        设置markdown渲染参数
+        
+        Args:
+            char_interval: 字符间隔，每多少个字符进行一次渲染
+            time_interval: 时间间隔，最长多少秒进行一次渲染
+        """
+        self.render_interval = max(20, char_interval)  # 最少20个字符
+        self.render_time_interval = max(0.5, time_interval)  # 最少0.5秒
         
     def append_chunk(self, chunk: str):
         """Append text chunk for streaming display"""
         self.full_text += chunk
         if not self.typing_timer.isActive():
             self.dots_timer.stop()
+            # 初始化渲染时间戳和markdown检测
+            self.last_render_time = time.time()
+            # 提前检测是否可能包含markdown（基于首个chunk）
+            if len(self.full_text) > 10:  # 有一定长度时再检测
+                self.is_markdown_detected = detect_markdown_content(self.full_text)
             self.typing_timer.start(20)  # 20ms per character
             
     def show_next_char(self):
@@ -377,15 +757,78 @@ class StreamingMessageWidget(MessageWidget):
         if self.display_index < len(self.full_text):
             self.display_index += 1
             display_text = self.full_text[:self.display_index]
-            self.content_label.setText(display_text)
-            self.content_label.adjustSize()
-            self.adjustSize()
+            current_time = time.time()
+            
+            # 检查是否需要进行阶段性markdown渲染
+            should_render = False
+            
+            # 条件1: 达到字符间隔
+            if self.display_index - self.last_render_index >= self.render_interval:
+                should_render = True
+            
+            # 条件2: 达到时间间隔
+            elif current_time - self.last_render_time >= self.render_time_interval:
+                should_render = True
+            
+            if should_render and self.message.type == MessageType.AI_STREAMING:
+                # 只在需要时进行markdown检测（避免每次都检测）
+                if not self.is_markdown_detected:
+                    self.is_markdown_detected = detect_markdown_content(display_text)
+                
+                # 进行阶段性markdown渲染
+                if self.is_markdown_detected:
+                    html_content = convert_markdown_to_html(display_text)
+                    # 只在格式实际变化时才设置格式，避免闪烁
+                    if self.current_format != Qt.TextFormat.RichText:
+                        self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                        self.current_format = Qt.TextFormat.RichText
+                    self.content_label.setText(html_content)
+                else:
+                    # 只在格式实际变化时才设置格式，避免闪烁
+                    if self.current_format != Qt.TextFormat.PlainText:
+                        self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+                        self.current_format = Qt.TextFormat.PlainText
+                    self.content_label.setText(display_text)
+                
+                # 更新渲染状态
+                self.last_render_index = self.display_index
+                self.last_render_time = current_time
+            else:
+                # 不需要渲染时，保持当前格式但更新文本
+                if self.is_markdown_detected:
+                    # 如果已检测到markdown，继续使用HTML格式
+                    html_content = convert_markdown_to_html(display_text)
+                    self.content_label.setText(html_content)
+                else:
+                    # 否则使用纯文本
+                    self.content_label.setText(display_text)
+                
+            # 不要频繁调用adjustSize，这是闪烁的主要原因
+            # self.content_label.adjustSize()
+            # self.adjustSize()
             
             # Auto-scroll to bottom
-            if hasattr(self.parent(), 'scroll_to_bottom'):
-                self.parent().scroll_to_bottom()
+            if hasattr(self.parent(), 'smart_scroll_to_bottom'):
+                self.parent().smart_scroll_to_bottom()
         else:
             self.typing_timer.stop()
+            
+            # 最终完成时，转换消息类型并进行最终markdown渲染
+            if self.message.type == MessageType.AI_STREAMING and self.full_text:
+                # 将消息类型改为AI_RESPONSE，表示流式输出已完成
+                self.message.type = MessageType.AI_RESPONSE
+                
+                # 进行最终的markdown检测和转换
+                if detect_markdown_content(self.full_text):
+                    html_content = convert_markdown_to_html(self.full_text)
+                    self.content_label.setText(html_content)
+                    self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                else:
+                    self.content_label.setText(self.full_text)
+                    self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+                # 最终完成时才调整一次大小
+                self.content_label.adjustSize()
+                self.adjustSize()
             
     def update_dots(self):
         """Update loading dots animation"""
@@ -402,6 +845,13 @@ class ChatView(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.messages: List[MessageWidget] = []
+        self.current_status_widget: Optional[StatusMessageWidget] = None
+        
+        # 自动滚动控制
+        self.auto_scroll_enabled = True  # 是否启用自动滚动
+        self.user_scrolled_manually = False  # 用户是否手动滚动过
+        self.last_scroll_position = 0  # 上次滚动位置
+        
         self.init_ui()
         
     def init_ui(self):
@@ -426,6 +876,12 @@ class ChatView(QScrollArea):
             }
         """)
         
+        # 连接滚动条信号，监测用户手动滚动
+        scrollbar = self.verticalScrollBar()
+        scrollbar.valueChanged.connect(self._on_scroll_changed)
+        scrollbar.sliderPressed.connect(self._on_user_scroll_start)
+        scrollbar.sliderReleased.connect(self._on_user_scroll_end)
+        
     def add_message(self, msg_type: MessageType, content: str, 
                    metadata: Dict[str, Any] = None) -> MessageWidget:
         """Add a new message to the chat"""
@@ -443,36 +899,249 @@ class ChatView(QScrollArea):
         self.layout.insertWidget(self.layout.count() - 1, widget)
         self.messages.append(widget)
         
+        # 动态设置消息最大宽度为聊天视图宽度的80%
+        self._update_message_width(widget)
+        
         # Force layout update
         widget.adjustSize()
         self.container.adjustSize()
         
         # Auto-scroll to bottom
-        QTimer.singleShot(100, self.scroll_to_bottom)
+        QTimer.singleShot(100, self.smart_scroll_to_bottom)
         
         return widget
         
     def add_streaming_message(self) -> StreamingMessageWidget:
         """Add a new streaming message"""
-        return self.add_message(MessageType.AI_STREAMING, "")
+        # 创建流式消息，完成后会转换为AI_RESPONSE类型
+        streaming_widget = self.add_message(MessageType.AI_STREAMING, "")
+        return streaming_widget
+        
+    def show_status(self, message: str) -> StatusMessageWidget:
+        """显示状态信息"""
+        # 如果已有状态消息，先隐藏
+        if self.current_status_widget:
+            self.hide_status()
+            
+        # 创建新的状态消息
+        self.current_status_widget = StatusMessageWidget(message, self)
+        self.layout.insertWidget(self.layout.count() - 1, self.current_status_widget)
+        
+        # 动态设置消息最大宽度
+        self._update_status_width(self.current_status_widget)
+        
+        # Force layout update and scroll to bottom
+        self.current_status_widget.adjustSize()
+        self.container.adjustSize()
+        QTimer.singleShot(100, self.smart_scroll_to_bottom)
+        
+        return self.current_status_widget
+        
+    def update_status(self, message: str):
+        """更新当前状态信息"""
+        if self.current_status_widget:
+            self.current_status_widget.update_status(message)
+            # 确保滚动到底部显示新状态
+            QTimer.singleShot(50, self.smart_scroll_to_bottom)
+        else:
+            self.show_status(message)
+            
+    def hide_status(self):
+        """隐藏当前状态信息"""
+        if self.current_status_widget:
+            self.current_status_widget.hide_with_fadeout()
+            self.layout.removeWidget(self.current_status_widget)
+            self.current_status_widget.deleteLater()
+            self.current_status_widget = None
+            
+    def _update_status_width(self, widget: StatusMessageWidget):
+        """更新状态消息控件的最大宽度"""
+        # 获取聊天视图的实际宽度
+        chat_width = self.viewport().width()
+        if chat_width > 0:
+            # 设置状态消息最大宽度为聊天视图宽度的80%，最小300px，最大600px
+            max_width = min(max(int(chat_width * 0.8), 300), 600)
+            # 找到状态气泡并设置其最大宽度
+            bubble = widget.findChild(QFrame, "statusBubble")
+            if bubble:
+                bubble.setMaximumWidth(max_width)
+                # 对于状态消息，也可以设置固定宽度来避免闪烁
+                bubble.setFixedWidth(max_width)
         
     def scroll_to_bottom(self):
         """Scroll to the bottom of the chat"""
         scrollbar = self.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
         
+    def smart_scroll_to_bottom(self):
+        """智能滚动到底部 - 只在启用自动滚动时执行"""
+        if self.auto_scroll_enabled and not self.user_scrolled_manually:
+            self.scroll_to_bottom()
+            
+    def _on_scroll_changed(self, value):
+        """滚动位置改变时的回调"""
+        scrollbar = self.verticalScrollBar()
+        
+        # 检查是否接近底部（距离底部少于50像素）
+        near_bottom = (scrollbar.maximum() - value) <= 50
+        
+        # 如果用户滚动到接近底部，重新启用自动滚动
+        if near_bottom and self.user_scrolled_manually:
+            print("📍 用户滚动到底部附近，重新启用自动滚动")
+            self.user_scrolled_manually = False
+            self.auto_scroll_enabled = True
+            
+    def _on_user_scroll_start(self):
+        """用户开始手动滚动"""
+        self.user_scrolled_manually = True
+        
+    def _on_user_scroll_end(self):
+        """用户结束手动滚动"""
+        # 检查当前是否在底部附近
+        scrollbar = self.verticalScrollBar()
+        near_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
+        
+        if not near_bottom:
+            # 如果不在底部，禁用自动滚动
+            self.auto_scroll_enabled = False
+            print("📍 用户手动滚动离开底部，禁用自动滚动")
+        else:
+            # 如果在底部，保持自动滚动
+            self.auto_scroll_enabled = True
+            self.user_scrolled_manually = False
+            print("📍 用户在底部附近，保持自动滚动")
+            
+    def wheelEvent(self, event):
+        """鼠标滚轮事件 - 检测用户滚轮操作"""
+        # 标记用户进行了手动滚动
+        self.user_scrolled_manually = True
+        
+        # 调用原始的滚轮事件处理
+        super().wheelEvent(event)
+        
+        # 延迟检查是否在底部附近
+        QTimer.singleShot(100, self._check_if_near_bottom)
+        
+    def _check_if_near_bottom(self):
+        """检查是否接近底部"""
+        scrollbar = self.verticalScrollBar()
+        near_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
+        
+        if near_bottom:
+            # 如果接近底部，重新启用自动滚动
+            self.auto_scroll_enabled = True
+            self.user_scrolled_manually = False
+            print("📍 滚轮操作后接近底部，重新启用自动滚动")
+        else:
+            # 否则禁用自动滚动
+            self.auto_scroll_enabled = False
+            print("📍 滚轮操作离开底部，禁用自动滚动")
+            
+    def mouseDoubleClickEvent(self, event):
+        """双击事件 - 手动重新启用自动滚动并滚动到底部"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            print("📍 双击聊天区域，重新启用自动滚动")
+            self.auto_scroll_enabled = True
+            self.user_scrolled_manually = False
+            self.scroll_to_bottom()
+        super().mouseDoubleClickEvent(event)
+        
+    def reset_auto_scroll(self):
+        """重置自动滚动状态（供外部调用）"""
+        self.auto_scroll_enabled = True
+        self.user_scrolled_manually = False
+        print("📍 重置自动滚动状态")
+        
+    def disable_auto_scroll(self):
+        """禁用自动滚动（供外部调用）"""
+        self.auto_scroll_enabled = False
+        self.user_scrolled_manually = True
+        print("📍 禁用自动滚动")
+        
+    def keyPressEvent(self, event):
+        """键盘事件 - 支持快捷键控制自动滚动"""
+        if event.key() == Qt.Key.Key_End:
+            # End键：重新启用自动滚动并滚动到底部
+            print("📍 按下End键，重新启用自动滚动")
+            self.auto_scroll_enabled = True
+            self.user_scrolled_manually = False
+            self.scroll_to_bottom()
+        elif event.key() == Qt.Key.Key_Home:
+            # Home键：滚动到顶部并禁用自动滚动
+            print("📍 按下Home键，滚动到顶部并禁用自动滚动")
+            self.auto_scroll_enabled = False
+            self.user_scrolled_manually = True
+            scrollbar = self.verticalScrollBar()
+            scrollbar.setValue(0)
+        else:
+            super().keyPressEvent(event)
+        
     def show_wiki(self, url: str, title: str):
         """Emit signal to show wiki page"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"📄 ChatView.show_wiki 被调用: URL={url}, Title={title}")
         self.wiki_requested.emit(url, title)
+        logger.info(f"📤 已发出wiki_requested信号")
+        
+    def _update_message_width(self, widget: MessageWidget):
+        """更新消息控件的最大宽度"""
+        # 获取聊天视图的实际宽度
+        chat_width = self.viewport().width()
+        if chat_width > 0:
+            # 设置消息最大宽度为聊天视图宽度的80%，最小300px，最大600px
+            max_width = min(max(int(chat_width * 0.8), 300), 600)
+            
+            # 如果是StreamingMessageWidget，调用其专门的更新方法
+            if isinstance(widget, StreamingMessageWidget):
+                widget._update_bubble_width()
+            else:
+                # 对于普通消息，设置固定宽度以保持一致性
+                bubble = widget.findChild(QFrame, "messageBubble")
+                if bubble:
+                    # 设置固定宽度，避免不同消息宽度不一致
+                    bubble.setFixedWidth(max_width)
+                    bubble.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+                
+                # 同时更新content_label的宽度
+                if hasattr(widget, 'content_label'):
+                    content_width = max_width - 24  # 减去边距
+                    widget.content_label.setFixedWidth(content_width)
+                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+                
+    def resizeEvent(self, event):
+        """窗口大小改变时更新所有消息的宽度"""
+        super().resizeEvent(event)
+        # 更新所有现有消息的宽度
+        for widget in self.messages:
+            self._update_message_width(widget)
+        # 更新状态消息的宽度
+        if self.current_status_widget:
+            self._update_status_width(self.current_status_widget)
+            
+    def update_all_message_widths(self):
+        """更新所有消息的宽度（用于窗口显示后的初始化）"""
+        for widget in self.messages:
+            self._update_message_width(widget)
+        if self.current_status_widget:
+            self._update_status_width(self.current_status_widget)
+        
+    def showEvent(self, event):
+        """窗口显示时更新消息宽度"""
+        super().showEvent(event)
+        # 延迟更新，确保窗口已完全显示
+        QTimer.singleShot(100, self.update_all_message_widths)
 
 
 class WikiView(QWidget):
     """Wiki page viewer"""
     
     back_requested = pyqtSignal()
+    wiki_page_loaded = pyqtSignal(str, str)  # 新信号：url, title
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.current_search_url = ""  # 存储搜索URL
+        self.current_search_title = ""  # 存储搜索标题
         self.init_ui()
         
     def init_ui(self):
@@ -542,11 +1211,28 @@ class WikiView(QWidget):
         if WEBENGINE_AVAILABLE and QWebEngineView:
             # Use WebEngine view
             self.web_view = QWebEngineView()
+            # 修复Qt bug: 设置合理的尺寸约束，避免巨大的默认尺寸
+            self.web_view.setMinimumSize(200, 150)  # 设置合理的最小尺寸
+            self.web_view.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
+            # 设置尺寸策略为可扩展，允许自由调整
+            self.web_view.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Expanding
+            )
+            
+            # 连接页面加载完成信号
+            self.web_view.loadFinished.connect(self._on_page_load_finished)
+            
             self.content_widget = self.web_view
         else:
             # Fallback to text view
             self.content_widget = QTextEdit()
             self.content_widget.setReadOnly(True)
+            self.content_widget.setMinimumSize(200, 150)  # 设置合理的最小尺寸
+            self.content_widget.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Expanding
+            )
             self.content_widget.setStyleSheet("""
                 QTextEdit {
                     background-color: white;
@@ -565,8 +1251,105 @@ class WikiView(QWidget):
         self.current_url = ""
         self.current_title = ""
         
+    def _on_page_load_finished(self, ok):
+        """页面加载完成时的回调"""
+        if not ok or not self.web_view:
+            return
+            
+        try:
+            # 获取当前页面的URL和标题
+            current_url = self.web_view.url().toString()
+            
+            # 检查是否是真实的wiki页面（不是搜索页面）
+            if self._is_real_wiki_page(current_url):
+                # 获取页面标题
+                self.web_view.page().runJavaScript(
+                    "document.title",
+                    self._on_title_received
+                )
+            else:
+                # 如果还是搜索页面，等待一段时间后再次检查
+                QTimer.singleShot(2000, self._check_for_redirect)
+                
+        except Exception as e:
+            print(f"页面加载完成处理失败: {e}")
+            
+    def _check_for_redirect(self):
+        """检查页面是否已重定向到真实wiki页面"""
+        if not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            if self._is_real_wiki_page(current_url):
+                self.web_view.page().runJavaScript(
+                    "document.title",
+                    self._on_title_received
+                )
+        except Exception as e:
+            print(f"重定向检查失败: {e}")
+            
+    def _is_real_wiki_page(self, url: str) -> bool:
+        """判断是否是真实的wiki页面（而不是搜索页面）"""
+        if not url:
+            return False
+            
+        # 检查URL是否包含常见的搜索引擎域名
+        search_engines = [
+            'duckduckgo.com',
+            'bing.com',
+            'google.com',
+            'search.yahoo.com'
+        ]
+        
+        for engine in search_engines:
+            if engine in url.lower():
+                return False
+                
+        # 检查是否包含wiki相关域名或路径
+        wiki_indicators = [
+            'wiki',
+            'fandom.com',
+            'wikia.com',
+            'gamepedia.com',
+            'huijiwiki.com',  # 添加灰机wiki支持
+            'mcmod.cn',       # MC百科
+            'terraria.wiki.gg',
+            'helldiversgamepedia.com'
+        ]
+        
+        url_lower = url.lower()
+        for indicator in wiki_indicators:
+            if indicator in url_lower:
+                return True
+                
+        # 如果URL与初始搜索URL不同，且不是搜索引擎，认为是真实页面
+        return url != self.current_search_url
+        
+    def _on_title_received(self, title):
+        """收到页面标题时的回调"""
+        if not title or not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            
+            # 更新显示的标题
+            self.current_url = current_url
+            self.current_title = title
+            self.title_label.setText(title)
+            
+            # 发出信号，通知找到了真实的wiki页面
+            print(f"📄 WikiView找到真实wiki页面: {title} -> {current_url}")
+            self.wiki_page_loaded.emit(current_url, title)
+            
+        except Exception as e:
+            print(f"处理页面标题失败: {e}")
+        
     def load_wiki(self, url: str, title: str):
         """Load a wiki page"""
+        self.current_search_url = url  # 保存搜索URL
+        self.current_search_title = title  # 保存搜索标题
         self.current_url = url
         self.current_title = title
         self.title_label.setText(title)
@@ -600,6 +1383,7 @@ class UnifiedAssistantWindow(QMainWindow):
     
     query_submitted = pyqtSignal(str)
     window_closing = pyqtSignal()  # Signal when window is closing
+    wiki_page_found = pyqtSignal(str, str)  # 新信号：传递真实wiki页面信息到controller
     
     def __init__(self, settings_manager=None):
         super().__init__()
@@ -615,6 +1399,10 @@ class UnifiedAssistantWindow(QMainWindow):
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint
         )
+        
+        # 确保窗口可以自由调整大小，移除任何尺寸限制
+        self.setMinimumSize(300, 200)  # 设置一个合理的最小尺寸
+        self.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
         
         # Central widget
         central = QWidget()
@@ -635,6 +1423,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Wiki view
         self.wiki_view = WikiView()
         self.wiki_view.back_requested.connect(self.show_chat_view)
+        self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
         
         self.content_stack.addWidget(self.chat_view)
         self.content_stack.addWidget(self.wiki_view)
@@ -717,6 +1506,11 @@ class UnifiedAssistantWindow(QMainWindow):
         # Apply shadow effect
         self.apply_shadow()
         
+    def reset_size_constraints(self):
+        """重置窗口尺寸约束，确保可以自由调整大小"""
+        self.setMinimumSize(300, 200)  # 保持合理的最小尺寸
+        self.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
+        
     def apply_shadow(self):
         """Apply shadow effect to window"""
         # This would require platform-specific implementation
@@ -724,40 +1518,97 @@ class UnifiedAssistantWindow(QMainWindow):
         pass
         
     def restore_geometry(self):
-        """Restore window geometry from settings"""
+        """Restore window geometry from settings with DPI scaling support"""
         if self.settings_manager:
-            settings = self.settings_manager.get()
-            popup = settings.get('popup', {})
-            self.setGeometry(
-                popup.get('left', 100),
-                popup.get('top', 100),
-                popup.get('width', 500),
-                popup.get('height', 700)
-            )
+            try:
+                scale = _get_scale()  # 获取DPI缩放因子
+                settings = self.settings_manager.get()
+                popup = settings.get('popup', {})
+                
+                # 从逻辑像素转换为物理像素
+                phys_x = int(popup.get('left', 100) * scale)
+                phys_y = int(popup.get('top', 100) * scale)
+                phys_w = int(popup.get('width', 500) * scale)
+                phys_h = int(popup.get('height', 700) * scale)
+                
+                # 确保窗口在屏幕范围内
+                screen = QApplication.primaryScreen().geometry()
+                
+                # 调整位置确保窗口可见
+                if phys_x + phys_w > screen.width():
+                    phys_x = screen.width() - phys_w - 10
+                if phys_y + phys_h > screen.height():
+                    phys_y = screen.height() - phys_h - 40
+                if phys_x < 0:
+                    phys_x = 10
+                if phys_y < 0:
+                    phys_y = 30
+                
+                self.setGeometry(phys_x, phys_y, phys_w, phys_h)
+                logging.info(f"恢复窗口几何: x={phys_x}, y={phys_y}, w={phys_w}, h={phys_h}, scale={scale}")
+                
+                # 恢复几何后重置尺寸约束，确保可以自由调整大小
+                self.reset_size_constraints()
+                
+            except Exception as e:
+                logging.error(f"恢复窗口几何信息失败: {e}")
+                # 失败时使用默认值
+                self.setGeometry(617, 20, 514, 32)
+                self.reset_size_constraints()
         else:
-            self.setGeometry(100, 100, 500, 700)
+            self.setGeometry(617, 20, 514, 32)
+            self.reset_size_constraints()
             
     def save_geometry(self):
-        """Save window geometry to settings"""
+        """Save window geometry to settings with DPI scaling support"""
         if self.settings_manager:
-            geo = self.geometry()
-            self.settings_manager.update({
-                'popup': {
-                    'left': geo.x(),
-                    'top': geo.y(),
-                    'width': geo.width(),
-                    'height': geo.height()
-                }
-            })
+            try:
+                scale = _get_scale()  # 获取DPI缩放因子
+                geo = self.geometry()
+                
+                # 将物理像素转换为逻辑像素
+                css_x = int(geo.x() / scale)
+                css_y = int(geo.y() / scale)
+                css_w = int(geo.width() / scale)
+                css_h = int(geo.height() / scale)
+                
+                # 更新配置
+                self.settings_manager.update({
+                    'popup': {
+                        'left': css_x,
+                        'top': css_y,
+                        'width': css_w,
+                        'height': css_h
+                    }
+                })
+                
+                logging.info(f"保存窗口几何: x={css_x}, y={css_y}, w={css_w}, h={css_h}, scale={scale}")
+            except Exception as e:
+                logging.error(f"保存窗口几何信息失败: {e}")
             
     def show_chat_view(self):
         """Switch to chat view"""
         self.content_stack.setCurrentWidget(self.chat_view)
+        # 切换到聊天视图时重置尺寸约束
+        self.reset_size_constraints()
+        # 确保消息宽度正确
+        QTimer.singleShot(50, self.chat_view.update_all_message_widths)
         
     def show_wiki_page(self, url: str, title: str):
         """Switch to wiki view and load page"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"🌐 UnifiedAssistantWindow.show_wiki_page 被调用: URL={url}, Title={title}")
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
+        # 切换到Wiki视图时也重置尺寸约束
+        self.reset_size_constraints()
+        logger.info(f"✅ 已切换到Wiki视图并加载页面")
+        
+    def handle_wiki_page_loaded(self, url: str, title: str):
+        """处理Wiki页面加载完成信号，将信号转发给controller"""
+        print(f"🌐 UnifiedAssistantWindow: Wiki页面加载完成 - {title}: {url}")
+        # 发出信号给controller处理
+        self.wiki_page_found.emit(url, title)
         
     def on_send_clicked(self):
         """Handle send button click"""
@@ -848,6 +1699,7 @@ class AssistantController:
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.window_closing.connect(self.show_mini)
+            self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             logger.info("UnifiedAssistantWindow created and signals connected")
         
         # 确保窗口显示
@@ -862,23 +1714,27 @@ class AssistantController:
             # Get screen geometry
             screen = QApplication.primaryScreen().geometry()
             
-            # Get mini window position and target window size
+            # Get mini window position and settings
             mini_pos = self.mini_window.pos()
-            target_width = 500
-            target_height = 700
             
-            # Calculate target position to ensure window stays on screen
-            # If mini window is on the right side, open to the left
-            if mini_pos.x() > screen.width() // 2:
-                target_x = mini_pos.x() - target_width + 60  # Open to left
-            else:
-                target_x = mini_pos.x()  # Open to right
-                
-            # Ensure target position is within screen bounds
-            target_x = max(10, min(target_x, screen.width() - target_width - 10))
-            target_y = max(30, min(mini_pos.y() - (target_height - 60) // 2, 
-                                  screen.height() - target_height - 40))
+            # 从设置中获取保存的窗口位置和大小
+            settings = self.settings_manager.get() if self.settings_manager else {}
+            popup = settings.get('popup', {})
+            scale = _get_scale()
             
+            # 从逻辑像素转换为物理像素
+            target_width = int(popup.get('width', 514) * scale)
+            target_height = int(popup.get('height', 32) * scale)
+            
+            # 使用保存的位置而不是根据mini window计算
+            saved_x = int(popup.get('left', 617) * scale)
+            saved_y = int(popup.get('top', 20) * scale)
+            
+            # 确保窗口在屏幕范围内（使用保存的位置）
+            target_x = max(10, min(saved_x, screen.width() - target_width - 10))
+            target_y = max(30, min(saved_y, screen.height() - target_height - 40))
+            
+            logger.info(f"Using saved position: saved=({saved_x}, {saved_y}), adjusted=({target_x}, {target_y})")
             logger.info(f"Animation: from ({mini_pos.x()}, {mini_pos.y()}, 60, 60) to ({target_x}, {target_y}, {target_width}, {target_height})")
             
             # Set initial position and size
@@ -901,22 +1757,36 @@ class AssistantController:
                 QRect(target_x, target_y, target_width, target_height)
             )
             self.expand_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            
+            # 添加动画完成回调，自动设置输入框焦点
+            def on_animation_finished():
+                logger.info("Animation finished, setting focus to input field")
+                if self.main_window and self.main_window.input_field:
+                    self.main_window.input_field.setFocus()
+                    self.main_window.input_field.activateWindow()
+                    
+            self.expand_animation.finished.connect(on_animation_finished)
             self.expand_animation.start()
             
             logger.info("Animation started")
         else:
             logger.info("No mini window, directly showing main window")
-            # 确保窗口在屏幕中央
-            screen = QApplication.primaryScreen().geometry()
-            target_width = 500
-            target_height = 700
-            target_x = (screen.width() - target_width) // 2
-            target_y = (screen.height() - target_height) // 2
-            
-            self.main_window.setGeometry(target_x, target_y, target_width, target_height)
+            # 使用restore_geometry恢复上次的窗口位置和大小
+            self.main_window.restore_geometry()
             
         self.current_mode = WindowMode.CHAT
+        
+        # 确保消息宽度在窗口显示后正确设置
+        QTimer.singleShot(200, self.main_window.chat_view.update_all_message_widths)
+        
         logger.info("expand_to_chat() completed")
+        
+    def handle_wiki_page_found(self, url: str, title: str):
+        """处理找到真实wiki页面的信号（基础实现，子类可重写）"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔗 AssistantController收到wiki页面信号: {title} -> {url}")
+        # 基础实现：什么都不做，子类（IntegratedAssistantController）会重写此方法
         
     def handle_query(self, query: str):
         """Handle user query"""
@@ -926,56 +1796,148 @@ class AssistantController:
             query
         )
         
+        # 重置自动滚动状态，确保新查询时启用自动滚动
+        self.main_window.chat_view.reset_auto_scroll()
+        
+        # Show initial processing status
+        self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)
+        
         # TODO: Implement actual query processing
-        # For now, just show a demo response
+        # For now, just show a trial_proto response with shorter delay
         QTimer.singleShot(500, lambda: self.demo_response(query))
         
     def demo_response(self, query: str):
         """Demo response for testing"""
         if "wiki" in query.lower():
-            # Simulate wiki response
-            transition = self.main_window.chat_view.add_message(
-                MessageType.TRANSITION,
-                TransitionMessages.WIKI_SEARCHING
-            )
-            
-            QTimer.singleShot(1000, lambda: self.show_wiki_result(transition))
+            # Simulate wiki response with status updates
+            self.simulate_wiki_process()
         else:
-            # Simulate guide response
-            transition = self.main_window.chat_view.add_message(
-                MessageType.TRANSITION,
-                TransitionMessages.GUIDE_SEARCHING
-            )
+            # Simulate guide response with detailed status flow
+            self.simulate_guide_process(query)
             
-            QTimer.singleShot(1000, lambda: self.show_guide_result(transition))
+    def simulate_wiki_process(self):
+        """模拟Wiki搜索流程"""
+        chat_view = self.main_window.chat_view
+        
+        # Wiki搜索流程简化，总时间1.5秒
+        QTimer.singleShot(300, lambda: chat_view.update_status(TransitionMessages.WIKI_SEARCHING))
+        QTimer.singleShot(1500, lambda: self.show_wiki_result())
+        
+    def simulate_guide_process(self, query: str):
+        """模拟完整的攻略查询流程"""
+        chat_view = self.main_window.chat_view
+        
+        # 简化状态切换序列（只保留2-3个关键状态）
+        status_updates = [
+            (0, TransitionMessages.DB_SEARCHING),      # 检索阶段
+            (1500, TransitionMessages.AI_SUMMARIZING), # AI处理阶段
+        ]
+        
+        # 依次设置状态更新
+        def create_status_updater(status_msg):
+            def updater():
+                print(f"[STATUS] 更新状态: {status_msg}")
+                chat_view.update_status(status_msg)
+            return updater
+        
+        for delay, status in status_updates:
+            QTimer.singleShot(delay, create_status_updater(status))
+        
+        # 缩短总时间到3秒
+        QTimer.singleShot(3000, lambda: self.show_guide_result())
             
-    def show_wiki_result(self, transition_widget):
+    def show_wiki_result(self):
         """Show wiki search result"""
-        transition_widget.update_content(TransitionMessages.WIKI_FOUND)
+        # 隐藏状态信息
+        self.main_window.chat_view.hide_status()
+        
+        # 显示找到的Wiki页面
+        self.main_window.chat_view.add_message(
+            MessageType.TRANSITION,
+            TransitionMessages.WIKI_FOUND
+        )
         
         self.main_window.chat_view.add_message(
             MessageType.WIKI_LINK,
             "Helldivers 2 - 武器指南",
-            {"url": "https://helldivers.wiki.gg/wiki/Weapons"}
+            {"url": "https://duckduckgo.com/?q=!ducky+Helldivers+2+weapons+site:helldivers.wiki.gg"}
         )
         
-    def show_guide_result(self, transition_widget):
+        # Show wiki page in the unified window (这将触发页面加载和URL更新)
+        self.main_window.show_wiki_page(
+            "https://duckduckgo.com/?q=!ducky+Helldivers+2+weapons+site:helldivers.wiki.gg", 
+            "Helldivers 2 - 武器指南"
+        )
+        
+    def show_guide_result(self):
         """Show guide result with streaming"""
-        transition_widget.hide()
+        # 隐藏状态信息
+        self.main_window.chat_view.hide_status()
+        
+        # 显示完成状态
+        completion_msg = self.main_window.chat_view.add_message(
+            MessageType.TRANSITION,
+            TransitionMessages.COMPLETED
+        )
+        
+        # 短暂显示完成状态后开始流式输出
+        QTimer.singleShot(500, lambda: self.start_streaming_response(completion_msg))
+        
+    def start_streaming_response(self, completion_widget):
+        """开始流式输出回答"""
+        # 隐藏完成状态
+        completion_widget.hide()
         
         streaming_msg = self.main_window.chat_view.add_streaming_message()
         
-        # Simulate streaming response
-        demo_text = "根据您的问题，我为您整理了以下攻略内容：\n\n1. 首先，您需要了解基础机制\n2. 其次，掌握核心技巧\n3. 最后，通过实践提升水平"
+        # Simulate streaming response with markdown formatting
+        demo_text = """## 🎮 游戏攻略指南
+
+根据您的问题，我为您整理了以下攻略内容：
+
+### 📋 基础要点
+1. **首先**，您需要了解基础机制
+2. **其次**，掌握核心技巧  
+3. **最后**，通过实践提升水平
+
+### 🛠️ 推荐配装
+- 主武器：*高伤害输出*
+- 副武器：`快速清兵`
+- 装备：**防护为主**
+
+### 💡 高级技巧
+> 记住：*熟能生巧*是提升的关键！
+
+希望这些信息对您有帮助！ 😊"""
         
-        chunks = [demo_text[i:i+5] for i in range(0, len(demo_text), 5)]
+        # 调整chunk大小和速度，便于观察markdown渲染效果
+        chunks = [demo_text[i:i+15] for i in range(0, len(demo_text), 15)]
         
         def send_chunk(index=0):
             if index < len(chunks):
                 streaming_msg.append_chunk(chunks[index])
-                QTimer.singleShot(100, lambda: send_chunk(index + 1))
+                QTimer.singleShot(120, lambda: send_chunk(index + 1))
                 
         send_chunk()
+        
+    def show_processing_status(self, status_message: str, delay_ms: int = 0):
+        """
+        显示处理状态信息
+        
+        Args:
+            status_message: 状态信息
+            delay_ms: 延迟显示的毫秒数
+        """
+        if self.main_window and self.main_window.chat_view:
+            if delay_ms > 0:
+                QTimer.singleShot(delay_ms, lambda: self.main_window.chat_view.update_status(status_message))
+            else:
+                self.main_window.chat_view.update_status(status_message)
+                
+    def hide_processing_status(self):
+        """隐藏处理状态信息"""
+        if self.main_window and self.main_window.chat_view:
+            self.main_window.chat_view.hide_status()
 
 
 # Demo/Testing

@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional, Literal, List
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..config import LLMConfig
+from src.game_wiki_tooltip.config import LLMConfig
 
 logger = logging.getLogger(__name__)
 
@@ -463,7 +463,7 @@ class GameAwareQueryProcessor:
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         stats = self.stats.copy()
-        stats["games_processed"] = list(stats["games_processed"])
+        stats["games_processed"] = list(stats["game_processed"])
         return stats
     
     def reset_stats(self):

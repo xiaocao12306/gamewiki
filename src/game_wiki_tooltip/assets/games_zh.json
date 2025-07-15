@@ -1,0 +1,50 @@
+{
+    "VALORANT": {
+        "BaseUrl": "https://lkval.com/",
+        "NeedsSearch": false
+    },
+    "Counter-Strike 2": {
+        "BaseUrl": "https://lkval.com/cs2",
+        "NeedsSearch": false
+    },
+    "三角洲行动": {
+        "BaseUrl": "https://www.kkrb725.com/?viewpage=view%2Foverview",
+        "NeedsSearch": false
+    },
+    "MONSTER HUNTER: WORLD": {
+        "BaseUrl": "mhworld.kiranico.com",
+        "NeedsSearch": true
+    },
+    "Monster Hunter Wilds": {
+        "BaseUrl": "mhwilds.gamertw.com",
+        "NeedsSearch": true
+    },
+    "Stardew Valley": {
+        "BaseUrl": "xinglugu.huijiwiki.com",
+        "NeedsSearch": true
+    },
+    "Don't Starve Together": {
+        "BaseUrl": "dontstarve.huijiwiki.com",
+        "NeedsSearch": true
+    },
+    "Don't Starve": {
+        "BaseUrl": "dontstarve.huijiwiki.com",
+        "NeedsSearch": true
+    },
+    "Elden Ring": {
+        "BaseUrl": "wiki.biligame.com/eldenring",
+        "NeedsSearch": true
+    },
+    "HELLDIVERS 2": {
+        "BaseUrl": "helldivers.wiki.gg",
+        "NeedsSearch": true
+    },
+    "7 Days to Die": {
+        "BaseUrl": "7daystodie.huijiwiki.com",
+        "NeedsSearch": true
+    },
+    "Civilization VI": {
+        "BaseUrl": "civ6.huijiwiki.com",
+        "NeedsSearch": true
+    }
+} 

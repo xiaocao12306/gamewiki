@@ -2,20 +2,14 @@
 Overlay manager – handles hotkey events and shows wiki content.
 """
 
-import asyncio
 import logging
-import webbrowser
 import webview
 import ctypes
-import re
 import urllib.parse
-from typing import Optional, Dict, Any
 import pathlib
-import time
-import threading
 
-from src.game_wiki_tooltip.config import GameConfig, GameConfigManager, SettingsManager
-from src.game_wiki_tooltip.searchbar import ask_keyword, process_query_with_intent
+from src.game_wiki_tooltip.config import GameConfigManager, SettingsManager
+from src.game_wiki_tooltip.app_v1.searchbar import ask_keyword, process_query_with_intent
 from src.game_wiki_tooltip.utils import get_foreground_title
 
 logger = logging.getLogger(__name__)
@@ -219,6 +213,14 @@ class OverlayManager:
     def found_valid_link(self, url: str):
         """JS 找到有效链接后回调"""
         logger.info(f"JavaScript找到有效链接: {url}")
+        
+        # 更新记录的最后访问URL为真实的wiki页面URL
+        self._last_url = url
+        logger.info(f"✅ 更新最后访问URL为真实wiki页面: {url}")
+
+        # 通知assistant integration系统（如果存在）
+        # 这将用于更新聊天窗口中的wiki链接显示
+        self._notify_assistant_integration(url)
 
         # 在主窗口中加载目标URL
         if self._current_window:
@@ -232,7 +234,36 @@ class OverlayManager:
         else:
             logger.error("主窗口不存在")
             return "error: no main window"
-
+            
+    def _notify_assistant_integration(self, real_url: str):
+        """通知assistant integration系统找到了真实的wiki页面"""
+        try:
+            # 方式1: 使用设置的controller实例（首选）
+            if hasattr(self, '_assistant_controller') and self._assistant_controller:
+                logger.info(f"🔗 通知assistant controller (方式1): {real_url}")
+                self._assistant_controller.on_wiki_page_found(real_url)
+                return
+                
+            # 方式2: 使用全局实例（备用）
+            from .assistant_integration import IntegratedAssistantController
+            if hasattr(IntegratedAssistantController, '_global_instance') and IntegratedAssistantController._global_instance:
+                controller = IntegratedAssistantController._global_instance
+                logger.info(f"🔗 通知assistant integration系统 (方式2): {real_url}")
+                controller.on_wiki_page_found(real_url)
+                return
+            
+            logger.debug("Assistant integration系统未找到，跳过通知")
+            
+        except ImportError:
+            logger.debug("Assistant integration模块不可用，跳过通知")
+        except Exception as e:
+            logger.warning(f"通知assistant integration失败: {e}")
+            
+    def set_assistant_controller(self, controller):
+        """设置assistant controller实例，用于wiki链接更新通知"""
+        self._assistant_controller = controller
+        logger.info("已设置assistant controller实例")
+        
     def open_url(self, url: str):
         """在当前浮窗中加载目标 URL（供 JS 调用）"""
         logger.info(f"JavaScript 请求打开 URL: {url}")
@@ -463,7 +494,6 @@ class OverlayManager:
             
             # 使用线程延迟执行，给窗口启动时间
             import threading
-            import time
             threading.Timer(0.5, delayed_load).start()
         
         print("=== Bing搜索回退完成 ===")

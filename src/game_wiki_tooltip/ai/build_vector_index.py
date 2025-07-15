@@ -241,7 +241,7 @@ def main():
     )
     
     parser.add_argument(
-        "--list-evaluate_report",
+        "--list-games",
         action="store_true",
         help="列出可用的游戏"
     )

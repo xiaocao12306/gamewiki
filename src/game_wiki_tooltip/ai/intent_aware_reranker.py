@@ -333,6 +333,31 @@ class IntentAwareReranker:
             # 获取原始的语义相似度分数
             semantic_score = result.get("score", 0.0)
             
+            # 添加详细的分数来源调试
+            print(f"   🔍 [RERANK-DEBUG] 结果 {i+1} 分数来源分析:")
+            print(f"      主要score字段: {semantic_score:.4f}")
+            if "fusion_score" in result:
+                print(f"      fusion_score字段: {result['fusion_score']:.4f}")
+            if "vector_score" in result:
+                print(f"      vector_score字段: {result['vector_score']:.4f}")
+            if "bm25_score" in result:
+                print(f"      bm25_score字段: {result['bm25_score']:.4f}")
+            if "original_vector_score" in result:
+                print(f"      original_vector_score字段: {result['original_vector_score']:.4f}")
+            if "original_bm25_score" in result:
+                print(f"      original_bm25_score字段: {result['original_bm25_score']:.4f}")
+            
+            # 验证分数的合理性
+            if semantic_score > 20.0:
+                print(f"      ⚠️ [RERANK-DEBUG] 检测到异常高分数，可能来源错误")
+                # 如果有fusion_score，优先使用fusion_score作为语义分数
+                if "fusion_score" in result:
+                    semantic_score = result["fusion_score"]
+                    print(f"      🔧 [RERANK-DEBUG] 使用fusion_score作为语义分数: {semantic_score:.4f}")
+                elif "vector_score" in result and result["vector_score"] > 0:
+                    semantic_score = result["vector_score"]
+                    print(f"      🔧 [RERANK-DEBUG] 使用vector_score作为语义分数: {semantic_score:.4f}")
+            
             # 计算意图相关度分数
             chunk = result.get("chunk", result)
             intent_score = self._calculate_intent_relevance(chunk, intent)

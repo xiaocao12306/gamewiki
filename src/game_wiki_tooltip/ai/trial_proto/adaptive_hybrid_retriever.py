@@ -17,8 +17,8 @@ from pathlib import Path
 import json
 
 # 导入自定义组件
-from .enhanced_bm25_indexer import EnhancedBM25Indexer
-from .enhanced_query_processor import EnhancedQueryProcessor, QueryIntent
+from src.game_wiki_tooltip.ai.enhanced_bm25_indexer import EnhancedBM25Indexer
+from src.game_wiki_tooltip.ai.enhanced_query_processor import EnhancedQueryProcessor, QueryIntent
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ class AdaptiveHybridRetriever:
         """自适应融合搜索结果"""
         
         # 确定权重
-        intent = QueryIntent(processed_query.get("intent", "unknown"))
+        intent = QueryIntent(processed_query.get("../intent", "unknown"))
         weights = self.QUERY_TYPE_WEIGHTS.get(intent, self.QUERY_TYPE_WEIGHTS[QueryIntent.UNKNOWN])
         
         logger.info(f"使用权重配置: 向量={weights['vector']}, BM25={weights['bm25']} (意图: {intent.value})")
@@ -467,7 +467,7 @@ class AdaptiveHybridRetriever:
                 "query_rewrite_enabled": self.enable_query_rewrite,
                 "enemy_boost_enabled": self.enable_enemy_boost,
                 "detected_enemies": processed_query.get("detected_enemies", []),
-                "query_intent": processed_query.get("intent", "unknown"),
+                "query_intent": processed_query.get("../intent", "unknown"),
                 "intent_confidence": processed_query.get("confidence", 0.0)
             }
         }

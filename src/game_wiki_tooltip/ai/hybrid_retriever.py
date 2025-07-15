@@ -425,11 +425,24 @@ class HybridSearchRetriever:
         
         final_results = []
         for doc_id, scores in sorted_docs[:top_k]:
+            # 深拷贝结果对象以避免引用问题
             result = scores["result"].copy()
+            
+            # 确保正确设置分数字段
+            result["score"] = scores["rrf_score"]  # 主要分数是RRF分数
             result["fusion_score"] = scores["rrf_score"]
-            result["vector_score"] = scores["vector_score"]
+            result["vector_score"] = scores["vector_score"] 
             result["bm25_score"] = scores["bm25_score"]
             result["fusion_method"] = "rrf"
+            result["original_vector_score"] = scores["vector_score"]  # 保留原始向量分数
+            result["original_bm25_score"] = scores["bm25_score"]     # 保留原始BM25分数
+            
+            # 添加调试验证
+            print(f"   🔧 [FUSION-DEBUG] 最终结果 {len(final_results)+1}:")
+            print(f"      主题: {result.get('chunk', {}).get('topic', 'Unknown')}")
+            print(f"      设置的score字段: {result['score']:.4f}")
+            print(f"      RRF分数: {result['fusion_score']:.4f}")
+            
             final_results.append(result)
         
         print(f"✅ [FUSION-DEBUG] RRF融合完成，返回 {len(final_results)} 个结果")

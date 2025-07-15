@@ -6,12 +6,11 @@ Returns None / "<<LAST>>" / str(keyword)
 import asyncio
 import logging
 import tkinter as tk
-from typing import Optional, Dict, Any, Literal
-import webview
+from typing import Optional, Dict, Any
 
 from src.game_wiki_tooltip.ai.intent.intent_classifier import classify_intent, get_intent_confidence
-from src.game_wiki_tooltip.ai.rag_query import query_rag, map_window_title_to_game_name
-from src.game_wiki_tooltip.ai.game_aware_query_processor import process_game_aware_query, GameAwareQueryResult
+from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+from src.game_wiki_tooltip.ai.trial_proto.game_aware_query_processor import process_game_aware_query
 
 logger = logging.getLogger(__name__)
 

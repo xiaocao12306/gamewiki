@@ -3,8 +3,8 @@
   "collection_name": "helldiver2_vectors",
   "model": "jina-embeddings-v4",
   "output_dim": 768,
-  "chunk_count": 82,
-  "index_path": "src\\game_wiki_tooltip\\ai\\vectorstore\\helldiver2_vectors",
-  "hybrid_search_enabled": true,
-  "bm25_index_path": "src\\game_wiki_tooltip\\ai\\vectorstore\\helldiver2_vectors\\enhanced_bm25_index.pkl"
+  "chunk_count": 83,
+  "index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\helldiver2_vectors",
+  "bm25_index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\helldiver2_vectors\\enhanced_bm25_index.pkl",
+  "hybrid_search_enabled": true
 }

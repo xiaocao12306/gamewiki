@@ -13,8 +13,8 @@ import win32con
 import win32gui
 import win32api
 
-from PyQt6.QtWidgets import QApplication, QMessageBox
-from PyQt6.QtCore import QTimer, pyqtSignal, QObject, pyqtSlot, QAbstractNativeEventFilter
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject, pyqtSlot, QAbstractNativeEventFilter, Qt
 from PyQt6.QtGui import QIcon
 
 from src.game_wiki_tooltip.config import SettingsManager, GameConfigManager
@@ -23,6 +23,7 @@ from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
 from src.game_wiki_tooltip.qt_hotkey_manager import QtHotkeyManager, HotkeyError
 from src.game_wiki_tooltip.assistant_integration import IntegratedAssistantController
 from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
+from src.game_wiki_tooltip.i18n import init_translations, t
 
 # 热键常量 - 与test_hotkey_only.py保持一致
 MOD_CONTROL = 0x0002
@@ -48,6 +49,107 @@ except Exception as e:
 
 SETTINGS_PATH = APPDATA_DIR / "settings.json"
 GAMES_CONFIG_PATH = APPDATA_DIR / "games.json"
+
+
+class ApiKeyMissingDialog(QDialog):
+    """自定义对话框，用于处理API key缺失的通知"""
+    
+    def __init__(self, missing_keys, parent=None):
+        super().__init__(parent)
+        self.missing_keys = missing_keys
+        self.dont_remind = False
+        self.open_settings = False
+        self._init_ui()
+        
+    def _init_ui(self):
+        """初始化用户界面"""
+        self.setWindowTitle("GameWiki Assistant")
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
+        self.setModal(True)
+        self.setFixedSize(400, 220)
+        
+        # 主布局
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        # 标题
+        title_label = QLabel("AI Features Unavailable")
+        title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #d32f2f;")
+        layout.addWidget(title_label)
+        
+        # 消息内容
+        message = (
+            "AI guide features require both API keys to function properly:\n\n"
+            f"Missing: {', '.join(self.missing_keys)}\n\n"
+            "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
+            "Jina vector search is essential for complete AI guide features.\n\n"
+            "You can still use Wiki search without API keys."
+        )
+        
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setStyleSheet("font-size: 11px; line-height: 1.4;")
+        layout.addWidget(message_label)
+        
+        # "不再提醒" 复选框
+        self.dont_remind_checkbox = QCheckBox("Don't remind me again (Wiki search only)")
+        self.dont_remind_checkbox.setStyleSheet("font-size: 11px;")
+        layout.addWidget(self.dont_remind_checkbox)
+        
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
+        
+        # 配置按钮
+        config_button = QPushButton("Configure API Keys")
+        config_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1976d2;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #1565c0;
+            }
+        """)
+        config_button.clicked.connect(self._on_configure_clicked)
+        button_layout.addWidget(config_button)
+        
+        # 稍后按钮
+        later_button = QPushButton("Maybe Later")
+        later_button.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+        """)
+        later_button.clicked.connect(self._on_later_clicked)
+        button_layout.addWidget(later_button)
+        
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+        
+    def _on_configure_clicked(self):
+        """用户点击配置按钮"""
+        self.dont_remind = self.dont_remind_checkbox.isChecked()
+        self.open_settings = True
+        self.accept()
+        
+    def _on_later_clicked(self):
+        """用户点击稍后按钮"""
+        self.dont_remind = self.dont_remind_checkbox.isChecked()
+        self.open_settings = False
+        self.accept()
 
 
 class WindowsHotkeyFilter(QAbstractNativeEventFilter):
@@ -126,6 +228,11 @@ class GameWikiApp(QObject):
         self.settings_mgr = SettingsManager(SETTINGS_PATH)
         self.game_cfg_mgr = GameConfigManager(GAMES_CONFIG_PATH)
         
+        # Initialize translation system based on settings
+        settings = self.settings_mgr.get()
+        current_language = settings.get('language', 'en')
+        init_translations(current_language)
+        
         # Initialize components
         self.tray_icon = None
         self.settings_window = None
@@ -155,7 +262,7 @@ class GameWikiApp(QObject):
             os.getenv('GEMINI_API_KEY')
         )
         
-        # Check Jina API key (optional but recommended)
+        # Check Jina API key (现在也是必需的，不再是可选的)
         jina_api_key = (
             api_config.get('jina_api_key') or 
             os.getenv('JINA_API_KEY')
@@ -171,28 +278,44 @@ class GameWikiApp(QObject):
         logger.info(f"  - Environment JINA_API_KEY: {'***found***' if os.getenv('JINA_API_KEY') else 'not found'}")
         logger.info(f"  - Final Jina API key: {'***found***' if jina_api_key else 'not found'}")
         
-        if not google_api_key or self.force_settings:
-            # No Google API key found OR user forced settings, show settings for initial setup
-            if self.force_settings:
-                logger.info("Settings window forced by command line argument")
-            else:
-                logger.info("No Google API key found in settings or environment variables")
-            logger.info("Showing settings window for initial setup")
-            self._show_settings(initial_setup=not self.force_settings)
-        else:
-            # API key found, initialize components
-            logger.info("Google API key found, initializing components directly")
-            if jina_api_key:
-                logger.info("Found both Google and Jina API keys")
-            else:
-                logger.info("Found Google API key, Jina API key not configured (optional)")
-            self._initialize_components()
+        # 检查是否同时有两个API key
+        has_both_keys = bool(google_api_key and jina_api_key)
+        dont_remind = settings.get('dont_remind_api_missing', False)
+        logger.info(f"  - Both API keys available: {has_both_keys}")
+        logger.info(f"  - Don't remind API missing: {dont_remind}")
+        
+        # 修改逻辑：强制显示设置窗口的情况
+        if self.force_settings:
+            logger.info("Settings window forced by command line argument")
+            self._show_settings(initial_setup=False)
+        elif not has_both_keys:
+            # 没有两个API key时，显示信息但不强制退出
+            missing_keys = []
+            if not google_api_key:
+                missing_keys.append("Google/Gemini API Key")
+            if not jina_api_key:
+                missing_keys.append("Jina API Key")
             
-    def _initialize_components(self):
+            logger.info(f"Missing API keys: {', '.join(missing_keys)}, starting in limited mode")
+            logger.info("User will be able to use wiki search but not AI guide features")
+            
+            # 显示通知告知用户功能受限
+            self._initialize_components(limited_mode=True)
+            
+            # 如果用户没有选择"不再提醒"，自动打开设置界面
+            if not dont_remind:
+                logger.info("Auto-opening settings window for API key configuration")
+                self._show_settings(initial_setup=True)
+        else:
+            # 同时有两个API key，initialize components normally
+            logger.info("Found both Google/Gemini and Jina API keys, initializing components with full functionality")
+            self._initialize_components(limited_mode=False)
+            
+    def _initialize_components(self, limited_mode=False):
         """Initialize all components"""
         try:
-            # Initialize assistant controller
-            self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr)
+            # Initialize assistant controller with limited mode flag
+            self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
             
             # Initialize tray icon
             self.tray_icon = QtTrayIcon()
@@ -228,16 +351,29 @@ class GameWikiApp(QObject):
                     else:
                         mode_text = "新版冲突处理模式"
                     
+                    if limited_mode:
+                        # 合并启动通知：热键信息 + 受限模式信息
+                        notification_msg = (
+                            f"{t('hotkey_registered', hotkey=hotkey_string)}\n"
+                            f"Started in limited mode (Wiki search only)\n"
+                            f"Running in {mode_text}\n\n"
+                            f"Missing API keys for AI guide features\n"
+                            f"Configure complete API keys to enable full functionality"
+                        )
+                    else:
+                        # 完整功能模式的通知
+                        notification_msg = f"{t('hotkey_registered', hotkey=hotkey_string)}\nFull functionality enabled ({mode_text})"
+                    
                     self.tray_icon.show_notification(
                         "GameWiki Assistant",
-                        f"已启动，按 {hotkey_string} 呼出助手\n({mode_text})"
+                        notification_msg
                     )
-                    logger.info(f"热键注册成功: {hotkey_string} (legacy_mode={registration_info['legacy_mode']}, ultra_compatible_mode={registration_info.get('ultra_compatible_mode', False)})")
+                    logger.info(f"热键注册成功: {hotkey_string} (legacy_mode={registration_info['legacy_mode']}, ultra_compatible_mode={registration_info.get('ultra_compatible_mode', False)}, limited_mode={limited_mode})")
                 else:
                     # Show warning but continue
                     self.tray_icon.show_notification(
                         "GameWiki Assistant",
-                        "已启动，但热键注册失败。请在设置中配置热键或以管理员身份运行。"
+                        t("hotkey_failed")
                     )
                     logger.warning("热键注册失败，但程序继续运行")
                     
@@ -246,7 +382,7 @@ class GameWikiApp(QObject):
                 # Don't show error dialog, just log and continue
                 self.tray_icon.show_notification(
                     "GameWiki Assistant",
-                    "已启动，但热键功能不可用。请检查设置或以管理员身份运行。"
+                    t("hotkey_failed")
                 )
                 
             # 安装Windows原生事件过滤器（主要方案）
@@ -265,13 +401,13 @@ class GameWikiApp(QObject):
             # Show mini assistant
             logger.info("Showing mini assistant...")
             self.assistant_ctrl.show_mini()
-            logger.info("Component initialization completed successfully")
+            logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
             
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}")
             QMessageBox.critical(
                 None,
-                "初始化失败",
+                t("error"),
                 f"程序初始化失败：{e}\n\n程序将退出。"
             )
             sys.exit(1)
@@ -282,40 +418,17 @@ class GameWikiApp(QObject):
             self.settings_window = QtSettingsWindow(self.settings_mgr)
             self.settings_window.settings_applied.connect(self._on_settings_applied)
             
-            if initial_setup:
-                # Connect close event for initial setup
-                self.settings_window.destroyed.connect(self._on_initial_setup_closed)
+            # 移除initial_setup处理逻辑，因为现在不会因为没有API key而强制退出
                 
         self.settings_window.show()
         self.settings_window.raise_()
         self.settings_window.activateWindow()
         
     def _on_initial_setup_closed(self):
-        """Handle initial setup window closed"""
-        # Check if API keys are available (settings or environment variables)
-        settings = self.settings_mgr.get()
-        api_config = settings.get('api', {})
-        
-        # Check Google API key from both sources
-        google_api_key = (
-            api_config.get('google_api_key') or 
-            os.getenv('GOOGLE_API_KEY') or 
-            os.getenv('GEMINI_API_KEY')
-        )
-        
-        if google_api_key:
-            # API key available, initialize components
-            logger.info("API key available after settings window closed")
-            self._initialize_components()
-        else:
-            # No API key available, exit
-            QMessageBox.information(
-                None,
-                "设置未完成",
-                "需要配置Google API密钥才能使用本程序。\n\n"
-                "请在设置窗口中配置API密钥，或设置环境变量 GOOGLE_API_KEY。"
-            )
-            sys.exit(0)
+        """Handle initial setup window closed - deprecated, kept for compatibility"""
+        # 这个方法现在不再使用，因为我们不再强制要求API key
+        # 保留是为了兼容性，但实际上不会被调用
+        pass
             
     def _on_settings_applied(self):
         """Handle settings applied"""
@@ -330,25 +443,138 @@ class GameWikiApp(QObject):
             
             logger.info("Components already initialized, updating settings...")
             
+            # 检查当前API key配置，决定是否需要切换模式
+            settings = self.settings_mgr.get()
+            api_config = settings.get('api', {})
+            
+            # Check Google API key from both sources
+            google_api_key = (
+                api_config.get('google_api_key') or 
+                os.getenv('GOOGLE_API_KEY') or 
+                os.getenv('GEMINI_API_KEY')
+            )
+            
+            # Check Jina API key (现在也是必需的)
+            jina_api_key = (
+                api_config.get('jina_api_key') or 
+                os.getenv('JINA_API_KEY')
+            )
+            
+            # 检查是否同时有两个API key
+            has_both_keys = bool(google_api_key and jina_api_key)
+            dont_remind = settings.get('dont_remind_api_missing', False)
+            
+            # 检查是否需要切换模式
+            current_limited_mode = getattr(self.assistant_ctrl, 'limited_mode', True)
+            new_limited_mode = not has_both_keys
+            
+            logger.info(f"模式检查: 当前受限模式={current_limited_mode}, 新受限模式={new_limited_mode}")
+            logger.info(f"API key状态: Google={'✓' if google_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
+            
+            # 检查是否需要显示API key缺失对话框（只在从完整模式切换到受限模式时显示）
+            show_api_dialog = (new_limited_mode and not current_limited_mode and not dont_remind)
+            
+            if show_api_dialog:
+                missing_keys = []
+                if not google_api_key:
+                    missing_keys.append("Google/Gemini API Key")
+                if not jina_api_key:
+                    missing_keys.append("Jina API Key")
+                
+                # 显示自定义对话框
+                dialog = ApiKeyMissingDialog(missing_keys, parent=None)
+                dialog.exec()
+                
+                # 处理用户的选择
+                if dialog.dont_remind:
+                    logger.info("User selected 'Don't remind me again'")
+                    self.settings_mgr.update({'dont_remind_api_missing': True})
+                
+                if dialog.open_settings:
+                    logger.info("User chose to configure API keys")
+                    # 不需要在这里打开设置窗口，因为它应该已经打开了
+                else:
+                    logger.info("User chose to continue without API keys")
+                    
+            if current_limited_mode != new_limited_mode:
+                # 需要切换模式，重新初始化组件
+                logger.info(f"模式切换: {current_limited_mode} -> {new_limited_mode}")
+                
+                # 清理现有组件
+                if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
+                    self.assistant_ctrl = None
+                
+                # 重新初始化组件
+                self._initialize_components(limited_mode=new_limited_mode)
+                
+                # 显示模式切换通知（但不重复显示热键通知）
+                mode_switched = True  # 标记已进行模式切换
+                if self.tray_icon:
+                    if new_limited_mode:
+                        missing_keys = []
+                        if not google_api_key:
+                            missing_keys.append("Google/Gemini API Key")
+                        if not jina_api_key:
+                            missing_keys.append("Jina API Key")
+                        
+                        self.tray_icon.show_notification(
+                            "GameWiki Assistant",
+                            f"Switched to limited mode\n\nOnly Wiki search is available\n\nMissing API keys: {', '.join(missing_keys)}\nConfigure complete API keys for full functionality"
+                        )
+                    else:
+                        self.tray_icon.show_notification(
+                            "GameWiki Assistant",
+                            "Switched to full functionality mode\n\nWiki search and AI guide features are now available\n\nComplete API key configuration detected"
+                        )
+                
+                logger.info("模式切换完成")
+                return
+            
+            # 如果不需要切换模式，继续原有的设置更新逻辑
+            mode_switched = False  # 未进行模式切换
+            
+            # Update translation manager with new language
+            current_language = settings.get('language', 'en')
+            from src.game_wiki_tooltip.i18n import set_language
+            set_language(current_language)
+            
+            # Reload games configuration for the new language
+            if self.game_cfg_mgr:
+                logger.info(f"Reloading games configuration for language: {current_language}")
+                self.game_cfg_mgr.reload_for_language(current_language)
+                
+            # 检测语言变化并重新加载RAG integration的游戏配置
+            if self.assistant_ctrl and hasattr(self.assistant_ctrl, 'rag_integration'):
+                if hasattr(self.assistant_ctrl.rag_integration, '_current_language'):
+                    old_language = self.assistant_ctrl.rag_integration._current_language
+                    if old_language != current_language:
+                        logger.info(f"Language changed from {old_language} to {current_language}, reloading RAG game config")
+                        self.assistant_ctrl.rag_integration.reload_for_language_change()
+                else:
+                    # 如果没有记录之前的语言，直接重新加载
+                    logger.info(f"Reloading RAG game config for language: {current_language}")
+                    self.assistant_ctrl.rag_integration.reload_for_language_change()
+            
+            # Update tray icon text
+            if self.tray_icon:
+                self.tray_icon.update_text()
+            
             # Re-register hotkey
             if self.hotkey_mgr:
                 logger.info("Re-registering hotkey...")
                 self.hotkey_mgr.unregister()
                 self.hotkey_mgr.register()
                 
-                # Show notification
-                if self.tray_icon:
+                # 只在没有进行模式切换时显示热键更新通知，避免重复通知
+                if self.tray_icon and not mode_switched:
                     self.tray_icon.show_notification(
-                        "设置已应用",
-                        f"热键已更新为 {self.hotkey_mgr.get_hotkey_string()}"
+                        t("settings_applied"),
+                        t("hotkey_updated", hotkey=self.hotkey_mgr.get_hotkey_string())
                     )
                     
-            # Reinitialize RAG components with new API keys
-            if self.assistant_ctrl:
+            # Reinitialize RAG components with new API keys (only if not in limited mode)
+            if self.assistant_ctrl and not new_limited_mode:
                 logger.info("Reinitializing RAG components with new API keys...")
-                settings = self.settings_mgr.get()
-                api_settings = settings.get('api', {})
-                
                 # Reinitialize RAG integration
                 self.assistant_ctrl.rag_integration._init_ai_components()
                 
@@ -356,7 +582,7 @@ class GameWikiApp(QObject):
             logger.error(f"Failed to apply settings: {e}")
             QMessageBox.warning(
                 None,
-                "应用设置失败",
+                t("warning"),
                 f"部分设置应用失败：{e}"
             )
             

@@ -4,17 +4,13 @@ System tray icon management.
 
 import logging
 import threading
-import tkinter as tk
 from tkinter import messagebox
 import pystray
 from PIL import Image
-import pathlib
 import sys
-import time
-import os
 
-from src.game_wiki_tooltip.utils import package_file, invoke_in_tk_thread
-from src.game_wiki_tooltip.hotkey import HotkeyManager
+from src.game_wiki_tooltip.utils import package_file
+from src.game_wiki_tooltip.app_v1.hotkey import HotkeyManager
 
 
 class TrayIcon:
@@ -29,7 +25,7 @@ class TrayIcon:
     def _show_settings(self, icon, item=None):
         """弹出热键设置窗口。既用于菜单点击，也用于托盘图标激活（单/双击）。"""
 
-        from src.game_wiki_tooltip.hotkey_setup import configure_hotkey
+        from src.game_wiki_tooltip.app_v1.hotkey_setup import configure_hotkey
         from src.game_wiki_tooltip.utils import invoke_in_tk_thread
         def show():
             if self._settings_window is not None:

@@ -6,8 +6,9 @@ import asyncio
 import logging
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
+import os # Added for os.getenv
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt
 
 from src.game_wiki_tooltip.unified_window import (
     AssistantController, MessageType, TransitionMessages
@@ -17,14 +18,14 @@ from src.game_wiki_tooltip.utils import get_foreground_title
 
 # 添加缺失的导入
 try:
-    from src.game_wiki_tooltip.ai.game_aware_query_processor import GameAwareQueryProcessor
+    from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified
     from src.game_wiki_tooltip.ai.rag_config import get_default_config
     from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery
     logger = logging.getLogger(__name__)
 except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.error(f"Failed to import AI components: {e}")
-    GameAwareQueryProcessor = None
+    process_query_unified = None
     get_default_config = None
     EnhancedRagQuery = None
 
@@ -38,6 +39,7 @@ class QueryIntent:
     intent_type: str  # "wiki" or "guide"
     confidence: float
     rewritten_query: Optional[str] = None
+    translated_query: Optional[str] = None  # 添加翻译后的查询字段
 
 
 class QueryWorker(QThread):
@@ -76,7 +78,7 @@ class QueryWorker(QThread):
     async def _process_query(self):
         """Process the query asynchronously"""
         try:
-            # Detect intent with game context
+            # 使用统一查询处理器进行意图检测和查询优化
             intent = await self.rag_integration.process_query_async(
                 self.query, 
                 game_context=self.game_context
@@ -84,16 +86,18 @@ class QueryWorker(QThread):
             self.intent_detected.emit(intent)
             
             if intent.intent_type == "wiki":
-                # Search wiki
-                url, title = await self.rag_integration.search_wiki_async(
-                    intent.rewritten_query or self.query
-                )
-                self.wiki_result.emit(url, title)
-            else:
-                # Generate guide with game context - this will emit chunks via signals
-                await self.rag_integration.generate_guide_async(
-                    intent.rewritten_query or self.query,
+                # 对于wiki搜索，使用原始查询（因为wiki搜索不需要优化的查询）
+                search_url, search_title = await self.rag_integration.prepare_wiki_search_async(
+                    self.query,  # 使用原始查询进行wiki搜索
                     game_context=self.game_context
+                )
+                self.wiki_result.emit(search_url, search_title)
+            else:
+                # 对于攻略查询，使用处理后的查询进行RAG搜索
+                await self.rag_integration.generate_guide_async(
+                    intent.rewritten_query or intent.translated_query or self.query,  # 使用处理后的查询
+                    game_context=self.game_context,
+                    skip_query_processing=True  # 跳过RAG内部的查询处理
                 )
                 
         except Exception as e:
@@ -111,57 +115,128 @@ class RAGIntegration(QObject):
     # Signals for UI updates
     streaming_chunk_ready = pyqtSignal(str)
     wiki_result_ready = pyqtSignal(str, str)  # url, title
+    wiki_link_updated = pyqtSignal(str, str)  # 新信号：用于更新聊天窗口中的wiki链接
     error_occurred = pyqtSignal(str)
     
-    def __init__(self, settings_manager: SettingsManager):
+    def __init__(self, settings_manager: SettingsManager, limited_mode: bool = False):
         super().__init__()
         self.settings_manager = settings_manager
+        self.limited_mode = limited_mode
         self.rag_engine = None
         self.query_processor = None
-        self._init_ai_components()
+        self._pending_wiki_update = None  # 存储待更新的wiki链接信息
+        
+        # 初始化游戏配置管理器
+        from src.game_wiki_tooltip.utils import APPDATA_DIR
+        from src.game_wiki_tooltip.config import GameConfigManager
+        
+        # 根据语言设置选择游戏配置文件
+        self._init_game_config_manager()
+        
+        # 根据模式初始化AI组件
+        if limited_mode:
+            logger.info("🚨 RAG Integration 运行在受限模式下，跳过AI组件初始化")
+        else:
+            self._init_ai_components()
+            
+    def _init_game_config_manager(self):
+        """根据语言设置初始化游戏配置管理器"""
+        from src.game_wiki_tooltip.utils import APPDATA_DIR
+        from src.game_wiki_tooltip.config import GameConfigManager
+        
+        # 获取当前语言设置
+        settings = self.settings_manager.get()
+        current_language = settings.get('language', 'zh')  # 默认中文
+        
+        # 根据语言选择配置文件
+        if current_language == 'en':
+            games_config_path = APPDATA_DIR / "games_en.json"
+            logger.info(f"🌐 使用英文游戏配置: {games_config_path}")
+        else:
+            # 默认使用中文配置 (zh 或其他)
+            games_config_path = APPDATA_DIR / "games_zh.json"
+            logger.info(f"🌐 使用中文游戏配置: {games_config_path}")
+            
+        # 检查配置文件是否存在，如果不存在则回退到默认的games.json
+        if not games_config_path.exists():
+            logger.warning(f"⚠️ 语言配置文件不存在: {games_config_path}")
+            fallback_path = APPDATA_DIR / "games.json"
+            if fallback_path.exists():
+                games_config_path = fallback_path
+                logger.info(f"📄 回退到默认配置文件: {games_config_path}")
+            else:
+                logger.error(f"❌ 连默认配置文件都不存在: {fallback_path}")
+        
+        self.game_cfg_mgr = GameConfigManager(games_config_path)
+        self._current_language = current_language
+        logger.info(f"✅ 游戏配置管理器已初始化，当前语言: {current_language}")
+        
+    def reload_for_language_change(self):
+        """当语言设置改变时重新加载游戏配置"""
+        logger.info("🔄 检测到语言设置变化，重新加载游戏配置")
+        self._init_game_config_manager()
         
     def _init_ai_components(self):
         """Initialize AI components with settings"""
+        # 如果在受限模式下，跳过AI组件初始化
+        if self.limited_mode:
+            logger.info("🚨 受限模式下跳过AI组件初始化")
+            return
+            
         try:
+            # 获取API设置
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
-            
-            # Get API keys from settings
             google_api_key = api_settings.get('google_api_key', '')
             jina_api_key = api_settings.get('jina_api_key', '')
             
-            # Create LLMConfig with API key from settings
-            # This makes the new UI system compatible with existing AI modules
-            llm_config = LLMConfig(
-                api_key=google_api_key,  # Explicitly pass API key
-                model='gemini-2.5-flash-lite-preview-06-17'
-            )
+            # 检查环境变量
+            if not google_api_key:
+                google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+            if not jina_api_key:
+                jina_api_key = os.getenv('JINA_API_KEY')
             
-            if not llm_config.is_valid():
-                logger.warning("Google API key not configured or invalid")
-                return
-                
-            # Initialize query processor
-            if GameAwareQueryProcessor:
-                self.query_processor = GameAwareQueryProcessor(llm_config=llm_config)
+            # 检查是否同时有两个API key
+            has_both_keys = bool(google_api_key and jina_api_key)
             
-            # 智能初始化RAG引擎
-            game_title = get_selected_game_title()
-            if game_title:
-                # 使用窗口标题映射到向量库名称
-                from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
-                vector_game_name = map_window_title_to_game_name(game_title)
+            if has_both_keys:
+                logger.info("✅ 检测到完整的API密钥配置，初始化AI组件")
                 
-                if vector_game_name:
-                    logger.info(f"检测到游戏窗口 '{game_title}' -> 向量库: {vector_game_name}")
-                    self._init_rag_for_game(vector_game_name, llm_config, jina_api_key)
+                llm_config = LLMConfig(
+                    api_key=google_api_key,
+                    model='gemini-2.5-flash-lite-preview-06-17'
+                )
+                
+                # Initialize query processor - 移除，我们将直接使用process_query_unified函数
+                # if process_query_unified:
+                #     self.query_processor = process_query_unified(llm_config=llm_config)
+                
+                # 智能初始化RAG引擎
+                game_title = get_selected_game_title()
+                if game_title:
+                    # 使用窗口标题映射到向量库名称
+                    from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+                    vector_game_name = map_window_title_to_game_name(game_title)
+                    
+                    if vector_game_name:
+                        logger.info(f"检测到游戏窗口 '{game_title}' -> 向量库: {vector_game_name}")
+                        self._init_rag_for_game(vector_game_name, llm_config, jina_api_key)
+                    else:
+                        logger.info(f"当前窗口 '{game_title}' 不是支持的游戏，跳过RAG初始化")
+                        logger.info("RAG引擎将在用户首次查询时根据游戏窗口动态初始化")
+                        # 不初始化RAG引擎，等待用户查询时动态检测
                 else:
-                    logger.info(f"当前窗口 '{game_title}' 不是支持的游戏，跳过RAG初始化")
-                    logger.info("RAG引擎将在用户首次查询时根据游戏窗口动态初始化")
-                    # 不初始化RAG引擎，等待用户查询时动态检测
+                    logger.info("未检测到前台窗口，跳过RAG初始化")
             else:
-                logger.info("未检测到前台窗口，跳过RAG初始化")
+                missing_keys = []
+                if not google_api_key:
+                    missing_keys.append("Google/Gemini API Key")
+                if not jina_api_key:
+                    missing_keys.append("Jina API Key")
                 
+                logger.warning(f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}")
+                logger.warning("无法初始化AI组件，需要同时配置Google/Gemini API Key和Jina API Key")
+                    
         except Exception as e:
             logger.error(f"Failed to initialize AI components: {e}")
             
@@ -175,13 +250,19 @@ class RAGIntegration(QObject):
             # Get RAG config
             rag_config = get_default_config()
             
+            # 自定义混合搜索配置，禁用统一查询处理
+            custom_hybrid_config = rag_config.hybrid_search.to_dict()
+            custom_hybrid_config["enable_unified_processing"] = False  # 禁用统一查询处理
+            custom_hybrid_config["enable_query_rewrite"] = False      # 禁用查询重写
+            custom_hybrid_config["enable_query_translation"] = False  # 禁用查询翻译
+            
             # Create RAG engine
             self.rag_engine = EnhancedRagQuery(
                 vector_store_path=None,  # Will be auto-detected
                 enable_hybrid_search=rag_config.hybrid_search.enabled,
-                hybrid_config=rag_config.hybrid_search.to_dict(),
+                hybrid_config=custom_hybrid_config,  # 使用自定义配置
                 llm_config=llm_config,
-                enable_query_rewrite=rag_config.query_processing.enable_query_rewrite,
+                enable_query_rewrite=False,  # 禁用查询重写，避免重复LLM调用
                 enable_summarization=rag_config.summarization.enabled,
                 summarization_config=rag_config.summarization.to_dict(),
                 enable_intent_reranking=rag_config.intent_reranking.enabled,
@@ -227,31 +308,72 @@ class RAGIntegration(QObject):
             logger.error(f"Failed to initialize RAG for {game_name}: {e}")
             
     async def process_query_async(self, query: str, game_context: str = None) -> QueryIntent:
-        """Process query to detect intent"""
-        if not self.query_processor:
+        """Process query using unified query processor for intent detection"""
+        logger.info(f"开始统一查询处理: '{query}' (游戏上下文: {game_context}, 受限模式: {self.limited_mode})")
+        
+        # 如果在受限模式下，始终返回wiki意图
+        if self.limited_mode:
+            logger.info("🚨 受限模式下，所有查询都将被视为wiki查询")
+            return QueryIntent(
+                intent_type='wiki',
+                confidence=0.9,
+                rewritten_query=query,
+                translated_query=query
+            )
+        
+        if not process_query_unified:
             # Fallback to simple detection
+            logger.warning("统一查询处理器不可用，使用简单意图检测")
             return self._simple_intent_detection(query)
             
         try:
-            # Use game-aware processor with provided game context
-            result = await asyncio.to_thread(
-                self.query_processor.process_query,
-                query,
-                game_name=game_context  # 修正参数名
+            # 获取API设置用于LLM配置
+            settings = self.settings_manager.get()
+            api_settings = settings.get('api', {})
+            google_api_key = api_settings.get('google_api_key', '')
+            
+            if not google_api_key:
+                logger.warning("Google API key未配置，使用简单意图检测")
+                return self._simple_intent_detection(query)
+                
+            llm_config = LLMConfig(
+                api_key=google_api_key,
+                model='gemini-2.5-flash-lite-preview-06-17'
             )
+            
+            # 使用统一查询处理器进行处理（合并了翻译、重写、意图判断）
+            result = await asyncio.to_thread(
+                process_query_unified,
+                query,
+                llm_config=llm_config
+            )
+            
+            logger.info(f"统一处理成功: '{query}' -> 意图: {result.intent} (置信度: {result.confidence:.3f})")
+            logger.info(f"  翻译结果: '{result.translated_query}'")
+            logger.info(f"  重写结果: '{result.rewritten_query}'")
             
             return QueryIntent(
                 intent_type=result.intent,
                 confidence=result.confidence,
-                rewritten_query=result.rewritten_query
+                rewritten_query=result.rewritten_query,
+                translated_query=result.translated_query  # 添加翻译后的查询
             )
             
         except Exception as e:
-            logger.error(f"Query processing failed: {e}")
+            logger.error(f"统一查询处理失败: {e}")
             return self._simple_intent_detection(query)
             
     def _simple_intent_detection(self, query: str) -> QueryIntent:
         """Simple keyword-based intent detection"""
+        # 如果在受限模式下，始终返回wiki意图
+        if self.limited_mode:
+            return QueryIntent(
+                intent_type='wiki',
+                confidence=0.9,
+                rewritten_query=query,
+                translated_query=query
+            )
+            
         query_lower = query.lower()
         
         # Wiki intent keywords
@@ -263,22 +385,124 @@ class RAGIntegration(QObject):
         guide_score = sum(1 for kw in guide_keywords if kw in query_lower)
         
         if wiki_score > guide_score:
-            return QueryIntent('wiki', confidence=0.7)
+            return QueryIntent(
+                intent_type='wiki', 
+                confidence=0.7, 
+                rewritten_query=query,
+                translated_query=query
+            )
         else:
-            return QueryIntent('guide', confidence=0.7)
+            return QueryIntent(
+                intent_type='guide', 
+                confidence=0.7,
+                rewritten_query=query,
+                translated_query=query
+            )
             
-    async def search_wiki_async(self, query: str) -> tuple[str, str]:
+    async def prepare_wiki_search_async(self, query: str, game_context: str = None) -> tuple[str, str]:
+        """准备wiki搜索，返回搜索URL和初始标题，真实URL将通过JavaScript回调获取"""
+        try:
+            from urllib.parse import quote, urlparse
+            
+            # 使用传入的游戏上下文，如果没有则获取当前游戏窗口标题
+            game_title = game_context or get_selected_game_title()
+            logger.info(f"🎮 当前游戏窗口标题: {game_title}")
+            
+            # 查找游戏配置 - 使用实例变量
+            game_config = self.game_cfg_mgr.for_title(game_title)
+            
+            if not game_config:
+                logger.warning(f"未找到游戏配置: {game_title}")
+                # 回退到通用搜索
+                search_query = f"{game_title} {query} wiki"
+                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
+                # 存储待更新的wiki信息（标记为DuckDuckGo搜索）
+                self._pending_wiki_update = {
+                    "initial_url": ddg_url,
+                    "query": query,
+                    "title": f"搜索: {query}",
+                    "status": "searching"
+                }
+            else:
+                logger.info(f"找到游戏配置: {game_config}")
+                
+                # 获取基础URL
+                base_url = game_config.BaseUrl
+                logger.info(f"游戏基础URL: {base_url}")
+                
+                # 提取域名
+                if base_url.startswith(('http://', 'https://')):
+                    domain = urlparse(base_url).hostname or ''
+                else:
+                    # 如果没有协议前缀，直接使用base_url作为域名
+                    domain = base_url.split('/')[0]  # 移除路径部分
+                
+                logger.info(f"提取的域名: {domain}")
+                
+                # 构建正确的搜索查询：site:域名 用户查询
+                search_query = f"site:{domain} {query}"
+                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
+                
+                logger.info(f"构建的搜索查询: {search_query}")
+                logger.info(f"DuckDuckGo URL: {ddg_url}")
+                
+                # 存储待更新的wiki信息
+                self._pending_wiki_update = {
+                    "initial_url": ddg_url,
+                    "query": query,
+                    "title": f"搜索: {query}",
+                    "domain": domain,
+                    "status": "searching"
+                }
+            
+            # 返回搜索URL和临时标题，真实URL将通过JavaScript回调更新
+            return ddg_url, f"搜索: {query}"
+                    
+        except Exception as e:
+            logger.error(f"Wiki search preparation failed: {e}")
+            return "", query
+            
+    async def search_wiki_async(self, query: str, game_context: str = None) -> tuple[str, str]:
         """Search for wiki page"""
         # Use existing wiki search logic from overlay.py
         try:
             import aiohttp
-            from urllib.parse import quote
+            from urllib.parse import quote, urlparse
             
-            game_title = get_selected_game_title()
-            search_query = f"{game_title} {query} wiki"
+            # 使用传入的游戏上下文，如果没有则获取当前游戏窗口标题
+            game_title = game_context or get_selected_game_title()
+            logger.info(f"🎮 当前游戏窗口标题: {game_title}")
             
-            # Try DuckDuckGo first
-            ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
+            # 查找游戏配置 - 使用实例变量
+            game_config = self.game_cfg_mgr.for_title(game_title)
+            
+            if not game_config:
+                logger.warning(f"未找到游戏配置: {game_title}")
+                # 回退到通用搜索
+                search_query = f"{game_title} {query} wiki"
+                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
+            else:
+                logger.info(f"找到游戏配置: {game_config}")
+                
+                # 获取基础URL
+                base_url = game_config.BaseUrl
+                logger.info(f"游戏基础URL: {base_url}")
+                
+                # 提取域名
+                if base_url.startswith(('http://', 'https://')):
+                    domain = urlparse(base_url).hostname or ''
+                else:
+                    # 如果没有协议前缀，直接使用base_url作为域名
+                    domain = base_url.split('/')[0]  # 移除路径部分
+                
+                logger.info(f"提取的域名: {domain}")
+                
+                # 构建正确的搜索查询：site:域名 用户查询
+                search_query = f"site:{domain} {query}"
+                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
+                
+                logger.info(f"构建的搜索查询: {search_query}")
+                logger.info(f"DuckDuckGo URL: {ddg_url}")
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(ddg_url, allow_redirects=True) as response:
@@ -297,8 +521,57 @@ class RAGIntegration(QObject):
             logger.error(f"Wiki search failed: {e}")
             return "", query
             
-    async def generate_guide_async(self, query: str, game_context: str = None):
+    def on_wiki_found(self, real_url: str, real_title: str = None):
+        """当JavaScript找到真实wiki页面时调用此方法"""
+        if self._pending_wiki_update:
+            logger.info(f"📄 JavaScript找到真实wiki页面: {real_url}")
+            
+            # 提取页面标题（如果没有提供）
+            if not real_title:
+                # 从URL提取标题
+                try:
+                    from urllib.parse import unquote
+                    parts = real_url.split('/')
+                    if parts:
+                        real_title = unquote(parts[-1]).replace('_', ' ')
+                    else:
+                        real_title = self._pending_wiki_update.get("query", "Wiki页面")
+                except:
+                    real_title = self._pending_wiki_update.get("query", "Wiki页面")
+            
+            # 更新待处理的wiki信息
+            self._pending_wiki_update.update({
+                "real_url": real_url,
+                "real_title": real_title,
+                "status": "found"
+            })
+            
+            # 发出信号更新聊天窗口中的链接
+            self.wiki_link_updated.emit(real_url, real_title)
+            logger.info(f"✅ 已发出wiki链接更新信号: {real_title} -> {real_url}")
+            
+            # 清除待更新信息
+            self._pending_wiki_update = None
+        else:
+            logger.warning("⚠️ 收到wiki页面回调，但没有待更新的wiki信息")
+            
+    async def generate_guide_async(self, query: str, game_context: str = None, skip_query_processing: bool = False):
         """Generate guide response with streaming"""
+        # 如果在受限模式下，显示相应的提示信息
+        if self.limited_mode:
+            logger.info("🚨 受限模式下，AI攻略功能不可用")
+            self.error_occurred.emit(
+                "🚨 AI Guide Features Unavailable\n\n"
+                "Currently running in limited mode with Wiki search only.\n\n"
+                "To use AI guide features, please configure both API keys (both required):\n"
+                "• Google/Gemini API Key (required) - for AI reasoning\n"
+                "• Jina API Key (required) - for vector search\n\n"
+                "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
+                "Jina vector search is essential for complete AI guide features.\n\n"
+                "Restart the program after configuration to enable full functionality."
+            )
+            return
+            
         if not self.rag_engine:
             # 尝试为指定游戏初始化RAG引擎
             if game_context:
@@ -306,7 +579,7 @@ class RAGIntegration(QObject):
                 vector_game_name = map_window_title_to_game_name(game_context)
                 
                 if vector_game_name:
-                    logger.info(f"RAG引擎未初始化，尝试为游戏 '{vector_game_name}' 初始化")
+                    logger.info(f"RAG engine not initialized, attempting to initialize for game '{vector_game_name}'")
                     
                     # 获取API设置
                     settings = self.settings_manager.get()
@@ -314,7 +587,16 @@ class RAGIntegration(QObject):
                     google_api_key = api_settings.get('google_api_key', '')
                     jina_api_key = api_settings.get('jina_api_key', '')
                     
-                    if google_api_key:
+                    # 检查环境变量
+                    if not google_api_key:
+                        google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+                    if not jina_api_key:
+                        jina_api_key = os.getenv('JINA_API_KEY')
+                    
+                    # 检查是否同时有两个API key
+                    has_both_keys = bool(google_api_key and jina_api_key)
+                    
+                    if has_both_keys:
                         llm_config = LLMConfig(
                             api_key=google_api_key,
                             model='gemini-2.5-flash-lite-preview-06-17'
@@ -322,24 +604,42 @@ class RAGIntegration(QObject):
                         self._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
                         
                         if not self.rag_engine:
-                            self.error_occurred.emit(f"无法为游戏 '{vector_game_name}' 初始化RAG引擎")
+                            self.error_occurred.emit(f"Game '{game_context}' does not support guide queries yet.\n\nCurrently supported games for guide queries:\n• Helldivers 2 (HELLDIVERS 2)\n• Elden Ring")
                             return
                     else:
-                        self.error_occurred.emit("RAG引擎未初始化，请检查API配置")
+                        missing_keys = []
+                        if not google_api_key:
+                            missing_keys.append("Google/Gemini API Key")
+                        if not jina_api_key:
+                            missing_keys.append("Jina API Key")
+                        
+                        self.error_occurred.emit(
+                            f"❌ Missing required API keys: {', '.join(missing_keys)}\n\n"
+                            "AI guide features require both API keys to be configured:\n"
+                            "• Google/Gemini API Key - for AI reasoning\n"
+                            "• Jina API Key - for vector search\n\n"
+                            "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
+                            "Jina vector search is essential for complete AI guide features.\n\n"
+                            "Please configure complete API keys in settings and try again."
+                        )
                         return
                 else:
-                    self.error_occurred.emit(f"当前游戏 '{game_context}' 暂不支持攻略查询")
+                    self.error_occurred.emit(f"Game '{game_context}' does not support guide queries yet.\n\nCurrently supported games for guide queries:\n• Helldivers 2 (HELLDIVERS 2)\n• Elden Ring")
                     return
             else:
-                self.error_occurred.emit("RAG引擎未初始化，且未提供游戏上下文")
+                self.error_occurred.emit("RAG engine not initialized and no game context provided")
                 return
             
         try:
             # Query RAG engine (it's already async)
+            logger.info(f"🔍 直接使用处理后的查询进行RAG搜索: '{query}'")
+            if skip_query_processing:
+                logger.info("⚡ 跳过RAG内部查询处理，使用已优化的查询")
+            
             result = await self.rag_engine.query(query)
             
             if not result or not result.get("answer"):
-                self.error_occurred.emit("未找到相关信息")
+                self.error_occurred.emit("No relevant guide information found. Please try rephrasing your question.")
                 return
                 
             # Get the answer from the result
@@ -356,17 +656,38 @@ class RAGIntegration(QObject):
                     
         except Exception as e:
             logger.error(f"Guide generation failed: {e}")
-            self.error_occurred.emit(f"生成攻略失败：{str(e)}")
+            self.error_occurred.emit(f"Guide generation failed: {str(e)}")
 
 
 class IntegratedAssistantController(AssistantController):
     """Enhanced assistant controller with RAG integration"""
     
-    def __init__(self, settings_manager: SettingsManager):
+    # 类级别的全局实例引用
+    _global_instance = None
+    
+    def __init__(self, settings_manager: SettingsManager, limited_mode: bool = False):
         super().__init__(settings_manager)
-        self.rag_integration = RAGIntegration(settings_manager)
+        self.limited_mode = limited_mode
+        self.rag_integration = RAGIntegration(settings_manager, limited_mode=limited_mode)
         self._setup_connections()
         self._current_worker = None
+        self._current_wiki_message = None  # 存储当前的wiki链接消息组件
+        
+        # 注册为全局实例
+        IntegratedAssistantController._global_instance = self
+        logger.info(f"🌐 已注册为全局assistant controller实例 (limited_mode={limited_mode})")
+        
+        # 如果是受限模式，显示提示信息
+        if limited_mode:
+            logger.info("🚨 运行在受限模式下：仅支持Wiki搜索功能")
+        else:
+            logger.info("✅ 运行在完整模式下：支持Wiki搜索和AI攻略功能")
+        
+    def __del__(self):
+        """析构函数，清理全局实例引用"""
+        if IntegratedAssistantController._global_instance is self:
+            IntegratedAssistantController._global_instance = None
+            logger.info("🌐 已清理全局assistant controller实例引用")
         
     def set_current_game_window(self, game_window_title: str):
         """重写父类方法，设置当前游戏窗口并处理RAG引擎初始化"""
@@ -396,6 +717,9 @@ class IntegratedAssistantController(AssistantController):
         self.rag_integration.wiki_result_ready.connect(
             self._on_wiki_result
         )
+        self.rag_integration.wiki_link_updated.connect(
+            self._on_wiki_link_updated
+        )
         self.rag_integration.error_occurred.connect(
             self._on_error
         )
@@ -412,7 +736,13 @@ class IntegratedAssistantController(AssistantController):
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.stop()
             self._current_worker.wait()
-        
+            
+        # 断开RAG integration的所有信号连接，防止重复
+        try:
+            self.rag_integration.streaming_chunk_ready.disconnect()
+        except:
+            pass  # 如果没有连接，忽略错误
+            
         # 使用已记录的游戏窗口标题（在热键触发时记录）
         if hasattr(self, 'current_game_window') and self.current_game_window:
             logger.info(f"🎮 使用已记录的游戏窗口: '{self.current_game_window}'")
@@ -430,9 +760,9 @@ class IntegratedAssistantController(AssistantController):
         self._current_worker.guide_chunk.connect(self._on_guide_chunk)
         self._current_worker.error_occurred.connect(self._on_error)
         
-        # Connect RAG integration signals to worker
+        # 重新连接RAG integration的信号到当前worker
         self.rag_integration.streaming_chunk_ready.connect(
-            self._current_worker.guide_chunk
+            self._on_streaming_chunk  # 直接连接到处理方法，而不是worker的信号
         )
         
         self._current_worker.start()
@@ -474,14 +804,14 @@ class IntegratedAssistantController(AssistantController):
                 if hasattr(self, '_current_transition_msg'):
                     self._current_transition_msg.update_content(TransitionMessages.WIKI_FOUND)
                 
-                # Add wiki link
-                self.main_window.chat_view.add_message(
+                # Add wiki link message (初始显示搜索URL)
+                self._current_wiki_message = self.main_window.chat_view.add_message(
                     MessageType.WIKI_LINK,
                     title,
                     {"url": url}
                 )
                 
-                # Open wiki page
+                # Show wiki page in the unified window (会触发JavaScript搜索真实URL)
                 self.main_window.show_wiki_page(url, title)
             else:
                 if hasattr(self, '_current_transition_msg'):
@@ -490,6 +820,49 @@ class IntegratedAssistantController(AssistantController):
         except Exception as e:
             logger.error(f"Wiki result handling error: {e}")
             self._on_error(str(e))
+            
+    def _on_wiki_link_updated(self, real_url: str, real_title: str):
+        """处理wiki链接更新信号"""
+        try:
+            if self._current_wiki_message:
+                logger.info(f"🔗 更新聊天窗口中的wiki链接: {real_title} -> {real_url}")
+                
+                # 更新消息内容和元数据
+                self._current_wiki_message.message.content = real_title
+                self._current_wiki_message.message.metadata["url"] = real_url
+                
+                # 重新设置内容以刷新显示 - 修复：使用真实标题而不是旧内容
+                html_content = (
+                    f'[LINK] <a href="{real_url}" style="color: #4096ff;">{real_url}</a><br/>'
+                    f'<span style="color: #666; margin-left: 20px;">{real_title}</span>'
+                )
+                self._current_wiki_message.content_label.setText(html_content)
+                self._current_wiki_message.content_label.setTextFormat(Qt.TextFormat.RichText)
+                
+                # 调整组件大小以适应新内容
+                self._current_wiki_message.content_label.adjustSize()
+                self._current_wiki_message.adjustSize()
+                
+                # 强制重绘
+                self._current_wiki_message.update()
+                
+                logger.info(f"✅ 聊天窗口wiki链接已更新为真实URL和标题")
+                
+                # 只有当标题包含有意义的内容时才清除引用（避免过早清除导致后续更新失效）
+                # 检查标题是否是临时的加载状态
+                temporary_titles = ["请稍候…", "Loading...", "Redirecting...", ""]
+                if real_title and real_title not in temporary_titles:
+                    # 延迟清除引用，允许可能的后续更新
+                    QTimer.singleShot(2000, lambda: setattr(self, '_current_wiki_message', None))
+                    logger.info(f"📋 延迟清除wiki消息引用，标题: '{real_title}'")
+                else:
+                    logger.info(f"📋 保持wiki消息引用，等待更完整的标题（当前: '{real_title}'）")
+                    
+            else:
+                logger.warning("⚠️ 没有找到要更新的wiki消息组件")
+                
+        except Exception as e:
+            logger.error(f"❌ 更新wiki链接失败: {e}")
             
     def _on_guide_chunk(self, chunk: str):
         """Handle guide chunk from worker"""
@@ -527,7 +900,16 @@ class IntegratedAssistantController(AssistantController):
             google_api_key = api_settings.get('google_api_key', '')
             jina_api_key = api_settings.get('jina_api_key', '')
             
-            if google_api_key:
+            # 检查环境变量
+            if not google_api_key:
+                google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+            if not jina_api_key:
+                jina_api_key = os.getenv('JINA_API_KEY')
+            
+            # 检查是否同时有两个API key
+            has_both_keys = bool(google_api_key and jina_api_key)
+            
+            if has_both_keys:
                 llm_config = LLMConfig(
                     api_key=google_api_key,
                     model='gemini-2.5-flash-lite-preview-06-17'
@@ -537,11 +919,36 @@ class IntegratedAssistantController(AssistantController):
                 self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
                 logger.info(f"✅ RAG引擎已重新初始化为向量库: {vector_game_name}")
             else:
-                logger.warning("❌ Google API密钥未配置，无法重新初始化RAG引擎")
+                missing_keys = []
+                if not google_api_key:
+                    missing_keys.append("Google/Gemini API Key")
+                if not jina_api_key:
+                    missing_keys.append("Jina API Key")
+                
+                logger.warning(f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}")
+                logger.warning("无法重新初始化RAG引擎，需要同时配置Google/Gemini API Key和Jina API Key")
                 
         except Exception as e:
             logger.error(f"❌ 重新初始化RAG引擎失败: {e}")
+            
+    def on_wiki_page_found(self, real_url: str, real_title: str = None):
+        """当webview中的JavaScript找到真实wiki页面时调用"""
+        logger.info(f"🌐 收到webview的wiki页面回调: {real_url}")
+        self.rag_integration.on_wiki_found(real_url, real_title)
         
+    def handle_wiki_page_found(self, url: str, title: str):
+        """重写父类方法：处理WikiView发现真实wiki页面的信号"""
+        logger.info(f"🔗 IntegratedAssistantController收到WikiView信号: {title} -> {url}")
+        
+        # 过滤掉明显的临时状态标题，只处理有意义的更新
+        if title and title not in ["请稍候…", "Loading...", "Redirecting...", ""]:
+            logger.info(f"✅ 接受wiki页面更新：{title}")
+            # 直接调用RAG integration的方法来处理wiki页面发现
+            self.rag_integration.on_wiki_found(url, title)
+        else:
+            logger.info(f"⏳ 跳过临时状态的wiki页面更新：{title}")
+            # 对于临时状态，仍然调用，但不会触发聊天窗口的最终更新
+            
     def switch_game(self, game_name: str):
         """Switch to a different game (game_name应该是窗口标题)"""
         # Stop current worker

@@ -11,6 +11,7 @@ from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.game_wiki_tooltip.utils import package_file
+from src.game_wiki_tooltip.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class QtTrayIcon(QObject):
         menu = QMenu()
         
         # Settings action
-        settings_action = QAction("设置", self)
+        settings_action = QAction(t("tray_settings"), self)
         settings_action.triggered.connect(self.settings_requested.emit)
         menu.addAction(settings_action)
         
@@ -48,7 +49,7 @@ class QtTrayIcon(QObject):
         menu.addSeparator()
         
         # Exit action
-        exit_action = QAction("退出", self)
+        exit_action = QAction(t("tray_exit"), self)
         exit_action.triggered.connect(self.exit_requested.emit)
         menu.addAction(exit_action)
         
@@ -56,7 +57,7 @@ class QtTrayIcon(QObject):
         self.tray_icon.setContextMenu(menu)
         
         # Set tooltip
-        self.tray_icon.setToolTip("Game Wiki Tooltip")
+        self.tray_icon.setToolTip(t("tray_tooltip"))
         
         # Double click to open settings
         self.tray_icon.activated.connect(self._on_activated)
@@ -70,6 +71,19 @@ class QtTrayIcon(QObject):
             # Handle PyQt6 enum compatibility issue
             if int(reason) == 2:  # DoubleClick = 2
                 self.settings_requested.emit()
+    
+    def update_text(self):
+        """Update tray icon text with current language"""
+        if self.tray_icon:
+            menu = self.tray_icon.contextMenu()
+            if menu:
+                actions = menu.actions()
+                if len(actions) >= 2:
+                    actions[0].setText(t("tray_settings"))  # Settings
+                    actions[2].setText(t("tray_exit"))      # Exit (skip separator)
+            
+            # Update tooltip
+            self.tray_icon.setToolTip(t("tray_tooltip"))
             
     def show(self):
         """Show tray icon"""

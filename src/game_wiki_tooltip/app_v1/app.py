@@ -4,7 +4,6 @@ Main entry point – initialises tray icon, hot-key hook and Tk event-loop.
 
 import sys
 import asyncio
-import pathlib
 import tkinter as tk
 from tkinter import messagebox
 import time
@@ -14,11 +13,11 @@ import logging
 import queue
 
 from src.game_wiki_tooltip.config import SettingsManager, GameConfigManager
-from src.game_wiki_tooltip.hotkey import HotkeyManager
-from src.game_wiki_tooltip.overlay import OverlayManager
-from src.game_wiki_tooltip.tray_icon import TrayIcon
-from src.game_wiki_tooltip.utils import run_tk_event_loop, APPDATA_DIR, get_foreground_title, _tk_call_queue
-from src.game_wiki_tooltip.hotkey_setup import configure_hotkey
+from src.game_wiki_tooltip.app_v1.hotkey import HotkeyManager
+from src.game_wiki_tooltip.app_v1.overlay import OverlayManager
+from src.game_wiki_tooltip.app_v1.tray_icon import TrayIcon
+from src.game_wiki_tooltip.utils import APPDATA_DIR, _tk_call_queue
+from src.game_wiki_tooltip.app_v1.hotkey_setup import configure_hotkey
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG,
