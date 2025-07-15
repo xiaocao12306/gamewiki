@@ -28,6 +28,13 @@ def setup_logging(verbose: bool = False):
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    
+    # 抑制markdown库的重复调试信息
+    try:
+        markdown_logger = logging.getLogger('markdown')
+        markdown_logger.setLevel(logging.WARNING)
+    except:
+        pass  # 如果没有markdown库，忽略
 
 
 def main():

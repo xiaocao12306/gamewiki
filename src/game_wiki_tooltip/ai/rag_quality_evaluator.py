@@ -558,6 +558,13 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
+    # 抑制markdown库的重复调试信息
+    try:
+        markdown_logger = logging.getLogger('markdown')
+        markdown_logger.setLevel(logging.WARNING)
+    except:
+        pass  # 如果没有markdown库，忽略
+    
     # 获取游戏名称（默认为helldiver2）
     game = sys.argv[1] if len(sys.argv) > 1 else "helldiver2"
     

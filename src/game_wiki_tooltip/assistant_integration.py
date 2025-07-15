@@ -247,6 +247,13 @@ class RAGIntegration(QObject):
                 logger.warning("RAG components not available")
                 return
                 
+            logger.info(f"🔄 正在为游戏 '{game_name}' 初始化新的RAG引擎")
+            
+            # 清除旧的RAG引擎
+            if hasattr(self, 'rag_engine') and self.rag_engine:
+                logger.info("🗑️ 清除旧的RAG引擎实例")
+                self.rag_engine = None
+                
             # Get RAG config
             rag_config = get_default_config()
             
@@ -274,13 +281,16 @@ class RAGIntegration(QObject):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
+                    logger.info(f"🚀 开始异步初始化RAG引擎 (游戏: {game_name})")
                     loop.run_until_complete(self.rag_engine.initialize(game_name))
-                    logger.info(f"RAG engine initialized for game: {game_name}")
+                    logger.info(f"✅ RAG引擎初始化完成 (游戏: {game_name})")
                     self._rag_init_complete = True
+                    self._current_rag_game = game_name  # 记录当前RAG引擎对应的游戏
                 except Exception as e:
-                    logger.error(f"Failed to initialize RAG for {game_name}: {e}")
+                    logger.error(f"❌ RAG引擎初始化失败 (游戏: {game_name}): {e}")
                     self.rag_engine = None
                     self._rag_init_complete = False
+                    self._current_rag_game = None
                 finally:
                     loop.close()
             
@@ -327,19 +337,19 @@ class RAGIntegration(QObject):
             return self._simple_intent_detection(query)
             
         try:
-            # 获取API设置用于LLM配置
-            settings = self.settings_manager.get()
-            api_settings = settings.get('api', {})
-            google_api_key = api_settings.get('google_api_key', '')
-            
-            if not google_api_key:
-                logger.warning("Google API key未配置，使用简单意图检测")
-                return self._simple_intent_detection(query)
-                
+            # 创建LLM配置并检查API密钥
             llm_config = LLMConfig(
-                api_key=google_api_key,
                 model='gemini-2.5-flash-lite-preview-06-17'
             )
+            
+            # 使用LLMConfig的get_api_key方法获取API密钥（支持GEMINI_API_KEY环境变量）
+            api_key = llm_config.get_api_key()
+            if not api_key:
+                logger.warning("GEMINI_API_KEY未配置，使用简单意图检测")
+                return self._simple_intent_detection(query)
+                
+            # 更新配置中的API密钥
+            llm_config.api_key = api_key
             
             # 使用统一查询处理器进行处理（合并了翻译、重写、意图判断）
             result = await asyncio.to_thread(
@@ -604,7 +614,18 @@ class RAGIntegration(QObject):
                         self._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
                         
                         if not self.rag_engine:
-                            self.error_occurred.emit(f"Game '{game_context}' does not support guide queries yet.\n\nCurrently supported games for guide queries:\n• Helldivers 2 (HELLDIVERS 2)\n• Elden Ring")
+                            # 检查是否是向量库不存在的问题
+                            logger.info(f"📋 游戏 '{vector_game_name}' 的向量库不存在，提供降级方案")
+                            self.error_occurred.emit(
+                                f"🎮 游戏 '{game_context}' 暂时没有攻略数据库\n\n"
+                                "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
+                                "📚 目前支持攻略查询的游戏：\n"
+                                "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
+                                "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
+                                "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
+                                "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
+                                "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
+                            )
                             return
                     else:
                         missing_keys = []
@@ -624,7 +645,17 @@ class RAGIntegration(QObject):
                         )
                         return
                 else:
-                    self.error_occurred.emit(f"Game '{game_context}' does not support guide queries yet.\n\nCurrently supported games for guide queries:\n• Helldivers 2 (HELLDIVERS 2)\n• Elden Ring")
+                    logger.info(f"📋 窗口 '{game_context}' 不支持攻略查询")
+                    self.error_occurred.emit(
+                        f"🎮 窗口 '{game_context}' 暂时不支持攻略查询\n\n"
+                        "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
+                        "📚 目前支持攻略查询的游戏：\n"
+                        "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
+                        "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
+                        "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
+                        "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
+                        "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
+                    )
                     return
             else:
                 self.error_occurred.emit("RAG engine not initialized and no game context provided")
@@ -732,6 +763,38 @@ class IntegratedAssistantController(AssistantController):
             query
         )
         
+        # 检查RAG引擎初始化状态
+        if getattr(self, '_rag_initializing', False):
+            # RAG引擎正在初始化中，显示等待状态
+            logger.info("🔄 RAG引擎正在初始化中，显示等待提示")
+            self.main_window.chat_view.show_status("🚀 游戏攻略系统正在初始化中，请稍候...")
+            
+            # 延迟处理查询，定期检查初始化状态
+            self._pending_query = query
+            self._check_rag_init_status()
+            return
+        
+        # RAG引擎已准备好，正常处理查询
+        self._process_query_immediately(query)
+        
+    def _check_rag_init_status(self):
+        """定期检查RAG初始化状态"""
+        if hasattr(self.rag_integration, '_rag_init_complete') and self.rag_integration._rag_init_complete:
+            # 初始化完成
+            logger.info("✅ RAG引擎初始化完成，开始处理查询")
+            self._rag_initializing = False
+            self.main_window.chat_view.hide_status()
+            
+            # 处理等待中的查询
+            if hasattr(self, '_pending_query'):
+                self._process_query_immediately(self._pending_query)
+                delattr(self, '_pending_query')
+        else:
+            # 继续等待，每500ms检查一次
+            QTimer.singleShot(500, self._check_rag_init_status)
+            
+    def _process_query_immediately(self, query: str):
+        """立即处理查询（RAG引擎已准备好）"""
         # Stop any existing worker
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.stop()
@@ -890,9 +953,9 @@ class IntegratedAssistantController(AssistantController):
         )
         
     def _reinitialize_rag_for_game(self, vector_game_name: str):
-        """重新初始化RAG引擎为特定向量库（参数已经是向量库名称，无需再次映射）"""
+        """重新初始化RAG引擎为特定向量库（异步，不阻塞UI）"""
         try:
-            logger.info(f"🚀 开始为向量库 '{vector_game_name}' 重新初始化RAG引擎")
+            logger.info(f"🚀 开始为向量库 '{vector_game_name}' 重新初始化RAG引擎（异步模式）")
             
             # 获取API设置
             settings = self.settings_manager.get()
@@ -915,21 +978,19 @@ class IntegratedAssistantController(AssistantController):
                     model='gemini-2.5-flash-lite-preview-06-17'
                 )
                 
-                # 重新初始化RAG引擎（等待初始化完成）
-                self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
-                logger.info(f"✅ RAG引擎已重新初始化为向量库: {vector_game_name}")
-            else:
-                missing_keys = []
-                if not google_api_key:
-                    missing_keys.append("Google/Gemini API Key")
-                if not jina_api_key:
-                    missing_keys.append("Jina API Key")
+                # 异步初始化RAG引擎（不等待完成）
+                self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=False)
+                logger.info(f"🔄 RAG引擎初始化已启动（异步）: {vector_game_name}")
                 
-                logger.warning(f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}")
-                logger.warning("无法重新初始化RAG引擎，需要同时配置Google/Gemini API Key和Jina API Key")
+                # 标记RAG引擎正在初始化
+                self._rag_initializing = True
+                self._target_vector_game = vector_game_name
+            else:
+                logger.warning(f"⚠️ API密钥不完整，无法初始化RAG引擎 (Google: {bool(google_api_key)}, Jina: {bool(jina_api_key)})")
                 
         except Exception as e:
-            logger.error(f"❌ 重新初始化RAG引擎失败: {e}")
+            logger.error(f"RAG引擎重新初始化失败: {e}")
+            self._rag_initializing = False
             
     def on_wiki_page_found(self, real_url: str, real_title: str = None):
         """当webview中的JavaScript找到真实wiki页面时调用"""

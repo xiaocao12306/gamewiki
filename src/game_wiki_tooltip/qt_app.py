@@ -35,6 +35,14 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# 抑制markdown库的重复调试信息
+try:
+    markdown_logger = logging.getLogger('MARKDOWN')
+    markdown_logger.setLevel(logging.WARNING)
+except:
+    pass  # 如果没有markdown库，忽略
+
 logger = logging.getLogger(__name__)
 
 # Load .env file if available
@@ -649,10 +657,19 @@ class GameWikiApp(QObject):
         if self.assistant_ctrl:
             logger.info("assistant_ctrl存在，调用expand_to_chat()...")
             try:
-                # 将游戏窗口标题传递给assistant controller
-                self.assistant_ctrl.set_current_game_window(game_window_title)
+                # 优化流程：先快速显示窗口，再异步初始化RAG引擎
+                # 1. 先记录游戏窗口但不立即初始化RAG
+                self.assistant_ctrl.current_game_window = game_window_title
+                logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
+                
+                # 2. 立即显示聊天窗口（无需等待RAG初始化）
                 self.assistant_ctrl.expand_to_chat()
                 logger.info("expand_to_chat()执行成功")
+                
+                # 3. 窗口显示后，异步初始化RAG引擎
+                QTimer.singleShot(100, lambda: self.assistant_ctrl.set_current_game_window(game_window_title))
+                logger.info("RAG引擎初始化已安排为异步任务")
+                
             except Exception as e:
                 logger.error(f"expand_to_chat()执行失败: {e}")
                 import traceback

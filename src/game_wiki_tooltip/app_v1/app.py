@@ -23,6 +23,13 @@ from src.game_wiki_tooltip.app_v1.hotkey_setup import configure_hotkey
 logging.basicConfig(level=logging.DEBUG,
                    format='%(asctime)s - %(levelname)s - %(message)s')
 
+# 抑制markdown库的重复调试信息
+try:
+    markdown_logger = logging.getLogger('markdown')
+    markdown_logger.setLevel(logging.WARNING)
+except:
+    pass  # 如果没有markdown库，忽略
+
 SETTINGS_PATH = APPDATA_DIR / "settings.json"
 GAMES_CONFIG_PATH = APPDATA_DIR / "games.json"
 

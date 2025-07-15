@@ -90,6 +90,8 @@ def map_window_title_to_game_name(window_title: str) -> Optional[str]:
         "文明6": "civilization6",
         "7 days to die": "7daystodie",
         "七日杀": "7daystodie",
+        "stardew valley": "stardewvalley",
+        "星露谷物语": "stardewvalley",
     }
     
     # 尝试精确匹配

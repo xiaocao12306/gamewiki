@@ -354,12 +354,15 @@ class StatusMessageWidget(QFrame):
     def __init__(self, message: str, parent=None):
         super().__init__(parent)
         self.current_message = message
+        
+        # 初始化动画属性（必须在init_ui之前，因为init_ui中会调用update_display）
+        self.animation_dots = 0
+        
         self.init_ui()
         
         # 动画定时器
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self.update_animation)
-        self.animation_dots = 0
         self.animation_timer.start(500)  # 每500ms更新一次动画
         
     def init_ui(self):
@@ -598,6 +601,7 @@ class MessageWidget(QFrame):
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
             bubble.setMaximumWidth(500)  # 设置一个合理的初始最大宽度
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
     def on_link_clicked(self, url):
         """Handle wiki link clicks"""
@@ -689,14 +693,14 @@ class StreamingMessageWidget(MessageWidget):
         # 找到消息气泡
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            # 使用QSizePolicy.Fixed防止重排，但宽度将动态设置
-            bubble.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            # 使用Preferred策略，允许布局系统灵活调整
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         
         # 优化content_label设置
         if hasattr(self, 'content_label'):
-            # 禁用自动调整大小，避免频繁重排
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-            # 设置文本换行和固定宽度
+            # 使用Preferred策略，避免固定尺寸造成布局问题
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+            # 设置文本换行
             self.content_label.setWordWrap(True)
             self.content_label.setScaledContents(False)
             
@@ -705,29 +709,59 @@ class StreamingMessageWidget(MessageWidget):
     
     def _update_bubble_width(self):
         """根据聊天窗口宽度动态设置对话框宽度"""
-        # 获取聊天视图的宽度
+        # 获取聊天视图的宽度，考虑滚动条宽度
         chat_view = self.parent()
         if chat_view and hasattr(chat_view, 'viewport'):
             viewport_width = chat_view.viewport().width()
+            # 减去滚动条可能占用的宽度（通常约20px）
+            scrollbar = chat_view.verticalScrollBar()
+            if scrollbar and scrollbar.isVisible():
+                viewport_width -= scrollbar.width()
         else:
             # 如果无法获取聊天视图宽度，尝试从父容器获取
             parent_widget = self.parent()
             viewport_width = parent_widget.width() if parent_widget else 500
         
-        # 计算对话框宽度（聊天视图宽度的80%，但不超过600px，不少于300px）
-        bubble_width = max(300, min(600, int(viewport_width * 0.8)))
+        # 确保有效宽度
+        viewport_width = max(300, viewport_width)
+        
+        # 计算对话框宽度（聊天视图宽度的75%，减少比例避免过宽，但不超过600px，不少于300px）
+        bubble_width = max(300, min(600, int(viewport_width * 0.75)))
         content_width = bubble_width - 24  # 减去边距
         
-        # 更新气泡和内容宽度
+        # 更新气泡和内容宽度 - 使用最大宽度而不是固定宽度
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            bubble.setFixedWidth(bubble_width)
+            bubble.setMaximumWidth(bubble_width)
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
         if hasattr(self, 'content_label'):
-            self.content_label.setFixedWidth(content_width)
+            self.content_label.setMaximumWidth(content_width)
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
-        # 调试信息
-        print(f"💬 消息宽度更新: 视图宽度={viewport_width}px, 消息宽度={bubble_width}px")
+        # 增强调试信息
+        if chat_view and hasattr(chat_view, 'viewport'):
+            original_viewport_width = chat_view.viewport().width()
+            scrollbar_width = scrollbar.width() if scrollbar and scrollbar.isVisible() else 0
+            
+            # 检测异常宽度变化
+            if original_viewport_width < 600:
+                print(f"🚨 流式消息视图宽度异常: viewport={original_viewport_width}px")
+                # 检查父容器链
+                parent = chat_view.parent() if chat_view else None
+                level = 0
+                while parent and level < 5:
+                    parent_width = parent.width() if hasattr(parent, 'width') else "N/A"
+                    parent_type = type(parent).__name__
+                    print(f"  └─ 父容器[{level}]: {parent_type} 宽度={parent_width}px")
+                    parent = parent.parent() if hasattr(parent, 'parent') else None
+                    level += 1
+        else:
+            original_viewport_width = 'N/A'
+            scrollbar_width = 0
+            
+        print(f"💬 流式消息宽度更新: 视图={original_viewport_width}px, 滚动条={scrollbar_width}px, "
+              f"计算后={viewport_width}px, 消息最大宽度={bubble_width}px")
     
     def set_render_params(self, char_interval: int = 80, time_interval: float = 1.5):
         """
@@ -882,9 +916,90 @@ class ChatView(QScrollArea):
         scrollbar.sliderPressed.connect(self._on_user_scroll_start)
         scrollbar.sliderReleased.connect(self._on_user_scroll_end)
         
+        # 添加欢迎信息
+        self._add_welcome_message()
+        
+    def _check_and_fix_width(self):
+        """检查并修复ChatView宽度异常"""
+        if not self.parent():
+            return
+            
+        parent_width = self.parent().width()
+        current_width = self.width()
+        viewport_width = self.viewport().width()
+        
+        # 如果父容器宽度正常但ChatView宽度异常
+        if parent_width > 600 and current_width < 600:
+            print(f"🔧 检测到ChatView宽度异常，开始修复:")
+            print(f"  父容器宽度: {parent_width}px")
+            print(f"  ChatView宽度: {current_width}px") 
+            print(f"  viewport宽度: {viewport_width}px")
+            
+            # 显示完整的父容器链
+            print(f"  完整父容器链:")
+            parent = self.parent()
+            level = 0
+            while parent and level < 5:
+                parent_width_info = parent.width() if hasattr(parent, 'width') else "N/A"
+                parent_type = type(parent).__name__
+                parent_geometry = parent.geometry() if hasattr(parent, 'geometry') else "N/A"
+                print(f"    └─ [{level}] {parent_type}: 宽度={parent_width_info}px, 几何={parent_geometry}")
+                parent = parent.parent() if hasattr(parent, 'parent') else None
+                level += 1
+            
+            # 强制设置为父容器宽度
+            self.setFixedWidth(parent_width)
+            QTimer.singleShot(50, lambda: self.setMaximumWidth(16777215))  # 延迟移除固定宽度限制
+            QTimer.singleShot(100, lambda: self.setMinimumWidth(0))
+            
+            print(f"🔧 已修复ChatView宽度为: {parent_width}px")
+            
+        # 如果viewport宽度异常，强制刷新
+        elif viewport_width < 600 and parent_width > 600:
+            print(f"🔧 检测到viewport宽度异常，强制刷新layout")
+            print(f"  当前尺寸策略: {self.sizePolicy().horizontalPolicy()}")
+            print(f"  最小尺寸: {self.minimumSize()}")
+            print(f"  最大尺寸: {self.maximumSize()}")
+            
+            self.updateGeometry()
+            self.container.updateGeometry()
+            if self.parent():
+                self.parent().updateGeometry()
+        
+    def _add_welcome_message(self):
+        """添加欢迎信息和推荐查询"""
+        welcome_content = """🎮 欢迎使用GameWiki智能助手！
+
+💡 **功能介绍：**
+• **Wiki搜索** - 快速查找游戏官方资料
+• **AI攻略** - 智能游戏攻略问答（需要配置API密钥）
+
+🎯 **推荐查询示例：**
+• 地狱潜兵2：`虫族配装推荐` / `火焰武器搭配`
+• 艾尔登法环：`Boss攻略` / `装备推荐`
+• 星露谷物语：`农场布局` / `好感度攻略`
+• 饥荒联机版：`生存技巧` / `角色选择`
+
+📝 **使用提示：**
+直接输入您的问题，系统会自动判断使用Wiki搜索还是AI攻略功能。"""
+        
+        # 创建欢迎消息
+        welcome_message = ChatMessage(
+            type=MessageType.AI_RESPONSE,
+            content=welcome_content,
+            metadata={"is_welcome": True}
+        )
+        
+        widget = MessageWidget(welcome_message, self)
+        self.layout.insertWidget(self.layout.count() - 1, widget)
+        self.messages.append(widget)
+        
     def add_message(self, msg_type: MessageType, content: str, 
                    metadata: Dict[str, Any] = None) -> MessageWidget:
         """Add a new message to the chat"""
+        # 检查并修复ChatView宽度异常
+        self._check_and_fix_width()
+        
         message = ChatMessage(
             type=msg_type,
             content=content,
@@ -899,7 +1014,7 @@ class ChatView(QScrollArea):
         self.layout.insertWidget(self.layout.count() - 1, widget)
         self.messages.append(widget)
         
-        # 动态设置消息最大宽度为聊天视图宽度的80%
+        # 动态设置消息最大宽度为聊天视图宽度的75%
         self._update_message_width(widget)
         
         # Force layout update
@@ -919,6 +1034,9 @@ class ChatView(QScrollArea):
         
     def show_status(self, message: str) -> StatusMessageWidget:
         """显示状态信息"""
+        # 检查并修复ChatView宽度异常
+        self._check_and_fix_width()
+        
         # 如果已有状态消息，先隐藏
         if self.current_status_widget:
             self.hide_status()
@@ -956,17 +1074,26 @@ class ChatView(QScrollArea):
             
     def _update_status_width(self, widget: StatusMessageWidget):
         """更新状态消息控件的最大宽度"""
-        # 获取聊天视图的实际宽度
+        # 获取聊天视图的实际宽度，考虑滚动条宽度
         chat_width = self.viewport().width()
+        
+        # 减去滚动条可能占用的宽度
+        scrollbar = self.verticalScrollBar()
+        if scrollbar and scrollbar.isVisible():
+            chat_width -= scrollbar.width()
+            
         if chat_width > 0:
-            # 设置状态消息最大宽度为聊天视图宽度的80%，最小300px，最大600px
-            max_width = min(max(int(chat_width * 0.8), 300), 600)
+            # 确保有效宽度
+            chat_width = max(300, chat_width)
+            
+            # 设置状态消息最大宽度为聊天视图宽度的75%，最小300px，最大600px
+            max_width = min(max(int(chat_width * 0.75), 300), 600)
             # 找到状态气泡并设置其最大宽度
             bubble = widget.findChild(QFrame, "statusBubble")
             if bubble:
                 bubble.setMaximumWidth(max_width)
-                # 对于状态消息，也可以设置固定宽度来避免闪烁
-                bubble.setFixedWidth(max_width)
+                # 使用首选尺寸策略，避免固定宽度造成布局问题
+                bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         
     def scroll_to_bottom(self):
         """Scroll to the bottom of the chat"""
@@ -1085,32 +1212,74 @@ class ChatView(QScrollArea):
         
     def _update_message_width(self, widget: MessageWidget):
         """更新消息控件的最大宽度"""
-        # 获取聊天视图的实际宽度
-        chat_width = self.viewport().width()
+        # 获取多层容器的宽度信息，用于调试
+        viewport_width = self.viewport().width()
+        scroll_area_width = self.width()
+        parent_window_width = self.parent().width() if self.parent() else "N/A"
+        
+        # 获取聊天视图的实际宽度，考虑滚动条宽度
+        chat_width = viewport_width
+        
+        # 减去滚动条可能占用的宽度
+        scrollbar = self.verticalScrollBar()
+        scrollbar_width = 0
+        if scrollbar and scrollbar.isVisible():
+            scrollbar_width = scrollbar.width()
+            chat_width -= scrollbar_width
+            
         if chat_width > 0:
-            # 设置消息最大宽度为聊天视图宽度的80%，最小300px，最大600px
-            max_width = min(max(int(chat_width * 0.8), 300), 600)
+            # 确保有效宽度
+            chat_width = max(300, chat_width)
+            
+            # 设置消息最大宽度为聊天视图宽度的75%，最小300px，最大600px
+            max_width = min(max(int(chat_width * 0.75), 300), 600)
             
             # 如果是StreamingMessageWidget，调用其专门的更新方法
             if isinstance(widget, StreamingMessageWidget):
                 widget._update_bubble_width()
             else:
-                # 对于普通消息，设置固定宽度以保持一致性
+                # 对于普通消息，使用最大宽度而不是固定宽度
                 bubble = widget.findChild(QFrame, "messageBubble")
                 if bubble:
-                    # 设置固定宽度，避免不同消息宽度不一致
-                    bubble.setFixedWidth(max_width)
-                    bubble.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+                    # 使用最大宽度，让布局系统自由决定实际宽度
+                    bubble.setMaximumWidth(max_width)
+                    bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                 
                 # 同时更新content_label的宽度
                 if hasattr(widget, 'content_label'):
                     content_width = max_width - 24  # 减去边距
-                    widget.content_label.setFixedWidth(content_width)
-                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+                    widget.content_label.setMaximumWidth(content_width)
+                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+                
+                # 增强调试信息 - 检测宽度突然变化
+                if viewport_width < 600:  # 当视图宽度异常小时输出详细信息
+                    print(f"🚨 视图宽度异常: viewport={viewport_width}px, scroll_area={scroll_area_width}px, "
+                          f"parent_window={parent_window_width}px, scrollbar={scrollbar_width}px")
+                    
+                    # 检查父容器链
+                    parent = self.parent()
+                    level = 0
+                    while parent and level < 5:
+                        parent_width = parent.width() if hasattr(parent, 'width') else "N/A"
+                        parent_type = type(parent).__name__
+                        print(f"  └─ 父容器[{level}]: {parent_type} 宽度={parent_width}px")
+                        parent = parent.parent() if hasattr(parent, 'parent') else None
+                        level += 1
+                        
+                print(f"💬 普通消息宽度更新: 视图={viewport_width}px, 滚动条={scrollbar_width}px, "
+                      f"计算后={chat_width}px, 消息最大宽度={max_width}px")
                 
     def resizeEvent(self, event):
         """窗口大小改变时更新所有消息的宽度"""
         super().resizeEvent(event)
+        
+        # 强制ChatView保持正确的宽度
+        parent_width = self.parent().width() if self.parent() else 0
+        current_width = self.width()
+        if parent_width > 0 and abs(current_width - parent_width) > 5:  # 超过5px差异
+            print(f"🔧 修复ChatView宽度: 当前={current_width}px, 父容器={parent_width}px")
+            self.resize(parent_width, self.height())
+        
         # 更新所有现有消息的宽度
         for widget in self.messages:
             self._update_message_width(widget)
@@ -1211,8 +1380,8 @@ class WikiView(QWidget):
         if WEBENGINE_AVAILABLE and QWebEngineView:
             # Use WebEngine view
             self.web_view = QWebEngineView()
-            # 修复Qt bug: 设置合理的尺寸约束，避免巨大的默认尺寸
-            self.web_view.setMinimumSize(200, 150)  # 设置合理的最小尺寸
+            # 修复尺寸问题：设置更小的最小尺寸，避免影响整体布局
+            self.web_view.setMinimumSize(100, 100)  # 减小最小尺寸
             self.web_view.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
             # 设置尺寸策略为可扩展，允许自由调整
             self.web_view.setSizePolicy(
@@ -1228,7 +1397,7 @@ class WikiView(QWidget):
             # Fallback to text view
             self.content_widget = QTextEdit()
             self.content_widget.setReadOnly(True)
-            self.content_widget.setMinimumSize(200, 150)  # 设置合理的最小尺寸
+            self.content_widget.setMinimumSize(100, 100)  # 减小最小尺寸，避免影响布局
             self.content_widget.setSizePolicy(
                 QSizePolicy.Policy.Expanding,
                 QSizePolicy.Policy.Expanding
@@ -1415,15 +1584,30 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Content area (chat/wiki switcher)
         self.content_stack = QStackedWidget()
+        # 确保QStackedWidget不会强制改变尺寸
+        self.content_stack.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         
         # Chat view
         self.chat_view = ChatView()
         self.chat_view.wiki_requested.connect(self.show_wiki_page)
+        # 确保聊天视图保持其尺寸
+        self.chat_view.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         
         # Wiki view
         self.wiki_view = WikiView()
         self.wiki_view.back_requested.connect(self.show_chat_view)
         self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
+        # 确保Wiki视图有合理的最小尺寸但不强制固定尺寸
+        self.wiki_view.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         
         self.content_stack.addWidget(self.chat_view)
         self.content_stack.addWidget(self.wiki_view)
