@@ -1,0 +1,4450 @@
+[
+  {
+    "chunk_id": "dst_sanity_001",
+    "timestamp": {
+      "start": "00:34",
+      "end": "01:07"
+    },
+    "topic": "Early Game Sanity - Picking Flowers",
+    "summary": "Picking flowers provides an instant sanity boost of +5 per flower. They are a crucial and renewable early-game resource for sanity management, as they can be replanted by butterflies, or respawn from bees and rainfall.",
+    "keywords": [
+      "sanity",
+      "picking flowers",
+      "early game",
+      "instant sanity",
+      "petals",
+      "renewable resource"
+    ],
+    "type": "Resource_Guide",
+    "data": {
+      "item_name": "Flower",
+      "item_type": "Resource",
+      "usage_scene": "Gaining a quick, small amount of sanity at any game stage.",
+      "effects": [
+        {
+          "stat": "Sanity",
+          "value": "+5",
+          "type": "Instant (on pick)"
+        }
+      ],
+      "notes": "Flowers are renewable. They can respawn via bees, rainfall, or by planting caught butterflies."
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_002",
+    "timestamp": {
+      "start": "01:07",
+      "end": "01:30"
+    },
+    "topic": "Early Game Sanity - Garland",
+    "summary": "The Garland is an easily craftable head item that provides a passive sanity regeneration aura. It requires 12 Petals and can be made without a Science Machine, making it highly accessible in the early game.",
+    "keywords": [
+      "garland",
+      "sanity regen",
+      "early game",
+      "headwear",
+      "crafting",
+      "petals"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Garland",
+      "item_type": "Headwear",
+      "crafting_recipe": [
+        {
+          "item": "Petals",
+          "quantity": 12
+        }
+      ],
+      "requirements": "None (no Science Machine needed)",
+      "effects": [
+        {
+          "stat": "Sanity/min",
+          "value": "+1.33",
+          "type": "Aura (when worn)"
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_003",
+    "timestamp": {
+      "start": "01:30",
+      "end": "02:04"
+    },
+    "topic": "Early Game Sanity - Top Hat",
+    "summary": "The Top Hat provides a superior sanity regeneration aura compared to the Garland. It requires a Science Machine and 6 Silk to craft and is also a necessary component for unlocking the Magic crafting tab.",
+    "keywords": [
+      "top hat",
+      "sanity regen",
+      "early game",
+      "headwear",
+      "crafting",
+      "silk",
+      "magic tab"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Top Hat",
+      "item_type": "Headwear",
+      "crafting_recipe": [
+        {
+          "item": "Silk",
+          "quantity": 6
+        }
+      ],
+      "requirements": "Science Machine",
+      "effects": [
+        {
+          "stat": "Sanity/min",
+          "value": "+3.3",
+          "type": "Aura (when worn)"
+        }
+      ],
+      "notes": "Crafting a Top Hat is required to unlock the Magic tab for the first time."
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_004",
+    "timestamp": {
+      "start": "02:04",
+      "end": "03:12"
+    },
+    "topic": "Sanity Food - Watermelon and Jerky",
+    "summary": "Watermelon and Jerky are effective food items for restoring sanity. Raw Watermelon gives +5 sanity, while Grilled Watermelon gives +7.5. Small Jerky and regular Jerky restore +10 and +15 sanity respectively, and are excellent long-lasting food sources, making them ideal for winter.",
+    "keywords": [
+      "sanity food",
+      "watermelon",
+      "jerky",
+      "small jerky",
+      "drying rack",
+      "cooking",
+      "hunger"
+    ],
+    "type": "Food_Guide",
+    "data": {
+      "items": [
+        {
+          "item_name": "Watermelon",
+          "effects": [
+            {
+              "state": "Raw",
+              "stat": "Sanity",
+              "value": "+5"
+            },
+            {
+              "state": "Grilled",
+              "stat": "Sanity",
+              "value": "+7.5"
+            }
+          ]
+        },
+        {
+          "item_name": "Small Jerky",
+          "effects": [
+            {
+              "stat": "Sanity",
+              "value": "+10"
+            }
+          ],
+          "notes": "Made from Morsels, Drumsticks, Fish, or Bat Wings on a Drying Rack."
+        },
+        {
+          "item_name": "Jerky",
+          "effects": [
+            {
+              "stat": "Sanity",
+              "value": "+15"
+            }
+          ],
+          "notes": "Made from Meat on a Drying Rack."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_005",
+    "timestamp": {
+      "start": "03:12",
+      "end": "04:22"
+    },
+    "topic": "Sanity Food - Cooked Green Mushrooms & Cactus Flesh",
+    "summary": "Cooked Green Mushrooms and Cooked Cactus Flesh are two of the best sanity-restoring foods. Both provide +15 sanity when cooked. Green Mushrooms must be picked at dusk, and eating them raw causes a massive sanity loss of -50. Cactus Flesh deals damage when picked without armor, but is available year-round.",
+    "keywords": [
+      "green mushroom",
+      "cactus flesh",
+      "cooked cactus",
+      "sanity food",
+      "cooking",
+      "deciduous forest",
+      "marsh",
+      "desert"
+    ],
+    "type": "Food_Guide",
+    "data": {
+      "items": [
+        {
+          "item_name": "Cooked Green Cap",
+          "source": "Cooked Green Mushroom",
+          "effects": [
+            {
+              "stat": "Sanity",
+              "value": "+15"
+            }
+          ],
+          "notes": "Raw Green Mushrooms drain 50 sanity. They are found in Deciduous Forests and Marshes and can only be picked at dusk."
+        },
+        {
+          "item_name": "Cooked Cactus Flesh",
+          "source": "Cooked Cactus",
+          "effects": [
+            {
+              "stat": "Sanity",
+              "value": "+15"
+            }
+          ],
+          "notes": "Cactus is available year-round in the desert. Wear armor when harvesting to avoid taking damage."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_006",
+    "timestamp": {
+      "start": "04:22",
+      "end": "05:26"
+    },
+    "topic": "Sanity Crock Pot Dishes - Popsicles and Ice Cream",
+    "summary": "Certain crock pot dishes are excellent for sanity. Melonsicles restore +20 sanity, while Banana Pops restore +33 sanity and +20 health, but require Bananas from the caves. The best is Ice Cream, which restores a massive +50 sanity but requires Electric Milk from Volt Goats.",
+    "keywords": [
+      "crock pot",
+      "ice cream",
+      "melonsicle",
+      "banana pop",
+      "sanity food",
+      "recipe",
+      "cooking"
+    ],
+    "type": "Food_Guide",
+    "data": {
+      "items": [
+        {
+          "item_name": "Melonsicle",
+          "effects": {
+            "sanity": "+20"
+          },
+          "notes": "Efficient as it relies on farmable watermelon."
+        },
+        {
+          "item_name": "Banana Pop",
+          "effects": {
+            "sanity": "+33",
+            "health": "+20"
+          },
+          "notes": "Requires bananas from the caves/ruins."
+        },
+        {
+          "item_name": "Ice Cream",
+          "effects": {
+            "sanity": "+50"
+          },
+          "notes": "The highest sanity-restoring food. Requires Electric Milk (from Volt Goats), making it a later-game option."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_007",
+    "timestamp": {
+      "start": "05:26",
+      "end": "06:01"
+    },
+    "topic": "Sanity Gain from Killing Shadow Creatures",
+    "summary": "Killing the shadow creatures that spawn when your sanity is low will instantly restore a portion of your sanity. This creates a feedback loop where fighting your insanity directly rewards you with sanity. This is a primary method for players who intentionally lower their sanity to farm Nightmare Fuel.",
+    "keywords": [
+      "shadow creatures",
+      "nightmare fuel",
+      "kiting",
+      "crawling horror",
+      "terrorbeak",
+      "insanity",
+      "sanity farm"
+    ],
+    "type": "Combat_Guide",
+    "data": {
+      "mechanic": "Killing Shadow Creatures",
+      "effects": [
+        {
+          "action": "Kill Crawling Horror",
+          "stat": "Sanity",
+          "value": "+15"
+        },
+        {
+          "action": "Kill Terrorbeak",
+          "stat": "Sanity",
+          "value": "+33"
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_008",
+    "timestamp": {
+      "start": "06:01",
+      "end": "06:23"
+    },
+    "topic": "Sanity Gain from Prototyping",
+    "summary": "Prototyping a new item for the first time at any crafting station provides an instant +15 sanity boost. This is a natural way to regain sanity while progressing through the game's tech tree.",
+    "keywords": [
+      "prototyping",
+      "crafting",
+      "science machine",
+      "alchemy engine",
+      "sanity boost",
+      "learning recipes"
+    ],
+    "type": "Mechanic_Guide",
+    "data": {
+      "action": "Prototyping a new recipe",
+      "effect": "Instantly restores +15 Sanity."
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_009",
+    "timestamp": {
+      "start": "06:23",
+      "end": "07:48"
+    },
+    "topic": "Sanity Auras - Glommer and Tam o' Shanter",
+    "summary": "Passive sanity regeneration can be achieved through auras from followers and gear. Glommer provides a +6.25 sanity/min aura to nearby players. The Tam o' Shanter, a drop from MacTusk, is one of the best head items, providing +6.7 sanity/min, excellent insulation, and is repairable.",
+    "keywords": [
+      "sanity aura",
+      "glommer",
+      "tam o' shanter",
+      "mactusk",
+      "passive sanity",
+      "winter gear",
+      "headwear"
+    ],
+    "type": "Mechanic_Guide",
+    "data": {
+      "auras": [
+        {
+          "source": "Glommer (Mob)",
+          "effect": "+6.25 Sanity/min",
+          "condition": "Player must be very close to Glommer."
+        },
+        {
+          "source": "Tam o' Shanter (Headwear)",
+          "effect": "+6.7 Sanity/min",
+          "notes": "Drops from MacTusk with a 25% chance. Also provides 120 insulation and can be repaired with a Sewing Kit."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_010",
+    "timestamp": {
+      "start": "07:48",
+      "end": "08:41"
+    },
+    "topic": "Sanity Auras - Followers (Pigs, Bunnymen, Hutch)",
+    "summary": "Befriended followers provide a powerful sanity regeneration aura, which can stack up to +25/min depending on the number of followers. This applies to Pigmen and Bunnymen. Additionally, the pet Hutch, when transformed into Music Box Hutch, provides an incredible +40 sanity/min aura.",
+    "keywords": [
+      "sanity aura",
+      "pigmen",
+      "bunnymen",
+      "followers",
+      "hutch",
+      "music box hutch",
+      "caves"
+    ],
+    "type": "Mechanic_Guide",
+    "data": {
+      "auras": [
+        {
+          "source": "Befriended Pigmen / Bunnymen",
+          "effect": "Up to +25 Sanity/min",
+          "condition": "Depends on number of followers and proximity."
+        },
+        {
+          "source": "Music Box Hutch (Pet)",
+          "effect": "+40 Sanity/min",
+          "condition": "Player must stand directly on top of it. Requires finding Hutch in the caves and feeding it a One-man Band and a light source."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_011",
+    "timestamp": {
+      "start": "08:41",
+      "end": "09:04"
+    },
+    "topic": "Sanity Gain from Sleeping",
+    "summary": "Sleeping in a Tent, Bed Roll, or Siesta Lean-to restores sanity and health over time, but at the cost of hunger. A Tent restores +1 sanity per second, while a Siesta Lean-to does the same but without draining hunger.",
+    "keywords": [
+      "sleeping",
+      "tent",
+      "siesta lean-to",
+      "bed roll",
+      "sanity gain",
+      "hunger drain"
+    ],
+    "type": "Mechanic_Guide",
+    "data": {
+      "actions": [
+        {
+          "structure": "Tent / Bed Roll",
+          "effect": "+1 Sanity/sec",
+          "cost": "-1 Hunger/sec"
+        },
+        {
+          "structure": "Siesta Lean-to",
+          "effect": "+1 Sanity/sec",
+          "cost": "No hunger cost, but requires summer to be effective."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_012",
+    "timestamp": {
+      "start": "09:04",
+      "end": "09:37"
+    },
+    "topic": "Enlightenment and the Lunar Biome",
+    "summary": "The Lunar Island introduces the Enlightenment mechanic, which is the inverse of Sanity. Being in the Lunar Biome converts your missing sanity into Enlightenment. Standing near Lunar Fissures or getting hit by Gestalts will rapidly increase your Enlightenment, which in turn restores your Sanity to full when you leave the biome's influence.",
+    "keywords": [
+      "enlightenment",
+      "lunacy",
+      "lunar island",
+      "lunar biome",
+      "lunar fissure",
+      "gestalt",
+      "sanity"
+    ],
+    "type": "Mechanic_Guide",
+    "data": {
+      "mechanic": "Enlightenment",
+      "relationship": "Inverse to Sanity. 100% Enlightenment equals 0% Sanity. 0% Enlightenment equals 100% Sanity.",
+      "sanity_gain_methods": [
+        {
+          "source": "Lunar Fissure Aura",
+          "effect": "Restores Sanity by converting it from Enlightenment at up to +100/min, depending on Moon Phase."
+        },
+        {
+          "source": "Gestalt Attack",
+          "effect": "Instantly restores +10 Sanity by converting it from Enlightenment."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_sanity_013",
+    "timestamp": {
+      "start": "09:37",
+      "end": "10:22"
+    },
+    "topic": "Late Game Sanity - Bee Queen Crown",
+    "summary": "The Bee Queen Crown is the ultimate sanity management item. Dropped by the Bee Queen, this powerful headwear completely inverts all negative sanity auras into positive ones. This allows you to stand next to monsters like Deerclops or near Nightmare Lights and rapidly gain sanity instead of losing it.",
+    "keywords": [
+      "bee queen crown",
+      "sanity aura",
+      "late game",
+      "boss item",
+      "bee queen",
+      "negative sanity",
+      "insulation"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Bee Queen Crown",
+      "item_type": "Headwear",
+      "source": "Dropped by Bee Queen",
+      "special_effect": "Inverts all negative sanity auras into positive sanity gain.",
+      "usage_scene": "Completely nullifying sanity drain from bosses, monsters, night, dusk, wetness, Nightmare Lights, and Evil Flowers.",
+      "notes": "Also provides 70% damage reduction and is waterproof."
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:00:43",
+      "end": "00:01:06"
+    },
+    "topic": "Beginner World Creation Settings",
+    "summary": "This chunk details the recommended world creation settings for a beginner player. It suggests the 'Survival' playstyle, enabling Caves for more content, and provides specific settings for solo players. It also recommends the 'Geometric Placement' and 'Craft Pot' client mods for a better experience.",
+    "keywords": [
+      "world creation",
+      "settings",
+      "survival mode",
+      "caves",
+      "local only",
+      "mods",
+      "geometric placement",
+      "craft pot"
+    ],
+    "type": "Game_Setup",
+    "structured_data": {
+      "recommended_playstyle": "Survival",
+      "essential_settings": [
+        "Enable Caves"
+      ],
+      "solo_player_settings": [
+        "Game Mode: Local Only",
+        "Players: 1"
+      ],
+      "recommended_mods": [
+        {
+          "name": "Geometric Placement",
+          "purpose": "Snaps objects to a grid for neat building."
+        },
+        {
+          "name": "Craft Pot",
+          "purpose": "Helps experiment and learn Crock Pot recipes."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:01:06",
+      "end": "00:01:31"
+    },
+    "topic": "Beginner Character Recommendations",
+    "summary": "This section provides character recommendations for new players. It highlights Wendy and Willow as strong choices due to their companion abilities (Abigail and Bernie, respectively) that act as bodyguards. The guide creator chooses to play as Wilson to ensure the strategies shown are generic and applicable to any character.",
+    "keywords": [
+      "character selection",
+      "beginner characters",
+      "Wendy",
+      "Willow",
+      "Wilson",
+      "Abigail",
+      "Bernie"
+    ],
+    "type": "Character_Recommendation",
+    "structured_data": {
+      "recommended_for_beginners": [
+        {
+          "name": "Wendy",
+          "reason": "Effectively has a bodyguard (her twin sister Abigail) to help with safety and combat."
+        },
+        {
+          "name": "Willow",
+          "reason": "Effectively has a bodyguard (her teddy bear, Bernie) to help with safety."
+        }
+      ],
+      "guide_character_choice": {
+        "name": "Wilson",
+        "reason": "He has few specific upsides or downsides, and his skill tree is not used in the guide, making the strategies universally applicable."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "00:01:31",
+      "end": "00:02:29"
+    },
+    "topic": "Core Survival Mechanics: Health, Hunger, and Sanity",
+    "summary": "This chunk explains the three core survival meters: Health, Hunger, and Sanity. It details how each meter depletes and the consequences of them reaching zero, such as death from zero health or starvation, and attacks from Shadow Creatures at low sanity.",
+    "keywords": [
+      "survival mechanics",
+      "health",
+      "hunger",
+      "sanity",
+      "stats",
+      "meters",
+      "shadow creatures",
+      "starvation"
+    ],
+    "type": "Core_Mechanics",
+    "structured_data": {
+      "survival_meters": [
+        {
+          "name": "Health",
+          "description": "If it hits zero, you die. It is lost from taking damage from mobs or the environment, and from starvation."
+        },
+        {
+          "name": "Hunger",
+          "description": "Drains by 75 points per day. When it hits zero, you begin starving, which drains health at a rate of 1.25 points per second."
+        },
+        {
+          "name": "Sanity",
+          "description": "Doesn't directly kill you. As it lowers, the screen becomes desaturated. Below 50% of maximum, Shadow Creatures appear. Below 15% of maximum, they become hostile and will attack, draining health and sanity."
+        }
+      ],
+      "day_cycle_info": {
+        "in_game_day_duration": "8 minutes real-time."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_004",
+    "timestamp": {
+      "start": "00:02:29",
+      "end": "00:03:25"
+    },
+    "topic": "Day 1 (Autumn): Initial Gathering",
+    "summary": "The guide outlines the tasks for the first day, which starts in Autumn. Players should stay in the relatively safe starter biome, gather essential resources like twigs, grass, and flint, and collect readily available food such as carrots and berries. The goal is to accumulate basic materials without engaging in combat.",
+    "keywords": [
+      "autumn",
+      "day 1",
+      "starter biome",
+      "gathering",
+      "twigs",
+      "grass",
+      "flint",
+      "carrots",
+      "berries"
+    ],
+    "type": "Seasonal_Guide",
+    "structured_data": {
+      "season": "Autumn",
+      "day_1_goals": [
+        {
+          "task": "Explore Starter Biome",
+          "details": "Identified by bright green grass turf and general lack of danger."
+        },
+        {
+          "task": "Gather Basic Materials",
+          "details": "Collect approximately 40 Twigs from Saplings, 40 Grass from Grass Tufts, and at least 3 Flint from the ground."
+        },
+        {
+          "task": "Gather Early Food",
+          "details": "Pick Berries and Carrots. You need the equivalent of 6 carrots per day to manage hunger."
+        },
+        {
+          "task": "Collect Seeds",
+          "details": "Pick up seeds dropped by birds."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_005",
+    "timestamp": {
+      "start": "00:03:25",
+      "end": "00:04:14"
+    },
+    "topic": "Alternate Resource Guide",
+    "summary": "This section explains that some worlds generate with alternate versions of basic resources. It describes Twiggy Trees, Grass Gekkos, and Juicy Berry Bushes as substitutes for Saplings, Grass Tufts, and Berry Bushes, detailing their unique properties and where to find them.",
+    "keywords": [
+      "alternate resources",
+      "twiggy trees",
+      "grass gekko",
+      "juicy berry bushes",
+      "world generation",
+      "biomes"
+    ],
+    "type": "Resource_Guide",
+    "structured_data": {
+      "alternate_resources": [
+        {
+          "name": "Twiggy Trees",
+          "replaces": "Saplings",
+          "details": "Twigs can be picked from the ground near them or the trees can be chopped down. They regrow twigs over time."
+        },
+        {
+          "name": "Grass Gekkos",
+          "replaces": "Grass Tufts (in some biomes)",
+          "details": "Found in Rocky biomes. Scare them to make them drop their tail, which counts as grass. The tail regrows in 2 days."
+        },
+        {
+          "name": "Juicy Berry Bushes",
+          "replaces": "Berry Bushes",
+          "details": "Grow 3 juicy berries at once but take longer to regrow. Juicy berries also spoil much faster than regular ones."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_006",
+    "timestamp": {
+      "start": "00:04:14",
+      "end": "00:05:58"
+    },
+    "topic": "Surviving the First Night",
+    "summary": "This part covers crucial steps for surviving the first night. It explains how to get emergency healing from Butterfly Wings, the dangers of dusk (sanity drain) and night (Charlie attacks in darkness), and how to craft an Axe and Torch to provide light and safety.",
+    "keywords": [
+      "healing",
+      "butterfly wings",
+      "dusk",
+      "night",
+      "darkness",
+      "Charlie",
+      "crafting",
+      "axe",
+      "torch"
+    ],
+    "type": "Survival_Guide",
+    "structured_data": {
+      "healing_source": {
+        "item": "Butterfly Wings",
+        "source": "Kill butterflies that spawn from flowers.",
+        "effect": "Restores 8 Health."
+      },
+      "night_survival": {
+        "dangers": [
+          "Sanity drains at 5 points per minute during dusk.",
+          "Complete darkness summons 'Charlie' (the Grue), who attacks for massive damage and sanity loss."
+        ],
+        "solutions": [
+          "Craft a Torch to provide a portable light source.",
+          "Light a tree on fire for a large, temporary light source.",
+          "Craft a Campfire for a stationary, more permanent light source."
+        ]
+      },
+      "essential_first_crafts": [
+        {
+          "item": "Axe",
+          "tab": "Tools",
+          "purpose": "Chop trees for logs and serves as a basic weapon."
+        },
+        {
+          "item": "Torch",
+          "tab": "Light Sources",
+          "purpose": "Prevents damage from darkness."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_007",
+    "timestamp": {
+      "start": "00:05:58",
+      "end": "00:08:07"
+    },
+    "topic": "Day 2 (Autumn): Finding Gold in the Mosaic Biome",
+    "summary": "The guide instructs the player to locate the Mosaic biome to mine Gold, a critical resource. It describes how to identify this biome by its mix of turfs and warns about the hostile Tallbirds found there. The goal is to mine Boulders with gold veins to collect gold nuggets and rocks using a Pickaxe.",
+    "keywords": [
+      "gold",
+      "mosaic biome",
+      "mining",
+      "pickaxe",
+      "boulders",
+      "tallbird",
+      "exploration"
+    ],
+    "type": "Area_Walkthrough",
+    "structured_data": {
+      "goal": "Acquire Gold, Rocks, and Flint.",
+      "target_biome": "Mosaic Biome",
+      "biome_identification": "A mix of various turfs: grassy, forest, rocky, swamp, cobblestone, and barren. It is always connected to the starter biome.",
+      "resource_source": "Mine Boulders with gold veins using a Pickaxe.",
+      "local_danger": {
+        "mob": "Tallbird",
+        "behavior": "Aggressive mob that patrols near its nest and attacks players who get too close. Can be avoided by running away until it loses interest."
+      },
+      "gathering_target": [
+        "20 Gold Nuggets",
+        "~40 Rocks"
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_008",
+    "timestamp": {
+      "start": "00:08:07",
+      "end": "00:09:45"
+    },
+    "topic": "Day 3 (Autumn): Science Machine and Essential Gear Crafting",
+    "summary": "This chunk focuses on technological progression by crafting a Science Machine. It explains how to unlock new recipes and the concept of pre-crafting structures. Key items to prototype and craft are the Backpack for more inventory space, the Spear for better combat, and the Log Suit for damage reduction.",
+    "keywords": [
+      "science machine",
+      "crafting",
+      "prototyping",
+      "backpack",
+      "log suit",
+      "spear",
+      "armor",
+      "weapon"
+    ],
+    "type": "Crafting_Guide",
+    "structured_data": {
+      "key_structure": {
+        "name": "Science Machine",
+        "recipe": "1 Gold Nugget, 4 Logs, 4 Rocks",
+        "purpose": "Unlocks Tier 1 recipes. Prototyping an item (crafting it for the first time) unlocks it permanently, allowing it to be crafted anywhere. Restores 15 sanity upon first-time crafts."
+      },
+      "essential_gear_to_prototype": [
+        {
+          "name": "Backpack",
+          "tab": "Storage Solutions"
+        },
+        {
+          "name": "Spear",
+          "tab": "Weapons"
+        },
+        {
+          "name": "Log Suit",
+          "tab": "Armor",
+          "details": "Provides 80% physical damage reduction."
+        }
+      ],
+      "pro_tip": "Structures can be pre-crafted to carry the materials in a single inventory slot before placing them down."
+    }
+  },
+  {
+    "chunk_id": "unique_id_009",
+    "timestamp": {
+      "start": "09:45:00",
+      "end": "12:42:00"
+    },
+    "topic": "Autumn (Days 4-5): Farming Pigs for Resources",
+    "summary": "This section guides the player to a Forest biome to farm Pigs. The goal is to acquire Meat and Pig Skins, which are essential for creating better items. The strategy involves hammering Pig Houses to get materials and then fighting the homeless pigs one-on-one.",
+    "keywords": [
+      "forest biome",
+      "pig",
+      "pig house",
+      "spider",
+      "farming",
+      "meat",
+      "pig skin",
+      "combat"
+    ],
+    "type": "Resource_Farming",
+    "structured_data": {
+      "target_biome": "Forest (dark green turf)",
+      "farming_strategy": {
+        "goal": "Obtain 2 Meat and 10 Pig Skin.",
+        "method": "Use a Hammer to destroy Pig Houses. This yields half the crafting materials back, including Pig Skin. Then, kill the now homeless pig.",
+        "combat_tactic": "Wear a Log Suit. Lure pigs one at a time. Dodge their attack, then hit them 3-4 times. Repeat."
+      },
+      "mob_interactions": "Pigs are neutral but will become hostile if one is attacked near them. They attack spiders on sight."
+    }
+  },
+  {
+    "chunk_id": "unique_id_010",
+    "timestamp": {
+      "start": "12:42:00",
+      "end": "14:37:00"
+    },
+    "topic": "Resurrection with Touch Stones",
+    "summary": "This bonus tip explains how to use Touch Stones for resurrection. After dying, the player becomes a ghost and can float to a Touch Stone and haunt it to revive. Each Touch Stone can only be used once per player.",
+    "keywords": [
+      "resurrection",
+      "death",
+      "ghost",
+      "touch stone",
+      "revival",
+      "survival tip"
+    ],
+    "type": "Survival_Tip",
+    "structured_data": {
+      "resurrection_method": {
+        "item": "Touch Stone",
+        "location": "Found randomly in the world, often surrounded by Pig Heads on spikes.",
+        "process": "After dying, navigate your ghost to an unused Touch Stone and haunt it to resurrect.",
+        "limitation": "Each Touch Stone works only once per player.",
+        "post_revival": "You must return to your skeleton to pick up your dropped items."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_011",
+    "timestamp": {
+      "start": "14:37:00",
+      "end": "15:52:00"
+    },
+    "topic": "No-Combat Spider Farming",
+    "summary": "A safe, non-combat method for farming spiders is shown. By crafting and placing Traps near a Spider Nest, players can lure spiders into them for an instant kill, easily gathering Silk, Monster Meat, and Spider Glands.",
+    "keywords": [
+      "spider farming",
+      "trap",
+      "no combat",
+      "silk",
+      "monster meat",
+      "spider gland",
+      "resource gathering"
+    ],
+    "type": "Resource_Farming",
+    "structured_data": {
+      "goal": "Obtain 8 Silk.",
+      "method": "Craft Traps (from the 'Tools' tab). Place them on the ground. Lure a spider by walking near it, then lead it over the trap. The spider is caught and killed instantly.",
+      "spider_drops": [
+        "Monster Meat",
+        "Silk",
+        "Spider Gland"
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_012",
+    "timestamp": {
+      "start": "15:52:00",
+      "end": "17:40:00"
+    },
+    "topic": "Autumn (Day 9): Base Camp Setup",
+    "summary": "By Day 9, the player should establish a base. This involves building a Fire Pit, Chests, an Alchemy Engine, and Crock Pots. The guide also covers finding Glommer's Statue to acquire Glommer on a full moon for a significant sanity boost.",
+    "keywords": [
+      "base building",
+      "fire pit",
+      "crock pot",
+      "alchemy engine",
+      "chest",
+      "glommer",
+      "full moon",
+      "sanity"
+    ],
+    "type": "Base_Building",
+    "structured_data": {
+      "essential_base_structures": [
+        {
+          "name": "Fire Pit",
+          "purpose": "A permanent, efficient light and heat source."
+        },
+        {
+          "name": "Alchemy Engine",
+          "purpose": "Unlocks Tier 2 recipes, replacing the Science Machine."
+        },
+        {
+          "name": "Chest",
+          "purpose": "For item storage."
+        },
+        {
+          "name": "Crock Pot",
+          "purpose": "Cooks advanced food dishes with superior stats."
+        }
+      ],
+      "special_npc_acquisition": {
+        "name": "Glommer",
+        "location": "Spawns at Glommer's Statue during a full moon.",
+        "benefit": "Provides a +6.25/min sanity aura and drops Glommer's Goop."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_013",
+    "timestamp": {
+      "start": "17:40:00",
+      "end": "19:35:00"
+    },
+    "topic": "Autumn (Day 11): Preparing for Winter",
+    "summary": "This section details crucial preparations for the upcoming winter season. The main goals are to craft a Football Helmet for better protection, a Ham Bat as a powerful weapon that uses hunger instead of durability, and a Thermal Stone to manage body temperature.",
+    "keywords": [
+      "winter prep",
+      "football helmet",
+      "ham bat",
+      "thermal stone",
+      "armor",
+      "weapon",
+      "temperature"
+    ],
+    "type": "Seasonal_Prep",
+    "structured_data": {
+      "winter_preparation_crafts": [
+        {
+          "item": "Football Helmet",
+          "tab": "Armor",
+          "recipe": "1 Pig Skin, 1 Rope",
+          "purpose": "Provides 80% damage reduction and occupies the head slot, allowing it to be worn with a Log Suit."
+        },
+        {
+          "item": "Ham Bat",
+          "tab": "Weapons",
+          "recipe": "1 Pig Skin, 2 Twigs, 2 Meat",
+          "purpose": "A powerful weapon that spoils over time instead of losing durability, making it excellent for extended fights. Deals 59.5 damage when fresh."
+        },
+        {
+          "item": "Thermal Stone",
+          "tab": "Survival",
+          "recipe": "10 Stone, 1 Pickaxe, 3 Flint",
+          "purpose": "When heated by a fire, it stores warmth and slows down freezing in winter."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_014",
+    "timestamp": {
+      "start": "19:35:00",
+      "end": "22:20:00"
+    },
+    "topic": "Autumn (Day 12): Food Security and Base Expansion",
+    "summary": "The guide focuses on establishing long-term food security by creating Drying Racks and Bee Boxes. Drying Racks turn meat into jerky, a long-lasting and restorative food. Bee Boxes produce honey, a crucial ingredient for powerful healing items.",
+    "keywords": [
+      "food security",
+      "drying rack",
+      "jerky",
+      "bee box",
+      "honey",
+      "healing",
+      "base expansion"
+    ],
+    "type": "Farming_And_Food",
+    "structured_data": {
+      "food_structures": [
+        {
+          "name": "Drying Rack",
+          "purpose": "Dries meat to create Jerky or Small Jerky, which restores Health, Hunger, and Sanity and lasts much longer."
+        },
+        {
+          "name": "Bee Box",
+          "recipe": "1 Honeycomb, 4 Bees, 2 Boards",
+          "purpose": "Generates Honey over time. Requires catching bees with a Bug Net and destroying a beehive for the honeycomb."
+        }
+      ],
+      "food_items": [
+        {
+          "name": "Jerky",
+          "stats": "+20 Health, +25 Hunger, +15 Sanity"
+        },
+        {
+          "name": "Honey",
+          "use": "Excellent Crock Pot ingredient, especially for healing foods like Honey Poultice."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_015",
+    "timestamp": {
+      "start": "22:20:00",
+      "end": "23:36:00"
+    },
+    "topic": "Autumn (Day 14): Final Winter Preparations",
+    "summary": "This chunk details the final steps to prepare for winter. It involves crafting a Bird Cage to produce eggs and a Winter Hat for insulation. It also recommends stocking up on logs and grass before winter arrives.",
+    "keywords": [
+      "winter prep",
+      "bird cage",
+      "winter hat",
+      "insulation",
+      "resource stocking",
+      "final prep"
+    ],
+    "type": "Seasonal_Prep",
+    "structured_data": {
+      "final_winter_prep": [
+        {
+          "item": "Bird Cage",
+          "recipe": "2 Papyrus, 6 Gold Nuggets, 2 Seeds",
+          "purpose": "Cage a bird (caught with a Bird Trap) and feed it meat to get eggs, a valuable Crock Pot ingredient."
+        },
+        {
+          "item": "Winter Hat",
+          "recipe": "4 Beefalo Wool, 4 Silk",
+          "purpose": "Provides 120 seconds of insulation against the cold."
+        },
+        {
+          "task": "Stockpile Resources",
+          "details": "Gather a large amount of logs and grass before winter, as they will be scarce."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_016",
+    "timestamp": {
+      "start": "23:36:00",
+      "end": "27:07:00"
+    },
+    "topic": "Winter (Day 21): Surviving the Cold and Deerclops",
+    "summary": "This part explains how to survive the first days of winter. Key activities include managing body temperature with a Thermal Stone and Winter Hat, and preparing for the first boss, Deerclops, who arrives around Day 30. The guide also covers creating an Ice Box for food preservation.",
+    "keywords": [
+      "winter",
+      "freezing",
+      "temperature",
+      "deerclops",
+      "boss fight",
+      "ice box",
+      "food preservation"
+    ],
+    "type": "Seasonal_Guide",
+    "structured_data": {
+      "season": "Winter",
+      "key_mechanics": [
+        "Freezing: Player temperature will drop, requiring warm clothing (Winter Hat) and a heat source (Fire Pit, heated Thermal Stone) to prevent health loss."
+      ],
+      "essential_structures": {
+        "name": "Ice Box",
+        "recipe": "2 Gold Nuggets, 1 Gear, 2 Boards",
+        "purpose": "Slows down food spoilage by 50%."
+      },
+      "boss_prep": {
+        "name": "Deerclops",
+        "arrival": "Around Day 30",
+        "preparation": "Build a panic room/arena away from your main base with a Fire Pit. Craft multiple Log Suits and Football Helmets."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_017",
+    "timestamp": {
+      "start": "27:07:00",
+      "end": "28:36:00"
+    },
+    "topic": "Winter (Day 24): Obtaining Gears and Finding Walrus Camps",
+    "summary": "The guide shows how to obtain Gears, a crucial crafting component. The primary methods are digging up graves (which costs sanity) or finding and fighting Clockwork monsters in the Mosaic biome. It also introduces the Walrus Camp, a winter-exclusive location for obtaining valuable loot.",
+    "keywords": [
+      "gears",
+      "clockwork monsters",
+      "graves",
+      "walrus camp",
+      "macTusk",
+      "winter loot"
+    ],
+    "type": "Resource_Farming",
+    "structured_data": {
+      "resource_goal": "Obtain Gears",
+      "methods": [
+        {
+          "name": "Digging Graves",
+          "tool": "Shovel",
+          "risk": "Costs sanity and can spawn ghosts."
+        },
+        {
+          "name": "Fighting Clockworks",
+          "location": "Mosaic Biome",
+          "details": "Clockwork Knights, Bishops, and Rooks drop gears upon defeat."
+        }
+      ],
+      "winter_location": {
+        "name": "Walrus Camp (Igoo)",
+        "spawns_in": "Winter",
+        "inhabitants": "MacTusk, Wee MacTusk, and two Blue Hounds.",
+        "loot": "Can drop Walrus Tusk (for Walking Cane) and Tam o' Shanter (excellent sanity-restoring hat)."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_018",
+    "timestamp": {
+      "start": "28:36:00",
+      "end": "30:45:00"
+    },
+    "topic": "Winter (Day 31): Defeating Deerclops",
+    "summary": "This chunk provides a strategy for fighting and defeating the winter boss, Deerclops. The recommended method is tanking, which involves equipping armor (Log Suit, Football Helmet) and repeatedly hitting the boss with a Ham Bat while standing near a fire to stay warm. The goal is to obtain the Deerclops Eyeball.",
+    "keywords": [
+      "deerclops",
+      "boss fight",
+      "winter boss",
+      "tanking strategy",
+      "ham bat",
+      "deerclops eyeball"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Deerclops",
+      "strategy": "Tank and Spank",
+      "requirements": [
+        "Multiple Log Suits",
+        "Multiple Football Helmets",
+        "Ham Bat",
+        "Fire Pit (for warmth and light)",
+        "Healing food (e.g., Pierogi)"
+      ],
+      "tactic": "Lure Deerclops to a pre-built arena away from your base. Stand near the fire pit and continuously attack with the Ham Bat, swapping out armor as it breaks. Heal when necessary.",
+      "key_drop": "Deerclops Eyeball",
+      "drop_use": "Craft the Eyebrella, the best item for Spring's rain."
+    }
+  },
+  {
+    "chunk_id": "unique_id_019",
+    "timestamp": {
+      "start": "30:45:00",
+      "end": "32:20:00"
+    },
+    "topic": "Spring (Day 36): Dealing with Rain and Preparing for Moose/Goose",
+    "summary": "This section covers the start of Spring and its main challenge: constant rain, which causes wetness. The guide advises crafting an Eyebrella for 100% water protection. It also introduces the Spring boss, Moose/Goose, and suggests finding its nests to prepare for the encounter.",
+    "keywords": [
+      "spring",
+      "rain",
+      "wetness",
+      "eyebrella",
+      "moose/goose",
+      "spring boss"
+    ],
+    "type": "Seasonal_Guide",
+    "structured_data": {
+      "season": "Spring",
+      "key_mechanic": {
+        "name": "Rain/Wetness",
+        "effect": "Causes sanity drain, tool slippage, and eventually freezing and health loss if wetness is high."
+      },
+      "essential_item": {
+        "name": "Eyebrella",
+        "recipe": "1 Deerclops Eyeball, 15 Twigs, 4 Bone Shards",
+        "purpose": "Provides 100% waterproofness, protecting from rain."
+      },
+      "boss_prep": {
+        "name": "Moose/Goose",
+        "location": "Spawns at several setpiece nests around the map during Spring."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_020",
+    "timestamp": {
+      "start": "32:20:00",
+      "end": "34:31:00"
+    },
+    "topic": "Spring (Day 42): Farming and Food Preparation",
+    "summary": "The focus shifts to advanced farming. The guide recommends building Farm Plots and using a Gardeneer Hat to research plants. It also explains the benefits of a Bird Cage for turning monster meat into eggs and introduces key Crock Pot recipes like Pierogi for healing.",
+    "keywords": [
+      "farming",
+      "farm plot",
+      "gardening",
+      "crock pot",
+      "pierogi",
+      "food recipes",
+      "bird cage",
+      "eggs"
+    ],
+    "type": "Farming_And_Food",
+    "structured_data": {
+      "farming_setup": [
+        {
+          "name": "Farm Plot",
+          "purpose": "Used to grow crops from seeds."
+        },
+        {
+          "name": "Gardeneer Hat",
+          "purpose": "Allows identification of plants to learn their specific needs."
+        }
+      ],
+      "crock_pot_recipes": [
+        {
+          "name": "Pierogi",
+          "recipe_category": "1 Meat, 1 Egg, 1 Vegetable, 1 Filler (e.g., berry)",
+          "effect": "+40 Health, +37.5 Hunger, +5 Sanity"
+        }
+      ],
+      "utility": {
+        "name": "Bird Cage",
+        "use": "Feed a caged bird any meat (including monster meat) to receive fresh eggs."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_021",
+    "timestamp": {
+      "start": "34:31:00",
+      "end": "35:48:00"
+    },
+    "topic": "Spring (Day 48): Defeating Moose/Goose",
+    "summary": "This chunk presents a strategy to defeat the Moose/Goose boss. The method involves luring the boss away from its nest, killing it, and then dealing with its lightning-summoning offspring, the Moslings. The main reward is the Down Feather, used to craft a Weather Pain.",
+    "keywords": [
+      "moose/goose",
+      "boss fight",
+      "spring boss",
+      "moslings",
+      "down feather",
+      "weather pain"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Moose/Goose",
+      "strategy": "Kiting and Crowd Control",
+      "tactic": "Lure the Moose/Goose away from its nest and Moslings. Dodge its charge attack, then land 2-3 hits. Repeat. After it dies, the Moslings will become enraged, spinning and calling down lightning. Hit them between their spin attacks.",
+      "key_drop": "Down Feather",
+      "drop_use": "Used to craft the Weather Pain, a powerful ranged weapon."
+    }
+  },
+  {
+    "chunk_id": "unique_id_022",
+    "timestamp": {
+      "start": "35:48:00",
+      "end": "38:00:00"
+    },
+    "topic": "Spring (Day 52): Preparing for Summer",
+    "summary": "The guide outlines preparations for Summer, the most dangerous season due to overheating. Key items to craft are an Endothermic Firepit for cooling, a Floral Shirt for passive cooling, and to gather Nitre for Endothermic Fires. It also advises finding the Oasis desert.",
+    "keywords": [
+      "summer prep",
+      "overheating",
+      "endothermic firepit",
+      "floral shirt",
+      "nitre",
+      "oasis desert"
+    ],
+    "type": "Seasonal_Prep",
+    "structured_data": {
+      "season_to_prepare_for": "Summer",
+      "main_danger": "Overheating",
+      "preparation_tasks": [
+        {
+          "task": "Craft an Endothermic Firepit",
+          "purpose": "A permanent structure that provides cooling."
+        },
+        {
+          "task": "Craft a Floral Shirt",
+          "recipe": "3 Papyrus, 8 Petals, 3 Silk",
+          "purpose": "Provides passive cooling and a small sanity boost."
+        },
+        {
+          "task": "Gather Nitre",
+          "source": "Mining boulders in the Rocky biome.",
+          "purpose": "Fuel for Endothermic Fires."
+        },
+        {
+          "task": "Locate Oasis Desert",
+          "purpose": "The Oasis is a key location for surviving summer."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_023",
+    "timestamp": {
+      "start": "38:00:00",
+      "end": "40:27:00"
+    },
+    "topic": "Summer (Day 57): Surviving Overheating and Wildfires",
+    "summary": "This chunk details how to survive Summer. The main strategies are staying near an Endothermic Fire or in the Oasis to prevent overheating. It also warns about wildfires, which can spontaneously ignite and destroy your base, and introduces the summer boss, Antlion, who resides in the Oasis.",
+    "keywords": [
+      "summer",
+      "overheating",
+      "wildfire",
+      "oasis",
+      "antlion",
+      "summer boss"
+    ],
+    "type": "Seasonal_Guide",
+    "structured_data": {
+      "season": "Summer",
+      "dangers": [
+        {
+          "name": "Overheating",
+          "effect": "Causes rapid health loss.",
+          "solutions": "Stay near an Endothermic Fire/Firepit, wear a Floral Shirt, or stay in the Oasis biome."
+        },
+        {
+          "name": "Wildfires",
+          "effect": "Objects can spontaneously combust, potentially destroying your base."
+        }
+      ],
+      "key_location": "Oasis Desert",
+      "summer_boss": {
+        "name": "Antlion",
+        "location": "Oasis Desert",
+        "behavior": "Causes sinkholes and cave-ins unless appeased with trinkets or rocks."
+      }
+    }
+  },
+  {
+    "chunk_id": "unique_id_024",
+    "timestamp": {
+      "start": "40:27:00",
+      "end": "43:08:00"
+    },
+    "topic": "Summer (Day 61): Defeating Antlion",
+    "summary": "A guide to defeating the Antlion boss in the Oasis desert. The strategy involves building walls to trap Antlion, dodging its sand spike attacks, and hitting it in between. Defeating Antlion rewards The Deconstruction Staff and prevents world-damaging cave-ins.",
+    "keywords": [
+      "antlion",
+      "boss fight",
+      "summer boss",
+      "oasis",
+      "deconstruction staff",
+      "sand spikes"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Antlion",
+      "strategy": "Trapping and Kiting",
+      "tactic": "Build a set of stone walls around Antlion to trap it. When it summons sand spikes, run to avoid them. After the attack, run in and hit Antlion a few times. Repeat until defeated.",
+      "key_drops": [
+        "The Deconstruction Staff"
+      ],
+      "benefits_of_defeating": "Stops Antlion from causing sinkholes and cave-ins for the rest of summer."
+    }
+  },
+  {
+    "chunk_id": "unique_id_025",
+    "timestamp": {
+      "start": "43:08:00",
+      "end": "45:49:00"
+    },
+    "topic": "Summer (Day 68): Final Preparations and First Year Survival",
+    "summary": "This section marks the end of the first year. With all seasonal bosses defeated, the player is now well-equipped to survive indefinitely. The guide suggests preparing for the second year by crafting more advanced items like a Meat Effigy for self-resurrection and setting up a more robust farm.",
+    "keywords": [
+      "end of year",
+      "year one",
+      "long-term survival",
+      "meat effigy",
+      "advanced farming",
+      "end game prep"
+    ],
+    "type": "End_Game_Prep",
+    "structured_data": {
+      "milestone": "Survived the first year (Day 70).",
+      "next_steps": [
+        {
+          "task": "Craft a Meat Effigy",
+          "purpose": "A resurrection item that can be placed at your base. Costs max health to build."
+        },
+        {
+          "task": "Expand Farming",
+          "details": "Create a larger, more efficient farm for a stable food supply."
+        },
+        {
+          "task": "Explore Caves",
+          "details": "With the surface world managed, the caves offer new challenges and resources."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "unique_id_026",
+    "timestamp": {
+      "start": "45:49:00",
+      "end": "47:20:00"
+    },
+    "topic": "How to Easily Kill Shadow Creatures",
+    "summary": "This bonus tip provides a simple combat strategy for defeating Shadow Creatures, which appear at low sanity. The tactic is to dodge their initial attack, then counter-attack them until they are defeated, as they cannot attack again immediately.",
+    "keywords": [
+      "shadow creatures",
+      "combat",
+      "sanity",
+      "kiting",
+      "terrorbeak",
+      "crawling horror"
+    ],
+    "type": "Combat_Tip",
+    "structured_data": {
+      "mob_name": "Shadow Creatures (e.g., Terrorbeak, Crawling Horror)",
+      "combat_strategy": "When a Shadow Creature appears and becomes hostile, wait for it to start its attack animation. Dodge the attack by moving out of the way. Immediately run back in and attack it repeatedly. It will be stun-locked and unable to fight back before it dies."
+    }
+  },
+  {
+    "chunk_id": "unique_id_027",
+    "timestamp": {
+      "start": "47:20:00",
+      "end": "49:33:00"
+    },
+    "topic": "Extra Essential Tips",
+    "summary": "A collection of final essential tips for survival. This includes managing sanity with items like Cooked Green Caps and the Tam o' Shanter, using a Sewing Kit to repair clothing, and building a Lightning Rod to protect the base from lightning strikes in Spring and Summer.",
+    "keywords": [
+      "sanity management",
+      "sewing kit",
+      "lightning rod",
+      "tam o' shanter",
+      "green caps",
+      "survival tips"
+    ],
+    "type": "Survival_Tip",
+    "structured_data": {
+      "tips": [
+        {
+          "category": "Sanity Management",
+          "details": "Cooked Green Caps restore 15 sanity but cost 1 health. A Tam o' Shanter hat provides a large passive sanity boost."
+        },
+        {
+          "category": "Item Repair",
+          "details": "A Sewing Kit can be used to repair clothing items like hats and shirts, restoring their durability."
+        },
+        {
+          "category": "Base Protection",
+          "details": "A Lightning Rod protects structures within its radius from being struck by lightning during rainstorms."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_001",
+    "timestamp": {
+      "start": "00:14:10",
+      "end": "00:14:37"
+    },
+    "topic": "Resurrection Tip Using Touch Stones",
+    "summary": "This section explains how to resurrect your character after dying. By finding a Touch Stone on the map and haunting it as a ghost, you can be brought back to life. This action can only be performed once per Touch Stone per player.",
+    "keywords": [
+      "resurrection",
+      "revive",
+      "death",
+      "ghost",
+      "Touch Stone",
+      "haunt",
+      "survival"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "mechanic_name": "Resurrection via Touch Stone",
+      "item_involved": "Touch Stone",
+      "process": [
+        "Upon death, you become a ghost.",
+        "Locate a Touch Stone structure on the map.",
+        "As a ghost, float over to the Touch Stone and haunt it.",
+        "You will be resurrected at the Touch Stone's location.",
+        "Return to where you died to pick up your dropped items."
+      ],
+      "important_notes": [
+        "Each Touch Stone can only be used once per player.",
+        "It's wise to store edible items in a backpack, as pigs and spiders may eat food left on the ground after you die."
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_002",
+    "timestamp": {
+      "start": "00:14:37",
+      "end": "00:15:12"
+    },
+    "topic": "Farming Eight Silk from Spiders",
+    "summary": "A safe strategy for gathering silk by using traps to catch spiders one by one without engaging in direct combat. This method allows you to clear out a spider nest and destroy it for additional silk, including dealing with tougher Spider Warriors from higher-tier nests.",
+    "keywords": [
+      "silk farming",
+      "spider nest",
+      "trap",
+      "spider",
+      "spider warrior",
+      "resource gathering",
+      "safe combat"
+    ],
+    "type": "Resource_Farming",
+    "data": {
+      "resource_name": "Silk",
+      "source_mob": [
+        "Spider",
+        "Spider Warrior"
+      ],
+      "source_structure": "Spider Nest",
+      "required_item": "Trap",
+      "recommended_gear": "Log Suit",
+      "strategy": [
+        "Craft a Trap and place it near a Spider Nest.",
+        "Lure a spider out by getting close or stepping on the surrounding web.",
+        "Lead the spider into the trap.",
+        "Pick up the trapped spider and kill it from your inventory to avoid aggroing other spiders.",
+        "Repeat until the nest is empty.",
+        "Destroy the empty nest for a bonus silk drop."
+      ],
+      "notes": "Higher level (Tier 2 or 3) nests may spawn Spider Warriors, which can also be lured into traps."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_003",
+    "timestamp": {
+      "start": "00:15:12",
+      "end": "00:15:27"
+    },
+    "topic": "Crafting the Alchemy Engine",
+    "summary": "Explains how to craft and use the Alchemy Engine, the tier 2 science structure. It's recommended to prototype the necessary Electrical Doodads and then pre-craft the Alchemy Engine without placing it to save inventory space.",
+    "keywords": [
+      "Alchemy Engine",
+      "crafting",
+      "science machine",
+      "technology",
+      "prototyping",
+      "electrical doodad"
+    ],
+    "type": "Crafting_Guide",
+    "data": {
+      "item_name": "Alchemy Engine",
+      "item_type": "Crafting Station",
+      "prerequisite_station": "Science Machine",
+      "crafting_recipe": [
+        {
+          "item": "Cut Stone",
+          "quantity": 4
+        },
+        {
+          "item": "Boards",
+          "quantity": 4
+        },
+        {
+          "item": "Electrical Doodads",
+          "quantity": 2
+        }
+      ],
+      "tip": "Pre-craft the Alchemy Engine near a Science Machine but don't place it right away to keep your inventory free."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_004",
+    "timestamp": {
+      "start": "00:15:27",
+      "end": "00:15:43"
+    },
+    "topic": "Crafting a Top Hat for Sanity",
+    "summary": "Details the crafting of a Top Hat, an essential early-game item for sanity management. Wearing the Top Hat provides a slow, passive sanity regeneration, which helps counteract the sanity drain from various in-game events.",
+    "keywords": [
+      "Top Hat",
+      "sanity",
+      "regeneration",
+      "clothing",
+      "silk",
+      "crafting"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Top Hat",
+      "item_type": "Clothing (Head)",
+      "crafting_recipe": [
+        {
+          "item": "Silk",
+          "quantity": 6
+        }
+      ],
+      "crafting_station": "Science Machine",
+      "effect": "Slowly regenerates sanity while worn.",
+      "usage_note": "A primary tool for sanity management in the early game. The alternative is to let sanity drop and fight Nightmare Creatures for Nightmare Fuel."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_005",
+    "timestamp": {
+      "start": "00:15:43",
+      "end": "00:15:58"
+    },
+    "topic": "Crafting a Bug Net and Catching Fireflies",
+    "summary": "Shows how to craft a Bug Net and use it to catch Fireflies at night. Fireflies are a key component for creating mobile and hands-free light sources.",
+    "keywords": [
+      "Bug Net",
+      "Fireflies",
+      "crafting",
+      "tool",
+      "light source"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Bug Net",
+      "item_type": "Tool",
+      "crafting_recipe": [
+        {
+          "item": "Twigs",
+          "quantity": 4
+        },
+        {
+          "item": "Silk",
+          "quantity": 2
+        },
+        {
+          "item": "Rope",
+          "quantity": 1
+        }
+      ],
+      "crafting_station": "Science Machine",
+      "usage": "Catching bugs, specifically Fireflies at night for this guide's purpose."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_006",
+    "timestamp": {
+      "start": "00:15:58",
+      "end": "00:16:39"
+    },
+    "topic": "Getting Light Bulbs and Crafting a Lantern",
+    "summary": "This segment guides the player to enter the Caves via a Plugged Sinkhole to gather Light Bulbs. These are then used with an Alchemy Engine to craft a Lantern, a superior, placeable, and refuelable light source.",
+    "keywords": [
+      "Lantern",
+      "Light Bulb",
+      "Caves",
+      "Plugged Sinkhole",
+      "Alchemy Engine",
+      "light source",
+      "refuel"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Lantern",
+      "item_type": "Light Source",
+      "crafting_recipe": [
+        {
+          "item": "Willow Twigs",
+          "quantity": 2
+        },
+        {
+          "item": "Light Bulb",
+          "quantity": 2
+        },
+        {
+          "item": "Rope",
+          "quantity": 2
+        }
+      ],
+      "crafting_station": "Alchemy Engine",
+      "pros": [
+        "Can be placed on the ground, freeing up the hand slot.",
+        "Refuelable with Light Bulbs or Slurtle Slime."
+      ],
+      "related_action": "Find a Plugged Sinkhole, mine it with a pickaxe, and enter the Caves to pick Light Bulbs from Light Plants."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_007",
+    "timestamp": {
+      "start": "00:16:39",
+      "end": "00:16:49"
+    },
+    "topic": "Crafting the Ham Bat",
+    "summary": "Introduces the Ham Bat, a powerful weapon with infinite durability that can be crafted at the Alchemy Engine. Its main drawback is that it spoils over time, causing its damage to decrease as it rots.",
+    "keywords": [
+      "Ham Bat",
+      "weapon",
+      "combat",
+      "crafting",
+      "spoilage",
+      "meat"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Ham Bat",
+      "item_type": "Weapon",
+      "crafting_recipe": [
+        {
+          "item": "Pig Skin",
+          "quantity": 1
+        },
+        {
+          "item": "Twigs",
+          "quantity": 2
+        },
+        {
+          "item": "Meat",
+          "quantity": 2
+        }
+      ],
+      "crafting_station": "Alchemy Engine",
+      "pros": [
+        "Infinite uses (durability)."
+      ],
+      "cons": [
+        "Spoils over time, and its damage decreases as it rots."
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_008",
+    "timestamp": {
+      "start": "00:16:49",
+      "end": "00:17:17"
+    },
+    "topic": "Crafting the Football Helmet and Using the Scrapbook",
+    "summary": "Explains how to craft the Football Helmet, a crucial piece of armor providing 80% damage reduction. It also introduces the Scrapbook, an in-game feature for looking up stats of encountered items and mobs.",
+    "keywords": [
+      "Football Helmet",
+      "armor",
+      "damage reduction",
+      "crafting",
+      "Scrapbook",
+      "compendium"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Football Helmet",
+      "item_type": "Armor (Head)",
+      "crafting_recipe": [
+        {
+          "item": "Pig Skin",
+          "quantity": 1
+        },
+        {
+          "item": "Rope",
+          "quantity": 1
+        }
+      ],
+      "crafting_station": "Alchemy Engine",
+      "stats": {
+        "health": 315,
+        "damage_absorption": "80%"
+      },
+      "usage_note": "Essential for combat. Should be equipped when in danger.",
+      "related_feature": {
+        "name": "Scrapbook",
+        "description": "Found in the pause menu, it provides detailed stats for items and mobs you've encountered."
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_009",
+    "timestamp": {
+      "start": "00:17:17",
+      "end": "00:17:27"
+    },
+    "topic": "Armor Stacking Mechanics",
+    "summary": "Clarifies that wearing both a Log Suit and a Football Helmet does not stack their damage reduction percentages. The 80% reduction cap applies, but the damage taken is split between both items, making them last longer.",
+    "keywords": [
+      "armor stacking",
+      "damage reduction",
+      "log suit",
+      "football helmet",
+      "durability"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "mechanic_name": "Armor Stacking",
+      "items_involved": [
+        "Log Suit",
+        "Football Helmet"
+      ],
+      "effect": "Damage reduction is capped at the highest value of equipped armor (80%). The durability loss is split between the pieces."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_010",
+    "timestamp": {
+      "start": "00:17:27",
+      "end": "00:17:46"
+    },
+    "topic": "Crafting the Miner Hat",
+    "summary": "A guide to crafting the Miner Hat, a hands-free light source. It's more convenient than a Lantern for exploration and combat at night as it equips to the head slot, leaving hands free for weapons or tools.",
+    "keywords": [
+      "Miner Hat",
+      "light source",
+      "hands-free",
+      "crafting",
+      "fireflies",
+      "head slot"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Miner Hat",
+      "item_type": "Light Source (Head)",
+      "crafting_recipe": [
+        {
+          "item": "Straw Hat",
+          "quantity": 1
+        },
+        {
+          "item": "Fireflies",
+          "quantity": 1
+        },
+        {
+          "item": "Gold Nugget",
+          "quantity": 1
+        }
+      ],
+      "crafting_station": "Alchemy Engine",
+      "pros": "Provides light while keeping the hand slot free, making it ideal for working or fighting at night."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_011",
+    "timestamp": {
+      "start": "00:17:46",
+      "end": "00:18:05"
+    },
+    "topic": "Fighting Spiders with Better Gear",
+    "summary": "With a Ham Bat and armor, players can confidently fight spiders directly. A standard spider can be killed in just two hits, making combat a more viable option for gathering silk and other resources.",
+    "keywords": [
+      "fighting spiders",
+      "combat",
+      "ham bat",
+      "armor",
+      "aggression"
+    ],
+    "type": "Combat_Strategy",
+    "data": {
+      "mob_name": "Spider",
+      "recommended_weapon": "Ham Bat",
+      "recommended_armor": "Football Helmet",
+      "strategy": "With a Ham Bat, a normal spider can be killed in two hits, allowing for aggressive farming."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_012",
+    "timestamp": {
+      "start": "00:18:05",
+      "end": "00:18:34"
+    },
+    "topic": "How to Obtain Charcoal",
+    "summary": "Explains the process of creating Charcoal by burning trees. A torch can be used to set a tree on fire, which can spread to nearby trees. Chopping down the resulting burnt trees yields charcoal.",
+    "keywords": [
+      "charcoal",
+      "resource gathering",
+      "burning trees",
+      "forest fire",
+      "torch",
+      "axe"
+    ],
+    "type": "Resource_Farming",
+    "data": {
+      "resource_name": "Charcoal",
+      "source": "Burnt Trees",
+      "process": [
+        "Use a Torch to set a tree on fire.",
+        "Allow the fire to spread to a manageable number of trees.",
+        "Once the trees are burnt, chop them down with an Axe to collect Charcoal."
+      ],
+      "warning": "Fire spreads easily. To stop an uncontrolled fire, run away to unload the chunk, which pauses the fire's spread."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_013",
+    "timestamp": {
+      "start": "00:18:34",
+      "end": "00:19:08"
+    },
+    "topic": "How to Catch Rabbits",
+    "summary": "This segment covers two methods for catching Rabbits. The primary method is to place a trap between a rabbit and its hole. Alternatively, at dusk or night, a shovel can be used to dig them out of their holes.",
+    "keywords": [
+      "rabbit",
+      "trap",
+      "catching",
+      "food",
+      "morsel",
+      "shovel"
+    ],
+    "type": "Mob_Guide",
+    "data": {
+      "mob_name": "Rabbit",
+      "location": [
+        "Starter Biome",
+        "Savanna"
+      ],
+      "behavior": "When approached, it flees towards its hole.",
+      "catching_methods": [
+        {
+          "method": "Trapping",
+          "description": "Place a Trap directly on or between the rabbit and its hole, then approach to scare it into the trap."
+        },
+        {
+          "method": "Shoveling",
+          "description": "During dusk or night, use a Shovel on a rabbit hole to force the rabbit out."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_014",
+    "timestamp": {
+      "start": "00:19:08",
+      "end": "00:19:21"
+    },
+    "topic": "Crafting the Prestihatitator",
+    "summary": "The Prestihatitator, the tier 1 magic crafting station, is introduced. It is crafted at a Science Machine and requires a Top Hat and four rabbits, unlocking a new branch of magic-based recipes.",
+    "keywords": [
+      "Prestihatitator",
+      "magic",
+      "crafting station",
+      "tier 1 magic",
+      "top hat",
+      "rabbit"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Prestihatitator",
+      "item_type": "Crafting Station (Magic)",
+      "crafting_recipe": [
+        {
+          "item": "Top Hat",
+          "quantity": 1
+        },
+        {
+          "item": "Rabbit",
+          "quantity": 4
+        },
+        {
+          "item": "Boards",
+          "quantity": 4
+        }
+      ],
+      "crafting_station": "Science Machine",
+      "function": "Unlocks Tier 1 magic recipes, the equivalent of a Science Machine for magic."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_015",
+    "timestamp": {
+      "start": "00:19:21",
+      "end": "00:20:34"
+    },
+    "topic": "Fighting Clockwork Creatures",
+    "summary": "Provides combat strategies for defeating the three main Clockwork creatures: the Bishop, Knight, and Rook. Defeating them is the primary way to obtain Gears, a crucial crafting component.",
+    "keywords": [
+      "clockwork",
+      "bishop",
+      "knight",
+      "rook",
+      "combat strategy",
+      "kiting",
+      "gears"
+    ],
+    "type": "Combat_Strategy",
+    "data": [
+      {
+        "mob_name": "Clockwork Bishop",
+        "strategy": "Has a ranged attack. The best strategy is to rush it down and attack continuously with a Ham Bat and armor, as its ranged attack is difficult to dodge consistently.",
+        "drops": [
+          "Gears",
+          "Purple Gem"
+        ]
+      },
+      {
+        "mob_name": "Clockwork Knight",
+        "strategy": "Kite this enemy. Attack 2-3 times, then dodge its swing. Repeat this pattern.",
+        "drops": [
+          "Gears"
+        ]
+      },
+      {
+        "mob_name": "Clockwork Rook",
+        "strategy": "Alternates between charging towards and away from the player. Get very close and attack to try and stunlock it. Its charge attack is highly destructive to structures and trees.",
+        "drops": [
+          "Gears"
+        ]
+      }
+    ]
+  },
+  {
+    "chunk_id": "dst_beginner_016",
+    "timestamp": {
+      "start": "00:20:34",
+      "end": "00:22:21"
+    },
+    "topic": "Base Location and Initial Setup",
+    "summary": "Discusses ideal locations for building a base, recommending a central spot on the map near key resources like wormholes and a sinkhole. It also touches on base layout and using a tethered Beefalo for defense.",
+    "keywords": [
+      "base building",
+      "base location",
+      "map layout",
+      "biome",
+      "wormhole",
+      "sinkhole",
+      "Beefalo",
+      "base defense"
+    ],
+    "type": "Base_Building",
+    "data": {
+      "topic": "Choosing a Base Location",
+      "criteria": [
+        "Central location on the map for easy access to all areas.",
+        "Proximity to useful biomes.",
+        "Near a Wormhole for rapid travel.",
+        "Relatively close to a Sinkhole for cave access.",
+        "Near a neutral mob herd (like Beefalo) for protection against hounds."
+      ],
+      "layout_tip": "A 7x7 tile square with inverted corners is a good starting size. A Pitchfork can be used to see the world grid.",
+      "setup_components": [
+        "Alchemy Engine",
+        "Prestihatitator",
+        "Chest",
+        "Fire Pit"
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_017",
+    "timestamp": {
+      "start": "00:22:21",
+      "end": "00:23:44"
+    },
+    "topic": "Crafting the Ice Box and Crock Pots",
+    "summary": "This section covers crafting essential base structures for food management. The Ice Box slows food spoilage, and Crock Pots allow for combining ingredients into more potent food dishes.",
+    "keywords": [
+      "Ice Box",
+      "Crock Pot",
+      "food storage",
+      "cooking",
+      "base building",
+      "gears",
+      "charcoal"
+    ],
+    "type": "Crafting_Guide",
+    "data": {
+      "items": [
+        {
+          "item_name": "Ice Box",
+          "item_type": "Structure (Food)",
+          "crafting_recipe": [
+            {
+              "item": "Gears",
+              "quantity": 1
+            },
+            {
+              "item": "Boards",
+              "quantity": 1
+            },
+            {
+              "item": "Cut Stone",
+              "quantity": 1
+            }
+          ],
+          "function": "Reduces food spoilage rate by half."
+        },
+        {
+          "item_name": "Crock Pot",
+          "item_type": "Structure (Food)",
+          "crafting_recipe": [
+            {
+              "item": "Cut Stone",
+              "quantity": 3
+            },
+            {
+              "item": "Charcoal",
+              "quantity": 6
+            },
+            {
+              "item": "Twigs",
+              "quantity": 6
+            }
+          ],
+          "function": "Combines four food ingredients to create advanced recipes with superior stats."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_018",
+    "timestamp": {
+      "start": "00:23:44",
+      "end": "00:24:06"
+    },
+    "topic": "Crock Pot Recipes: Meatballs and Meaty Stew",
+    "summary": "Provides two essential Crock Pot recipes for hunger: Meatballs and Meaty Stew. It explains the ingredients and warns against using more than one Monster Meat to avoid making Monster Lasagna.",
+    "keywords": [
+      "crock pot recipes",
+      "meatballs",
+      "meaty stew",
+      "cooking",
+      "hunger",
+      "monster meat"
+    ],
+    "type": "Crafting_Guide",
+    "data": {
+      "recipes": [
+        {
+          "dish_name": "Meatballs",
+          "ingredients": "1 Meat (any type) + 3 Fillers (e.g., berries, carrots, ice). No twigs.",
+          "stats": {
+            "hunger": 62.5,
+            "health": 3,
+            "sanity": 5
+          },
+          "purpose": "Excellent for restoring hunger."
+        },
+        {
+          "dish_name": "Meaty Stew",
+          "ingredients": "Requires a total meat value of 3.0 (e.g., 1 Meat, 1 Monster Meat, 2 Morsels) + 1 Filler. No twigs.",
+          "stats": {
+            "hunger": 150,
+            "health": 12,
+            "sanity": 5
+          },
+          "purpose": "The best dish for restoring a large amount of hunger."
+        }
+      ],
+      "warning": "Using more than one Monster Meat in a Crock Pot recipe will result in Monster Lasagna, which is poisonous and damages health and sanity."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_019",
+    "timestamp": {
+      "start": "00:24:06",
+      "end": "00:24:34"
+    },
+    "topic": "Glommer, Werepigs, and Manure",
+    "summary": "Explains how to find Glommer on a full moon and the benefits it provides, such as producing Glommer's Goop for fuel. It also details how pigs turn into Werepigs during a full moon, which can be farmed for meat, pig skin, and manure.",
+    "keywords": [
+      "Glommer",
+      "full moon",
+      "Werepig",
+      "Pigman",
+      "manure",
+      "fuel"
+    ],
+    "type": "Mob_Guide",
+    "data": {
+      "mob_name": "Glommer",
+      "spawns_on": "Full Moon, at Glommer's Statue in the Deciduous Forest (Pig King biome).",
+      "benefit": "Produces Glommer's Goop, a highly efficient fuel source.",
+      "related_mob": {
+        "name": "Werepig",
+        "origin": "Pigmen transform during a full moon.",
+        "farming_strategy": "Feed them non-meat edible items to make them poop, then kill them for 2 Meat and 1 Pig Skin.",
+        "purpose": "A good source of Manure, Meat, and Pig Skin."
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_020",
+    "timestamp": {
+      "start": "00:24:34",
+      "end": "00:24:45"
+    },
+    "topic": "Trading with the Pig King",
+    "summary": "Briefly explains the function of the Pig King, who can be found in the Deciduous Forest. He trades Gold Nuggets for meat items and various trinkets.",
+    "keywords": [
+      "Pig King",
+      "trading",
+      "gold nugget",
+      "meat",
+      "trinkets"
+    ],
+    "type": "NPC_Guide",
+    "data": {
+      "npc_name": "Pig King",
+      "location": "Deciduous Forest",
+      "function": "Trades items for Gold Nuggets.",
+      "trade_items": [
+        "Meat (not Monster Meat)",
+        "Trinkets (from graves, tumbleweeds, etc.)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_021",
+    "timestamp": {
+      "start": "00:24:45",
+      "end": "00:26:26"
+    },
+    "topic": "Farming Basics with the Garden Digamajig",
+    "summary": "Introduces the basics of the farming system. It covers crafting a Garden Digamajig to create farm plots, a Garden Hoe to till the soil, and how to plant seeds. It also explains how to make crops happy to get more seeds back.",
+    "keywords": [
+      "farming",
+      "garden digamajig",
+      "garden hoe",
+      "seeds",
+      "crops",
+      "food source"
+    ],
+    "type": "Farming_Guide",
+    "data": {
+      "key_items": [
+        {
+          "item": "Garden Digamajig",
+          "function": "Creates a farm plot."
+        },
+        {
+          "item": "Garden Hoe",
+          "function": "Tills the soil within a farm plot to create spots for planting seeds."
+        }
+      ],
+      "process": [
+        "Craft and place Garden Digamajigs to create a farm area (e.g., a 2x2 plot).",
+        "Use a Garden Hoe to till spots inside the plot.",
+        "Plant seeds in the tilled spots.",
+        "Tend to the plants to keep them happy."
+      ],
+      "making_plants_happy": [
+        "Talk to them at each growth stage.",
+        "Water them with a Watering Can at each stage.",
+        "Clear away any weeds or debris near them."
+      ],
+      "seed_return": "Happy plants have a higher chance of returning 1 or 2 seeds of their specific crop type."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_022",
+    "timestamp": {
+      "start": "00:26:26",
+      "end": "00:26:41"
+    },
+    "topic": "Organizing with Chests",
+    "summary": "A quick tip on crafting additional chests to organize resources and declutter the player's inventory and base area. It notes that while items can be dropped on the ground, they risk being stolen by certain mobs.",
+    "keywords": [
+      "chest",
+      "storage",
+      "organization",
+      "inventory management",
+      "base building"
+    ],
+    "type": "Base_Building",
+    "data": {
+      "item_name": "Chest",
+      "function": "Provides 9 slots of storage.",
+      "tip": "Craft multiple chests to organize different categories of items.",
+      "warning": "Leaving items on the ground is risky as Moles, Catcoons, and other mobs can steal or eat them."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_023",
+    "timestamp": {
+      "start": "00:26:41",
+      "end": "00:27:04"
+    },
+    "topic": "Crafting a Fire Pit",
+    "summary": "Covers how to craft a Fire Pit, a permanent and safer version of a basic Campfire. It provides light and a cooking source but cannot spread fire, making it ideal for a base.",
+    "keywords": [
+      "fire pit",
+      "light source",
+      "cooking",
+      "base structure",
+      "safety"
+    ],
+    "type": "Item_Guide",
+    "data": {
+      "item_name": "Fire Pit",
+      "item_type": "Structure (Light/Cooking)",
+      "crafting_recipe": [
+        {
+          "item": "Rocks",
+          "quantity": 12
+        },
+        {
+          "item": "Logs",
+          "quantity": 2
+        }
+      ],
+      "pros": [
+        "Permanent structure that doesn't disappear when extinguished.",
+        "Cannot spread fire to nearby objects."
+      ],
+      "placement_tip": "Place it one tile below the center tile of the base to illuminate most of the area."
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_024",
+    "timestamp": {
+      "start": "00:27:04",
+      "end": "00:28:28"
+    },
+    "topic": "Taming and Using Beefalo",
+    "summary": "This section explains how to find, shave, and tame a Beefalo. A tethered Beefalo can be brought to the base to serve as a powerful defender against hostile mobs like Hounds.",
+    "keywords": [
+      "Beefalo",
+      "taming",
+      "beefalo bell",
+      "razor",
+      "beefalo wool",
+      "base defense",
+      "kiting"
+    ],
+    "type": "Mob_Guide",
+    "data": {
+      "mob_name": "Beefalo",
+      "actions": [
+        {
+          "action": "Shaving",
+          "tool": "Razor",
+          "time": "Night (while they sleep)",
+          "yields": "Beefalo Wool"
+        },
+        {
+          "action": "Tethering",
+          "tool": "Beefalo Bell",
+          "effect": "The Beefalo will follow the bell, allowing you to lead it to your base."
+        },
+        {
+          "action": "Killing",
+          "strategy": "Lure one away from the herd. Attack once, dodge, then perform a 6-hit combo before dodging again. Repeat."
+        }
+      ],
+      "utility": "A tethered Beefalo near the base acts as a strong defender against threats.",
+      "drops": [
+        "Meat",
+        "Beefalo Wool",
+        "Beefalo Horn (rare)"
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_025",
+    "timestamp": {
+      "start": "00:28:28",
+      "end": "00:28:50"
+    },
+    "topic": "Dealing with Hound Attacks",
+    "summary": "Explains the mechanics of Hound attacks, which occur periodically. The guide recommends leading the Hounds to other mobs, like Beefalo, to have them fight for you. Alternatively, players can fight them directly using a kiting pattern.",
+    "keywords": [
+      "hound attack",
+      "hounds",
+      "combat",
+      "base defense",
+      "kiting",
+      "beefalo"
+    ],
+    "type": "Combat_Strategy",
+    "data": {
+      "event_name": "Hound Attack",
+      "warning_sign": "Distant barking sounds, followed by the character's warning.",
+      "strategies": [
+        "Lure Hounds to a powerful neutral mob like a Beefalo herd or Treeguard.",
+        "Fight them directly by kiting: wait for the lunge, dodge, attack twice, then repeat."
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_beginner_026",
+    "timestamp": {
+      "start": "00:28:50",
+      "end": "00:29:58"
+    },
+    "topic": "Researching Plants with the Gardener Hat",
+    "summary": "Details how to research unknown plants using the Gardener Hat. By equipping the hat and inspecting plants at their various growth stages, players can identify them, learn what they produce, and distinguish them from weeds.",
+    "keywords": [
+      "gardener hat",
+      "farming",
+      "researching plants",
+      "crop identification",
+      "weeds"
+    ],
+    "type": "Farming_Guide",
+    "data": {
+      "item_name": "Gardener Hat",
+      "function": "Allows the player to research unknown plants.",
+      "process": "Equip the Gardener Hat and inspect a plant at each of its growth stages (sprout, small, medium, grown).",
+      "outcome": "Once fully researched, the plant's name and properties will be revealed in the farming interface, allowing for better farm management.",
+      "weeds": "The last four plants in the register are weeds and should be dug up to improve the happiness of nearby crops."
+    }
+  },
+  {
+    "chunk_id": "unique_id_001",
+    "timestamp": {
+      "start": "00:29:20",
+      "end": "00:33:53"
+    },
+    "topic": "Day 15: Acquiring a Bird Cage and Unlocking Pierogi",
+    "summary": "This segment explains how to craft essential gardening tools like the Bucket-o-poop and Gardeneer Hat to research and identify plants. It then details crafting a Bird Cage, which is crucial for turning meat (even monster meat) into Eggs. This process unlocks the powerful Pierogi healing recipe in the Crock Pot.",
+    "keywords": [
+      "Bird Cage",
+      "Gardening",
+      "Gardeneer Hat",
+      "Bucket-o-poop",
+      "Pierogi",
+      "Crock Pot recipe",
+      "Reeds",
+      "Swamp biome",
+      "farming",
+      "plant research"
+    ],
+    "type": "Crafting_Guide",
+    "steps": [
+      {
+        "step_number": 1,
+        "description": "Craft a Bucket-o-poop and a Gardeneer Hat to begin plant research. This allows you to identify plants, their growth stages, and any weeds in your farm plot.",
+        "crafting_info": [
+          {
+            "item_name": "Bucket-o-poop",
+            "recipe": {
+              "Boards": 4,
+              "Bone Shards": 3,
+              "Manure": 4
+            },
+            "notes": "Bone Shards are obtained by hammering bones or skeletons found in desert biomes."
+          },
+          {
+            "item_name": "Gardeneer Hat",
+            "recipe": {
+              "Bucket-o-poop": 1,
+              "Seeds": 3,
+              "Electric Doodad": 1
+            }
+          }
+        ]
+      },
+      {
+        "step_number": 2,
+        "description": "Gather at least 10 Reeds from a Swamp biome. These are needed to craft Papyrus.",
+        "location": "Swamp"
+      },
+      {
+        "step_number": 3,
+        "description": "Craft a Bird Trap to catch a live bird.",
+        "crafting_info": [
+          {
+            "item_name": "Bird Trap",
+            "recipe": {
+              "Twigs": 3,
+              "Silk": 4
+            }
+          }
+        ]
+      },
+      {
+        "step_number": 4,
+        "description": "Craft and place a Bird Cage. Once a bird is caught in the trap, place it inside the cage.",
+        "crafting_info": [
+          {
+            "item_name": "Bird Cage",
+            "recipe": {
+              "Papyrus": 2,
+              "Gold Nugget": 6,
+              "Seeds": 2
+            },
+            "notes": "Bird Cages cannot catch fire."
+          }
+        ]
+      },
+      {
+        "step_number": 5,
+        "description": "Feed the caged bird any meat (including Monster Meat) to receive an Egg. This is an efficient way to convert spoiling meat into a fresh, valuable ingredient.",
+        "interaction": "Give Meat to Caged Bird",
+        "output": "Egg"
+      },
+      {
+        "step_number": 6,
+        "description": "Use the Egg to cook Pierogi in a Crock Pot. This is a top-tier healing food.",
+        "crafting_info": [
+          {
+            "item_name": "Pierogi",
+            "recipe": {
+              "Meat (any)": 1,
+              "Egg": 1,
+              "Vegetable": 1,
+              "Filler": 1
+            },
+            "stats_restored": {
+              "Health": 40,
+              "Hunger": 37.5,
+              "Sanity": 5
+            }
+          }
+        ]
+      },
+      {
+        "step_number": 7,
+        "description": "To create a sustainable farm of specific crops like Potatoes and Toma Roots, feed these vegetables to the caged bird. The bird will produce 1-2 seeds of that specific crop, allowing you to build up a seed supply.",
+        "interaction": "Give Farm Crop to Caged Bird",
+        "output": "Crop-specific Seeds"
+      }
+    ]
+  },
+  {
+    "chunk_id": "unique_id_002",
+    "timestamp": {
+      "start": "00:33:53",
+      "end": "00:37:06"
+    },
+    "topic": "Day 20: Prepare for Winter",
+    "summary": "This chapter focuses on the essential preparations for the Winter season. It explains the freezing mechanic and details how to craft a Beefalo Hat and a Thermal Stone to maintain body temperature and survive the cold.",
+    "keywords": [
+      "Winter preparation",
+      "Freezing",
+      "Insulation",
+      "Thermal Stone",
+      "Beefalo Hat",
+      "cold survival",
+      "season guide"
+    ],
+    "type": "Seasonal_Guide",
+    "season_info": {
+      "season": "Winter",
+      "starts_on_day": 21,
+      "primary_threat": "Freezing (Health loss from low body temperature)",
+      "preparation_items": [
+        {
+          "item_name": "Beefalo Hat",
+          "item_type": "Armor (Head Slot)",
+          "crafting_recipe": {
+            "Beefalo Horn": 1,
+            "Beefalo Wool": 8
+          },
+          "purpose": "Provides constant insulation while worn, slowing the rate of freezing."
+        },
+        {
+          "item_name": "Thermal Stone",
+          "item_type": "Tool",
+          "crafting_recipe": {
+            "Pickaxe": 1,
+            "Flint": 10,
+            "Stone": 12
+          },
+          "purpose": "Absorbs heat from fire sources and radiates it to keep the player warm. Its effectiveness decreases as it cools. Needs to be periodically reheated."
+        }
+      ],
+      "survival_strategy": "Warm up next to a Campfire or burning tree until you are about to overheat. Equip the Beefalo Hat and carry a fully heated Thermal Stone to maximize the time you can spend away from a heat source."
+    }
+  },
+  {
+    "chunk_id": "unique_id_003",
+    "timestamp": {
+      "start": "00:37:06",
+      "end": "00:40:14"
+    },
+    "topic": "Day 21: Acquire a Walking Cane by Hunting MacTusk",
+    "summary": "This section introduces the Winter-exclusive mob, MacTusk, and its hunting party. It provides strategies for locating and killing MacTusk to obtain the Walrus Tusk and Tam o' Shanter, which are used to craft the essential Walking Cane for a speed boost and a powerful sanity-restoring hat.",
+    "keywords": [
+      "MacTusk",
+      "Walking Cane",
+      "Walrus Tusk",
+      "Tam o' Shanter",
+      "Winter hunting",
+      "speed boost",
+      "Moonstone Forest",
+      "Ice Hounds"
+    ],
+    "type": "Mob_Guide",
+    "mob_info": {
+      "mob_name": "MacTusk",
+      "location": "Spawns from an igloo in the Moonstone Forest biome (guaranteed) or the Triple MacTusk biome (not guaranteed).",
+      "spawns_in_season": "Winter",
+      "respawn_time": "2.5 days",
+      "hunting_strategy": "Equip armor and weapon. Charge directly at the main MacTusk to make it flee, ignoring its two Ice Hound companions. Chase the MacTusk until it gives up and starts walking back to its igloo, then attack it. After killing the main MacTusk, deal with the Ice Hounds one by one, waiting a few seconds between kills to avoid being frozen by their icy death explosion.",
+      "loot": [
+        {
+          "item_name": "Walrus Tusk",
+          "drop_chance": "50%",
+          "usage": "Craft the Walking Cane."
+        },
+        {
+          "item_name": "Tam o' Shanter",
+          "drop_chance": "25%",
+          "usage": "Excellent head armor providing winter insulation and a powerful sanity regeneration aura (6.7/min)."
+        },
+        {
+          "item_name": "Blow Dart",
+          "drop_chance": "100%",
+          "usage": "A ranged weapon."
+        },
+        {
+          "item_name": "Meat",
+          "drop_chance": "100%"
+        }
+      ]
+    },
+    "related_item": {
+      "item_name": "Walking Cane",
+      "item_type": "Tool (Hand Slot)",
+      "crafting_recipe": {
+        "Walrus Tusk": 1,
+        "Twigs": 4,
+        "Gold Nugget": 2
+      },
+      "effect": "Provides a 25% movement speed bonus when equipped, making it one of the most essential items in the game."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_001",
+    "timestamp": {
+      "start": "00:40:05",
+      "end": "00:40:14"
+    },
+    "topic": "Resource Guide: Pig Heads",
+    "summary": "This section explains how to get resources from Pig Heads found in the world. They are a source of Pig Skin and Twigs.",
+    "keywords": [
+      "Pig Head",
+      "Pig Skin",
+      "Twigs",
+      "Hammer",
+      "resource gathering"
+    ],
+    "type": "Resource_Guide",
+    "data": {
+      "item_name": "Pig Head",
+      "location": "Found on wooden platforms or pikes in the world.",
+      "tool_required": "Hammer",
+      "drops": [
+        {
+          "item": "Pig Skin",
+          "quantity": 2
+        },
+        {
+          "item": "Twigs",
+          "quantity": "some"
+        }
+      ],
+      "notes": "A useful source for Pig Skin if needed."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_002",
+    "timestamp": {
+      "start": "00:40:14",
+      "end": "00:41:04"
+    },
+    "topic": "Winter Resource: Acquiring Ice",
+    "summary": "During Winter, Penguins will appear near water and build nests containing Ice Glaciers. Mining these glaciers provides Ice, a valuable Crock Pot filler that doesn't spoil in a fridge and is needed for a Summer recipe.",
+    "keywords": [
+      "Ice",
+      "Penguin",
+      "Winter",
+      "Crock Pot",
+      "filler",
+      "Ice Glacier",
+      "Vegetable Stinger",
+      "Sanity food"
+    ],
+    "type": "Resource_Guide",
+    "data": {
+      "resource_name": "Ice",
+      "season": "Winter",
+      "source_mob": "Penguins",
+      "source_structure": "Ice Glacier",
+      "tool_required": "Pickaxe",
+      "mob_behavior": "Penguins will not attack when you mine their glaciers.",
+      "usage": [
+        {
+          "use": "Crock Pot Filler",
+          "description": "Ice works as a good filler for many recipes. It never spoils if kept in a fridge."
+        },
+        {
+          "use": "Summer Crafting",
+          "description": "At least 15 Ice should be saved for a crafting recipe in Summer."
+        }
+      ],
+      "recommended_quantity": "Around 40 for Crock Pot recipes, plus 15 saved for Summer.",
+      "related_recipe": {
+        "item_name": "Vegetable Stinger",
+        "ingredients": [
+          "Toma Root x2",
+          "Vegetable x1 (e.g., Carrot or another Toma Root)",
+          "Ice x1"
+        ],
+        "effects": "Restores 33 Sanity."
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_guide_003",
+    "timestamp": {
+      "start": "00:41:04",
+      "end": "00:41:35"
+    },
+    "topic": "Objective: Explore the Map Before Day 30",
+    "summary": "This section advises using the time before Day 30 to explore the map, specifically to find one of the two Desert biomes. These biomes contain different types of Cacti, which are important resources.",
+    "keywords": [
+      "exploration",
+      "map",
+      "desert biome",
+      "Dragonfly Desert",
+      "Oasis Desert",
+      "Cactus"
+    ],
+    "type": "Area_Walkthrough",
+    "data": {
+      "objective": "Explore the map and locate one of the two Desert biomes before the Day 30 boss fight.",
+      "points_of_interest": [
+        {
+          "name": "Dragonfly Desert",
+          "description": "Has a sandy turf and contains round Cacti."
+        },
+        {
+          "name": "Oasis Desert",
+          "description": "Has a sandy turf and contains tall Cacti."
+        }
+      ],
+      "other_activities": [
+        "Acquire more Ice",
+        "Farm Potatoes",
+        "Kill more MacTusks"
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_004",
+    "timestamp": {
+      "start": "00:41:35",
+      "end": "00:41:45"
+    },
+    "topic": "Quick Tip: Getting Gold from Spoiling Meat",
+    "summary": "A quick tip on how to convert spoiling meat or monster meat into gold. This involves feeding it to a caged bird to get eggs, then giving the eggs to the Pig King.",
+    "keywords": [
+      "gold farming",
+      "spoiling meat",
+      "monster meat",
+      "birdcage",
+      "eggs",
+      "Pig King"
+    ],
+    "type": "General_Tip",
+    "data": {
+      "tip_name": "Meat to Gold Conversion",
+      "steps": [
+        "Feed spoiling meat or monster meat to a caged bird.",
+        "The bird will produce Eggs.",
+        "Give the Eggs to the Pig King.",
+        "The Pig King will reward you with Gold Nuggets."
+      ],
+      "benefit": "Provides an easy source of gold from an otherwise wasted resource."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_005",
+    "timestamp": {
+      "start": "00:41:45",
+      "end": "00:41:54"
+    },
+    "topic": "Light Tip: Stockpiling Light Bulbs",
+    "summary": "To avoid frequent trips into the caves, it is recommended to gather about 20 Light Bulbs and store them in a fridge. This ensures a steady supply of fuel for Lanterns and Miner Hats.",
+    "keywords": [
+      "Light Bulb",
+      "Lantern",
+      "Miner Hat",
+      "fuel",
+      "caves",
+      "fridge"
+    ],
+    "type": "General_Tip",
+    "data": {
+      "tip_name": "Light Source Fuel Management",
+      "action": "Gather around 20 Light Bulbs from the caves.",
+      "storage": "Store the Light Bulbs in a Fridge to prevent them from spoiling.",
+      "benefit": "Eliminates the need to enter the caves every time you need to refuel your Lantern or Miner Hat."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_006",
+    "timestamp": {
+      "start": "00:41:54",
+      "end": "00:42:11"
+    },
+    "topic": "Pig Poop Tip: Farming Manure and Ham Bats",
+    "summary": "This tip explains how to farm Manure and craft Ham Bats easily. By feeding a Pig four Monster Meats, it transforms into a Werepig, which provides the necessary materials.",
+    "keywords": [
+      "Manure",
+      "Pig Poop",
+      "Ham Bat",
+      "Werepig",
+      "Monster Meat",
+      "Pig House"
+    ],
+    "type": "General_Tip",
+    "data": {
+      "tip_name": "Manure and Ham Bat Farming",
+      "steps": [
+        "Craft a Pig House near your base.",
+        "Feed the spawned Pig four pieces of Monster Meat to turn it into a Werepig.",
+        "Kill the Werepig. It drops 2 Meat and 1 Pig Skin, enough to craft a Ham Bat.",
+        "To farm Manure (Poop), drop unwanted non-meat food items (like spoiling Light Bulbs) on the ground while the Pig is a Werepig. It will eat them and produce Manure."
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_007",
+    "timestamp": {
+      "start": "00:42:11",
+      "end": "00:42:20"
+    },
+    "topic": "Hounds Tip: Prioritizing Ice Hounds",
+    "summary": "During a Hound attack in winter that includes Ice Hounds, you should prioritize killing the Ice Hounds first. When an Ice Hound dies, it releases a freezing blast that immobilizes other nearby hounds, making them easier to defeat.",
+    "keywords": [
+      "Hound attack",
+      "Ice Hound",
+      "Winter",
+      "freezing",
+      "crowd control"
+    ],
+    "type": "Combat_Tip",
+    "data": {
+      "mob_name": "Ice Hound",
+      "context": "Winter Hound attacks",
+      "strategy": "Target and kill the Ice Hounds first.",
+      "mechanic": "Upon death, an Ice Hound unleashes an area-of-effect freeze attack.",
+      "benefit": "Instantly freezes other nearby Hounds, making the encounter much easier to manage."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_008",
+    "timestamp": {
+      "start": "00:42:20",
+      "end": "00:42:29"
+    },
+    "topic": "Fire Tip: Efficient Fuel Usage",
+    "summary": "A tip for getting the most out of a Log Suit with low durability. Instead of letting it break, you can use it as fuel for a fire, as it provides a massive fuel value regardless of its durability.",
+    "keywords": [
+      "Log Suit",
+      "fuel",
+      "campfire",
+      "durability",
+      "efficiency"
+    ],
+    "type": "General_Tip",
+    "data": {
+      "tip_name": "Efficient Fuel with Low Durability Items",
+      "item": "Log Suit (low durability)",
+      "action": "Throw a low-durability Log Suit into a fire.",
+      "benefit": "You get the full, massive fuel value from the Log Suit without losing much utility, since its durability was already low."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_009",
+    "timestamp": {
+      "start": "00:42:29",
+      "end": "00:46:00"
+    },
+    "topic": "Boss Fight Guide: Deerclops",
+    "summary": "A comprehensive guide on preparing for and defeating the Deerclops boss, which spawns on the night of Day 30. It covers preparation, a strategy for controlling its spawn location, and two different methods for fighting it (tanking and kiting).",
+    "keywords": [
+      "Deerclops",
+      "boss fight",
+      "Winter boss",
+      "Day 30",
+      "tanking",
+      "kiting",
+      "spawn manipulation",
+      "sanity drain"
+    ],
+    "type": "Boss_Strategy",
+    "data": {
+      "boss_name": "Deerclops",
+      "season": "Winter",
+      "spawn_time": "Night of Day 30",
+      "preparation": {
+        "items": [
+          "Armor x2 (e.g., Log Suit)",
+          "A pre-built Campfire",
+          "Healing Food (e.g., Pierogi, Cooked Potatoes)",
+          "Sanity Food (e.g., Cooked Cactus Flesh)",
+          "Weapon (e.g., Ham Bat)",
+          "Fresh Ham Bat and a Sign (for spawn manipulation)"
+        ]
+      },
+      "spawn_strategy": {
+        "name": "Sign Baiting",
+        "location": "Find an acute-angled peninsula away from your base.",
+        "steps": [
+          "Before nighttime, go to the peninsula.",
+          "Place a Sign away from the tip (vertex) of the peninsula.",
+          "Stand at the very tip of the peninsula.",
+          "When Deerclops spawns, it will target the closest structure (the Sign), spawn off-screen nearby, and destroy it.",
+          "This forces Deerclops to spawn in a predictable location away from your base."
+        ]
+      },
+      "fight_strategies": [
+        {
+          "name": "Tanking",
+          "method": "Stay near your campfire to avoid being frozen. Wear armor and continuously attack Deerclops. Eat healing food when your health drops and sanity food (Cooked Cactus) to counteract its sanity-draining aura. Standing just within melee range instead of directly under it reduces the sanity drain."
+        },
+        {
+          "name": "Kiting",
+          "method": "Deerclops' attack is a long cone in front of it. To dodge, back away as it starts its attack animation, then move sideways. Having a Walking Cane makes this easier."
+        }
+      ],
+      "behavior_if_ignored": "Deerclops will target and destroy structures. After destroying 5 structures, it will smile and walk off-screen, despawning permanently if it unloads. If it walks off-screen without smiling, it has not despawned and will be where you left it.",
+      "loot": [
+        "Deerclops Eyeball",
+        "Meat x8"
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_010",
+    "timestamp": {
+      "start": "00:46:00",
+      "end": "00:48:19"
+    },
+    "topic": "Preparing for Spring",
+    "summary": "This section outlines how to prepare for Spring, which starts on Day 36. The main threats are rain and lightning, requiring specific gear like the Eyebrella. It also covers the need to repair clothing items with a Sewing Kit.",
+    "keywords": [
+      "Spring",
+      "rain",
+      "lightning",
+      "wetness",
+      "Eyebrella",
+      "Rain Coat",
+      "Football Helmet",
+      "Umbrella",
+      "Sewing Kit"
+    ],
+    "type": "Season_Guide",
+    "data": {
+      "season": "Spring",
+      "start_day": 36,
+      "threats": [
+        "Rain (causes wetness, cold, freezing, item dropping, sanity loss)",
+        "Lightning"
+      ],
+      "recommended_gear": [
+        {
+          "item_name": "Eyebrella",
+          "description": "Best option. Provides 100% rain and lightning resistance. Takes the head slot. Crafted with Deerclops Eyeball, 15 Twigs, 4 Bone Shards.",
+          "limit": "You can only make as many as you have Deerclops Eyeballs."
+        },
+        {
+          "item_name": "Football Helmet + Umbrella",
+          "description": "Alternative. Provides over 100% rain resistance, but no lightning protection. Takes head and hand slots."
+        },
+        {
+          "item_name": "Rain Coat",
+          "description": "Alternative. Provides 100% rain and lightning resistance. Takes the body slot. Requires 2 Tentacle Spots to craft."
+        }
+      ],
+      "maintenance": {
+        "item_name": "Sewing Kit",
+        "usage": "Repairs the durability of clothing items (not armor). Recommended to repair items before they reach 0% durability to prevent them from being destroyed.",
+        "crafting_recipe": [
+          "Hound's Tooth x8",
+          "Silk x1",
+          "Log x1"
+        ]
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_guide_011",
+    "timestamp": {
+      "start": "00:48:19",
+      "end": "00:49:06"
+    },
+    "topic": "Spring Farming: Tomatoes and Potatoes",
+    "summary": "Both Tomatoes and Potatoes grow well in Spring. This segment suggests a farming layout of a 4x4 combination on each farm tile to yield a good harvest of crops and seeds.",
+    "keywords": [
+      "farming",
+      "Spring",
+      "Tomatoes",
+      "Potatoes",
+      "farm plot",
+      "seeds"
+    ],
+    "type": "Farming_Guide",
+    "data": {
+      "season": "Spring",
+      "crops": [
+        "Toma Root",
+        "Potato"
+      ],
+      "strategy": "Plant a 4x4 combination of Tomatoes and Potatoes on each farm plot for a good yield of both crops and their respective seeds."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_012",
+    "timestamp": {
+      "start": "00:49:06",
+      "end": "00:50:46"
+    },
+    "topic": "How to Deal with Lureplants",
+    "summary": "Lureplants spawn in Spring in previously explored areas and create Eyeplants around them that eat items. This guide explains how to kill them and how they can be used defensively.",
+    "keywords": [
+      "Lureplant",
+      "Eyeplant",
+      "Spring",
+      "hound defense",
+      "item storage"
+    ],
+    "type": "Mob_Guide",
+    "data": {
+      "mob_name": "Lureplant",
+      "season": "Spring",
+      "behavior": "Spawns a bulb in previously visited locations. After 2 days, it grows Eyeplants in a large radius. Eyeplants will eat any items or small mobs on the ground and transfer them to the main Lureplant bulb, where they are slowly digested.",
+      "strategy": "Kill the central Lureplant bulb to instantly kill all of its Eyeplants. The bulb will drop its loot, including a Leafy Meat and the items it has eaten (if not yet digested).",
+      "utility": {
+        "name": "Hound Defense",
+        "description": "Killing the Lureplant drops its bulb, which can be replanted. Planting it on non-compostable turf (like Cobblestone or Wood Flooring) prevents Eyeplants from spawning on that turf. This allows you to create controlled 'kill zones' where Eyeplants will attack incoming enemies like Hounds."
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_guide_013",
+    "timestamp": {
+      "start": "00:50:46",
+      "end": "05:13:36"
+    },
+    "topic": "Boss Fight Guide: Moose/Goose",
+    "summary": "This is a detailed guide for fighting the optional Spring boss, Moose/Goose, and its offspring, the Moslings. It covers finding the boss, its attack patterns, and the strategy for defeating both the mother and her enraged babies.",
+    "keywords": [
+      "Moose/Goose",
+      "Moslings",
+      "boss fight",
+      "Spring boss",
+      "kiting",
+      "Down Feathers"
+    ],
+    "type": "Boss_Strategy",
+    "data": {
+      "boss_name": "Moose/Goose",
+      "season": "Spring",
+      "status": "Optional",
+      "location": "Found at Nesting Grounds, which are setpieces with a pond, a nest of sticks, some trees, and berry bushes.",
+      "preparation": {
+        "items": [
+          "Weapon (e.g., Ham Bat)",
+          "Armor",
+          "Walking Cane",
+          "Healing Food"
+        ]
+      },
+      "phase_1_strategy": {
+        "target": "Moose/Goose",
+        "attacks": [
+          {
+            "name": "Normal Attack",
+            "damage": 75,
+            "description": "A standard melee attack with its horns."
+          },
+          {
+            "name": "Honk",
+            "damage": 0,
+            "description": "A loud honk that causes the player to drop their equipped weapon."
+          }
+        ],
+        "pattern": "Typically performs three normal attacks, then one honk, and repeats.",
+        "strategy": "Kite the boss by hitting it 3 times, then dodging. After the third attack, anticipate the honk. When honked, immediately press the pickup button to re-equip your weapon, then dodge its next attack and repeat the pattern."
+      },
+      "phase_2_strategy": {
+        "target": "Moslings (enraged)",
+        "trigger": "Occurs after the Moose/Goose is defeated.",
+        "behavior": "The baby Moslings become enraged and perform a spinning tornado attack that moves directly toward the player.",
+        "strategy": "As a Mosling approaches while spinning, simply change your direction of movement to dodge it. After the spin, the Mosling will be stunned and vulnerable to attack. Repeat this for all Moslings. Try to group them up so their spin attacks and stun periods are synchronized."
+      },
+      "loot": [
+        "Drumstick x6",
+        "Meat x6",
+        "Down Feather x5"
+      ],
+      "notes": "Five Down Feathers are needed for a Summer preparation item. The fight is easier at night as the Moslings will be asleep, allowing you to damage or kill them before engaging the adult."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_014",
+    "timestamp": {
+      "start": "05:13:36",
+      "end": "05:14:53"
+    },
+    "topic": "Boss Fight Guide: Lord of the Fruit Flies",
+    "summary": "Guide for the Lord of the Fruit Flies, a farming-related boss. It spawns after growing more than 15 farm crops close together after day 35. The fight is relatively easy and yields the useful Friendly Fruit Fly Fruit.",
+    "keywords": [
+      "Lord of the Fruit Flies",
+      "farming boss",
+      "farm crops",
+      "Friendly Fruit Fly Fruit",
+      "tanking"
+    ],
+    "type": "Boss_Strategy",
+    "data": {
+      "boss_name": "Lord of the Fruit Flies",
+      "spawn_condition": "Spawns when the 16th (or more) farm crop fully grows near the player, after Day 35.",
+      "attacks": [
+        {
+          "name": "Main Attack",
+          "damage": 25,
+          "description": "A very fast melee attack."
+        },
+        {
+          "name": "Spawn Minions",
+          "description": "May spawn small, hostile Fruit Flies that deal minor damage but will un-tend to your plants."
+        }
+      ],
+      "strategy": "The boss's attack is very fast, making kiting difficult. The recommended strategy is to tank the damage while wearing armor and continuously attacking. Kill the small Fruit Flies after defeating the Lord.",
+      "loot": [
+        {
+          "item_name": "Friendly Fruit Fly Fruit",
+          "description": "An item that spawns a friendly Fruit Fly follower.",
+          "utility": "The friendly Fruit Fly will automatically tend to your farm crops, keeping them happy without manual interaction from the player."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_001",
+    "timestamp": {
+      "start": "00:54:02",
+      "end": "00:54:58"
+    },
+    "topic": "Lord of the Fruit Flies Boss Fight and Reward",
+    "summary": "This chunk explains how to spawn and defeat the Lord of the Fruit Flies, a boss related to farming. After Day 35, planting over 15 crops closely together will cause it to spawn. The fight is simple, and defeating it yields the Friendly Fruit Fly Fruit, which creates a follower that automatically tends to your crops.",
+    "keywords": [
+      "Lord of the Fruit Flies",
+      "farming boss",
+      "spawn condition",
+      "boss strategy",
+      "Friendly Fruit Fly",
+      "crop tending",
+      "follower"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Lord of the Fruit Flies",
+      "spawn_condition": "After Day 35, have more than 15 farm crops planted close together. The boss spawns when the 15th (or later) crop fully grows while the player is nearby.",
+      "difficulty": "Easy",
+      "recommended_weapons": [
+        "Ham Bat"
+      ],
+      "key_mechanics": [
+        "Attacks are very fast but deal low damage (25).",
+        "Spawns smaller, hostile fruit flies that will untend your plants."
+      ],
+      "phase_1_strategy": "A simple kite pattern of 3 hits then dodging is effective. Alternatively, you can stand close and continuously attack, tanking the low damage hits. Kill the smaller fruit flies after the main boss is defeated.",
+      "notable_loot": [
+        {
+          "item_name": "Friendly Fruit Fly Fruit",
+          "description": "Spawns a friendly Fruit Fly follower that automatically tends to farm crops, eliminating the need to talk to them manually."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_002",
+    "timestamp": {
+      "start": "00:54:58",
+      "end": "00:55:09"
+    },
+    "topic": "Tip: Farming Guano with Excess Seeds",
+    "summary": "This tip explains how to productively use excess seeds from farming. By feeding them to a bird captured in a Birdcage, players have a chance to receive Guano.",
+    "keywords": [
+      "guano",
+      "seeds",
+      "birdcage",
+      "farming",
+      "fertilizer",
+      "fuel",
+      "tip"
+    ],
+    "type": "Gameplay_Tip",
+    "structured_data": {
+      "tip_category": "Resource_Farming",
+      "process": "Feed excess seeds to a bird in a Birdcage.",
+      "outcome": "Chance to receive Guano.",
+      "utility": "Guano can be used as a good fuel source or for fertilization."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_003",
+    "timestamp": {
+      "start": "00:55:09",
+      "end": "00:55:56"
+    },
+    "topic": "Farming Tip: How to Grow Giant Crops",
+    "summary": "A guide on the conditions required to grow giant crops, which yield significantly more vegetables and seeds. This requires near-perfect care, including companion planting, consistent watering, and tending.",
+    "keywords": [
+      "giant crops",
+      "farming",
+      "vegetables",
+      "tomatoes",
+      "potatoes",
+      "crop combination",
+      "nutrients"
+    ],
+    "type": "Gameplay_Tip",
+    "structured_data": {
+      "tip_category": "Farming",
+      "goal": "Grow Giant Crops",
+      "benefits": "Yields 2-3 vegetables and 2-3 seeds per harvested plant.",
+      "requirements": [
+        "Plant crops in a beneficial combination (e.g., 4 Tomatoes and 4 Potatoes together).",
+        "Tend to the crops every growth stage.",
+        "Water the crops every growth stage.",
+        "Have at least 4 of the same type of crop planted close by.",
+        "Ensure there are no weeds nearby."
+      ],
+      "notes": "The process can be greatly aided by a Friendly Fruit Fly follower and natural rain during Spring. It's not recommended to actively pursue this as a beginner, but it's a great bonus if it happens naturally."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_004",
+    "timestamp": {
+      "start": "00:55:56",
+      "end": "01:00:28"
+    },
+    "topic": "Summer Preparation: Cooling and Fire Prevention",
+    "summary": "This section covers essential preparations for the Summer season, focusing on the main threats: overheating and wildfires. It details several methods for cooling the player down and protecting the base from fire.",
+    "keywords": [
+      "summer",
+      "survival",
+      "overheating",
+      "wildfire",
+      "cooling",
+      "thermal stone",
+      "ice flingomatic",
+      "luxury fan",
+      "eyebrella",
+      "ice chester"
+    ],
+    "type": "Survival_Guide",
+    "structured_data": {
+      "season": "Summer",
+      "threats": [
+        {
+          "name": "Heat/Overheating",
+          "description": "Player's temperature will rise, leading to health loss if not managed."
+        },
+        {
+          "name": "Wildfires",
+          "description": "Flammable objects and structures can spontaneously ignite. This does not happen in the first two or last two days of Summer."
+        }
+      ],
+      "preparation_methods": [
+        {
+          "method": "Eyebrella & Luxury Fan",
+          "description": "Wear the Eyebrella to slow heat gain. Use the Luxury Fan to actively cool down. Fan recipe: 5 Down Feathers, 2 Ropes, 2 Reeds. The fan also extinguishes fires. This method is ineffective for characters with beards.",
+          "type": "Cooling & Fire Control"
+        },
+        {
+          "method": "Super-Cooling a Thermal Stone",
+          "description": "A trick to make a Thermal Stone ice-cold. Light a flammable item, then use a Watering Can to extinguish it and continuously pour water on the stone. Each pour lowers its temp by 5°C, down to a minimum of -22.5°C.",
+          "type": "Cooling"
+        },
+        {
+          "method": "Fridge / Ice Chester & Thermal Stones",
+          "description": "Keep a Thermal Stone in a Fridge or Ice Chester to cool it to 0°C. Swap it with the one you are carrying to stay cool. Ice Chester is a mobile version, created by putting 9 Blue Gems in Chester's slots during a full moon.",
+          "type": "Cooling"
+        },
+        {
+          "method": "Endothermic Fire Pit",
+          "description": "A fire pit that cools the player instead of warming them. Crafted with Nitre and Grass.",
+          "type": "Cooling"
+        },
+        {
+          "method": "Ice Flingomatic",
+          "description": "A structure that automatically extinguishes fires within its large range. Essential for base protection against wildfires. Can be fueled with logs, charcoal, etc. Note: It will also put out your helpful campfires, so turn it off when they are in use.",
+          "type": "Fire Control"
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_005",
+    "timestamp": {
+      "start": "01:00:28",
+      "end": "01:01:27"
+    },
+    "topic": "Summer Gameplay Tips: Plants, Hounds, and Caves",
+    "summary": "This section provides various tips for managing gameplay during Summer. It covers which plants wither, the arrival of Fire Hounds, and how the Caves can be used as a safe haven from the heat.",
+    "keywords": [
+      "summer tips",
+      "wilted plants",
+      "fire hounds",
+      "hound attack",
+      "caves",
+      "farming"
+    ],
+    "type": "Gameplay_Tip",
+    "structured_data": {
+      "tip_category": "Seasonal_Survival",
+      "season": "Summer",
+      "tips": [
+        {
+          "topic": "Plant Wilting",
+          "description": "On the surface, plants like Grass, Saplings, and Berry Bushes will wilt from the heat unless kept hydrated (e.g., by an Ice Flingomatic or Watering Can). Farm crops are immune to wilting if their soil is moist."
+        },
+        {
+          "topic": "Fire Hounds",
+          "description": "During Summer and subsequent Autumns, Hound attacks will include Fire Hounds. They explode into fire upon death, so kill them away from flammable structures."
+        },
+        {
+          "topic": "Caves",
+          "description": "The temperature in the Caves is always lower than the surface, making it a safe place to avoid overheating. Plants do not wilt in the caves."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_guide_006",
+    "timestamp": {
+      "start": "01:01:27",
+      "end": "01:02:07"
+    },
+    "topic": "Magic Progression: Crafting the Shadow Manipulator and Dark Sword",
+    "summary": "This chunk details how to advance to the second tier of magic by crafting the Shadow Manipulator. It involves finding gems, creating a Purple Gem, and gathering other materials to unlock powerful magic items like the Dark Sword.",
+    "keywords": [
+      "magic",
+      "shadow manipulator",
+      "prestihatitator",
+      "purple gem",
+      "dark sword",
+      "crafting",
+      "nightmare fuel",
+      "living log"
+    ],
+    "type": "Crafting_Guide",
+    "structured_data": {
+      "goal": "Build a Shadow Manipulator",
+      "prerequisite": "Prestihatitator (Magic Tier 1)",
+      "crafting_recipe": [
+        {
+          "item_name": "Shadow Manipulator",
+          "ingredients": [
+            {
+              "name": "Purple Gem",
+              "quantity": 1
+            },
+            {
+              "name": "Nightmare Fuel",
+              "quantity": 7
+            },
+            {
+              "name": "Living Logs",
+              "quantity": 3
+            }
+          ]
+        },
+        {
+          "item_name": "Purple Gem",
+          "ingredients": [
+            {
+              "name": "Red Gem",
+              "quantity": 1
+            },
+            {
+              "name": "Blue Gem",
+              "quantity": 1
+            }
+          ],
+          "crafting_station": "Prestihatitator"
+        }
+      ],
+      "unlocked_items": [
+        {
+          "item_name": "Dark Sword",
+          "description": "A powerful weapon that costs 5 Nightmare Fuel and 1 Living Log to craft."
+        }
+      ],
+      "resource_acquisition": "Red and Blue Gems can be found by digging up graves in the Mosaic biome."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_007",
+    "timestamp": {
+      "start": "01:02:07",
+      "end": "01:05:08"
+    },
+    "topic": "Antlion Boss Guide (Summer Boss)",
+    "summary": "A comprehensive guide to the optional Summer boss, Antlion. It covers how to find her in the Oasis, the effects of ignoring her (destructive tremors), how to appease her or initiate the fight, and a detailed strategy for combat.",
+    "keywords": [
+      "Antlion",
+      "summer boss",
+      "oasis desert",
+      "sandstorm",
+      "boss strategy",
+      "tremors",
+      "sand spikes",
+      "desert goggles"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Antlion",
+      "season": "Summer",
+      "location": "Oasis Desert",
+      "behavior": "If ignored, she will cause tremors that create damaging craters under the player, destroying structures. The tremors can be stopped by appeasing or killing her.",
+      "appeasement": "Feed her an ice-cold Thermal Stone to stop tremors for a while.",
+      "fight_initiation": "Attack her directly, or feed her a hot item.",
+      "key_mechanics": [
+        "Summons Sand Castles to trap the player.",
+        "Summons Sand Spikes from the ground, which are telegraphed.",
+        "Eats rocks to heal if left un-attacked for three of her own attack cycles. Hitting her interrupts the heal."
+      ],
+      "fight_strategy": "Dodge the Sand Spikes. Attack her during the openings when her Sand Castles collapse and she is rebuilding them. Use a Dark Sword or Hambat and wear Log Suits for protection. Keep cool with an Endothermic Fire or a cold Thermal Stone.",
+      "related_items": {
+        "item_name": "Desert Goggles",
+        "function": "Negates the vision and movement speed penalties of the sandstorm in the Oasis Desert. The blueprint can be fished from the Oasis lake."
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_guide_008",
+    "timestamp": {
+      "start": "01:05:29",
+      "end": "01:05:49"
+    },
+    "topic": "Tip: Using Gunpowder to Cull Beefalo",
+    "summary": "This tip describes how to manage an overgrown Beefalo herd using Gunpowder. Crafting and detonating gunpowder near sleeping Beefalo is an efficient way to gather meat.",
+    "keywords": [
+      "gunpowder",
+      "beefalo",
+      "culling",
+      "herd management",
+      "meat farming",
+      "rotten egg",
+      "charcoal",
+      "nitre"
+    ],
+    "type": "Gameplay_Tip",
+    "structured_data": {
+      "tip_category": "Resource_Farming",
+      "goal": "Efficiently kill multiple Beefalo for resources.",
+      "item_needed": "Gunpowder",
+      "crafting_recipe": [
+        {
+          "item_name": "Gunpowder",
+          "ingredients": [
+            {
+              "name": "Rotten Egg",
+              "quantity": 1
+            },
+            {
+              "name": "Charcoal",
+              "quantity": 1
+            },
+            {
+              "name": "Nitre",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "process": "Stack 5 Gunpowder next to sleeping Beefalo and light it with a torch. Run away before it explodes."
+    }
+  },
+  {
+    "chunk_id": "dst_guide_009",
+    "timestamp": {
+      "start": "01:06:05",
+      "end": "01:07:50"
+    },
+    "topic": "Bearger Boss Guide (Autumn Boss)",
+    "summary": "This covers the Autumn boss, Bearger, who spawns in the second Autumn. The guide explains how to use his destructive attacks to farm wood or fight other mobs like Treeguards, as well as a direct combat strategy.",
+    "keywords": [
+      "Bearger",
+      "autumn boss",
+      "boss strategy",
+      "lumberjack",
+      "wood farming",
+      "Treeguard",
+      "kiting"
+    ],
+    "type": "Boss_Strategy",
+    "structured_data": {
+      "boss_name": "Bearger",
+      "season": "Autumn (spawns from the second Autumn onward)",
+      "utility": "His destructive charge attack can be used to chop down entire forests for easy wood collection.",
+      "strategy_vs_mobs": "Can be lured to fight other strong mobs like Treeguards. 2-3 Treeguards can kill Bearger.",
+      "direct_combat_strategy": "Bait his ground slam attack, run in for hits, then dodge his three swipe attacks by moving to his side or behind him. Repeat the pattern. Be careful, as his attacks can make you drop your weapon.",
+      "notable_loot": [
+        {
+          "item_name": "Thick Fur",
+          "description": "Used with gears to craft the Insulated Pack, a backpack that also functions as a fridge to slow food spoilage."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "dst_char_001_wilson",
+    "timestamp": {
+      "start": "00:00:34",
+      "end": "00:01:21"
+    },
+    "topic": "Character Guide: Wilson",
+    "summary": "Wilson is the baseline, beginner-friendly character with no significant downsides but only one unique perk: growing a beard for winter insulation. His balanced stats make him an excellent choice for learning the core mechanics of Don't Starve Together.",
+    "keywords": [
+      "Wilson",
+      "beginner character",
+      "beard",
+      "insulation",
+      "winter survival",
+      "baseline",
+      "standard stats",
+      "Don't Starve Together"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wilson",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 200,
+        "damage_multiplier": 1.0
+      },
+      "pros": [
+        "Grows a 'magnificent beard' that provides winter insulation, equivalent to 56% of a Beefalo Hat.",
+        "Has no downsides, making him the perfect vanilla character for new players."
+      ],
+      "cons": [
+        "His only unique feature is his beard, offering no other special abilities for combat or utility."
+      ],
+      "special_abilities": [
+        {
+          "name": "Grows a Magnificent Beard",
+          "description": "The beard grows over time, providing insulation against cold. It can be shaved for Beard Hair, which is useful for crafting, and helps prevent overheating in summer."
+        }
+      ],
+      "ratings": {
+        "survivability": "6/10",
+        "utility": "5/10",
+        "combat": "5/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_002_willow",
+    "timestamp": {
+      "start": "00:01:21",
+      "end": "00:02:49"
+    },
+    "topic": "Character Guide: Willow",
+    "summary": "Willow is a pyromaniac character who is immune to fire damage and gains sanity near fires. She starts with a unique lighter and has a powerful teddy bear companion, Bernie, who becomes a monstrous protector when she is insane, taunting and fighting enemies including shadow creatures.",
+    "keywords": [
+      "Willow",
+      "Bernie",
+      "pyromaniac",
+      "fire immunity",
+      "sanity gain",
+      "lighter",
+      "shadow creatures",
+      "crowd control"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Willow",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 120
+      },
+      "pros": [
+        "Starts with her unique, durable lighter.",
+        "Gains sanity while near fires.",
+        "Completely immune to fire damage.",
+        "Resistant to overheating in summer.",
+        "Her companion, Bernie, taunts and fights all enemies (including shadow creatures) when Willow is insane."
+      ],
+      "cons": [
+        "Freezes more easily in winter.",
+        "Clothing that provides insulation is less effective on her."
+      ],
+      "special_abilities": [
+        {
+          "name": "Bernie",
+          "description": "A craftable teddy bear that transforms into a large, fighting monster when Willow's sanity is low. Bernie has 2000 HP and deals 25 DPS, making him an excellent tank against shadow creatures. He can be fully repaired with a single use of a Sewing Kit."
+        },
+        {
+          "name": "Willow's Lighter",
+          "description": "A starting item that functions like a torch with higher durability but a smaller light radius."
+        }
+      ],
+      "ratings": {
+        "survivability": "6/10",
+        "utility": "6/10",
+        "combat": "6/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_003_wolfgang",
+    "timestamp": {
+      "start": "00:02:49",
+      "end": "00:04:16"
+    },
+    "topic": "Character Guide: Wolfgang",
+    "summary": "Wolfgang is a strongman whose abilities are directly tied to his hunger level. He has three forms: Wimpy, Normal, and Mighty. In Mighty form, he is a combat powerhouse with the highest potential DPS in the game, but this comes at the cost of a massive hunger drain, requiring constant food management.",
+    "keywords": [
+      "Wolfgang",
+      "Mighty form",
+      "Wimpy form",
+      "hunger management",
+      "DPS",
+      "combat character",
+      "strongman",
+      "high damage"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wolfgang",
+      "stats": {
+        "health": "Variable (150-300)",
+        "hunger": "Variable (up to 300)",
+        "sanity": 200
+      },
+      "pros": [
+        "Highest damage output in the game when in Mighty form (up to 2.0x damage).",
+        "Gains increased max health (up to 300) and movement speed (up to 1.25x) in Mighty form.",
+        "Favorite food is Cooked Potato, which is easy to mass-produce."
+      ],
+      "cons": [
+        "Becomes significantly weaker in Wimpy form (low hunger), with reduced damage and health.",
+        "Extremely high hunger drain in Mighty form (up to 3.0x), making him difficult for beginners.",
+        "Suffers a 10% higher sanity drain from all sources.",
+        "His value diminishes in larger teams where his damage is less critical."
+      ],
+      "special_abilities": [
+        {
+          "name": "Hunger-based Forms",
+          "description": "Wolfgang's stats (Health, Damage, Speed, Hunger Drain) scale linearly based on his current hunger level, transitioning between Wimpy, Normal, and Mighty states."
+        }
+      ],
+      "ratings": {
+        "survivability": "8/10",
+        "utility": "6/10",
+        "combat": "10/10"
+      },
+      "notes": "The video was recorded prior to the Wolfgang rework. A pop-up in the video notes that his mechanics have since changed to be controlled by a 'Might Meter' rather than being directly tied to hunger."
+    }
+  },
+  {
+    "chunk_id": "dst_char_004_wendy",
+    "timestamp": {
+      "start": "00:04:16",
+      "end": "00:06:06"
+    },
+    "topic": "Character Guide: Wendy",
+    "summary": "Wendy is a morbid character defined by her ghostly twin sister, Abigail. While Wendy herself deals reduced damage, Abigail provides powerful Area of Effect (AoE) damage, making her exceptionally good at crowd control and farming groups of small mobs like spiders. Her effectiveness wanes against single, powerful bosses.",
+    "keywords": [
+      "Wendy",
+      "Abigail",
+      "ghost",
+      "twin sister",
+      "AoE damage",
+      "crowd control",
+      "mob farming",
+      "Sisturn"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wendy",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 200,
+        "damage_multiplier": 0.75
+      },
+      "pros": [
+        "Accompanied by Abigail, who deals excellent AoE damage.",
+        "Superb at crowd control and farming resources from mobs like spiders.",
+        "Suffers 25% less sanity drain.",
+        "Can craft a 'Sisturn' to level up Abigail and provide a sanity aura.",
+        "Can craft various potions to buff Abigail's abilities."
+      ],
+      "cons": [
+        "Deals 25% less damage herself, making her weak in direct combat.",
+        "Abigail can die quickly against bosses unless specific strategies are used.",
+        "Struggles against nightmare creatures as Abigail cannot attack them."
+      ],
+      "special_abilities": [
+        {
+          "name": "Abigail",
+          "description": "A ghostly companion summoned via Abigail's Flower. She levels up to increase her HP (150/300/600) and deals AoE damage that scales with the time of day (15 Day, 25 Dusk, 40 Night/Caves). When Abigail hits an enemy, she 'vexes' them, causing them to take 1.1x more damage from all sources. Wendy herself deals 1.4x damage to vexed enemies."
+        }
+      ],
+      "ratings": {
+        "survivability": "7/10",
+        "utility": "8/10",
+        "combat": "7/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_005_wx78",
+    "timestamp": {
+      "start": "00:06:06",
+      "end": "00:07:37"
+    },
+    "topic": "Character Guide: WX-78",
+    "summary": "WX-78 is a robot character that can upgrade their stats by eating gears. When fully upgraded, WX-78 has some of the best stats in the game. They can also become 'overcharged' by lightning, granting significant speed, light, and freezing immunity buffs.",
+    "keywords": [
+      "WX-78",
+      "robot",
+      "gears",
+      "upgrade",
+      "overcharge",
+      "lightning",
+      "high stats",
+      "Wickerbottom synergy"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "WX-78",
+      "stats": {
+        "health": "150 base, up to 400",
+        "hunger": "150 base, up to 200",
+        "sanity": "150 base, up to 300"
+      },
+      "pros": [
+        "Can eat gears to permanently upgrade max stats (15 gears for full upgrade).",
+        "Eating gears restores a large amount of stats (60 HP, 75 Hunger, 50 Sanity).",
+        "Becomes 'overcharged' by lightning, gaining 1.5x movement speed, emitting light, and becoming immune to freezing.",
+        "Ignores food penalties from stale or spoiled food."
+      ],
+      "cons": [
+        "Max stats are reset upon death.",
+        "Drops only half of the gears used for upgrades upon death.",
+        "Takes small, continuous damage when wet or in the rain without protection.",
+        "It's hard to keep WX-78 constantly overcharged without a Wickerbottom player."
+      ],
+      "special_abilities": [
+        {
+          "name": "System Upgrade",
+          "description": "Consumes gears to increase maximum Health, Hunger, and Sanity. Requires 15 gears to reach maximum potential."
+        },
+        {
+          "name": "System Overload",
+          "description": "Getting struck by lightning overcharges WX-78, providing a 1.5x speed boost, a personal light source (making them immune to Charlie), and immunity to freezing."
+        }
+      ],
+      "ratings": {
+        "survivability": "7/10",
+        "utility": "7/10",
+        "combat": "7/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_006_wickerbottom",
+    "timestamp": {
+      "start": "00:07:37",
+      "end": "00:09:29"
+    },
+    "topic": "Character Guide: Wickerbottom",
+    "summary": "Wickerbottom is the librarian, a powerful support character who can craft magical books with unique and potent effects. These books allow for mass resource generation, crowd control, and providing buffs to teammates, making her an incredible asset for any team. Her main downsides are her inability to sleep and taking penalties from stale/spoiled food.",
+    "keywords": [
+      "Wickerbottom",
+      "books",
+      "librarian",
+      "support",
+      "utility",
+      "resource farming",
+      "The End is Nigh",
+      "Applied Horticulture"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wickerbottom",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 250
+      },
+      "pros": [
+        "Can craft powerful books with unique effects (e.g., spawning birds, tentacles, lightning, growing plants).",
+        "Can craft Science Machine and Alchemy Engine recipes one tier early.",
+        "Excellent for creating large-scale farms (Feathers, Krampus Sacks, Lureplants).",
+        "Can consistently overcharge a WX-78 player using 'The End is Nigh'."
+      ],
+      "cons": [
+        "Cannot sleep in tents or bed rolls to regain health/sanity.",
+        "Takes reduced nutrition from stale and spoiled food.",
+        "Reading books costs a significant amount of sanity."
+      ],
+      "special_abilities": [
+        {
+          "name": "Bookcrafting",
+          "description": "Can craft several unique books: 'Birds of the World' (spawns 20-30 birds), 'On Tentacles' (spawns up to 3 tentacles), 'Sleepytime Stories' (puts mobs to sleep), 'The End is Nigh' (causes 16 lightning strikes), 'Applied Horticulture Abridged' (grows up to 10 edible plants), and 'Applied Silviculture' (grows non-edible plants)."
+        }
+      ],
+      "ratings": {
+        "survivability": "5/10",
+        "utility": "9/10",
+        "combat": "5/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_007_woodie",
+    "timestamp": {
+      "start": "00:09:29",
+      "end": "00:11:12"
+    },
+    "topic": "Character Guide: Woodie",
+    "summary": "Woodie is a versatile character who can transform into three different 'were' forms: Werebeaver, Weremoose, and Weregoose. Each form excels at a specific task—gathering wood, combat, and exploration, respectively. He manages these transformations with a 'weremeter' and can craft idols to choose his form.",
+    "keywords": [
+      "Woodie",
+      "werebeaver",
+      "weremoose",
+      "weregoose",
+      "transformation",
+      "versatile",
+      "resource gathering",
+      "Lucy the Axe"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Woodie",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 200
+      },
+      "pros": [
+        "Starts with his infinite durability axe, Lucy.",
+        "Chops trees faster and more efficiently.",
+        "Can transform into three specialized forms for gathering, fighting, and exploring.",
+        "All forms have night vision.",
+        "Permanent beard provides winter insulation."
+      ],
+      "cons": [
+        "Full moon transforms him into a random form.",
+        "His were-forms cannot interact with inventory (cannot eat or pick up items).",
+        "Isn't the absolute best at any single thing, but is good at many."
+      ],
+      "special_abilities": [
+        {
+          "name": "Were-Forms",
+          "description": "Can transform into a Werebeaver (chops/mines efficiently), a Weremoose (high damage reduction and powerful charge attack for combat), or a Weregoose (fastest character, can walk on water, good for scouting)."
+        },
+        {
+          "name": "Idols",
+          "description": "Can craft idols to choose which were-form to transform into by eating them."
+        }
+      ],
+      "ratings": {
+        "survivability": "6/10",
+        "utility": "6/10",
+        "combat": "5/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_008_wes",
+    "timestamp": {
+      "start": "00:11:12",
+      "end": "00:12:02"
+    },
+    "topic": "Character Guide: Wes",
+    "summary": "Wes is the mime character, designed to be a challenge. He has low stats, deals less damage, and has a faster hunger drain. His only unique ability is crafting balloons, which offer minor utility like a small speed boost or AoE sanity healing.",
+    "keywords": [
+      "Wes",
+      "mime",
+      "challenge character",
+      "hard mode",
+      "balloons",
+      "low stats",
+      "debuffs"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wes",
+      "stats": {
+        "health": 75,
+        "hunger": 75,
+        "sanity": 75,
+        "damage_multiplier": 0.75
+      },
+      "pros": [
+        "Can craft various balloons with minor effects, such as the Speedy Balloon which gives a 1.3x speed bonus.",
+        "Tools and weapons durability is drained slower because his actions take longer."
+      ],
+      "cons": [
+        "Extremely low stats (75 HP, 75 Hunger, 75 Sanity).",
+        "Deals 25% less damage.",
+        "Overheats and freezes easier.",
+        "Takes longer to mine, chop, hammer, etc.",
+        "Hounds and lightning are more likely to target him.",
+        "Doesn't speak, so he provides no audible warnings for events like hound attacks."
+      ],
+      "special_abilities": [
+        {
+          "name": "Pile o' Balloons",
+          "description": "Can craft various balloons, including a Speedy Balloon, an AoE Sanity healing balloon, and bait balloons."
+        }
+      ],
+      "ratings": {
+        "survivability": "1/10",
+        "utility": "6/10",
+        "combat": "3/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_009_maxwell",
+    "timestamp": {
+      "start": "00:12:02",
+      "end": "00:13:00"
+    },
+    "topic": "Character Guide: Maxwell",
+    "summary": "Maxwell is a character focused on resource gathering through his ability to summon shadow puppets. He has very high passive sanity regeneration but extremely low maximum health. His puppets can chop, mine, and dig for him, making him one of the best wood gatherers in the game.",
+    "keywords": [
+      "Maxwell",
+      "shadow puppets",
+      "Codex Umbra",
+      "sanity regeneration",
+      "resource gathering",
+      "wood farming",
+      "low health"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Maxwell",
+      "stats": {
+        "health": 75,
+        "hunger": 150,
+        "sanity": 200
+      },
+      "pros": [
+        "Has the highest passive sanity regeneration in the game (6.75/minute).",
+        "Can summon shadow puppets to perform tasks like chopping, mining, and digging.",
+        "One of the best wood gatherers in the game with 3 chopper puppets and 1 digger puppet.",
+        "Can read Wickerbottom's books."
+      ],
+      "cons": [
+        "Extremely low maximum health (75 HP), making him very fragile."
+      ],
+      "special_abilities": [
+        {
+          "name": "Shadow Puppets",
+          "description": "Using the Codex Umbra and Nightmare Fuel, Maxwell can summon up to four shadow puppets (Miners, Loggers, Diggers, Duelists) that perform tasks automatically. The workers have 1 HP but last forever unless damaged. The duelist has 75 HP and regenerates health."
+        }
+      ],
+      "ratings": {
+        "survivability": "4/10",
+        "utility": "9/10",
+        "combat": "5/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_010_wigfrid",
+    "timestamp": {
+      "start": "00:13:00",
+      "end": "00:13:43"
+    },
+    "topic": "Character Guide: Wigfrid",
+    "summary": "Wigfrid is a performance artist who believes she is a Valkyrie. She is a powerful combat-focused character with inherent damage bonuses and damage reduction. She can craft her own unique battle gear and gains health and sanity from fighting, but is restricted to eating only meat.",
+    "keywords": [
+      "Wigfrid",
+      "Valkyrie",
+      "combat",
+      "Battle Helm",
+      "Battle Spear",
+      "meat only",
+      "tank",
+      "life steal"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wigfrid",
+      "stats": {
+        "health": 200,
+        "hunger": 120,
+        "sanity": 120,
+        "damage_multiplier": 1.25,
+        "damage_taken_modifier": 0.75
+      },
+      "pros": [
+        "Deals 25% more damage and takes 25% less damage.",
+        "Can craft her own Battle Spear and high-durability Battle Helm (80% damage reduction).",
+        "Restores Health and Sanity while fighting.",
+        "Gains 'Inspiration' while fighting, which can be used to perform powerful battle songs that buff herself and her team."
+      ],
+      "cons": [
+        "Can only eat meat and meat-based crockpot dishes.",
+        "Teaches bad habits to new players by allowing them to tank hits without learning to kite.",
+        "Highly not recommended for beginners due to the meat-only diet."
+      ],
+      "special_abilities": [
+        {
+          "name": "Battle Songs",
+          "description": "Craftable songs that use 'Inspiration' to provide various buffs, such as increasing weapon durability, causing life steal on hit, or providing a sanity aura."
+        }
+      ],
+      "ratings": {
+        "survivability": "10/10",
+        "utility": "7/10",
+        "combat": "6/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_011_webber",
+    "timestamp": {
+      "start": "00:13:43",
+      "end": "00:14:34"
+    },
+    "topic": "Character Guide: Webber",
+    "summary": "Webber is a spider-child who can befriend spiders, eat monster meat without penalty, and grow a silk beard. He is neutral to spiders and can upgrade their dens. His playstyle revolves around creating and commanding a spider army for farming and combat.",
+    "keywords": [
+      "Webber",
+      "spider",
+      "spider army",
+      "monster meat",
+      "silk beard",
+      "spider den",
+      "befriend spiders"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Webber",
+      "stats": {
+        "health": 175,
+        "hunger": 175,
+        "sanity": 100
+      },
+      "pros": [
+        "Is a spider, making him neutral to other spiders.",
+        "Can befriend spiders by feeding them meat (4 spiders for 1 monster meat).",
+        "Can eat monster foods without any negative health or sanity effects.",
+        "Grows a beard made of silk, which can be shaved for silk.",
+        "Can upgrade spider dens with silk.",
+        "Can craft various 'Spider Gadgets' to manage his spider followers."
+      ],
+      "cons": [
+        "Mobs that are aggressive to spiders (Pigs, Bunnymen, Catcoons) are also aggressive to Webber.",
+        "Cannot befriend mobs like Pigs or Bunnymen."
+      ],
+      "special_abilities": [
+        {
+          "name": "Spider Ally",
+          "description": "Can befriend spiders to create a large army. Can use a 'Webby Whistle' to call spiders, a 'Shoo Box' to dismiss them, and 'Switcherdoodles' to change a spider's type."
+        }
+      ],
+      "ratings": {
+        "survivability": "6/10",
+        "utility": "6/10",
+        "combat": "6/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_012_winona",
+    "timestamp": {
+      "start": "00:14:34",
+      "end": "00:15:30"
+    },
+    "topic": "Character Guide: Winona",
+    "summary": "Winona is a factory worker and engineer who can build unique gadgets like catapults and spotlights. She can also craft items faster by consuming hunger, but crafts slower when her hunger is low. Her gadgets are excellent for creating automated farms and base defenses.",
+    "keywords": [
+      "Winona",
+      "engineer",
+      "gadgets",
+      "catapult",
+      "spotlight",
+      "generator",
+      "automated farms",
+      "base defense"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Winona",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 200
+      },
+      "pros": [
+        "Can craft items faster at the cost of hunger.",
+        "Can dodge the first hit from Charlie (the dark).",
+        "Can craft unique, powerful gadgets: Catapults, Spotlights, Generators, and G.E.M.erators.",
+        "Her gadgets are excellent for building automated farms (Varg, Bunny/Bee, Spider/Silk farms)."
+      ],
+      "cons": [
+        "Crafts slower than normal if her hunger is below 50.",
+        "Her catapults can be replaced by the Houndius Shootius in the late game for some farms."
+      ],
+      "special_abilities": [
+        {
+          "name": "Engineering Tab",
+          "description": "A unique crafting tab containing: Winona's Catapult (17 DPS AoE turret), Winona's Spotlight (follows player with light), Winona's Generator (powers gadgets, fueled by Nitre), and Winona's G.E.M.erator (powers gadgets, fueled by gems)."
+        },
+        {
+          "name": "Trusty Tape",
+          "description": "A craftable item that repairs clothing, equivalent to one use of a Sewing Kit."
+        }
+      ],
+      "ratings": {
+        "survivability": "5/10",
+        "utility": "9/10",
+        "combat": "6/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_013_warly",
+    "timestamp": {
+      "start": "00:15:30",
+      "end": "00:16:52"
+    },
+    "topic": "Character Guide: Warly",
+    "summary": "Warly is a chef with his own portable cooking equipment. He can cook unique, powerful dishes and spices that provide significant buffs to himself and his teammates. However, he has a faster hunger drain, can only eat crockpot food, and gets diminishing returns from eating the same meal repeatedly.",
+    "keywords": [
+      "Warly",
+      "chef",
+      "crockpot",
+      "spices",
+      "food buffs",
+      "team support",
+      "unique dishes",
+      "Volt Goat Chaud-Froid"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Warly",
+      "stats": {
+        "health": 150,
+        "hunger": 200,
+        "sanity": 200
+      },
+      "pros": [
+        "His unique crockpots cook 20% faster.",
+        "Can cook exclusive dishes with powerful buffs (e.g., Volt Goat Chaud-Froid for electric damage, Fish Cordon Bleu for wetness immunity).",
+        "Can craft spices to add to any crockpot dish, providing extra buffs (damage, work efficiency, health gain, damage reduction)."
+      ],
+      "cons": [
+        "Has a 1.2x faster hunger drain.",
+        "Can only eat crockpot foods.",
+        "Gains less nutrition from eating the same food within a 2-day period.",
+        "Some unique ingredients/spices are difficult to mass produce in the early game."
+      ],
+      "special_abilities": [
+        {
+          "name": "Unique Cookware & Recipes",
+          "description": "Starts with a Portable Crock Pot, Grinding Mill, and Seasoning Station. Can cook powerful dishes like Volt Goat Chaud-Froid, which grants electric damage and a 1.5x damage multiplier (or 2.5x if the target is wet)."
+        }
+      ],
+      "ratings": {
+        "survivability": "5/10",
+        "utility": "10/10",
+        "combat": "8/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_014_wortox",
+    "timestamp": {
+      "start": "00:16:52",
+      "end": "00:17:59"
+    },
+    "topic": "Character Guide: Wortox",
+    "summary": "Wortox is an imp-like monster who feeds on souls dropped by deceased creatures. He can use these souls to heal himself and his team with an AoE effect, or to teleport short distances. His main drawback is that he only receives half the benefits from normal food, making him reliant on soul farming.",
+    "keywords": [
+      "Wortox",
+      "imp",
+      "souls",
+      "teleport",
+      "soul hop",
+      "AoE healing",
+      "team healer",
+      "monster"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wortox",
+      "stats": {
+        "health": 175,
+        "hunger": 200,
+        "sanity": 150
+      },
+      "pros": [
+        "Gains souls when mobs die nearby.",
+        "Can eat souls for hunger at the cost of a small amount of sanity.",
+        "Can drop a soul for AoE healing (13-20 HP) for the team.",
+        "Can use a soul to teleport (Soul Hop) anywhere on screen.",
+        "Easy to farm souls from small creatures like butterflies."
+      ],
+      "cons": [
+        "Is a monster, so Pigs and Bunnymen are aggressive towards him.",
+        "Gains only half the effectiveness from all food items.",
+        "Can only hold 20 souls at a time; holding more causes him to drop them and lose sanity.",
+        "Souls can only be stored in his inventory."
+      ],
+      "special_abilities": [
+        {
+          "name": "Soul-Powered",
+          "description": "Collects souls from dead creatures. Souls can be consumed for 18.75 hunger (-5 sanity), dropped for AoE healing, or used to perform a short-range teleport (Soul Hop)."
+        }
+      ],
+      "ratings": {
+        "survivability": "9/10",
+        "utility": "7/10",
+        "combat": "6/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_015_wormwood",
+    "timestamp": {
+      "start": "00:17:59",
+      "end": "00:19:35"
+    },
+    "topic": "Character Guide: Wormwood",
+    "summary": "Wormwood is a plant-like character with a focus on farming and nature. He cannot heal from food and must use items like Manure or his own craftable Compost Wrap. He has a unique 'Green Thumb' tab for crafting plant-related items like Living Logs and armor, and he enters a blooming state in Spring, gaining bonuses.",
+    "keywords": [
+      "Wormwood",
+      "plant",
+      "farming",
+      "Green Thumb",
+      "Living Log",
+      "Bramble Husk",
+      "blooming",
+      "no food healing"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wormwood",
+      "stats": {
+        "health": 150,
+        "hunger": 150,
+        "sanity": 200
+      },
+      "pros": [
+        "Has a unique 'Green Thumb' crafting tab.",
+        "Can craft Living Logs at the cost of health.",
+        "Can plant seeds anywhere without tilling turf.",
+        "Gains sanity when planting.",
+        "Enters a 'blooming' state in Spring (or with fertilizer), gaining increased speed and hunger drain, and automatically tending to crops.",
+        "Immune to hostile weeds in farm plots.",
+        "Eyeplants are neutral to him."
+      ],
+      "cons": [
+        "Cannot heal from any food items (except Jellybeans).",
+        "Loses sanity when digging up or chopping down plants.",
+        "Takes extra damage from fire."
+      ],
+      "special_abilities": [
+        {
+          "name": "Green Thumb Crafting",
+          "description": "Can craft Living Logs, Compost Wrap (healing item), Bramble Trap (AoE trap), and Bramble Husk (armor that damages attackers and provides damage reduction)."
+        }
+      ],
+      "ratings": {
+        "survivability": "4/10",
+        "utility": "7/10",
+        "combat": "4/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_016_wurt",
+    "timestamp": {
+      "start": "00:19:35",
+      "end": "00:20:51"
+    },
+    "topic": "Character Guide: Wurt",
+    "summary": "Wurt is a Merm who can befriend other Merms, build a Merm kingdom, and eventually summon the powerful Merm King. She is a vegetarian and is targeted by pigs. Her playstyle is weak early on but becomes incredibly powerful in the late game once her Merm army and king are established.",
+    "keywords": [
+      "Wurt",
+      "Merm",
+      "Merm King",
+      "vegetarian",
+      "late game",
+      "Merm army",
+      "swamp"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wurt",
+      "stats": {
+        "health": "150 (250 with King)",
+        "hunger": "200 (250 with King)",
+        "sanity": "150 (200 with King)"
+      },
+      "pros": [
+        "Can befriend Merms.",
+        "Can build Merm structures, including houses for spawning Merms and fortifications for Royal Merm Guards.",
+        "Can summon the Merm King, who provides massive stat buffs to Wurt and all Merms.",
+        "Walks 30% faster on marsh turf.",
+        "Gains 33% extra hunger from eating vegetables, fruits, and butterfly wings.",
+        "Holding a fish in her inventory provides a sanity aura (3.3/min)."
+      ],
+      "cons": [
+        "Is a vegetarian and cannot eat meat or meat dishes.",
+        "Pigs are aggressive towards her, and she cannot trade with the Pig King.",
+        "Holding a dead fish causes sanity drain.",
+        "Very expensive and resource-intensive to establish her Merm Kingdom, making her a late-game character."
+      ],
+      "special_abilities": [
+        {
+          "name": "The Merm King",
+          "description": "A powerful ally that can be summoned. The King provides buffs to Wurt's stats and to all Merms on the map, and can be given fish to provide unique buffs to the entire team."
+        }
+      ],
+      "ratings": {
+        "survivability": "5/10",
+        "utility": "6/10",
+        "combat": "5/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_017_walter",
+    "timestamp": {
+      "start": "00:20:51",
+      "end": "00:22:53"
+    },
+    "topic": "Character Guide: Walter",
+    "summary": "Walter is a boy scout accompanied by his unkillable pet dog, Woby. He is not afraid of the dark or monsters but loses sanity when he takes damage. He uses a special Slingshot for ranged combat and can craft a portable camper's tent.",
+    "keywords": [
+      "Walter",
+      "Woby",
+      "slingshot",
+      "ranged combat",
+      "sanity loss",
+      "boy scout",
+      "camper's tent"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Walter",
+      "stats": {
+        "health": 130,
+        "hunger": 110,
+        "sanity": 200
+      },
+      "pros": [
+        "Has an unkillable pet dog, Woby, with 9 inventory slots.",
+        "Woby can be transformed into a large, ridable mount by feeding him monster meat.",
+        "Has a special Slingshot weapon with various ammo types for ranged combat.",
+        "Can craft a portable Camper's Tent.",
+        "Does not lose sanity from darkness or sanity auras from monsters.",
+        "Gains sanity when near 5+ trees."
+      ],
+      "cons": [
+        "Loses sanity whenever he takes health damage (-1 health = -2 sanity).",
+        "Sanity loss from damage can cause a downward spiral if not managed.",
+        "Does not gain sanity from equipment like the Tam o' Shanter.",
+        "Takes an extra 10 damage from all bee attacks, which ignores armor.",
+        "The Slingshot's fire rate is slow, resulting in lower DPS than many melee weapons."
+      ],
+      "special_abilities": [
+        {
+          "name": "Woby",
+          "description": "Walter's loyal pet dog who functions as a mobile chest. Can be ridden when fed monster meat."
+        },
+        {
+          "name": "Trusty Slingshot",
+          "description": "Walter's unique ranged weapon. Can fire various ammo types like Pebbles, Gold Rounds, Marble Pellets, and special rounds with freezing or slowing effects."
+        }
+      ],
+      "ratings": {
+        "survivability": "4/10",
+        "utility": "6/10",
+        "combat": "4/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_018_wanda",
+    "timestamp": {
+      "start": "00:22:53",
+      "end": "00:25:09"
+    },
+    "topic": "Character Guide: Wanda",
+    "summary": "Wanda is a time-traveler who uses an age meter instead of a health bar. She starts at age 20 and dies at 80. She deals more damage with shadow weapons the older she is, making her a high-risk, high-reward glass cannon. Her powerful utility comes from various craftable watches that allow her to reverse damage, revive teammates, and teleport.",
+    "keywords": [
+      "Wanda",
+      "age meter",
+      "glass cannon",
+      "high damage",
+      "teleport",
+      "watches",
+      "time travel",
+      "Alarming Clock"
+    ],
+    "type": "Character_Guide",
+    "character_data": {
+      "character_name": "Wanda",
+      "stats": {
+        "health": "Age Meter (20-80 years)",
+        "hunger": 175,
+        "sanity": 200
+      },
+      "pros": [
+        "Has an Age Meter instead of Health, where 1 Age = 2.5 Health (effectively 150 max HP).",
+        "Deals significantly more damage with shadow weapons as she gets older (up to 1.75x multiplier).",
+        "Can craft her own powerful weapon, the Alarming Clock, which attacks faster than a spear and has high DPS when she is old.",
+        "Has powerful utility watches: Ageless Watch (reverses aging), Backstep Watch (short-range teleport/dodge), and Backtrek Watch (long-range teleport)."
+      ],
+      "cons": [
+        "Must be close to death (old age) to deal her best damage, making her a high-risk character.",
+        "Requires high damage reduction (e.g., Night Armor) to play effectively without constant risk.",
+        "Crafting her watches requires Thulecite Fragments, which can be hard to get in the early game.",
+        "Teleports require Mactusk drops to craft."
+      ],
+      "special_abilities": [
+        {
+          "name": "Age Meter",
+          "description": "Replaces health. Starts at age 20, dies at age 80. Taking damage increases age, and she ages naturally over time (1 year every 40 seconds)."
+        },
+        {
+          "name": "Timepiece Crafting",
+          "description": "Can craft various watches: Ageless Watch (reduces age by 8), Backstep Watch (short teleport dodge), Backtrek Watch (sets a teleport anchor), and Alarming Clock (powerful personal weapon)."
+        }
+      ],
+      "ratings": {
+        "survivability": "6/10",
+        "utility": "10/10",
+        "combat": "9/10"
+      }
+    }
+  },
+  {
+    "chunk_id": "dst_char_019_beginner_recommendations",
+    "timestamp": {
+      "start": "00:25:34",
+      "end": "00:25:52"
+    },
+    "topic": "Beginner Character Recommendations",
+    "summary": "For new players, the video recommends starting with Wilson, Wendy, Willow, or Woodie. These characters are considered good for learning the game's fundamentals without overly complex or punishing mechanics, providing a sincere Don't Starve experience.",
+    "keywords": [
+      "beginner",
+      "new player",
+      "recommendation",
+      "starting character",
+      "Wilson",
+      "Wendy",
+      "Willow",
+      "Woodie"
+    ],
+    "type": "Recommendation",
+    "recommendations": {
+      "audience": "Beginners",
+      "characters": [
+        {
+          "name": "Wilson",
+          "reason": "The baseline character, good for learning core mechanics."
+        },
+        {
+          "name": "Wendy",
+          "reason": "Her companion Abigail helps with early game combat and farming."
+        },
+        {
+          "name": "Willow",
+          "reason": "Her immunity to fire and companion Bernie offer good survivability aids."
+        },
+        {
+          "name": "Woodie",
+          "reason": "His versatile forms teach different aspects of the game (gathering, combat, exploration)."
+        }
+      ],
+      "overall_advice": "These characters teach the right habits and provide a sincere Don't Starve experience, as other characters can drastically change the gameplay."
+    }
+  }
+]

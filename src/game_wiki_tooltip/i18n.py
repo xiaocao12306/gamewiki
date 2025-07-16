@@ -137,6 +137,19 @@ class TranslationManager:
             "validation_api_key_needed": "Google API Key is required to use this program.\n\n"
                                        "Please configure API key in settings window, or set GOOGLE_API_KEY environment variable.",
             
+            # Welcome message
+            "welcome_title": "🎮 Welcome to GameWiki AI Assistant!",
+            "welcome_features": "💡 **Features:**",
+            "welcome_wiki_search": "• **Wiki Search** - Quick access to official game resources",
+            "welcome_ai_guide": "• **AI Guide BETA** - Intelligent game strategy Q&A (requires API key configuration; ONLY support Helldivers2/Elden Ring/Don't Starve Together/Civilization VI so far)",
+            "welcome_examples": "🎯 **Recommended Query Examples:**",
+            "welcome_helldivers": "• Helldivers 2: `best warbond to buy first` / `flame weapon combinations`",
+            "welcome_eldenring": "• Elden Ring: `boss strategies` / `equipment recommendations`",
+            "welcome_stardew": "• Stardew Valley: `farm layouts` / `relationship guides`",
+            "welcome_dst": "• Don't Starve Together: `survival tips` / `character selection`",
+            "welcome_usage": "📝 **Usage Tips:**",
+            "welcome_usage_desc": "Simply type your question, and the system will automatically determine whether to use Wiki search or AI guide functionality.",
+            
             # Common
             "ok": "OK",
             "yes": "Yes",
@@ -207,6 +220,19 @@ class TranslationManager:
                 "validation_setup_incomplete": "设置未完成",
                 "validation_api_key_needed": "需要配置Google API密钥才能使用本程序。\n\n"
                                            "请在设置窗口中配置API密钥，或设置环境变量 GOOGLE_API_KEY。",
+
+                # Welcome message
+                "welcome_title": "🎮 欢迎使用GameWiki智能助手！",
+                "welcome_features": "💡 **功能介绍：**",
+                "welcome_wiki_search": "• **Wiki搜索** - 快速查找游戏wiki资料",
+                "welcome_ai_guide": "• **AI攻略BETA** - 智能游戏攻略问答（需要配置API密钥；目前仅支持饥荒/文明6/艾尔登法环/地狱潜兵2）",
+                "welcome_examples": "🎯 **推荐查询示例：**",
+                "welcome_helldivers": "• 地狱潜兵2：`虫族配装推荐` / `火焰武器搭配`",
+                "welcome_eldenring": "• 艾尔登法环：`Boss攻略` / `装备推荐`",
+                "welcome_stardew": "• 星露谷物语：`农场布局` / `好感度攻略`",
+                "welcome_dst": "• 饥荒联机版：`生存技巧` / `角色选择`",
+                "welcome_usage": "📝 **使用提示：**",
+                "welcome_usage_desc": "直接输入您的问题，系统会自动判断使用Wiki搜索还是AI攻略功能。",
                 
                 # Common
                 "ok": "确定",

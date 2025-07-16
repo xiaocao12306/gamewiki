@@ -110,7 +110,9 @@ class GeminiSummarizer:
             
             print(f"✅ [SUMMARY-DEBUG] Gemini响应成功")
             print(f"   - 响应长度: {len(response.text)} 字符")
-            print(f"   - 响应预览: {response.text[:200]}...")
+            print(f"   - 完整响应内容:")
+            print(f"{response.text}")
+            print(f"   - [响应内容结束]")
             
             # Parse and format the response
             formatted_response = self._format_summary_response(response.text, chunks)

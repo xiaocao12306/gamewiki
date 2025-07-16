@@ -85,7 +85,12 @@ class QueryWorker(QThread):
             )
             self.intent_detected.emit(intent)
             
-            if intent.intent_type == "wiki":
+            if intent.intent_type == "unsupported":
+                # 对于不支持的窗口，直接发出错误信号
+                error_msg = f"当前窗口 '{self.game_context}' 不在支持的游戏列表中。\n\n支持的游戏请查看设置页面，或者尝试在支持的游戏窗口中使用本工具。"
+                self.error_occurred.emit(error_msg)
+                return
+            elif intent.intent_type == "wiki":
                 # 对于wiki搜索，使用原始查询（因为wiki搜索不需要优化的查询）
                 search_url, search_title = await self.rag_integration.prepare_wiki_search_async(
                     self.query,  # 使用原始查询进行wiki搜索
@@ -331,6 +336,29 @@ class RAGIntegration(QObject):
                 translated_query=query
             )
         
+        # ✅ 新增：在调用LLM之前，先检查游戏窗口是否支持
+        if game_context:
+            # 1. 检查是否支持RAG攻略查询（有向量库）
+            from .ai.rag_query import map_window_title_to_game_name
+            game_name = map_window_title_to_game_name(game_context)
+            
+            # 2. 检查是否在games.json配置中（支持wiki查询）
+            is_wiki_supported = self._is_game_supported_for_wiki(game_context)
+            
+            # 如果既不支持RAG攻略查询，也不支持wiki查询，直接返回不支持
+            if not game_name and not is_wiki_supported:
+                logger.info(f"📋 窗口 '{game_context}' 不支持攻略查询")
+                return QueryIntent(
+                    intent_type='unsupported',
+                    confidence=1.0,
+                    rewritten_query=query,
+                    translated_query=query
+                )
+        else:
+            # 如果没有游戏上下文（未记录游戏窗口），跳过统一查询处理
+            logger.info("📋 未记录游戏窗口，跳过统一查询处理，使用简单意图检测")
+            return self._simple_intent_detection(query)
+        
         if not process_query_unified:
             # Fallback to simple detection
             logger.warning("统一查询处理器不可用，使用简单意图检测")
@@ -372,6 +400,22 @@ class RAGIntegration(QObject):
         except Exception as e:
             logger.error(f"统一查询处理失败: {e}")
             return self._simple_intent_detection(query)
+            
+    def _is_game_supported_for_wiki(self, window_title: str) -> bool:
+        """检查游戏窗口是否支持wiki查询（基于games.json配置）"""
+        try:
+            # 获取游戏配置
+            if hasattr(self, 'game_cfg_mgr') and self.game_cfg_mgr:
+                game_config = self.game_cfg_mgr.for_title(window_title)
+                if game_config:
+                    logger.info(f"🎮 窗口 '{window_title}' 在games.json中找到配置，支持wiki查询")
+                    return True
+            
+            logger.info(f"📋 窗口 '{window_title}' 未在games.json中找到配置")
+            return False
+        except Exception as e:
+            logger.error(f"检查游戏配置时出错: {e}")
+            return False
             
     def _simple_intent_detection(self, query: str) -> QueryIntent:
         """Simple keyword-based intent detection"""
@@ -669,6 +713,21 @@ class RAGIntegration(QObject):
             
             result = await self.rag_engine.query(query)
             
+            # 检查是否需要切换到wiki模式
+            if result and result.get("fallback_to_wiki"):
+                logger.info(f"🔄 向量库不存在，自动切换到wiki模式: '{query}'")
+                self.streaming_chunk_ready.emit("💡 该游戏暂无攻略数据库，为您自动切换到Wiki搜索模式...\n\n")
+                
+                # 自动切换到wiki搜索
+                try:
+                    search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+                    self.wiki_result_ready.emit(search_url, search_title)
+                    self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                except Exception as wiki_error:
+                    logger.error(f"自动Wiki搜索失败: {wiki_error}")
+                    self.streaming_chunk_ready.emit("❌ 自动Wiki搜索失败，请手动点击Wiki搜索按钮\n")
+                return
+            
             if not result or not result.get("answer"):
                 self.error_occurred.emit("No relevant guide information found. Please try rephrasing your question.")
                 return
@@ -938,12 +997,29 @@ class IntegratedAssistantController(AssistantController):
             self._current_streaming_msg.append_chunk(chunk)
             
     def _on_wiki_result(self, url: str, title: str):
-        """Handle wiki search result"""
-        self.main_window.chat_view.add_message(
-            MessageType.WIKI_LINK,
-            title,
-            {"url": url}
-        )
+        """Handle wiki search result from RAG integration"""
+        try:
+            if url:
+                # Update transition message
+                if hasattr(self, '_current_transition_msg'):
+                    self._current_transition_msg.update_content(TransitionMessages.WIKI_FOUND)
+                
+                # Add wiki link message (初始显示搜索URL)
+                self._current_wiki_message = self.main_window.chat_view.add_message(
+                    MessageType.WIKI_LINK,
+                    title,
+                    {"url": url}
+                )
+                
+                # Show wiki page in the unified window (会触发JavaScript搜索真实URL)
+                self.main_window.show_wiki_page(url, title)
+            else:
+                if hasattr(self, '_current_transition_msg'):
+                    self._current_transition_msg.update_content(TransitionMessages.ERROR_NOT_FOUND)
+                    
+        except Exception as e:
+            logger.error(f"Wiki result handling error: {e}")
+            self._on_error(str(e))
         
     def _on_error(self, error_msg: str):
         """Handle error"""

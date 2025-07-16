@@ -1,0 +1,1151 @@
+[
+  {
+    "chunk_id": "civ6_guide_001",
+    "timestamp": {
+      "start": "00:00:00",
+      "end": "00:00:34"
+    },
+    "topic": "Introduction",
+    "summary": "This video is a comprehensive beginner's guide for Civilization 6. It aims to explain everything a new player needs to know, from game setup to understanding each of the victory conditions, to make the complex game less intimidating.",
+    "keywords": [
+      "civilization 6",
+      "beginner guide",
+      "introduction",
+      "tutorial",
+      "getting started"
+    ],
+    "type": "General_Info"
+  },
+  {
+    "chunk_id": "civ6_guide_002",
+    "timestamp": {
+      "start": "00:00:34",
+      "end": "00:04:18"
+    },
+    "topic": "Game Setup and Initial Settings",
+    "summary": "This section details how to set up a new game, recommending the 'Create Game' menu over 'Play Now' for more control. It explains each setup option and provides specific recommendations for beginners, such as choosing the Standard ruleset, playing as Trajan of Rome, and selecting a smaller map to ease into the game.",
+    "keywords": [
+      "game setup",
+      "create game",
+      "ruleset",
+      "civilization choice",
+      "Trajan",
+      "Rome",
+      "difficulty",
+      "game speed",
+      "map type",
+      "map size",
+      "beginner settings"
+    ],
+    "type": "Game_Setup",
+    "data": {
+      "recommended_ruleset_for_beginners": "Standard Rules, as it provides the core experience without the added complexity of the 'Rise and Fall' or 'Gathering Storm' expansions.",
+      "recommended_leader_for_beginners": "Trajan of Rome.",
+      "reasoning_for_trajan": "Rome is a neutral, well-rounded civilization. All cities start with a free Monument building, automatically build roads to the capital via trade posts, have a strong early-game unit (Legion), and a useful, cheaper unique district (Bath).",
+      "recommended_difficulty_for_beginners": "Prince or lower. It's advised to start on an easier difficulty to learn the mechanics without being overwhelmed.",
+      "recommended_game_speed_for_beginners": "Quick speed is recommended to get through games faster and learn the core gameplay loop more efficiently.",
+      "recommended_map_type_for_beginners": "Continents, as it provides a balanced experience of land and sea exploration.",
+      "recommended_map_size_for_beginners": "Small or Tiny, to reduce the number of opposing civilizations and make the game more manageable for a first playthrough."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_003",
+    "timestamp": {
+      "start": "00:04:18",
+      "end": "00:08:34"
+    },
+    "topic": "User Interface (UI) Overview",
+    "summary": "A detailed walkthrough of the main game User Interface. This covers the resource bar at the top-left (Science, Culture, Faith, Gold), the various information panels and menus at the top-right (Leaders, World Rankings, Reports), and the map tools in the bottom-left (Minimap, Lenses, Map Options). The function of each UI element is explained to help new players navigate the game.",
+    "keywords": [
+      "ui",
+      "user interface",
+      "hud",
+      "resources",
+      "science",
+      "culture",
+      "faith",
+      "gold",
+      "lenses",
+      "civilopedia",
+      "reports"
+    ],
+    "type": "UI_Guide",
+    "data": {
+      "top_left_resources": [
+        {
+          "name": "Science",
+          "purpose": "Used to progress through the Technology Tree."
+        },
+        {
+          "name": "Culture",
+          "purpose": "Used to progress through the Civics Tree and unlock new policies and governments."
+        },
+        {
+          "name": "Faith",
+          "purpose": "Used to found pantheons, establish religions, and purchase religious units."
+        },
+        {
+          "name": "Gold",
+          "purpose": "Currency for purchasing tiles, units, buildings, and trading."
+        },
+        {
+          "name": "Tourism",
+          "purpose": "Key resource for achieving a Culture Victory."
+        },
+        {
+          "name": "Diplomatic Favor",
+          "purpose": "Currency for voting in the World Congress."
+        },
+        {
+          "name": "Strategic Resources",
+          "purpose": "Limited resources like Horses, Iron, Niter, etc., required for advanced units and buildings."
+        }
+      ],
+      "top_right_menus": "Includes access to diplomacy with other leaders, World Rankings, City-State interactions, Trade Route management, Era Progress, detailed Reports, and the invaluable Civilopedia (in-game wiki).",
+      "bottom_left_tools": "Contains the Minimap, Map Lenses (to overlay data like appeal or city placement), Map Options (to toggle icons), Map Tacks (for planning), Map Search, and Strategic View (a board-game-like mode)."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_004",
+    "timestamp": {
+      "start": "00:08:34",
+      "end": "00:15:23"
+    },
+    "topic": "Early Game Strategy and First Actions",
+    "summary": "This segment guides players through the critical first turns. It covers founding the first city, selecting the initial production (Scout recommended), choosing the first technology based on nearby resources, and exploring the map. It also explains how to handle barbarians, the benefits of discovering tribal villages and natural wonders, and how to choose the first government policies after researching Code of Laws.",
+    "keywords": [
+      "early game",
+      "first city",
+      "founding",
+      "settler",
+      "scout",
+      "production",
+      "research",
+      "exploration",
+      "barbarians",
+      "tribal village",
+      "government policy",
+      "code of laws"
+    ],
+    "type": "Early_Game_Strategy",
+    "data": {
+      "first_city_placement": "Most of the time, it is best to found your city on the starting tile on turn one. Moving your settler wastes turns.",
+      "recommended_first_production": "A Scout is highly recommended to explore the surrounding area quickly.",
+      "recommended_first_research": "Choose based on nearby resources. For example, 'Animal Husbandry' if you see animals, or 'Mining' if you see stone.",
+      "recommended_first_policies": "After unlocking 'Code of Laws', the recommended policies are 'Discipline' for a combat bonus against Barbarians and 'God King' for early Faith and Gold generation.",
+      "exploration_tips": "Use your starting Warrior to explore the immediate vicinity, while the newly built Scout explores farther out. Discovering Tribal Villages (goody huts) provides valuable bonuses.",
+      "barbarian_management": "Barbarians are hostile NPCs. It's crucial to find and destroy their outposts to prevent them from spawning more units and harassing your cities."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_005",
+    "timestamp": {
+      "start": "00:15:23",
+      "end": "00:20:58"
+    },
+    "topic": "The Mid Game",
+    "summary": "This section explains the transition into the mid-game, which is characterized by city expansion and specialization. Key goals include settling new cities in good locations, building up districts to pursue a victory condition, managing loyalty to prevent cities from rebelling, and dealing with more complex interactions with other civilizations.",
+    "keywords": [
+      "mid game",
+      "expansion",
+      "settling",
+      "new cities",
+      "loyalty",
+      "districts",
+      "specialization",
+      "era score"
+    ],
+    "type": "Mid_Game_Strategy",
+    "data": {
+      "primary_focus": "Expand your empire by training Settlers and founding new cities.",
+      "city_placement_factors": "Look for locations with access to fresh water, different types of resources, and good production tiles (hills, woods).",
+      "city_specialization": "Start specializing your cities. For example, one city might focus on science by building a Campus district, while another focuses on commerce with a Commercial Hub.",
+      "loyalty_management": "A new concept in the 'Rise and Fall' expansion. Cities can lose loyalty and rebel if they are too far from your capital, under pressure from other civs, or lack amenities. Governors can help maintain loyalty.",
+      "era_score": "Earned by completing historic moments (e.g., building a wonder, clearing a barbarian camp). A high Era Score can lead to a Golden Age, providing powerful bonuses. A low score can lead to a Dark Age, which has penalties but offers access to powerful Dark Age policies."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_006",
+    "timestamp": {
+      "start": "00:20:58",
+      "end": "00:23:14"
+    },
+    "topic": "Tile Improvements",
+    "summary": "This part explains the role of the Builder unit and how to improve tiles. Builders have a limited number of charges and can construct improvements like farms, mines, and pastures on appropriate tiles to increase their yields of food, production, gold, and other resources. Removing features like woods or rainforests provides an immediate resource boost but removes the tile's base yields.",
+    "keywords": [
+      "tile improvement",
+      "builder",
+      "farm",
+      "mine",
+      "pasture",
+      "quarry",
+      "yields",
+      "food",
+      "production"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "unit": "Builder",
+      "function": "Constructs improvements on tiles within your territory. Has a limited number of 'charges' (builds).",
+      "common_improvements": [
+        {
+          "name": "Farm",
+          "resource": "Food",
+          "placement": "Grasslands, Plains"
+        },
+        {
+          "name": "Mine",
+          "resource": "Production",
+          "placement": "Hills"
+        },
+        {
+          "name": "Pasture",
+          "resource": "Food, Production",
+          "placement": "On Cattle, Sheep, Horses resources"
+        }
+      ],
+      "feature_removal": "Builders can remove features like Woods or Rainforest. This action consumes a charge and provides a one-time lump sum of Production or Food, but the feature is permanently gone."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_007",
+    "timestamp": {
+      "start": "00:23:14",
+      "end": "00:27:49"
+    },
+    "topic": "Resources",
+    "summary": "An explanation of the three types of resources in the game: Bonus, Luxury, and Strategic. Bonus resources provide extra yields, Luxury resources increase amenities to keep cities happy, and Strategic resources are required to build and maintain powerful units and buildings. The Gathering Storm expansion adds a third category, Power resources, like Coal and Oil.",
+    "keywords": [
+      "resources",
+      "bonus resource",
+      "luxury resource",
+      "strategic resource",
+      "power",
+      "amenities",
+      "happiness"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "resource_types": [
+        {
+          "name": "Bonus Resources",
+          "examples": "Cattle, Wheat, Copper",
+          "function": "Provide extra base yields (Food, Production, Gold) to a tile once improved."
+        },
+        {
+          "name": "Luxury Resources",
+          "examples": "Spices, Diamonds, Silk, Wine",
+          "function": "Provide Amenities to your cities, which is crucial for happiness and growth. You only need one copy of a luxury to provide amenities to multiple cities, extra copies can be traded."
+        },
+        {
+          "name": "Strategic Resources",
+          "examples": "Horses, Iron, Niter, Oil, Uranium",
+          "function": "Required to build and maintain advanced military units. You accumulate these resources per turn after improving their tile."
+        },
+        {
+          "name": "Power Resources (Gathering Storm)",
+          "examples": "Coal, Oil, Uranium",
+          "function": "A sub-category of strategic resources used to provide electricity to your cities in the late game for significant building boosts."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_008",
+    "timestamp": {
+      "start": "00:27:49",
+      "end": "00:32:51"
+    },
+    "topic": "Districts",
+    "summary": "This section covers the concept of Districts, which are specialized city tiles that provide yields and allow for the construction of advanced buildings. It explains the importance of adjacency bonuses, where placing districts next to certain features or other districts grants extra yields. Key districts for different victory types, like the Campus for Science and the Holy Site for Religion, are highlighted.",
+    "keywords": [
+      "districts",
+      "adjacency bonus",
+      "campus",
+      "holy site",
+      "theater square",
+      "commercial hub",
+      "industrial zone",
+      "encampment",
+      "harbor"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "function": "Districts are specialized tiles that unlock buildings and provide yields. A city's population determines how many districts it can build.",
+      "adjacency_bonus": "A core mechanic where districts gain extra yields based on what they are built next to. For example, a Campus gets bonuses from being next to mountains and a Holy Site gets bonuses from being next to Natural Wonders.",
+      "key_districts_by_victory_type": [
+        {
+          "victory_type": "Science",
+          "district": "Campus"
+        },
+        {
+          "victory_type": "Culture",
+          "district": "Theater Square"
+        },
+        {
+          "victory_type": "Domination",
+          "district": "Encampment"
+        },
+        {
+          "victory_type": "Religion",
+          "district": "Holy Site"
+        },
+        {
+          "victory_type": "Diplomatic",
+          "district": "No single key district, but a strong economy (Commercial Hub, Harbor) is vital."
+        }
+      ],
+      "general_purpose_districts": "Commercial Hubs, Harbors, and Industrial Zones are valuable for any playstyle, providing Gold, Trade Routes, and Production."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_009",
+    "timestamp": {
+      "start": "00:32:51",
+      "end": "00:36:47"
+    },
+    "topic": "City Management",
+    "summary": "This section delves into the citizen management screen of a city. It explains how to manually assign citizens to work specific tiles to prioritize Food for growth, Production for building, or other yields. The concept of specialists, who work in district buildings for enhanced yields, is also introduced.",
+    "keywords": [
+      "city management",
+      "citizen management",
+      "working tiles",
+      "food focus",
+      "production focus",
+      "specialists",
+      "city screen"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "citizen_assignment": "Citizens automatically work the highest-yield tiles, but players can manually lock them onto specific tiles to prioritize a certain output (e.g., Food for faster growth, Production to finish a wonder).",
+      "focus_buttons": "The UI provides buttons to automatically prioritize Food, Production, or a balanced approach.",
+      "specialists": "Citizens can be assigned to work in slots within district buildings. Specialists generate more of that district's primary yield (e.g., a scientist in a library generates more science) and Great Person points."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_010",
+    "timestamp": {
+      "start": "00:36:47",
+      "end": "00:39:09"
+    },
+    "topic": "Housing & Amenities",
+    "summary": "An explanation of two crucial city statistics: Housing and Amenities. Housing limits a city's maximum population and is increased by building near fresh water, constructing farms, and certain buildings. Amenities represent citizen happiness; low amenities slow growth and can lead to rebellion, while high amenities boost growth and yields.",
+    "keywords": [
+      "housing",
+      "amenities",
+      "population growth",
+      "happiness",
+      "city stats",
+      "luxury resources",
+      "entertainment complex"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "housing": {
+        "purpose": "Determines the population cap of a city. Growth slows significantly if population is close to the housing limit.",
+        "sources": "Settling near Fresh Water, building Farms, Granaries, Aqueducts."
+      },
+      "amenities": {
+        "purpose": "Represents the happiness and contentment of a city's population.",
+        "effects": "High amenities provide bonuses to growth and non-food yields. Low amenities reduce yields and can cause cities to spawn rebel units.",
+        "sources": "Owning different types of Luxury Resources, building Entertainment Complexes and Water Parks, and certain government policies."
+      }
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_011",
+    "timestamp": {
+      "start": "00:39:09",
+      "end": "00:43:40"
+    },
+    "topic": "City-States",
+    "summary": "This part details the function of City-States, which are neutral, single-city civilizations. Players can interact with them by sending Envoys, which are earned through influence and certain civics. Sending enough Envoys grants tiered bonuses, and becoming the Suzerain (having the most Envoys) unlocks unique bonuses and their strategic resources.",
+    "keywords": [
+      "city-states",
+      "envoys",
+      "suzerain",
+      "influence",
+      "city-state quests",
+      "diplomacy",
+      "bonuses"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "definition": "Neutral, single-city civilizations that do not compete for victory but offer bonuses to major civilizations.",
+      "interaction_method": "Send 'Envoys' to gain influence. The first envoy sent to a city-state grants a base yield in your capital.",
+      "bonuses": "Sending 1, 3, and 6 envoys unlocks scaling bonuses based on the city-state's type (e.g., Scientific city-states grant science bonuses).",
+      "suzerain_status": "Achieved by having more Envoys in a city-state than any other civilization. Grants a unique bonus, access to all their resources, and they will join you in wars.",
+      "earning_envoys": "Envoys are earned passively over time based on your government and can also be gained by completing quests issued by the city-states."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_012",
+    "timestamp": {
+      "start": "00:43:40",
+      "end": "00:49:28"
+    },
+    "topic": "Diplomacy",
+    "summary": "A guide to interacting with other major civilizations. This covers the relationship levels, understanding leader agendas (both public and hidden), making deals, forming alliances, and declaring war. It also touches on grievances, the system that tracks justification for war, and the World Congress mechanic from the Gathering Storm expansion.",
+    "keywords": [
+      "diplomacy",
+      "alliances",
+      "trade",
+      "declaring war",
+      "grievances",
+      "agendas",
+      "world congress",
+      "relationships"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "leader_agendas": "Each leader has a unique personality driven by agendas that determine what they like and dislike. Higher diplomatic visibility reveals their hidden agendas.",
+      "deals_and_trade": "You can trade luxury resources, strategic resources, gold, great works, and even cities with other civilizations.",
+      "alliances": "Formal agreements that provide mutual benefits. Types include Research, Military, Economic, Cultural, and Religious alliances, each with scaling bonuses.",
+      "war_and_grievances": "Declaring a surprise war generates a lot of grievances against you, making other civs dislike you. Having a Casus Belli (justification for war) reduces the grievance penalty.",
+      "world_congress": "A recurring event where all civs vote on resolutions that affect the entire game, using Diplomatic Favor as currency."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_013",
+    "timestamp": {
+      "start": "00:49:28",
+      "end": "00:56:19"
+    },
+    "topic": "Combat",
+    "summary": "This segment explains the combat mechanics. It covers unit types (melee, ranged, anti-cavalry, siege), combat strength, terrain modifiers, and unit promotions. Key concepts like flanking bonuses, support bonuses, and the difference between attacking cities and units are detailed to provide a foundation for military strategy.",
+    "keywords": [
+      "combat",
+      "military",
+      "units",
+      "combat strength",
+      "melee",
+      "ranged",
+      "cavalry",
+      "siege",
+      "promotions",
+      "war"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "combat_strength": "The primary stat determining combat outcomes. A higher number is better.",
+      "unit_types": "Units often have bonuses against other types (e.g., Spearmen are anti-cavalry). Melee units must be adjacent to attack. Ranged units can attack from a distance. Siege units are critical for taking down city walls.",
+      "terrain_modifiers": "Terrain like hills, woods, and crossing rivers affects combat, usually providing a defensive bonus to the unit on that tile.",
+      "support_and_flanking": "Having friendly units adjacent to an enemy provides a combat bonus. Attacking an enemy that is adjacent to two or more of your units grants a larger flanking bonus.",
+      "promotions": "Units gain experience from combat and can be promoted, unlocking powerful new abilities.",
+      "attacking_cities": "Cities have their own combat strength and walls that must be broken down, typically with siege units, before a melee unit can capture the city center."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_014",
+    "timestamp": {
+      "start": "00:56:19",
+      "end": "01:00:23"
+    },
+    "topic": "Religion",
+    "summary": "This explains the religious system, from founding a Pantheon with early Faith to establishing a full Religion with a Great Prophet. It covers choosing beliefs, which provide unique bonuses, and using religious units like Missionaries and Apostles to spread your religion to other cities. Winning a Religious Victory requires making your religion the dominant one in every major civilization.",
+    "keywords": [
+      "religion",
+      "faith",
+      "pantheon",
+      "great prophet",
+      "beliefs",
+      "missionary",
+      "apostle",
+      "inquisitor",
+      "religious victory"
+    ],
+    "type": "Gameplay_Mechanic",
+    "data": {
+      "founding_a_pantheon": "The first step, achieved by accumulating a small amount of Faith. Provides a minor early-game bonus.",
+      "founding_a_religion": "Requires earning a Great Prophet. Allows you to choose a symbol, name, and powerful beliefs for your religion.",
+      "religious_beliefs": "Provide bonuses to your civilization. Categories include Follower Beliefs, Founder Beliefs, Worship Beliefs, and Enhancer Beliefs.",
+      "spreading_religion": "Done primarily through Missionaries and Apostles, which are purchased with Faith. They can exert religious pressure on cities to convert them.",
+      "theological_combat": "Religious units can engage in theological combat to reduce the influence of other religions in a city."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_015",
+    "timestamp": {
+      "start": "01:00:23",
+      "end": "01:08:42"
+    },
+    "topic": "Victory Conditions",
+    "summary": "A detailed breakdown of the different ways to win the game. The video explains the requirements for each of the main victory types: Domination (conquering all original capitals), Science (launching an exoplanet expedition), Culture (attracting more visiting tourists than any civ has domestic tourists), Religion (converting all other civs), and Diplomatic (accumulating Diplomatic Victory Points). It also mentions the Score Victory, which is a tie-breaker if no other condition is met by the game's end turn.",
+    "keywords": [
+      "victory conditions",
+      "how to win",
+      "domination victory",
+      "science victory",
+      "culture victory",
+      "religious victory",
+      "diplomatic victory",
+      "score victory"
+    ],
+    "type": "Victory_Conditions",
+    "data": {
+      "victory_types": [
+        {
+          "name": "Domination Victory",
+          "requirement": "Conquer the original capital city of every other civilization in the game."
+        },
+        {
+          "name": "Science Victory",
+          "requirement": "Complete a series of space-race projects: launch a satellite, land a human on the Moon, establish a Mars colony, and finally launch an exoplanet expedition."
+        },
+        {
+          "name": "Culture Victory",
+          "requirement": "Attract more visiting tourists from every other civilization than they have domestic tourists. This is achieved by accumulating Culture and Tourism from Great Works, Wonders, National Parks, and unique improvements."
+        },
+        {
+          "name": "Religious Victory",
+          "requirement": "Make your Religion the predominant religion in every other major civilization. A civ is considered converted when more than 50% of its cities follow your religion."
+        },
+        {
+          "name": "Diplomatic Victory",
+          "requirement": "Be the first to accumulate a set number of Diplomatic Victory Points. Points are earned through the World Congress, certain wonders, and technologies."
+        },
+        {
+          "name": "Score Victory",
+          "requirement": "If no other victory condition is met by the turn limit (e.g., 500 turns on Standard speed), the civilization with the highest score wins. The score is based on a combination of cities, population, wonders, technologies, etc."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_016",
+    "timestamp": {
+      "start": "01:08:42",
+      "end": "01:09:03"
+    },
+    "topic": "Outro",
+    "summary": "The video concludes with a brief summary, hoping that the guide was helpful for new players looking to get into Civilization 6.",
+    "keywords": [
+      "outro",
+      "conclusion",
+      "summary"
+    ],
+    "type": "General_Info"
+  },
+  {
+    "chunk_id": "civ6_guide_001",
+    "timestamp": {
+      "start": "16:00",
+      "end": "17:50"
+    },
+    "topic": "Early Game Expansion Strategy",
+    "summary": "This section explains when and where to settle new cities. It advises expanding after establishing your capital, choosing locations with new resources that are self-sufficient and defensible. It also covers the risks of environmental hazards (like volcanoes and floods) and the importance of escorting civilian units like settlers to prevent capture by enemies.",
+    "keywords": [
+      "expand",
+      "new city",
+      "settle",
+      "settler",
+      "city placement",
+      "resources",
+      "environmental hazards",
+      "floodplains",
+      "volcanoes",
+      "escort unit"
+    ],
+    "type": "Strategy_Guide",
+    "data": {
+      "strategy_type": "Expansion",
+      "when_to_expand": "After building the foundations of your capital city, including some basic buildings and a unit or two for defense.",
+      "where_to_expand_criteria": [
+        {
+          "criteria": "Proximity",
+          "description": "Settle fairly close to your capital for easier management and defense."
+        },
+        {
+          "criteria": "Resources",
+          "description": "The location should provide access to new luxury or strategic resources not available to the capital."
+        },
+        {
+          "criteria": "Self-Sufficiency",
+          "description": "The new city should have enough good tiles to sustain its own growth without needing constant support from the capital."
+        }
+      ],
+      "risks_and_considerations": [
+        {
+          "risk": "Environmental Hazards",
+          "details": "Settling on floodplains, near volcanoes, or on low coastlines is risky due to potential natural disasters (a feature from the Gathering Storm expansion). However, post-disaster tiles can have improved yields."
+        },
+        {
+          "risk": "Unit Capture",
+          "details": "Civilian units, especially Settlers, are vulnerable and will be captured instantly if a hostile combat unit moves onto their tile. Always escort them with a combat unit for protection."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_002",
+    "timestamp": {
+      "start": "17:50",
+      "end": "21:18"
+    },
+    "topic": "City Management Fundamentals",
+    "summary": "An overview of the city management interface and its core concepts. This chunk explains essential yields like Food for population growth and Production for creating units and buildings. It also introduces critical city stats such as Amenities (happiness), Housing, city Health (defense), and Loyalty (to prevent rebellions).",
+    "keywords": [
+      "city management",
+      "food",
+      "production",
+      "population",
+      "amenities",
+      "housing",
+      "loyalty",
+      "city health",
+      "yields",
+      "citizens"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "mechanic_name": "City Management",
+      "key_yields": [
+        {
+          "yield": "Food",
+          "description": "Drives population growth. Each citizen consumes 2 Food per turn."
+        },
+        {
+          "yield": "Production",
+          "description": "The resource used to build units, buildings, districts, and wonders in a city."
+        }
+      ],
+      "city_stats": [
+        {
+          "stat": "Amenities",
+          "description": "Represents citizen happiness. High amenities boost yields and growth; low amenities apply penalties. Gained from luxury resources and buildings."
+        },
+        {
+          "stat": "Housing",
+          "description": "Determines the maximum population a city can support. Growth slows and stops if population exceeds housing."
+        },
+        {
+          "stat": "Loyalty",
+          "description": "(Rise & Fall Expansion feature) A measure of a city's allegiance. If it drops to zero, the city will rebel and become a Free City."
+        },
+        {
+          "stat": "Health / Defenses",
+          "description": "A city's hit points during a siege. When it reaches zero, a melee unit can capture the city."
+        }
+      ],
+      "management_actions": [
+        {
+          "action": "Manage Citizens",
+          "description": "Manually assign citizens to work specific tiles to prioritize certain yields (e.g., focus on food for growth)."
+        },
+        {
+          "action": "Buy Tiles",
+          "description": "Use Gold to purchase tiles to expand a city's borders instantly."
+        },
+        {
+          "action": "Production Queue",
+          "description": "Set a sequence of items for a city to produce. The Multi-Queue screen allows managing queues for all cities."
+        },
+        {
+          "action": "Purchase with Gold/Faith",
+          "description": "Instantly acquire units or buildings using Gold or Faith, bypassing the production time."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_003",
+    "timestamp": {
+      "start": "21:18",
+      "end": "24:14"
+    },
+    "topic": "Builders, Districts, and Wonders",
+    "summary": "This section explains how to develop land. Builders are units that create tile improvements (farms, mines) to boost yields. Districts are specialized city tiles that unlock powerful buildings and focus a city's output on a specific goal, like a Campus for Science. Wonders are unique, powerful constructions that provide significant bonuses but can only be built once per game.",
+    "keywords": [
+      "builder",
+      "tile improvement",
+      "district",
+      "wonder",
+      "campus",
+      "theater square",
+      "commercial hub",
+      "power",
+      "climate change"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "units": [
+        {
+          "name": "Builder",
+          "function": "A civilian unit with a limited number of charges used to create tile improvements (e.g., Farm, Mine, Quarry) or remove features (e.g., Woods, Rainforest). These improvements increase tile yields."
+        }
+      ],
+      "city_development": [
+        {
+          "name": "Districts",
+          "description": "Specialty tiles that replace the base yield of a tile. They enable the construction of advanced buildings and generate Great Person points. District placement is strategic, as many get adjacency bonuses from being next to certain features or other districts."
+        },
+        {
+          "name": "Wonders",
+          "description": "Unique buildings that take up a tile and provide powerful, often empire-wide, effects. Each Wonder can only be built once per game, so players race to complete them."
+        }
+      ],
+      "late_game_mechanics": [
+        {
+          "name": "Power",
+          "description": "(Gathering Storm Expansion feature) In the late game, many advanced buildings require Power to operate at full efficiency. Power is generated by Power Plant buildings, which consume strategic resources like Coal and Oil, or from renewable sources like Wind Farms."
+        },
+        {
+          "name": "Climate Change",
+          "description": "(Gathering Storm Expansion feature) Burning fossil fuels for power generates CO2, which contributes to global warming, raising sea levels and increasing the frequency of natural disasters."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_004",
+    "timestamp": {
+      "start": "24:14",
+      "end": "25:27"
+    },
+    "topic": "Trade Routes and Traders",
+    "summary": "Explains the function of the Trader unit and trade routes. Traders create routes between cities, generating resources like Gold, Food, and Production for the home city. These routes also automatically build roads, which increase unit movement speed along the path. Traders are vulnerable to being plundered by barbarians or enemy units.",
+    "keywords": [
+      "trading",
+      "trade route",
+      "trader",
+      "gold",
+      "food",
+      "production",
+      "roads",
+      "city-state",
+      "plunder"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "unit": "Trader",
+      "function": "Creates a trade route from a home city to a destination city (yours, another civ's, or a city-state).",
+      "benefits": [
+        "Provides per-turn yields (Gold, Food, Production, etc.) to the home city.",
+        "Automatically creates a Road between the two cities over time, improving movement speed.",
+        "Can spread Religious pressure."
+      ],
+      "strategy": {
+        "early_game": "Use internal trade routes from new cities to your capital to transfer Food and Production, helping them grow faster.",
+        "late_game": "Foreign trade routes often become more profitable for Gold and other yields."
+      },
+      "risk": "Traders can be plundered (killed) by barbarians or civilizations you are at war with, ending the trade route."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_005",
+    "timestamp": {
+      "start": "25:27",
+      "end": "27:21"
+    },
+    "topic": "Governors and Loyalty",
+    "summary": "Introduces Governors, special characters assigned to cities for unique bonuses and improved Loyalty. Loyalty is a mechanic that determines a city's stability; low loyalty causes reduced yields and can lead to rebellion, where the city becomes a Free City. Governors are a primary tool for maintaining Loyalty in cities, especially those on the frontier or under pressure from other civilizations.",
+    "keywords": [
+      "governors",
+      "loyalty",
+      "rise and fall",
+      "free city",
+      "rebellion",
+      "city pressure",
+      "civics",
+      "promotions"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Governors",
+      "expansion": "Rise and Fall",
+      "function": "Unique characters that can be appointed to a city to provide specialized bonuses and a significant boost to Loyalty. They are unlocked and promoted using Governor Titles earned from Civics.",
+      "governor_list": [
+        "Victor (The Castellan)",
+        "Amani (The Diplomat)",
+        "Moksha (The Cardinal)",
+        "Magnus (The Steward)",
+        "Liang (The Surveyor)",
+        "Pingala (The Educator)",
+        "Reyna (The Financier)"
+      ],
+      "mechanic_name_2": "Loyalty",
+      "expansion_2": "Rise and Fall",
+      "function_2": "Measures a city's allegiance. Loyalty is exerted as pressure from nearby cities. If a city's Loyalty drops to zero, it rebels and becomes a Free City, which can then join another civilization that exerts enough pressure on it."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_006",
+    "timestamp": {
+      "start": "27:21",
+      "end": "28:50"
+    },
+    "topic": "Ages and Dedications",
+    "summary": "This section explains the game's Era and Age system. Based on an 'Era Score' earned through achievements, your civilization will enter a Dark, Normal, or Golden Age when the world advances to a new Era. Each age provides unique effects, especially on Loyalty, and allows you to choose a 'Dedication' bonus that shapes your strategy for that period.",
+    "keywords": [
+      "era",
+      "age",
+      "dark age",
+      "golden age",
+      "normal age",
+      "heroic age",
+      "era score",
+      "dedication",
+      "historic moments"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Ages",
+      "expansion": "Rise and Fall",
+      "trigger": "Achieving a certain 'Era Score' before the world transitions to a new Era.",
+      "era_score_source": "Gained from completing 'Historic Moments' such as building a wonder for the first time, circumnavigating the globe, or discovering a natural wonder.",
+      "age_types": [
+        {
+          "type": "Dark Age",
+          "effect": "Causes negative Loyalty pressure in cities. Unlocks powerful but risky Dark Policies. Makes it easier to achieve a Golden Age in the next era."
+        },
+        {
+          "type": "Normal Age",
+          "effect": "Standard gameplay with no major bonuses or penalties."
+        },
+        {
+          "type": "Golden Age",
+          "effect": "Increases Loyalty pressure, making it easier to hold your cities and flip foreign ones. Unlocks powerful Dedication bonuses."
+        },
+        {
+          "type": "Heroic Age",
+          "effect": "Occurs when moving from a Dark Age to a Golden Age. Provides the benefits of a Golden Age but allows choosing three Dedications instead of one."
+        }
+      ],
+      "dedication_function": "A special bonus chosen at the start of a new Age that provides a powerful gameplay effect and an additional source of Era Score."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_007",
+    "timestamp": {
+      "start": "28:50",
+      "end": "29:47"
+    },
+    "topic": "Great People",
+    "summary": "This chunk details Great People, unique historical figures that provide powerful, one-time bonuses. Civilizations earn Great Person Points from specific districts (e.g., Campuses for Scientists) and compete to recruit them. Types include Great Generals, Scientists, Artists, and Prophets, each with abilities that align with different victory paths.",
+    "keywords": [
+      "great people",
+      "great person points",
+      "great general",
+      "great scientist",
+      "great artist",
+      "great prophet",
+      "recruit",
+      "districts"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Great People",
+      "recruitment": "Earned by accumulating Great Person Points (GPP) from corresponding districts. The civilization with the highest GPP total recruits the Great Person when they become available. They can also be purchased with Gold or Faith.",
+      "types_and_functions": [
+        {
+          "type": "Great General",
+          "function": "Provides combat bonuses to nearby units."
+        },
+        {
+          "type": "Great Scientist",
+          "function": "Can instantly grant a technology (Eureka) or provide other science-related boosts."
+        },
+        {
+          "type": "Great Prophet",
+          "function": "The only way to found a Religion."
+        },
+        {
+          "type": "Great Writer/Artist/Musician",
+          "function": "Create Great Works that generate Culture and Tourism."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_008",
+    "timestamp": {
+      "start": "29:47",
+      "end": "30:57"
+    },
+    "topic": "Religion",
+    "summary": "Explains the process of founding and spreading a religion. Players must first generate Faith to found a Pantheon, then recruit a Great Prophet to establish a full Religion. Once founded, a religion can be customized with various beliefs and spread to other cities using religious units like Missionaries, which is key to achieving a Religious Victory.",
+    "keywords": [
+      "religion",
+      "faith",
+      "pantheon",
+      "great prophet",
+      "holy site",
+      "beliefs",
+      "missionary",
+      "apostle",
+      "religious victory"
+    ],
+    "type": "Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Religion",
+      "founding_process": [
+        {
+          "step": 1,
+          "action": "Found a Pantheon by generating 25 Faith."
+        },
+        {
+          "step": 2,
+          "action": "Recruit a Great Prophet by accumulating Great Prophet Points (from Holy Sites)."
+        },
+        {
+          "step": 3,
+          "action": "Use the Great Prophet on a Holy Site or Stonehenge to found a Religion."
+        }
+      ],
+      "customization": "Choose a symbol, name, and a set of Beliefs that provide unique bonuses to cities following the religion.",
+      "spreading_religion": {
+        "passive": "Spreads via Religious Pressure from proximity and Trade Routes.",
+        "active": "Use religious units like Missionaries and Apostles to actively convert cities. These are purchased with Faith."
+      },
+      "religious_combat": "Apostles can engage in theological combat with religious units from other civilizations to reduce their influence."
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_religion_001",
+    "timestamp": {
+      "start": "00:30:00",
+      "end": "00:32:05"
+    },
+    "topic": "Religion Mechanics",
+    "summary": "This section explains how to establish and spread a religion. It covers founding a Pantheon, acquiring a Great Prophet to found a full religion, choosing beliefs for unique bonuses, and the methods of spreading influence through passive pressure, trade routes, and dedicated religious units like Missionaries and Apostles. It also introduces the concept of Theological Combat, where religious units can fight each other to alter religious pressure in a region.",
+    "keywords": [
+      "religion",
+      "faith",
+      "pantheon",
+      "great prophet",
+      "beliefs",
+      "missionary",
+      "apostle",
+      "theological combat",
+      "holy city",
+      "religious pressure",
+      "conversion"
+    ],
+    "type": "Game_Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Religion",
+      "key_steps": [
+        {
+          "step": "1. Found a Pantheon",
+          "details": "Accumulate 25 Faith to choose a Pantheon belief, which provides a civilization-wide bonus based on terrain or resources."
+        },
+        {
+          "step": "2. Earn a Great Prophet",
+          "details": "This is required to found a full religion. They are earned through Faith generation and building Holy Sites."
+        },
+        {
+          "step": "3. Found a Religion",
+          "details": "Use a Great Prophet to found a religion. You can customize its name, symbol, and choose powerful beliefs that grant bonuses when your religion is dominant in a city. The founding city becomes a Holy City."
+        },
+        {
+          "step": "4. Spread Religion",
+          "details": "Religion can be spread through passive pressure from proximity, trade routes, or actively using religious units like Missionaries and Apostles."
+        },
+        {
+          "step": "5. Engage in Theological Combat",
+          "details": "Apostles can engage in combat with other religious units. Winning a battle reduces the opposing religion's influence in the area and increases your own."
+        }
+      ],
+      "related_units": [
+        "Missionary",
+        "Apostle",
+        "Guru",
+        "Inquisitor"
+      ],
+      "special_abilities": [
+        {
+          "unit": "Apostle",
+          "ability": "Launch Inquisition",
+          "description": "Unlocks the Inquisitor unit, which is powerful at removing foreign religions from your lands."
+        },
+        {
+          "unit": "Apostle",
+          "ability": "Evangelize Belief",
+          "description": "Adds an additional belief (modifier) to your religion, making it stronger."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_diplomacy_002",
+    "timestamp": {
+      "start": "00:32:05",
+      "end": "00:37:34"
+    },
+    "topic": "Diplomacy and Leader Interactions",
+    "summary": "This chunk details the diplomacy screen and interactions with other leaders. It covers understanding leader agendas, gossip, access levels, relationships, and the grievance system. Key diplomatic actions like making deals, declaring friendship, forming alliances, and different types of war declarations (Formal, Surprise, Casus Belli) are explained.",
+    "keywords": [
+      "diplomacy",
+      "leader",
+      "relationship",
+      "grievances",
+      "casus belli",
+      "declare war",
+      "surprise war",
+      "make deal",
+      "trade",
+      "alliances",
+      "access level",
+      "denounce"
+    ],
+    "type": "Game_Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Diplomacy",
+      "diplomacy_screen_tabs": [
+        "Gossip",
+        "Access Level",
+        "Government",
+        "Our Relationship",
+        "Agendas",
+        "Grievances",
+        "Alliances"
+      ],
+      "key_actions": [
+        {
+          "action": "Declare Friendship",
+          "description": "Improves relations and is a prerequisite for alliances. Prevents formal war declarations between the two civs."
+        },
+        {
+          "action": "Establish Resident Embassy",
+          "description": "Increases diplomatic access level, provides more information, and reveals the other civ's capital for a small gold cost."
+        },
+        {
+          "action": "Denounce",
+          "description": "Formally states unhappiness with a civ, generating grievances. After 5 turns, allows for a Formal War declaration, which has fewer penalties than a Surprise War."
+        },
+        {
+          "action": "Make Deal",
+          "description": "Initiates trade negotiations for resources, gold, agreements (like Open Borders), and cities."
+        },
+        {
+          "action": "Propose Alliance",
+          "description": "Forms a pact with a friendly civilization. Alliance types include Research, Military, Economic, Cultural, and Religious, each providing unique, tiered benefits that grow over time."
+        },
+        {
+          "action": "Casus Belli",
+          "description": "A 'reason for war' that reduces the warmonger penalties incurred. Examples include Formal War (after denouncement), Holy War, and Liberation War."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_war_003",
+    "timestamp": {
+      "start": "00:37:34",
+      "end": "00:41:39"
+    },
+    "topic": "War and Combat Mechanics",
+    "summary": "This section covers the essentials of military combat. It differentiates between unit types like melee, ranged, cavalry, and siege, explaining their strengths and weaknesses. The guide also details the process of attacking and capturing cities, the importance of city walls, the negative impact of War Weariness on your empire's amenities, and how units gain experience to earn powerful promotions.",
+    "keywords": [
+      "war",
+      "combat",
+      "units",
+      "melee",
+      "ranged",
+      "cavalry",
+      "siege",
+      "artillery",
+      "city conquest",
+      "walls",
+      "war weariness",
+      "promotions",
+      "unique unit"
+    ],
+    "type": "Game_Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Combat",
+      "unit_roles": [
+        {
+          "type": "Melee",
+          "role": "Standard front-line fighters. Must be on an adjacent tile to attack. Required to capture cities."
+        },
+        {
+          "type": "Ranged",
+          "role": "Attack from a distance. Weak if attacked in melee."
+        },
+        {
+          "type": "Cavalry",
+          "role": "High movement units. Strong but vulnerable to anti-cavalry units."
+        },
+        {
+          "type": "Anti-Cavalry",
+          "role": "Units like Spearmen and Pikemen that get a combat bonus against cavalry."
+        },
+        {
+          "type": "Siege",
+          "role": "Units like Catapults and Bombards that are highly effective at destroying city walls."
+        }
+      ],
+      "city_conquest_steps": [
+        "Use siege units to destroy the city's walls (outer health bar).",
+        "Reduce the city's main health to zero with unit attacks.",
+        "Move a melee-class unit onto the city tile to capture it."
+      ],
+      "related_concepts": [
+        {
+          "name": "War Weariness",
+          "description": "A negative penalty to Amenities in your cities caused by prolonged warfare, which can reduce growth and productivity."
+        },
+        {
+          "name": "Unit Promotions",
+          "description": "Units gain experience (XP) from combat. Upon leveling up, they can choose a promotion from a skill tree, granting bonuses like extra combat strength or healing."
+        },
+        {
+          "name": "Unique Unit (UU)",
+          "description": "Each civilization has a unique unit that replaces a standard unit, offering special advantages during a specific era."
+        }
+      ]
+    }
+  },
+  {
+    "chunk_id": "civ6_guide_victory_conditions_004",
+    "timestamp": {
+      "start": "00:41:39",
+      "end": "00:44:03"
+    },
+    "topic": "How to Win: Victory Conditions",
+    "summary": "This segment outlines the six victory conditions available in the full game: Score, Science, Culture, Domination, Religious, and Diplomatic. Each victory type has a distinct set of objectives, from capturing all capitals for Domination to attracting the most international tourists for Culture. The video stresses the importance of choosing a victory goal early to focus your civilization's strategy.",
+    "keywords": [
+      "victory condition",
+      "how to win",
+      "score victory",
+      "science victory",
+      "culture victory",
+      "domination victory",
+      "religious victory",
+      "diplomatic victory",
+      "tourism",
+      "space race"
+    ],
+    "type": "Game_Mechanics_Guide",
+    "data": {
+      "mechanic_name": "Victory Conditions",
+      "victory_types": [
+        {
+          "name": "Score Victory",
+          "requirement": "Have the highest score when the turn limit (e.g., 500 turns) is reached. This is a fallback win condition if no other victory is achieved."
+        },
+        {
+          "name": "Science Victory",
+          "requirement": "Complete a series of space race projects: launch a satellite, land a human on the Moon, establish a Mars colony, and finally launch an exoplanet expedition."
+        },
+        {
+          "name": "Culture Victory",
+          "requirement": "Attract more visiting tourists from every other civilization than they have domestic tourists. Tourism is generated by Great Works, Wonders, Relics, National Parks, and other cultural elements."
+        },
+        {
+          "name": "Domination Victory",
+          "requirement": "Capture the original capital city of every other civilization in the game."
+        },
+        {
+          "name": "Religious Victory",
+          "requirement": "Your founded religion must be the majority religion (over 50% of citizens) in every civilization."
+        },
+        {
+          "name": "Diplomatic Victory",
+          "requirement": "Accumulate 20 Diplomatic Victory Points. Points are earned by winning votes in the World Congress, completing Aid Requests, and building certain wonders like the Statue of Liberty."
+        }
+      ]
+    }
+  }
+]

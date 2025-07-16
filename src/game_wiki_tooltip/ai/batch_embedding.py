@@ -297,14 +297,17 @@ class BatchEmbeddingProcessor:
         try:
             from .enhanced_bm25_indexer import EnhancedBM25Indexer
             
-            enhanced_bm25_indexer = EnhancedBM25Indexer()
+            # 从collection_name中提取游戏名称
+            game_name = collection_name.replace("_vectors", "") if "_vectors" in collection_name else collection_name
+            
+            enhanced_bm25_indexer = EnhancedBM25Indexer(game_name=game_name)
             enhanced_bm25_indexer.build_index(chunks)
             
             # 保存增强BM25索引
             bm25_path = index_path / "enhanced_bm25_index.pkl"
             enhanced_bm25_indexer.save_index(str(bm25_path))
             
-            logger.info(f"增强BM25索引构建完成，保存到: {bm25_path}")
+            logger.info(f"增强BM25索引构建完成（游戏: {game_name}），保存到: {bm25_path}")
             
         except Exception as e:
             logger.error(f"构建增强BM25索引失败: {e}")
@@ -314,6 +317,7 @@ class BatchEmbeddingProcessor:
         config = {
             "vector_store_type": "faiss",
             "collection_name": collection_name,
+            "game_name": game_name,  # 添加游戏名称
             "model": self.model,
             "output_dim": self.output_dim,
             "chunk_count": len(chunks),

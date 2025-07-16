@@ -1,0 +1,11 @@
+{
+  "vector_store_type": "faiss",
+  "collection_name": "civilization6_vectors",
+  "game_name": "civilization6",
+  "model": "jina-embeddings-v4",
+  "output_dim": 768,
+  "chunk_count": 28,
+  "index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\civilization6_vectors",
+  "bm25_index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\civilization6_vectors\\enhanced_bm25_index.pkl",
+  "hybrid_search_enabled": true
+}

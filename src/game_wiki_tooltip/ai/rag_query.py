@@ -180,9 +180,9 @@ class EnhancedRagQuery:
             logger.info("初始化增强RAG系统...")
             
             if not BATCH_EMBEDDING_AVAILABLE:
-                print(f"⚠️ [RAG-DEBUG] 批量嵌入模块不可用，使用模拟模式")
-                logger.warning("批量嵌入模块不可用，使用模拟模式")
-                self.is_initialized = True
+                print(f"⚠️ [RAG-DEBUG] 批量嵌入模块不可用，设置为未初始化状态")
+                logger.warning("批量嵌入模块不可用，设置为未初始化状态")
+                self.is_initialized = False  # 设置为未初始化，后续查询时会返回fallback_to_wiki
                 return
             
             # 确定向量库路径
@@ -233,7 +233,7 @@ class EnhancedRagQuery:
                     self._initialize_hybrid_retriever()
                     
             else:
-                logger.warning("向量库不可用，使用模拟模式")
+                logger.warning("向量库不可用，设置为未初始化状态")
             
             self.is_initialized = True
             logger.info("增强RAG系统初始化完成")
@@ -281,7 +281,11 @@ class EnhancedRagQuery:
             # 创建向量检索器适配器
             vector_retriever = VectorRetrieverAdapter(self)
             
-            # 创建混合检索器 - 默认启用统一处理以提高性能
+            # 创建混合检索器 - 从配置中读取统一处理设置
+            enable_unified_processing = self.hybrid_config.get("enable_unified_processing", True)
+            enable_query_rewrite = self.hybrid_config.get("enable_query_rewrite", self.enable_query_rewrite)
+            enable_query_translation = self.hybrid_config.get("enable_query_translation", self.enable_summarization and self.enable_query_rewrite)
+            
             self.hybrid_retriever = HybridSearchRetriever(
                 vector_retriever=vector_retriever,
                 bm25_index_path=bm25_index_path,
@@ -290,12 +294,15 @@ class EnhancedRagQuery:
                 bm25_weight=self.hybrid_config.get("bm25_weight", 0.7),
                 rrf_k=self.hybrid_config.get("rrf_k", 60),
                 llm_config=self.llm_config,
-                enable_unified_processing=True,  # 启用统一处理以提高性能
-                enable_query_rewrite=self.enable_query_rewrite,
-                enable_query_translation=self.enable_summarization and self.enable_query_rewrite  # 仅在统一处理禁用时使用
+                enable_unified_processing=enable_unified_processing,  # 从配置中读取
+                enable_query_rewrite=enable_query_rewrite,
+                enable_query_translation=enable_query_translation
             )
             
-            logger.info("混合检索器初始化成功（统一处理模式）")
+            if enable_unified_processing:
+                logger.info("混合检索器初始化成功（统一处理模式）")
+            else:
+                logger.info("混合检索器初始化成功（独立处理模式，禁用统一处理）")
             
         except Exception as e:
             logger.error(f"混合检索器初始化失败: {e}")
@@ -734,6 +741,19 @@ class EnhancedRagQuery:
         """
         if not self.is_initialized:
             await self.initialize()
+            
+        # 如果初始化后仍然没有向量库，返回fallback_to_wiki
+        if not self.is_initialized or not self.vector_store:
+            print(f"❌ [RAG-DEBUG] RAG系统未正确初始化，建议切换到wiki模式")
+            return {
+                "answer": "",
+                "sources": [],
+                "confidence": 0.0,
+                "query_time": 0.0,
+                "results_count": 0,
+                "error": "RAG_NOT_INITIALIZED",
+                "fallback_to_wiki": True
+            }
         
         try:
             print(f"🔍 [RAG-DEBUG] 开始RAG查询: {question}")
@@ -823,25 +843,29 @@ class EnhancedRagQuery:
                 
             else:
                 # 检查是否是因为向量库不存在
-                if hasattr(self, 'vector_store_path') and self.vector_store_path is None:
-                    # 没有找到对应的向量库
-                    print(f"❌ [RAG-DEBUG] 向量库未找到: {self.vector_store_path}")
+                if (hasattr(self, 'vector_store_path') and self.vector_store_path is None) or not self.vector_store:
+                    # 没有找到对应的向量库，返回特殊错误标识，让调用方切换到wiki模式
+                    print(f"❌ [RAG-DEBUG] 向量库未找到，建议切换到wiki模式")
                     return {
-                        "answer": "抱歉，暂时没有找到该游戏的攻略数据库。\n\n目前支持攻略查询的游戏：\n• 地狱潜兵2 - 可以询问武器配装、敌人攻略等\n• 艾尔登法环 - 可以询问Boss攻略、装备推荐等\n• 饥荒联机版 - 可以询问生存技巧、角色攻略等\n• 文明6 - 可以询问文明特色、胜利策略等\n• 七日杀 - 可以询问建筑、武器制作等",
+                        "answer": "",  # 空答案，由调用方处理
                         "sources": [],
                         "confidence": 0.0,
                         "query_time": 0.0,
                         "results_count": 0,
-                        "error": "VECTOR_STORE_NOT_FOUND"
+                        "error": "VECTOR_STORE_NOT_FOUND",
+                        "fallback_to_wiki": True  # 添加标识，提示调用方切换到wiki模式
                     }
                 else:
-                    # 其他情况，回退到模拟模式
-                    print(f"🔄 [RAG-DEBUG] 回退到模拟模式")
-                    await asyncio.sleep(0.5)
-                    answer = self._get_mock_answer(question)
-                    confidence = 0.8
-                    sources = ["模拟知识库"]
-                    search_metadata = {"search_type": "mock"}
+                    # 其他情况的错误
+                    print(f"❌ [RAG-DEBUG] 向量库查询失败，原因未知")
+                    return {
+                        "answer": "抱歉，攻略查询系统出现问题，请稍后重试。",
+                        "sources": [],
+                        "confidence": 0.0,
+                        "query_time": 0.0,
+                        "results_count": 0,
+                        "error": "RAG_SYSTEM_ERROR"
+                    }
             
             query_time = asyncio.get_event_loop().time() - start_time
             
@@ -869,41 +893,7 @@ class EnhancedRagQuery:
                 "query_time": 0.0,
                 "error": str(e)
             }
-    
-    def _get_mock_answer(self, question: str) -> str:
-        """获取模拟答案（用于测试）"""
-        question_lower = question.lower()
-        
-        if "好感度" in question_lower or "关系" in question_lower:
-            return """提升好感度的方法：
-1. 送礼物：每个角色都有喜欢的礼物，送对礼物能快速提升好感度
-2. 对话：每天与角色对话
-3. 参加节日活动
-4. 完成角色任务
 
-建议：艾米丽喜欢羊毛、布料等手工制品；谢恩喜欢啤酒和披萨。"""
-        
-        elif "赚钱" in question_lower or "收入" in question_lower:
-            return """赚钱攻略：
-1. 种植高价值作物：草莓、蓝莓、蔓越莓
-2. 养殖动物：鸡、牛、羊
-3. 钓鱼：不同季节有不同鱼类
-4. 挖矿：获得宝石和矿石
-5. 制作手工艺品：果酱、奶酪等
-
-最佳策略：春季种植草莓，夏季种植蓝莓，秋季种植蔓越莓。"""
-        
-        elif "新手" in question_lower or "入门" in question_lower:
-            return """新手入门指南：
-1. 第一周：清理农场，种植防风草
-2. 第二周：建造鸡舍，开始养殖
-3. 第三周：升级工具，扩大种植
-4. 第四周：参加春季节日
-
-重点：优先升级水壶和锄头，多与村民互动。"""
-        
-        else:
-            return f"关于'{question}'的攻略：\n\n这是一个通用的游戏攻略建议。建议您尝试不同的游戏策略，探索游戏中的各种可能性。记住，每个玩家都有自己独特的游戏风格！"
 
 
 # 全局实例

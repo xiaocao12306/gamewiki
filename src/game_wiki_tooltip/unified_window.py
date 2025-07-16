@@ -502,7 +502,7 @@ class MessageWidget(QFrame):
         self.content_label.setOpenExternalLinks(False)
         self.content_label.setSizePolicy(
             QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Minimum
+            QSizePolicy.Policy.MinimumExpanding
         )
         
         # Set content based on message type
@@ -693,13 +693,13 @@ class StreamingMessageWidget(MessageWidget):
         # 找到消息气泡
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            # 使用Preferred策略，允许布局系统灵活调整
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+            # 使用MinimumExpanding策略，允许内容自由扩展
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         
         # 优化content_label设置
         if hasattr(self, 'content_label'):
-            # 使用Preferred策略，避免固定尺寸造成布局问题
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+            # 使用MinimumExpanding策略，允许内容自由扩展
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
             # 设置文本换行
             self.content_label.setWordWrap(True)
             self.content_label.setScaledContents(False)
@@ -733,35 +733,18 @@ class StreamingMessageWidget(MessageWidget):
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
             bubble.setMaximumWidth(bubble_width)
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
             
         if hasattr(self, 'content_label'):
             self.content_label.setMaximumWidth(content_width)
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
             
-        # 增强调试信息
+        # 只在异常情况下输出调试信息
         if chat_view and hasattr(chat_view, 'viewport'):
             original_viewport_width = chat_view.viewport().width()
-            scrollbar_width = scrollbar.width() if scrollbar and scrollbar.isVisible() else 0
-            
-            # 检测异常宽度变化
-            if original_viewport_width < 600:
-                print(f"🚨 流式消息视图宽度异常: viewport={original_viewport_width}px")
-                # 检查父容器链
-                parent = chat_view.parent() if chat_view else None
-                level = 0
-                while parent and level < 5:
-                    parent_width = parent.width() if hasattr(parent, 'width') else "N/A"
-                    parent_type = type(parent).__name__
-                    print(f"  └─ 父容器[{level}]: {parent_type} 宽度={parent_width}px")
-                    parent = parent.parent() if hasattr(parent, 'parent') else None
-                    level += 1
-        else:
-            original_viewport_width = 'N/A'
-            scrollbar_width = 0
-            
-        print(f"💬 流式消息宽度更新: 视图={original_viewport_width}px, 滚动条={scrollbar_width}px, "
-              f"计算后={viewport_width}px, 消息最大宽度={bubble_width}px")
+            # 只有在宽度异常小时才输出警告
+            if original_viewport_width < 400:
+                print(f"⚠️ 流式消息视图宽度异常: viewport={original_viewport_width}px")
     
     def set_render_params(self, char_interval: int = 80, time_interval: float = 1.5):
         """
@@ -852,6 +835,10 @@ class StreamingMessageWidget(MessageWidget):
                 # 将消息类型改为AI_RESPONSE，表示流式输出已完成
                 self.message.type = MessageType.AI_RESPONSE
                 
+                # 只在异常情况下输出调试信息
+                if len(self.full_text) > 5000:  # 内容特别长时输出信息
+                    print(f"📝 长文本流式消息完成，文本长度: {len(self.full_text)} 字符")
+                
                 # 进行最终的markdown检测和转换
                 if detect_markdown_content(self.full_text):
                     html_content = convert_markdown_to_html(self.full_text)
@@ -860,9 +847,20 @@ class StreamingMessageWidget(MessageWidget):
                 else:
                     self.content_label.setText(self.full_text)
                     self.content_label.setTextFormat(Qt.TextFormat.PlainText)
-                # 最终完成时才调整一次大小
-                self.content_label.adjustSize()
-                self.adjustSize()
+                
+                # 更新几何而不是强制调整大小，避免内容被截断
+                self.content_label.updateGeometry()
+                self.updateGeometry()
+                
+                # 确保父容器也更新布局
+                if self.parent() and hasattr(self.parent(), 'container'):
+                    self.parent().container.updateGeometry()
+                
+                # 移除不必要的调试输出
+                
+                # 延迟滚动到底部，确保布局完成后内容可见
+                if hasattr(self.parent(), 'scroll_to_bottom'):
+                    QTimer.singleShot(200, self.parent().scroll_to_bottom)
             
     def update_dots(self):
         """Update loading dots animation"""
@@ -886,6 +884,11 @@ class ChatView(QScrollArea):
         self.user_scrolled_manually = False  # 用户是否手动滚动过
         self.last_scroll_position = 0  # 上次滚动位置
         
+        # resize防抖动机制
+        self.resize_timer = QTimer()
+        self.resize_timer.setSingleShot(True)
+        self.resize_timer.timeout.connect(self._performDelayedResize)
+        
         self.init_ui()
         
     def init_ui(self):
@@ -898,7 +901,13 @@ class ChatView(QScrollArea):
         self.layout = QVBoxLayout(self.container)
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(10, 10, 10, 10)
-        self.layout.addStretch()
+        self.layout.addStretch()  # 保持底部对齐
+        
+        # 确保容器填充ScrollArea
+        self.container.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         
         self.setWidget(self.container)
         
@@ -1017,12 +1026,12 @@ class ChatView(QScrollArea):
         # 动态设置消息最大宽度为聊天视图宽度的75%
         self._update_message_width(widget)
         
-        # Force layout update
-        widget.adjustSize()
-        self.container.adjustSize()
+        # 温和的布局更新，避免强制调整大小
+        widget.updateGeometry()
+        self.container.updateGeometry()
         
-        # Auto-scroll to bottom
-        QTimer.singleShot(100, self.smart_scroll_to_bottom)
+        # 稍微延长滚动延迟，确保布局完成
+        QTimer.singleShot(150, self.smart_scroll_to_bottom)
         
         return widget
         
@@ -1048,10 +1057,10 @@ class ChatView(QScrollArea):
         # 动态设置消息最大宽度
         self._update_status_width(self.current_status_widget)
         
-        # Force layout update and scroll to bottom
-        self.current_status_widget.adjustSize()
-        self.container.adjustSize()
-        QTimer.singleShot(100, self.smart_scroll_to_bottom)
+        # 温和的布局更新
+        self.current_status_widget.updateGeometry()
+        self.container.updateGeometry()
+        QTimer.singleShot(150, self.smart_scroll_to_bottom)
         
         return self.current_status_widget
         
@@ -1243,42 +1252,36 @@ class ChatView(QScrollArea):
                 if bubble:
                     # 使用最大宽度，让布局系统自由决定实际宽度
                     bubble.setMaximumWidth(max_width)
-                    bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+                    bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
                 
                 # 同时更新content_label的宽度
                 if hasattr(widget, 'content_label'):
                     content_width = max_width - 24  # 减去边距
                     widget.content_label.setMaximumWidth(content_width)
-                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
                 
-                # 增强调试信息 - 检测宽度突然变化
-                if viewport_width < 600:  # 当视图宽度异常小时输出详细信息
-                    print(f"🚨 视图宽度异常: viewport={viewport_width}px, scroll_area={scroll_area_width}px, "
-                          f"parent_window={parent_window_width}px, scrollbar={scrollbar_width}px")
-                    
-                    # 检查父容器链
-                    parent = self.parent()
-                    level = 0
-                    while parent and level < 5:
-                        parent_width = parent.width() if hasattr(parent, 'width') else "N/A"
-                        parent_type = type(parent).__name__
-                        print(f"  └─ 父容器[{level}]: {parent_type} 宽度={parent_width}px")
-                        parent = parent.parent() if hasattr(parent, 'parent') else None
-                        level += 1
-                        
-                print(f"💬 普通消息宽度更新: 视图={viewport_width}px, 滚动条={scrollbar_width}px, "
-                      f"计算后={chat_width}px, 消息最大宽度={max_width}px")
+                # 只在异常情况下输出调试信息
+                if viewport_width < 400:  # 当视图宽度异常小时输出警告
+                    print(f"⚠️ 视图宽度异常: viewport={viewport_width}px")
                 
     def resizeEvent(self, event):
-        """窗口大小改变时更新所有消息的宽度"""
+        """窗口大小改变时触发防抖动更新"""
         super().resizeEvent(event)
         
-        # 强制ChatView保持正确的宽度
+        # 强制ChatView保持正确的宽度（立即执行，避免显示异常）
         parent_width = self.parent().width() if self.parent() else 0
         current_width = self.width()
         if parent_width > 0 and abs(current_width - parent_width) > 5:  # 超过5px差异
-            print(f"🔧 修复ChatView宽度: 当前={current_width}px, 父容器={parent_width}px")
             self.resize(parent_width, self.height())
+        
+        # 使用防抖动机制延迟更新消息宽度
+        self.resize_timer.stop()  # 停止之前的计时器
+        self.resize_timer.start(200)  # 0.2秒后执行更新
+        
+    def _performDelayedResize(self):
+        """延迟执行的resize更新操作"""
+        # 调试：只在防抖动完成后输出一次信息
+        print(f"📏 ChatView尺寸稳定，执行布局更新: {self.size()}")
         
         # 更新所有现有消息的宽度
         for widget in self.messages:
@@ -1286,6 +1289,36 @@ class ChatView(QScrollArea):
         # 更新状态消息的宽度
         if self.current_status_widget:
             self._update_status_width(self.current_status_widget)
+            
+        # 强制更新所有消息的高度，确保内容完整显示
+        self._ensureContentComplete()
+        
+        # 确保滚动到正确位置
+        QTimer.singleShot(50, self.smart_scroll_to_bottom)
+        
+    def _ensureContentComplete(self):
+        """确保所有消息内容完整显示"""
+        for widget in self.messages:
+            if hasattr(widget, 'content_label'):
+                # 强制内容标签重新计算高度
+                widget.content_label.updateGeometry()
+                widget.updateGeometry()
+                
+                # 对于流式消息，特别处理
+                if isinstance(widget, StreamingMessageWidget):
+                    # 如果是已完成的流式消息，确保所有内容都可见
+                    if widget.message.type == MessageType.AI_RESPONSE and widget.full_text:
+                        # 重新设置文本以触发高度重新计算
+                        current_text = widget.content_label.text()
+                        if current_text:
+                            widget.content_label.setText("")
+                            widget.content_label.setText(current_text)
+                            widget.content_label.updateGeometry()
+                            widget.updateGeometry()
+        
+        # 强制整个容器重新布局
+        self.container.updateGeometry()
+        self.updateGeometry()
             
     def update_all_message_widths(self):
         """更新所有消息的宽度（用于窗口显示后的初始化）"""
@@ -1561,6 +1594,9 @@ class UnifiedAssistantWindow(QMainWindow):
         self.init_ui()
         self.restore_geometry()
         
+        # 调试：初始化后打印尺寸
+        print(f"🏠 UnifiedAssistantWindow初始化完成，尺寸: {self.size()}")
+        
     def init_ui(self):
         """Initialize the main window UI"""
         self.setWindowTitle("GameWiki Assistant")
@@ -1671,9 +1707,9 @@ class UnifiedAssistantWindow(QMainWindow):
         input_layout.addWidget(self.input_field)
         input_layout.addWidget(self.send_button)
         
-        # Add to main layout
-        main_layout.addWidget(self.content_stack)
-        main_layout.addWidget(input_container)
+        # Add to main layout with stretch factor
+        main_layout.addWidget(self.content_stack, 1)  # 拉伸因子1，占据所有可用空间
+        main_layout.addWidget(input_container, 0)     # 拉伸因子0，保持固定高度
         
         # Window styling
         self.setStyleSheet("""

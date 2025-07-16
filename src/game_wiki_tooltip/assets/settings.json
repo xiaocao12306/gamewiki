@@ -5,10 +5,10 @@
         "modifiers": ["Ctrl"]
     },
     "popup": {
-        "width": 800,
-        "height": 600,
-        "left": 100,
-        "top": 100
+        "width": 562,
+        "height": 340,
+        "left": 564,
+        "top": 20
     },
     "summarization": {
         "enabled": true,

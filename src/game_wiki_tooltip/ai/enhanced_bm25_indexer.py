@@ -17,157 +17,58 @@ import logging
 from rank_bm25 import BM25Okapi
 from typing import List, Dict, Any, Optional, Set, Tuple
 from pathlib import Path
+from .game_keyword_configs import GameKeywordConfig
 
 logger = logging.getLogger(__name__)
 
 class EnhancedBM25Indexer:
-    """增强BM25索引器，专门优化游戏战术信息检索"""
+    """增强BM25索引器，支持多游戏优化的战术信息检索"""
     
-    # 敌人名称映射和权重
-    ENEMY_KEYWORDS = {
-        # Terminid敌人
-        'bile titan': 5.0,
-        'biletitan': 5.0, 
-        'bile_titan': 5.0,
-        '胆汁泰坦': 5.0,
-        'bt': 4.0,  # 常见缩写
-        
-        'charger': 4.0,
-        '冲锋者': 4.0,
-        
-        'hulk': 5.0,
-        '巨人机甲': 5.0,
-        'hulk devastator': 5.0,
-        
-        'impaler': 4.0,
-        '穿刺者': 4.0,
-        
-        'brood commander': 3.5,
-        '族群指挥官': 3.5,
-        
-        'stalker': 3.5,
-        '潜行者': 3.5,
-        
-        # Automaton敌人  
-        'factory strider': 4.5,
-        '工厂行者': 4.5,
-        
-        'devastator': 4.0,
-        '毁灭者': 4.0,
-        
-        'berserker': 3.5,
-        '狂战士': 3.5,
-        
-        'gunship': 3.5,
-        '武装直升机': 3.5,
-        
-        'tank': 4.0,
-        '坦克': 4.0,
-        
-        'dropship': 3.5,
-        '运输舰': 3.5,
-    }
-    
-    # 战术术语权重
-    TACTICAL_KEYWORDS = {
-        # 弱点相关
-        'weak point': 4.0,
-        'weakness': 4.0,
-        'vulnerable': 3.5,
-        'weak spot': 4.0,
-        'critical': 3.5,
-        '弱点': 4.0,
-        '要害': 3.5,
-        '致命': 3.5,
-        
-        # 击杀相关
-        'kill': 3.5,
-        'destroy': 3.5,
-        'eliminate': 3.0,
-        'defeat': 3.0,
-        'how to kill': 4.0,
-        '击杀': 3.5,
-        '消灭': 3.5,
-        '击败': 3.0,
-        
-        # 战术相关
-        'strategy': 3.5,
-        'tactic': 3.5,
-        'counter': 3.0,
-        'effective': 3.0,
-        'recommended': 3.0,
-        '策略': 3.5,
-        '战术': 3.5,
-        '对抗': 3.0,
-        '推荐': 3.0,
-        
-        # 武器装备
-        'weapon': 3.0,
-        'loadout': 3.0,
-        'build': 3.0,
-        'equipment': 2.5,
-        '武器': 3.0,
-        '配装': 3.0,
-        '装备': 2.5,
-        
-        # 部位相关
-        'head': 3.0,
-        'headshot': 3.5,
-        'belly': 3.0,
-        'eye': 3.5,
-        'back': 2.5,
-        'leg': 2.5,
-        '头部': 3.0,
-        '腹部': 3.0,
-        '眼睛': 3.5,
-        '背部': 2.5,
-        '腿部': 2.5,
-    }
-    
-    # 武器分类权重
-    WEAPON_KEYWORDS = {
-        # 反坦克武器
-        'anti-tank': 2.5,
-        'railgun': 2.5,
-        'recoilless rifle': 2.5,
-        'eat': 2.5,
-        'quasar cannon': 2.5,
-        '反坦克': 2.5,
-        '轨道炮': 2.5,
-        
-        # 爆炸武器
-        'explosive': 2.0,
-        'grenade launcher': 2.0,
-        'autocannon': 2.0,
-        '爆炸': 2.0,
-        '榴弹发射器': 2.0,
-        '自动加农炮': 2.0,
-        
-        # 精确武器
-        'precision': 2.0,
-        'sniper': 2.0,
-        'anti-materiel': 2.0,
-        '精确': 2.0,
-        '狙击': 2.0,
-        '反器材': 2.0,
-    }
-    
-    def __init__(self, stop_words: Optional[List[str]] = None):
+    def __init__(self, game_name: str = "helldiver2", stop_words: Optional[List[str]] = None):
         """
         初始化增强BM25索引器
         
         Args:
+            game_name: 游戏名称 (helldiver2, dst, eldenring, civilization6)
             stop_words: 停用词列表
         """
+        self.game_name = game_name
         self.bm25 = None
         self.documents = []
         self.stop_words = self._load_stop_words(stop_words)
         
-        # 合并所有关键词权重
-        self.keyword_weights = {}
-        self.keyword_weights.update(self.ENEMY_KEYWORDS)
-        self.keyword_weights.update(self.TACTICAL_KEYWORDS) 
-        self.keyword_weights.update(self.WEAPON_KEYWORDS)
+        # 根据游戏加载特定的关键词权重配置
+        self._load_game_config()
+    
+    def _load_game_config(self) -> None:
+        """加载游戏特定的关键词配置"""
+        try:
+            config = GameKeywordConfig.get_config(self.game_name)
+            
+            # 合并所有关键词权重
+            self.keyword_weights = {}
+            self.keyword_weights.update(config['common_keywords'])
+            self.keyword_weights.update(config['enemy_keywords'])
+            self.keyword_weights.update(config['tactical_keywords'])
+            self.keyword_weights.update(config['item_keywords'])
+            self.keyword_weights.update(config['special_keywords'])
+            
+            # 保存各类别关键词用于特殊处理
+            self.enemy_keywords = config['enemy_keywords']
+            self.tactical_keywords = config['tactical_keywords']
+            self.item_keywords = config['item_keywords']
+            self.special_keywords = config['special_keywords']
+            
+            logger.info(f"已加载 {self.game_name} 游戏配置，共 {len(self.keyword_weights)} 个关键词")
+            
+        except Exception as e:
+            logger.error(f"加载游戏配置失败: {e}")
+            # 降级到空配置
+            self.keyword_weights = {}
+            self.enemy_keywords = {}
+            self.tactical_keywords = {}
+            self.item_keywords = {}
+            self.special_keywords = {}
         
     def _load_stop_words(self, stop_words: Optional[List[str]] = None) -> Set[str]:
         """加载停用词，但保留重要的战术术语"""
@@ -186,34 +87,36 @@ class EnhancedBM25Indexer:
         return default_stop_words
         
     def _normalize_enemy_name(self, text: str) -> str:
-        """标准化敌人名称"""
+        """标准化敌人名称 - 基于当前游戏配置"""
         text = text.lower()
         
-        # 敌人名称标准化
-        enemy_mappings = {
-            'bt': 'bile titan',
-            'biletitan': 'bile titan',
-            'bile_titan': 'bile titan',
-            '胆汁泰坦': 'bile titan',
-            
-            '巨人机甲': 'hulk',
-            'hulk devastator': 'hulk',
-            
-            '冲锋者': 'charger',
-            '穿刺者': 'impaler',
-            '潜行者': 'stalker',
-            '族群指挥官': 'brood commander',
-            
-            '工厂行者': 'factory strider',
-            '毁灭者': 'devastator', 
-            '狂战士': 'berserker',
-            '武装直升机': 'gunship',
-            '坦克': 'tank',
-            '运输舰': 'dropship',
-        }
+        # 基于游戏特定的敌人关键词进行标准化
+        # 这里我们使用一个通用的方法，不再硬编码特定游戏的映射
+        # 可以根据需要在游戏配置中添加别名映射
         
-        for original, normalized in enemy_mappings.items():
-            text = text.replace(original, normalized)
+        # 针对Helldivers 2的特殊处理 (保留向后兼容性)
+        if self.game_name == "helldiver2":
+            enemy_mappings = {
+                'bt': 'bile titan',
+                'biletitan': 'bile titan',
+                'bile_titan': 'bile titan',
+                '胆汁泰坦': 'bile titan',
+                '巨人机甲': 'hulk',
+                'hulk devastator': 'hulk',
+                '冲锋者': 'charger',
+                '穿刺者': 'impaler',
+                '潜行者': 'stalker',
+                '族群指挥官': 'brood commander',
+                '工厂行者': 'factory strider',
+                '毁灭者': 'devastator',
+                '狂战士': 'berserker',
+                '武装直升机': 'gunship',
+                '坦克': 'tank',
+                '运输舰': 'dropship',
+            }
+            
+            for original, normalized in enemy_mappings.items():
+                text = text.replace(original, normalized)
             
         return text
         
@@ -359,7 +262,9 @@ class EnhancedBM25Indexer:
                 # 调试信息
                 if i < 3:  # 只打印前3个用于调试
                     logger.info(f"样本 {i}: {chunk.get('topic', 'Unknown')}")
+                    logger.info(f"增强文本: {enhanced_text[:200]}...")
                     logger.info(f"Token样本: {tokenized[:10]}")
+                    logger.info(f"Token总数: {len(tokenized)}")
                 
             except Exception as e:
                 logger.error(f"处理第 {i} 个知识块时出错: {e}")
@@ -457,16 +362,33 @@ class EnhancedBM25Indexer:
         return results
     
     def _extract_enemy_from_chunk(self, chunk: Dict[str, Any]) -> str:
-        """从chunk中提取敌人名称"""
+        """从chunk中提取敌人/目标名称 - 基于游戏类型"""
         # 检查结构化数据
         if "structured_data" in chunk and "enemy_name" in chunk["structured_data"]:
             return chunk["structured_data"]["enemy_name"]
             
-        # 检查topic
+        # 检查topic中的敌人关键词
         topic = chunk.get("topic", "").lower()
-        for enemy in self.ENEMY_KEYWORDS:
+        for enemy in self.enemy_keywords:
             if enemy in topic:
                 return enemy.title()
+        
+        # 对于不同游戏类型，查找不同的目标类型
+        if self.game_name == "dst":
+            # DST: 查找Boss、生物或角色名
+            for special in self.special_keywords:
+                if special in topic:
+                    return special.title()
+        elif self.game_name == "eldenring":
+            # Elden Ring: 查找Boss名称
+            for enemy in self.enemy_keywords:
+                if enemy in topic:
+                    return enemy.title()
+        elif self.game_name == "civilization6":
+            # Civilization 6: 查找文明名称
+            for civ in self.special_keywords:
+                if civ in topic:
+                    return civ.title()
                 
         return "Unknown"
     
@@ -557,9 +479,10 @@ class EnhancedBM25Indexer:
 
 
 def test_enhanced_bm25():
-    """测试增强BM25索引器"""
-    # 使用实际的chunk数据进行测试
-    test_chunks = [
+    """测试增强BM25索引器 - 多游戏支持"""
+    
+    # Helldivers 2 测试数据
+    helldivers_chunks = [
         {
             "chunk_id": "bile_titan_test",
             "topic": "Terminid: Bile Titan Weaknesses",
@@ -577,51 +500,71 @@ def test_enhanced_bm25():
                 ],
                 "recommended_weapons": ["EAT", "Recoilless Rifle", "Quasar Cannon"]
             }
-        },
+        }
+    ]
+    
+    # DST 测试数据
+    dst_chunks = [
         {
-            "chunk_id": "hulk_test", 
-            "topic": "Automaton: Hulk Weaknesses",
-            "summary": "The Hulk's primary weak point is its glowing red eye socket. Stun grenades can immobilize it for easy targeting.",
-            "keywords": ["Hulk", "Automaton", "eye socket", "stun grenade"],
-            "structured_data": {
-                "enemy_name": "Hulk",
-                "faction": "Automaton",
-                "weak_points": [
-                    {
-                        "name": "Eye Socket",
-                        "notes": "Glowing red eye socket on head"
-                    }
-                ],
-                "recommended_weapons": ["Railgun", "Anti-Materiel Rifle"]
+            "chunk_id": "dst_winter_test",
+            "topic": "Winter Survival: Managing Temperature and Deerclops",
+            "summary": "Surviving winter requires thermal stone management and preparing for Deerclops boss fight around day 30.",
+            "keywords": ["winter", "temperature", "deerclops", "boss", "thermal stone"],
+            "data": {
+                "season": "Winter",
+                "boss_name": "Deerclops",
+                "key_items": ["Thermal Stone", "Winter Hat", "Fire Pit"]
             }
         }
     ]
     
-    # 创建索引器
-    indexer = EnhancedBM25Indexer()
-    
-    # 构建索引
-    indexer.build_index(test_chunks)
-    
-    # 测试搜索
-    print("=== 增强BM25索引器测试 ===")
-    print(f"索引统计: {indexer.get_stats()}")
-    
-    # 测试查询
-    test_queries = [
-        "how to kill bile titan",
-        "bile titan weakness",
-        "hulk eye weak point",
-        "bt头部弱点"
+    # Elden Ring 测试数据
+    eldenring_chunks = [
+        {
+            "chunk_id": "malenia_test",
+            "topic": "Malenia Boss Strategy: Waterfowl Dance Counter",
+            "summary": "Malenia's waterfowl dance can be dodged by running away during the first flurry, then dodging through the second and third attacks.",
+            "keywords": ["Malenia", "waterfowl dance", "boss strategy", "dodge", "timing"],
+            "structured_data": {
+                "boss_name": "Malenia",
+                "difficulty": "Very Hard",
+                "key_attacks": ["Waterfowl Dance", "Scarlet Rot"]
+            }
+        }
     ]
     
-    for query in test_queries:
-        print(f"\n查询: {query}")
-        results = indexer.search(query, top_k=3)
-        for result in results:
-            print(f"  - 分数: {result['score']:.3f}")
-            print(f"    主题: {result['chunk']['topic']}")
-            print(f"    相关性: {result['match_info']['relevance_reason']}")
+    # 测试不同游戏的索引器
+    test_cases = [
+        ("helldiver2", helldivers_chunks, ["how to kill bile titan", "anti-tank weapons"]),
+        ("dst", dst_chunks, ["winter survival", "deerclops strategy"]),
+        ("eldenring", eldenring_chunks, ["malenia boss fight", "waterfowl dance counter"])
+    ]
+    
+    print("=== 多游戏增强BM25索引器测试 ===\n")
+    
+    for game_name, chunks, queries in test_cases:
+        print(f"🎮 测试游戏: {game_name.upper()}")
+        print(f"📚 知识块数量: {len(chunks)}")
+        
+        # 创建游戏特定的索引器
+        indexer = EnhancedBM25Indexer(game_name=game_name)
+        
+        # 构建索引
+        indexer.build_index(chunks)
+        
+        # 显示统计信息
+        stats = indexer.get_stats()
+        print(f"📊 索引统计: 文档数={stats['document_count']}, 关键词数={stats['keyword_weights_count']}")
+        
+        # 测试查询
+        for query in queries:
+            print(f"\n🔍 查询: {query}")
+            results = indexer.search(query, top_k=2)
+            for i, result in enumerate(results, 1):
+                print(f"   {i}. 分数={result['score']:.3f} | {result['chunk']['topic']}")
+                print(f"      相关性: {result['match_info']['relevance_reason']}")
+        
+        print("\n" + "="*50 + "\n")
 
 
 if __name__ == "__main__":
