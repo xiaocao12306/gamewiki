@@ -112,7 +112,7 @@ class EnhancedRagQuery:
                  hybrid_config: Optional[Dict] = None,
                  llm_config: Optional[LLMConfig] = None,
                  enable_query_rewrite: bool = True,
-                 enable_summarization: bool = False,
+                 enable_summarization: bool = True,
                  summarization_config: Optional[Dict] = None,
                  enable_intent_reranking: bool = True,
                  reranking_config: Optional[Dict] = None):
@@ -320,21 +320,19 @@ class EnhancedRagQuery:
                 self.enable_summarization = False
                 return
             
-            # 创建摘要配置
+            # 创建摘要配置 (移除已废弃的max_summary_length参数)
             config = SummarizationConfig(
                 api_key=api_key,
                 model_name=self.summarization_config.get("model_name", "gemini-2.5-flash-lite-preview-06-17"),
-                max_summary_length=self.summarization_config.get("max_summary_length", 300),
                 temperature=self.summarization_config.get("temperature", 0.3),
                 include_sources=self.summarization_config.get("include_sources", True),
                 language=self.summarization_config.get("language", "auto")
             )
             
-            # 创建摘要器
+            # 创建摘要器 (移除已废弃的max_summary_length参数)
             self.summarizer = create_gemini_summarizer(
                 api_key=api_key,
                 model_name=config.model_name,
-                max_summary_length=config.max_summary_length,
                 temperature=config.temperature,
                 include_sources=config.include_sources,
                 language=config.language
@@ -659,7 +657,7 @@ class EnhancedRagQuery:
         
         return "\n".join(answer_parts)
     
-    async def _format_answer_with_summary(self, search_response: Dict[str, Any], question: str) -> str:
+    async def _format_answer_with_summary(self, search_response: Dict[str, Any], question: str, original_query: str = None) -> str:
         """
         使用Gemini摘要器格式化检索结果
         
@@ -703,6 +701,7 @@ class EnhancedRagQuery:
             summary_result = self.summarizer.summarize_chunks(
                 chunks=chunks,
                 query=question,
+                original_query=original_query,
                 context=game_context
             )
             
@@ -728,7 +727,7 @@ class EnhancedRagQuery:
         
         return f"根据{topic}：\n{summary}"
     
-    async def query(self, question: str, top_k: int = 3) -> Dict[str, Any]:
+    async def query(self, question: str, top_k: int = 3, original_query: str = None) -> Dict[str, Any]:
         """
         执行RAG查询
         
@@ -781,11 +780,22 @@ class EnhancedRagQuery:
                         search_response.setdefault("metadata", {})["reranking_applied"] = True
                     
                     # 格式化答案（使用摘要或原始格式）
-                    if self.enable_summarization and self.summarizer and len(results) > 1:
+                    print(f"🔍 [SUMMARY-DEBUG] 检查摘要条件 (混合搜索):")
+                    print(f"   - enable_summarization: {self.enable_summarization}")
+                    print(f"   - summarizer存在: {self.summarizer is not None}")
+                    print(f"   - 结果数量: {len(results)}")
+                    
+                    if self.enable_summarization and self.summarizer and len(results) > 0:
                         print(f"💬 [RAG-DEBUG] 使用Gemini摘要格式化答案")
-                        answer = await self._format_answer_with_summary(search_response, question)
+                        answer = await self._format_answer_with_summary(search_response, question, original_query=original_query)
                     else:
                         print(f"💬 [RAG-DEBUG] 使用原始格式化答案")
+                        if not self.enable_summarization:
+                            print(f"   原因: 摘要功能未启用")
+                        elif not self.summarizer:
+                            print(f"   原因: 摘要器未初始化")
+                        elif len(results) == 0:
+                            print(f"   原因: 没有检索结果")
                         answer = self._format_answer(search_response, question)
                     
                     confidence = max([r["score"] for r in results]) if results else 0.0
@@ -830,11 +840,22 @@ class EnhancedRagQuery:
                     }
                     
                     # 格式化答案（使用摘要或原始格式）
-                    if self.enable_summarization and self.summarizer and len(results) > 1:
+                    print(f"🔍 [SUMMARY-DEBUG] 检查摘要条件 (单一搜索):")
+                    print(f"   - enable_summarization: {self.enable_summarization}")
+                    print(f"   - summarizer存在: {self.summarizer is not None}")
+                    print(f"   - 结果数量: {len(results)}")
+                    
+                    if self.enable_summarization and self.summarizer and len(results) > 0:
                         print(f"💬 [RAG-DEBUG] 使用Gemini摘要格式化答案")
-                        answer = await self._format_answer_with_summary(search_response, question)
+                        answer = await self._format_answer_with_summary(search_response, question, original_query=original_query)
                     else:
                         print(f"💬 [RAG-DEBUG] 使用原始格式化答案")
+                        if not self.enable_summarization:
+                            print(f"   原因: 摘要功能未启用")
+                        elif not self.summarizer:
+                            print(f"   原因: 摘要器未初始化")
+                        elif len(results) == 0:
+                            print(f"   原因: 没有检索结果")
                         answer = self._format_answer(search_response, question)
                     
                     confidence = max([r["score"] for r in results]) if results else 0.0
@@ -900,13 +921,15 @@ class EnhancedRagQuery:
 _enhanced_rag_query = None
 
 def get_enhanced_rag_query(vector_store_path: Optional[str] = None,
-                          llm_config: Optional[LLMConfig] = None) -> EnhancedRagQuery:
+                          llm_config: Optional[LLMConfig] = None,
+                          enable_summarization: bool = True) -> EnhancedRagQuery:
     """获取增强RAG查询器的单例实例"""
     global _enhanced_rag_query
     if _enhanced_rag_query is None:
         _enhanced_rag_query = EnhancedRagQuery(
             vector_store_path=vector_store_path,
-            llm_config=llm_config
+            llm_config=llm_config,
+            enable_summarization=enable_summarization
         )
     return _enhanced_rag_query
 
@@ -963,11 +986,11 @@ async def query_enhanced_rag(question: str,
             # 加载摘要设置
             if summarization_config is None:
                 summarization_settings = settings.get("summarization", {})
-                enable_summarization = summarization_settings.get("enabled", False)
+                enable_summarization = summarization_settings.get("enabled", True)  # 默认启用摘要
                 summarization_config = {
                     "api_key": summarization_settings.get("api_key") or os.environ.get("GEMINI_API_KEY"),
                     "model_name": summarization_settings.get("model_name", "gemini-2.5-flash-lite-preview-06-17"),
-                    "max_summary_length": summarization_settings.get("max_summary_length", 300),
+                    # 移除已废弃的max_summary_length参数
                     "temperature": summarization_settings.get("temperature", 0.3),
                     "include_sources": summarization_settings.get("include_sources", True),
                     "language": summarization_settings.get("language", "auto")

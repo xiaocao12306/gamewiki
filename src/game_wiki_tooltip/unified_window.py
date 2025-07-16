@@ -15,6 +15,8 @@ from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
 from dataclasses import dataclass, field
 
+from src.game_wiki_tooltip.i18n import t
+
 # 导入 markdown 支持
 try:
     import markdown
@@ -977,20 +979,21 @@ class ChatView(QScrollArea):
         
     def _add_welcome_message(self):
         """添加欢迎信息和推荐查询"""
-        welcome_content = """🎮 欢迎使用GameWiki智能助手！
-
-💡 **功能介绍：**
-• **Wiki搜索** - 快速查找游戏官方资料
-• **AI攻略** - 智能游戏攻略问答（需要配置API密钥）
-
-🎯 **推荐查询示例：**
-• 地狱潜兵2：`虫族配装推荐` / `火焰武器搭配`
-• 艾尔登法环：`Boss攻略` / `装备推荐`
-• 星露谷物语：`农场布局` / `好感度攻略`
-• 饥荒联机版：`生存技巧` / `角色选择`
-
-📝 **使用提示：**
-直接输入您的问题，系统会自动判断使用Wiki搜索还是AI攻略功能。"""
+        # 构建多语言欢迎消息
+        welcome_parts = [
+            t('welcome_title'),
+            "",
+            t('welcome_features'),
+            t('welcome_wiki_search'),
+            t('welcome_ai_guide'),
+            "",
+            t('welcome_examples'),
+            t('welcome_helldivers'),
+            t('welcome_eldenring'),
+            t('welcome_dst')
+        ]
+        
+        welcome_content = "\n".join(welcome_parts)
         
         # 创建欢迎消息
         welcome_message = ChatMessage(

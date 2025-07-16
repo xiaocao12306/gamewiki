@@ -38,31 +38,92 @@ class TranslationManager:
         self._load_translations()
     
     def _load_translations(self):
-        """加载翻译文件"""
+        """加载翻译文件，支持开发阶段的自动更新"""
         try:
-            # 加载默认语言（英语）作为fallback
-            default_file = self._get_translation_file(DEFAULT_LANGUAGE)
-            if default_file.exists():
-                with open(default_file, 'r', encoding='utf-8') as f:
-                    self.fallback_translations = json.load(f)
-            else:
-                # 如果没有翻译文件，创建默认的英语翻译
-                self.fallback_translations = self._create_default_translations()
-                self._save_translation_file(DEFAULT_LANGUAGE, self.fallback_translations)
+            # 获取代码中定义的最新翻译
+            latest_defaults = self._create_default_translations()
             
-            # 加载当前语言的翻译
-            current_file = self._get_translation_file(self.current_language)
-            if current_file.exists():
-                with open(current_file, 'r', encoding='utf-8') as f:
-                    self.translations[self.current_language] = json.load(f)
-            elif self.current_language != DEFAULT_LANGUAGE:
-                # 如果当前语言不是默认语言且没有翻译文件，创建一个基于默认语言的翻译文件
-                self.translations[self.current_language] = self._create_language_translations(self.current_language)
-                self._save_translation_file(self.current_language, self.translations[self.current_language])
+            # 加载默认语言（英语）
+            default_file = self._get_translation_file(DEFAULT_LANGUAGE)
+            
+            if default_file.exists():
+                # 读取现有文件
+                with open(default_file, 'r', encoding='utf-8') as f:
+                    existing_translations = json.load(f)
                 
+                # 检查是否需要更新
+                updated = False
+                
+                # 添加新键
+                for key, value in latest_defaults.items():
+                    if key not in existing_translations:
+                        existing_translations[key] = value
+                        logger.info(f"Added new translation key: {key}")
+                        updated = True
+                
+                # 移除已删除的键
+                keys_to_remove = []
+                for key in existing_translations:
+                    if key not in latest_defaults:
+                        keys_to_remove.append(key)
+                        logger.info(f"Removed obsolete translation key: {key}")
+                        updated = True
+                
+                for key in keys_to_remove:
+                    del existing_translations[key]
+                
+                # 如果有更新，保存文件
+                if updated:
+                    self._save_translation_file(DEFAULT_LANGUAGE, existing_translations)
+                    logger.info(f"Updated translation file: {default_file}")
+                
+                self.fallback_translations = existing_translations
+            else:
+                # 首次运行，创建新文件
+                self.fallback_translations = latest_defaults
+                self._save_translation_file(DEFAULT_LANGUAGE, self.fallback_translations)
+                logger.info(f"Created new translation file: {default_file}")
+            
+            # 处理当前语言（如中文）
+            if self.current_language != DEFAULT_LANGUAGE:
+                current_file = self._get_translation_file(self.current_language)
+                latest_current = self._create_language_translations(self.current_language)
+                
+                if current_file.exists():
+                    # 同样的更新逻辑
+                    with open(current_file, 'r', encoding='utf-8') as f:
+                        existing_current = json.load(f)
+                    
+                    updated = False
+                    for key, value in latest_current.items():
+                        if key not in existing_current:
+                            existing_current[key] = value
+                            logger.info(f"Added new translation key to {self.current_language}: {key}")
+                            updated = True
+                    
+                    # 移除过时的键
+                    keys_to_remove = [k for k in existing_current if k not in latest_current]
+                    for key in keys_to_remove:
+                        del existing_current[key]
+                        logger.info(f"Removed obsolete translation key from {self.current_language}: {key}")
+                        updated = True
+                    
+                    if updated:
+                        self._save_translation_file(self.current_language, existing_current)
+                        logger.info(f"Updated translation file: {current_file}")
+                    
+                    self.translations[self.current_language] = existing_current
+                else:
+                    self.translations[self.current_language] = latest_current
+                    self._save_translation_file(self.current_language, latest_current)
+                    logger.info(f"Created new translation file: {current_file}")
+                    
         except Exception as e:
             logger.error(f"Failed to load translations: {e}")
+            # 降级到内存中的翻译
             self.fallback_translations = self._create_default_translations()
+            if self.current_language != DEFAULT_LANGUAGE:
+                self.translations[self.current_language] = self._create_language_translations(self.current_language)
     
     def _get_translation_file(self, language: str) -> Path:
         """获取翻译文件路径"""

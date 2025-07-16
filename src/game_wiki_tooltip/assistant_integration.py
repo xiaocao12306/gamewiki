@@ -98,10 +98,12 @@ class QueryWorker(QThread):
                 )
                 self.wiki_result.emit(search_url, search_title)
             else:
-                # 对于攻略查询，使用处理后的查询进行RAG搜索
+                # 对于攻略查询，同时传递原始查询和处理后的查询
+                processed_query = intent.rewritten_query or intent.translated_query or self.query
                 await self.rag_integration.generate_guide_async(
-                    intent.rewritten_query or intent.translated_query or self.query,  # 使用处理后的查询
+                    processed_query,  # 用于检索的查询
                     game_context=self.game_context,
+                    original_query=self.query,  # 原始查询，用于答案生成
                     skip_query_processing=True  # 跳过RAG内部的查询处理
                 )
                 
@@ -609,7 +611,7 @@ class RAGIntegration(QObject):
         else:
             logger.warning("⚠️ 收到wiki页面回调，但没有待更新的wiki信息")
             
-    async def generate_guide_async(self, query: str, game_context: str = None, skip_query_processing: bool = False):
+    async def generate_guide_async(self, query: str, game_context: str = None, original_query: str = None, skip_query_processing: bool = False):
         """Generate guide response with streaming"""
         # 如果在受限模式下，显示相应的提示信息
         if self.limited_mode:
@@ -708,10 +710,12 @@ class RAGIntegration(QObject):
         try:
             # Query RAG engine (it's already async)
             logger.info(f"🔍 直接使用处理后的查询进行RAG搜索: '{query}'")
+            if original_query:
+                logger.info(f"📝 同时使用原始查询进行答案生成: '{original_query}'")
             if skip_query_processing:
                 logger.info("⚡ 跳过RAG内部查询处理，使用已优化的查询")
             
-            result = await self.rag_engine.query(query)
+            result = await self.rag_engine.query(query, original_query=original_query)
             
             # 检查是否需要切换到wiki模式
             if result and result.get("fallback_to_wiki"):
