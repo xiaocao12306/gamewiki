@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Optional, Any
 import google.generativeai as genai
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,13 @@ class GeminiSummarizer:
         print(f"   - 知识块数量: {len(chunks)}")
         print(f"   - 上下文: {context or 'None'}")
         print(f"   - 模型: {self.config.model_name}")
+        
+        # Store game context for video source extraction
+        if context:
+            self.current_game_name = context
+            print(f"🎮 [SUMMARY-DEBUG] Stored game name: {self.current_game_name}")
+        else:
+            print(f"⚠️ [SUMMARY-DEBUG] No context provided, game name not stored")
         
         if not chunks:
             print(f"⚠️ [SUMMARY-DEBUG] 没有知识块可用于摘要")
@@ -280,6 +288,11 @@ Your response:"""
     ) -> Dict[str, Any]:
         """Format the summary response with metadata"""
         
+        print(f"📦 [FORMAT-DEBUG] Formatting summary response")
+        print(f"   - Has current_game_name: {hasattr(self, 'current_game_name')}")
+        if hasattr(self, 'current_game_name'):
+            print(f"   - current_game_name value: {self.current_game_name}")
+        
         # Extract source references if present
         sources = []
         if self.config.include_sources:
@@ -291,6 +304,15 @@ Your response:"""
                         "topic": chunk.get("topic", ""),
                         "score": chunk.get("score", 0)
                     })
+        
+        # Add video sources to the summary
+        print(f"🎬 [FORMAT-DEBUG] Extracting video sources...")
+        video_sources_text = self._extract_video_sources(chunks, summary_text)
+        if video_sources_text:
+            print(f"✅ [FORMAT-DEBUG] Video sources found, adding to summary")
+            summary_text = summary_text.strip() + "\n\n" + video_sources_text
+        else:
+            print(f"❌ [FORMAT-DEBUG] No video sources returned")
         
         return {
             "summary": summary_text.strip(),
@@ -342,6 +364,129 @@ Your response:"""
             "model": "fallback",
             "language": self._detect_language(summary)
         }
+    
+    def _extract_video_sources(self, chunks: List[Dict[str, Any]], summary_text: str) -> str:
+        """Extract video source information from chunks"""
+        try:
+            # Get game name from config
+            game_name = None
+            if hasattr(self, 'current_game_name'):
+                game_name = self.current_game_name
+            
+            print(f"🎥 [VIDEO-DEBUG] Starting video source extraction")
+            print(f"   - Game name: {game_name}")
+            print(f"   - Number of chunks: {len(chunks)}")
+            
+            if not game_name:
+                logger.debug("No game name available for video source extraction")
+                print(f"❌ [VIDEO-DEBUG] No game name available")
+                return ""
+            
+            # Load original knowledge chunk file
+            # __file__ is in src/game_wiki_tooltip/ai/, need to go up to project root
+            kb_path = Path(__file__).parent.parent.parent.parent / "data" / "knowledge_chunk" / f"{game_name}.json"
+            print(f"📁 [VIDEO-DEBUG] Looking for knowledge chunk file: {kb_path}")
+            
+            if not kb_path.exists():
+                logger.debug(f"Knowledge chunk file not found: {kb_path}")
+                print(f"❌ [VIDEO-DEBUG] Knowledge chunk file not found")
+                return ""
+            
+            with open(kb_path, 'r', encoding='utf-8') as f:
+                kb_data = json.load(f)
+            
+            # Collect video sources
+            video_sources = {}  # URL -> {title, timestamps}
+            
+            # Check which chunks were actually used in the summary
+            used_chunks = []
+            for chunk in chunks:
+                # Check if chunk content appears in summary or has high score
+                chunk_keywords = chunk.get("keywords", [])
+                chunk_topic = chunk.get("topic", "")
+                chunk_score = chunk.get("score", 0)
+                
+                # Simple heuristic: check if keywords or topic appear in summary
+                keyword_match = any(keyword.lower() in summary_text.lower() for keyword in chunk_keywords)
+                topic_match = chunk_topic.lower() in summary_text.lower()
+                high_score = chunk_score > 0.5
+                
+                if keyword_match or topic_match or high_score:
+                    used_chunks.append(chunk)
+                    print(f"✅ [VIDEO-DEBUG] Chunk used: {chunk_topic} (score: {chunk_score:.3f})")
+                    print(f"   - Keyword match: {keyword_match}, Topic match: {topic_match}, High score: {high_score}")
+            
+            print(f"📊 [VIDEO-DEBUG] Used chunks count: {len(used_chunks)}")
+            
+            # Match chunks with original data using topic matching
+            for chunk in used_chunks:
+                chunk_topic = chunk.get("topic", "")
+                
+                print(f"🔍 [VIDEO-DEBUG] Matching chunk by topic: {chunk_topic}")
+                
+                if not chunk_topic:
+                    print(f"⚠️ [VIDEO-DEBUG] Chunk missing topic, skipping")
+                    continue
+                
+                # Search in all videos' knowledge chunks
+                for video_entry in kb_data:
+                    video_info = video_entry.get("video_info", {})
+                    if not video_info:
+                        continue
+                    
+                    for kb_chunk in video_entry.get("knowledge_chunks", []):
+                        # Match by topic only
+                        if kb_chunk.get("topic", "").strip() == chunk_topic.strip():
+                            
+                            video_url = video_info.get("url", "")
+                            if video_url:
+                                if video_url not in video_sources:
+                                    video_sources[video_url] = {
+                                        "title": video_info.get("title", "Unknown Video"),
+                                        "timestamps": []
+                                    }
+                                
+                                # Add timestamp
+                                timestamp = kb_chunk.get("timestamp", {})
+                                start = timestamp.get("start", "")
+                                end = timestamp.get("end", "")
+                                if start and end:
+                                    video_sources[video_url]["timestamps"].append(f"{start}-{end}")
+            
+            # Format video sources
+            print(f"📹 [VIDEO-DEBUG] Found {len(video_sources)} video sources")
+            
+            if not video_sources:
+                print(f"❌ [VIDEO-DEBUG] No video sources found")
+                return ""
+            
+            # Build the sources text
+            sources_lines = ["---", "<small>", "📺 **信息来源：**"]
+            
+            for url, info in video_sources.items():
+                title = info["title"]
+                timestamps = info["timestamps"]
+                
+                # Sort timestamps
+                timestamps = sorted(set(timestamps))  # Remove duplicates and sort
+                
+                # Format timestamps
+                if timestamps:
+                    timestamp_str = "; ".join(timestamps)
+                    sources_lines.append(f"- [{title} ({timestamp_str})]({url})")
+                else:
+                    sources_lines.append(f"- [{title}]({url})")
+            
+            sources_lines.append("</small>")
+            
+            return "\n".join(sources_lines)
+            
+        except Exception as e:
+            logger.error(f"Error extracting video sources: {e}")
+            print(f"❌ [VIDEO-DEBUG] Error extracting video sources: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
     
     def _detect_language(self, text: str) -> str:
         """Simple language detection based on character composition"""

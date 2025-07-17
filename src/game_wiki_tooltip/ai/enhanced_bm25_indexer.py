@@ -123,6 +123,7 @@ class EnhancedBM25Indexer:
     def preprocess_text(self, text: str) -> List[str]:
         """
         增强文本预处理，重点处理战术信息
+        优化英文分词和单复数匹配
         
         Args:
             text: 输入文本
@@ -139,8 +140,42 @@ class EnhancedBM25Indexer:
         # 移除特殊字符，但保留中文、英文、数字和空格
         text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9\s]', ' ', text)
         
-        # 中文分词
-        tokens = list(jieba.cut(text))
+        # 检测是否包含中文
+        has_chinese = bool(re.search(r'[\u4e00-\u9fa5]', text))
+        
+        # 分词处理
+        if has_chinese:
+            # 包含中文，使用jieba分词
+            tokens = list(jieba.cut(text))
+        else:
+            # 纯英文，使用空格分词（更准确）
+            tokens = text.split()
+        
+        # 简单的英文词干提取
+        def simple_stem(word):
+            """简单的词干提取，处理常见的英文变形"""
+            if len(word) <= 2:
+                return word
+                
+            # 处理复数形式
+            if word.endswith('s') and len(word) > 3:
+                # 特殊复数形式
+                if word.endswith('ies') and len(word) > 4:
+                    return word[:-3] + 'y'  # strategies -> strategy
+                elif word.endswith('es') and len(word) > 4:
+                    return word[:-2]  # boxes -> box
+                else:
+                    return word[:-1]  # recommendations -> recommendation
+                    
+            # 处理其他常见后缀
+            if word.endswith('ing') and len(word) > 5:
+                return word[:-3]  # running -> run
+            if word.endswith('ed') and len(word) > 4:
+                return word[:-2]  # played -> play
+            if word.endswith('ly') and len(word) > 4:
+                return word[:-2]  # quickly -> quick
+                
+            return word
         
         # 处理token并应用权重
         weighted_tokens = []
@@ -152,12 +187,25 @@ class EnhancedBM25Indexer:
                 token not in self.stop_words and 
                 (len(token) > 1 or token.isdigit())):
                 
-                # 检查是否是高权重关键词
-                weight = self.keyword_weights.get(token, 1.0)
-                
-                # 根据权重重复token
-                repeat_count = int(weight)
-                weighted_tokens.extend([token] * repeat_count)
+                # 对英文单词应用词干提取
+                if not re.search(r'[\u4e00-\u9fa5]', token):  # 非中文
+                    stemmed = simple_stem(token)
+                    
+                    # 添加词干形式
+                    weight = self.keyword_weights.get(stemmed, self.keyword_weights.get(token, 1.0))
+                    repeat_count = int(weight)
+                    weighted_tokens.extend([stemmed] * repeat_count)
+                    
+                    # 如果词干与原词不同，也添加原词
+                    if stemmed != token:
+                        weight_orig = self.keyword_weights.get(token, 1.0)
+                        repeat_count_orig = int(weight_orig)
+                        weighted_tokens.extend([token] * repeat_count_orig)
+                else:
+                    # 中文词汇直接处理
+                    weight = self.keyword_weights.get(token, 1.0)
+                    repeat_count = int(weight)
+                    weighted_tokens.extend([token] * repeat_count)
         
         return weighted_tokens
     
@@ -293,7 +341,7 @@ class EnhancedBM25Indexer:
             logger.warning("增强BM25索引未初始化")
             return []
             
-        # 预处理查询
+        # 预处理查询 - 使用与索引构建相同的逻辑
         normalized_query = self._normalize_enemy_name(query.lower())
         tokenized_query = self.preprocess_text(normalized_query)
         
@@ -325,7 +373,7 @@ class EnhancedBM25Indexer:
                 match_info = {
                     "topic": chunk.get("topic", ""),
                     "enemy": self._extract_enemy_from_chunk(chunk),
-                    "relevance_reason": self._explain_relevance(tokenized_query, chunk)
+                    "relevance_reason": self._explain_relevance(tokenized_query, chunk, original_query=query)
                 }
                 result = {
                     "chunk": chunk,
@@ -392,11 +440,32 @@ class EnhancedBM25Indexer:
                 
         return "Unknown"
     
-    def _explain_relevance(self, query_tokens: List[str], chunk: Dict[str, Any]) -> str:
-        """解释匹配相关性"""
+    def _explain_relevance(self, query_tokens: List[str], chunk: Dict[str, Any], original_query: str = None) -> str:
+        """解释匹配相关性，提供更详细的匹配分析"""
         chunk_text = self.build_enhanced_text(chunk).lower()
         
         matched_terms = []
+        original_terms = []
+        
+        # 如果有原始查询，分析原始查询词的匹配情况
+        if original_query:
+            original_tokens = original_query.lower().split()
+            for token in original_tokens:
+                # 检查原始词和词干形式的匹配
+                if token in chunk_text:
+                    if token in self.keyword_weights:
+                        original_terms.append(f"{token}(权重:{self.keyword_weights[token]})")
+                    else:
+                        original_terms.append(token)
+                else:
+                    # 检查词干匹配
+                    # 简单词干提取逻辑（与preprocess_text中的一致）
+                    if token.endswith('s') and len(token) > 3:
+                        stemmed = token[:-1]
+                        if stemmed in chunk_text:
+                            original_terms.append(f"{token}->{stemmed}")
+        
+        # 分析处理后的token匹配
         for token in set(query_tokens):  # 去重
             if token in chunk_text:
                 if token in self.keyword_weights:
@@ -404,7 +473,15 @@ class EnhancedBM25Indexer:
                 else:
                     matched_terms.append(token)
         
-        return f"匹配: {', '.join(matched_terms[:5])}"  # 限制显示数量
+        # 构建匹配说明
+        if original_terms and matched_terms:
+            return f"匹配: {', '.join(original_terms[:3])} | 处理后: {', '.join(matched_terms[:3])}"
+        elif matched_terms:
+            return f"匹配: {', '.join(matched_terms[:5])}"
+        elif original_terms:
+            return f"匹配: {', '.join(original_terms[:5])}"
+        else:
+            return "无明显匹配"
     
     def save_index(self, path: str) -> None:
         """保存增强BM25索引"""

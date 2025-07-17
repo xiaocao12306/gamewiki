@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -129,7 +130,6 @@ dmypy.json
 .pyre/
 
 # Project specific
-*.spec
 app.spec
 *.exe
 *.msi
@@ -157,9 +157,12 @@ temp/
 tmp/
 
 # Log files
-*.log
 logs/
 
 # Test files
+test/
 test_*.py
 *_test.py
+
+# Claude editor settings
+.claude/

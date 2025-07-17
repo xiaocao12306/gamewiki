@@ -78,20 +78,12 @@ def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     title_to_vectordb_mapping = {
         "don't starve together": "dst",
         "don't starve": "dst",
-        "饥荒": "dst",
         "helldivers 2": "helldiver2",
-        "地狱潜兵2": "helldiver2",
-        "地狱潜兵": "helldiver2",
         "elden ring": "eldenring",
-        "艾尔登法环": "eldenring",
-        "老头环": "eldenring",
         "civilization vi": "civilization6",
         "civilization 6": "civilization6",
-        "文明6": "civilization6",
         "7 days to die": "7daystodie",
-        "七日杀": "7daystodie",
-        "stardew valley": "stardewvalley",
-        "星露谷物语": "stardewvalley",
+        "stardew valley": "stardewvalley"
     }
     
     # 尝试精确匹配
@@ -227,6 +219,9 @@ class EnhancedRagQuery:
                     self.metadata = self.vector_store["metadata"]
                 
                 logger.info(f"向量库加载完成: {self.config['chunk_count']} 个知识块")
+                
+                # Store game name from initial parameter
+                self.game_name = game_name
                 
                 # 初始化混合检索器
                 if self.enable_hybrid_search:
@@ -696,6 +691,14 @@ class EnhancedRagQuery:
             game_context = None
             if hasattr(self, 'config') and self.config:
                 game_context = self.config.get("game_name", None)
+            
+            # If no game_name in config, use the stored game_name from initialization
+            if not game_context and hasattr(self, 'game_name'):
+                game_context = self.game_name
+            
+            # Set game name in summarizer for video source extraction
+            if game_context and hasattr(self.summarizer, 'current_game_name'):
+                self.summarizer.current_game_name = game_context
             
             # 调用摘要器生成结构化回复
             summary_result = self.summarizer.summarize_chunks(

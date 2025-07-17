@@ -140,13 +140,13 @@ class TransitionMessages:
 
 def detect_markdown_content(text: str) -> bool:
     """
-    检测文本是否包含markdown格式
+    检测文本是否包含markdown格式或HTML格式
     
     Args:
         text: 要检测的文本
         
     Returns:
-        True如果文本包含markdown格式，否则False
+        True如果文本包含markdown或HTML格式，否则False
     """
     if not text:
         return False
@@ -163,7 +163,21 @@ def detect_markdown_content(text: str) -> bool:
         r'\[.*?\]\(.*?\)', # 链接 [text](url)
     ]
     
+    # 检测HTML标签（特别是视频源中使用的标签）
+    html_patterns = [
+        r'<small.*?>.*?</small>',  # <small>标签
+        r'<a\s+.*?href.*?>.*?</a>', # <a>链接标签
+        r'<[^>]+>',  # 其他HTML标签
+        r'📺\s*\*\*信息来源：\*\*',  # 视频源标题
+    ]
+    
+    # 检查markdown模式
     for pattern in markdown_patterns:
+        if re.search(pattern, text, re.MULTILINE | re.DOTALL):
+            return True
+    
+    # 检查HTML模式        
+    for pattern in html_patterns:
         if re.search(pattern, text, re.MULTILINE | re.DOTALL):
             return True
             
@@ -172,42 +186,128 @@ def detect_markdown_content(text: str) -> bool:
 
 def convert_markdown_to_html(text: str) -> str:
     """
-    将markdown文本转换为HTML
+    将markdown文本转换为HTML，同时保持已有的HTML标签
     
     Args:
-        text: markdown文本
+        text: markdown文本或混合HTML内容
         
     Returns:
         转换后的HTML文本
     """
-    if not MARKDOWN_AVAILABLE or not text:
+    if not text:
         return text
         
     try:
-        # 配置markdown转换器，使用基础扩展（避免依赖可能不存在的扩展）
-        available_extensions = []
+        # 检查是否包含HTML标签（特别是视频源部分）
+        has_html_tags = bool(re.search(r'<[^>]+>', text, re.MULTILINE | re.DOTALL))
         
-        # 尝试添加可用的扩展
-        try:
-            import markdown.extensions.extra
-            available_extensions.append('extra')
-        except ImportError:
-            pass
-            
-        try:
-            import markdown.extensions.nl2br
-            available_extensions.append('nl2br')
-        except ImportError:
-            pass
-            
-        # 如果没有可用的扩展，使用基础配置
-        if available_extensions:
-            md = markdown.Markdown(extensions=available_extensions)
+        if has_html_tags:
+            # 检查是否是混合内容（Markdown + HTML视频源）
+            video_source_start = text.find('---\n<small>')
+            if video_source_start != -1:
+                # 分离Markdown和HTML部分
+                markdown_content = text[:video_source_start].strip()
+                html_content = text[video_source_start:].strip()
+                
+                # 处理Markdown部分
+                processed_markdown = ""
+                if markdown_content:
+                    if MARKDOWN_AVAILABLE:
+                        # 使用markdown库处理
+                        available_extensions = []
+                        try:
+                            import markdown.extensions.extra
+                            available_extensions.append('extra')
+                        except ImportError:
+                            pass
+                        try:
+                            import markdown.extensions.nl2br
+                            available_extensions.append('nl2br')
+                        except ImportError:
+                            pass
+                        
+                        if available_extensions:
+                            md = markdown.Markdown(extensions=available_extensions)
+                        else:
+                            md = markdown.Markdown()
+                        
+                        processed_markdown = md.convert(markdown_content)
+                    else:
+                        # 没有markdown库时，处理基本格式
+                        processed_markdown = markdown_content.replace('\n', '<br/>')
+                        processed_markdown = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', processed_markdown)
+                        processed_markdown = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_markdown)
+                        processed_markdown = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', processed_markdown)
+                
+                # 合并处理后的内容
+                combined_content = processed_markdown
+                if html_content:
+                    combined_content += "\n\n" + html_content
+                
+                # 应用样式包装
+                styled_html = f"""
+                <div style="
+                    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 100%;
+                    word-wrap: break-word;
+                ">
+                    {combined_content}
+                </div>
+                """
+                return styled_html
+            else:
+                # 纯HTML内容，直接包装
+                styled_html = f"""
+                <div style="
+                    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 100%;
+                    word-wrap: break-word;
+                ">
+                    {text}
+                </div>
+                """
+                return styled_html
+        
+        # 如果没有HTML标签，进行常规markdown处理
+        if not MARKDOWN_AVAILABLE:
+            # 没有markdown库时，至少处理一些基本格式
+            html = text.replace('\n', '<br/>')
+            # 处理粗体
+            html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
+            # 处理斜体
+            html = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html)
+            # 处理链接
+            html = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', html)
         else:
-            md = markdown.Markdown()
-        
-        # 转换markdown到HTML
-        html = md.convert(text)
+            # 使用markdown库处理
+            # 配置markdown转换器，使用基础扩展（避免依赖可能不存在的扩展）
+            available_extensions = []
+            
+            # 尝试添加可用的扩展
+            try:
+                import markdown.extensions.extra
+                available_extensions.append('extra')
+            except ImportError:
+                pass
+                
+            try:
+                import markdown.extensions.nl2br
+                available_extensions.append('nl2br')
+            except ImportError:
+                pass
+                
+            # 如果没有可用的扩展，使用基础配置
+            if available_extensions:
+                md = markdown.Markdown(extensions=available_extensions)
+            else:
+                md = markdown.Markdown()
+            
+            # 转换markdown到HTML
+            html = md.convert(text)
         
         # 添加一些基础样式，让HTML显示更好看
         styled_html = f"""
@@ -790,23 +890,29 @@ class StreamingMessageWidget(MessageWidget):
                 should_render = True
             
             if should_render and self.message.type == MessageType.AI_STREAMING:
-                # 只在需要时进行markdown检测（避免每次都检测）
-                if not self.is_markdown_detected:
-                    self.is_markdown_detected = detect_markdown_content(display_text)
+                # 重新检测内容格式（支持动态变化，如添加HTML视频源）
+                current_has_format = detect_markdown_content(display_text)
                 
-                # 进行阶段性markdown渲染
-                if self.is_markdown_detected:
+                # 如果检测到格式变化，更新检测状态
+                if current_has_format and not self.is_markdown_detected:
+                    self.is_markdown_detected = True
+                    print(f"🔄 [STREAMING] 检测到格式内容，切换到HTML渲染模式")
+                
+                # 进行阶段性渲染
+                if self.is_markdown_detected or current_has_format:
                     html_content = convert_markdown_to_html(display_text)
                     # 只在格式实际变化时才设置格式，避免闪烁
                     if self.current_format != Qt.TextFormat.RichText:
                         self.content_label.setTextFormat(Qt.TextFormat.RichText)
                         self.current_format = Qt.TextFormat.RichText
+                        print(f"📝 [STREAMING] 切换到RichText格式，内容长度: {len(display_text)}")
                     self.content_label.setText(html_content)
                 else:
                     # 只在格式实际变化时才设置格式，避免闪烁
                     if self.current_format != Qt.TextFormat.PlainText:
                         self.content_label.setTextFormat(Qt.TextFormat.PlainText)
                         self.current_format = Qt.TextFormat.PlainText
+                        print(f"📝 [STREAMING] 切换到PlainText格式，内容长度: {len(display_text)}")
                     self.content_label.setText(display_text)
                 
                 # 更新渲染状态
@@ -815,7 +921,7 @@ class StreamingMessageWidget(MessageWidget):
             else:
                 # 不需要渲染时，保持当前格式但更新文本
                 if self.is_markdown_detected:
-                    # 如果已检测到markdown，继续使用HTML格式
+                    # 如果已检测到markdown/HTML，继续使用HTML格式
                     html_content = convert_markdown_to_html(display_text)
                     self.content_label.setText(html_content)
                 else:
@@ -832,23 +938,25 @@ class StreamingMessageWidget(MessageWidget):
         else:
             self.typing_timer.stop()
             
-            # 最终完成时，转换消息类型并进行最终markdown渲染
+            # 最终完成时，转换消息类型并进行最终渲染
             if self.message.type == MessageType.AI_STREAMING and self.full_text:
                 # 将消息类型改为AI_RESPONSE，表示流式输出已完成
                 self.message.type = MessageType.AI_RESPONSE
                 
-                # 只在异常情况下输出调试信息
-                if len(self.full_text) > 5000:  # 内容特别长时输出信息
-                    print(f"📝 长文本流式消息完成，文本长度: {len(self.full_text)} 字符")
+                # 输出完成信息
+                has_video_sources = '📺 **信息来源：**' in self.full_text
+                print(f"🎬 [STREAMING] 流式消息完成，长度: {len(self.full_text)} 字符，包含视频源: {has_video_sources}")
                 
-                # 进行最终的markdown检测和转换
+                # 进行最终的格式检测和转换
                 if detect_markdown_content(self.full_text):
                     html_content = convert_markdown_to_html(self.full_text)
                     self.content_label.setText(html_content)
                     self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
                 else:
                     self.content_label.setText(self.full_text)
                     self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+                    print(f"✅ [STREAMING] 最终渲染完成，使用PlainText格式")
                 
                 # 更新几何而不是强制调整大小，避免内容被截断
                 self.content_label.updateGeometry()

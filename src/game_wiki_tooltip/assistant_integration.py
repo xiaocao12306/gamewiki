@@ -738,15 +738,45 @@ class RAGIntegration(QObject):
                 
             # Get the answer from the result
             answer = result["answer"]
-            
-            # Emit the answer in chunks to simulate streaming
-            # Split the answer into lines for better streaming experience
-            lines = answer.split('\n')
-            for line in lines:
-                if line.strip():  # Only emit non-empty lines
-                    self.streaming_chunk_ready.emit(line + '\n')
-                    # Small delay to simulate streaming
-                    await asyncio.sleep(0.05)
+
+            # 检查答案是否包含HTML格式的视频源（需要保持完整性）
+            if '<small>' in answer and '📺 **信息来源：**' in answer:
+                # 包含HTML格式的视频源，需要特殊处理以保持格式完整
+                logger.info("🎬 检测到HTML格式的视频源，保持格式完整性")
+                
+                # 查找视频源部分的起始位置
+                video_source_start = answer.find('---\n<small>')
+                if video_source_start != -1:
+                    # 分离主要内容和视频源
+                    main_content = answer[:video_source_start].strip()
+                    video_sources = answer[video_source_start:].strip()
+                    
+                    # 先发送主要内容（可以按行分割）
+                    if main_content:
+                        main_lines = main_content.split('\n')
+                        for line in main_lines:
+                            if line.strip():
+                                self.streaming_chunk_ready.emit(line + '\n')
+                                await asyncio.sleep(0.05)
+                    
+                    # 添加分隔空行
+                    self.streaming_chunk_ready.emit('\n')
+                    await asyncio.sleep(0.1)
+                    
+                    # 完整发送视频源部分，保持HTML格式
+                    self.streaming_chunk_ready.emit(video_sources)
+                else:
+                    # 如果找不到标准格式，完整发送整个答案
+                    logger.warning("⚠️ 视频源格式异常，完整发送答案")
+                    self.streaming_chunk_ready.emit(answer)
+            else:
+                # 普通答案，按行分割发送（原有逻辑）
+                lines = answer.split('\n')
+                for line in lines:
+                    if line.strip():  # Only emit non-empty lines
+                        self.streaming_chunk_ready.emit(line + '\n')
+                        # Small delay to simulate streaming
+                        await asyncio.sleep(0.05)
                     
         except Exception as e:
             logger.error(f"Guide generation failed: {e}")
