@@ -46,5 +46,189 @@
     "Civilization VI": {
         "BaseUrl": "civ6.huijiwiki.com",
         "NeedsSearch": true
+    },
+    "DARK SOULS III": {
+        "BaseUrl": "http://darksouls3.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "BLOODBORNE": {
+        "BaseUrl": "https://www.bloodborne-wiki.com/",
+        "NeedsSearch": true
+    },
+    "SEKIRO: SHADOWS DIE TWICE": {
+        "BaseUrl": "https://sekiroshadowsdietwice.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "LIES OF P": {
+        "BaseUrl": "https://liesofp.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "NIOH 2": {
+        "BaseUrl": "https://nioh2.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "REMNANT II": {
+        "BaseUrl": "https://remnant2.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "THE WITCHER 3: WILD HUNT": {
+        "BaseUrl": "https://witcher.fandom.com/wiki/The_Witcher_3:_Wild_Hunt",
+        "NeedsSearch": true
+    },
+    "THE ELDER SCROLLS V: SKYRIM": {
+        "BaseUrl": "https://en.uesp.net/wiki/Skyrim:Skyrim",
+        "NeedsSearch": true
+    },
+    "BALDUR'S GATE 3": {
+        "BaseUrl": "https://baldursgate3.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "CYBERPUNK 2077": {
+        "BaseUrl": "https://cyberpunk2077.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "FALLOUT 4": {
+        "BaseUrl": "https://fallout.fandom.com/wiki/Fallout_4",
+        "NeedsSearch": true
+    },
+    "DIVINITY: ORIGINAL SIN 2": {
+        "BaseUrl": "https://divinityoriginalsin2.wiki.fextralife.com",
+        "NeedsSearch": true
+    },
+    "KINGDOM COME: DELIVERANCE": {
+        "BaseUrl": "https://kingdom-come-deliverance.fandom.com",
+        "NeedsSearch": true
+    },
+    "PERSONA 5 ROYAL": {
+        "BaseUrl": "https://megatenwiki.com/wiki/Persona_5_Royal",
+        "NeedsSearch": true
+    },
+    "THE LEGEND OF ZELDA: TEARS OF THE KINGDOM": {
+        "BaseUrl": "https://www.ign.com/wikis/the-legend-of-zelda-tears-of-the-kingdom",
+        "NeedsSearch": true
+    },
+    "THE LEGEND OF ZELDA: BREATH OF THE WILD": {
+        "BaseUrl": "https://www.ign.com/wikis/the-legend-of-zelda-breath-of-the-wild",
+        "NeedsSearch": true
+    },
+    "WORLD OF WARCRAFT": {
+        "BaseUrl": "https://www.wowhead.com/",
+        "NeedsSearch": true
+    },
+    "FINAL FANTASY XIV": {
+        "BaseUrl": "https://ffxiv.consolegameswiki.com/wiki/FF14_Wiki",
+        "NeedsSearch": true
+    },
+    "THE ELDER SCROLLS ONLINE": {
+        "BaseUrl": "https://en.uesp.net/wiki/Online:Online",
+        "NeedsSearch": true
+    },
+    "GUILD WARS 2": {
+        "BaseUrl": "https://wiki.guildwars2.com/wiki/Main_Page",
+        "NeedsSearch": true
+    },
+    "DESTINY 2": {
+        "BaseUrl": "https://www.d2foundry.gg/",
+        "NeedsSearch": true
+    },
+    "WARFRAME": {
+        "BaseUrl": "https://warframe.fandom.com/wiki/WARFRAME_Wiki",
+        "NeedsSearch": true
+    },
+    "PATH OF EXILE": {
+        "BaseUrl": "https://www.poewiki.net/wiki/Path_of_Exile_Wiki",
+        "NeedsSearch": true
+    },
+    "BLACK DESERT ONLINE": {
+        "BaseUrl": "https://www.blackdesertfoundry.com/",
+        "NeedsSearch": true
+    },
+    "ESCAPE FROM TARKOV": {
+        "BaseUrl": "https://escapefromtarkov.wiki.gg/wiki/Escape_from_Tarkov_Wiki",
+        "NeedsSearch": true
+    },
+    "OLD SCHOOL RUNESCAPE": {
+        "BaseUrl": "https://oldschool.runescape.wiki/",
+        "NeedsSearch": true
+    },
+    "GENSHIN IMPACT": {
+        "BaseUrl": "https://genshin-impact.fandom.com/wiki/Genshin_Impact_Wiki",
+        "NeedsSearch": true
+    },
+    "MINECRAFT": {
+        "BaseUrl": "https://minecraft.wiki/w/Minecraft_Wiki",
+        "NeedsSearch": true
+    },
+    "TERRARIA": {
+        "BaseUrl": "https://terraria.wiki.gg/wiki/Terraria_Wiki",
+        "NeedsSearch": true
+    },
+    "NO MAN'S SKY": {
+        "BaseUrl": "https://nomanssky.fandom.com/wiki/No_Man%27s_Sky_Wiki",
+        "NeedsSearch": true
+    },
+    "RUST": {
+        "BaseUrl": "https://rust.fandom.com/wiki/Rust_Wiki",
+        "NeedsSearch": true
+    },
+    "ARK: SURVIVAL EVOLVED": {
+        "BaseUrl": "https://ark.wiki.gg/wiki/ARK_Survival_Evolved_Wiki",
+        "NeedsSearch": true
+    },
+    "PROJECT ZOMBOID": {
+        "BaseUrl": "https://pzwiki.net/wiki/Main_Page",
+        "NeedsSearch": true
+    },
+    "VALHEIM": {
+        "BaseUrl": "https://valheim.fandom.com/wiki/Valheim_Wiki",
+        "NeedsSearch": true
+    },
+    "SUBNAUTICA": {
+        "BaseUrl": "https://subnautica.fandom.com/wiki/Subnautica_Wiki",
+        "NeedsSearch": true
+    },
+    "FACTORIO": {
+        "BaseUrl": "https://wiki.factorio.com/",
+        "NeedsSearch": true
+    },
+    "RIMWORLD": {
+        "BaseUrl": "https://rimworldwiki.com/",
+        "NeedsSearch": true
+    },
+    "CRUSADER KINGS III": {
+        "BaseUrl": "https://ck3.paradoxwikis.com/Crusader_Kings_III_Wiki",
+        "NeedsSearch": true
+    },
+    "STELLARIS": {
+        "BaseUrl": "https://stellaris.paradoxwikis.com/Stellaris_Wiki",
+        "NeedsSearch": true
+    },
+    "HEARTS OF IRON IV": {
+        "BaseUrl": "https://hoi4.paradoxwikis.com/Hearts_of_Iron_4_Wiki",
+        "NeedsSearch": true
+    },
+    "SID MEIER'S CIVILIZATION VI": {
+        "BaseUrl": "https://civilization.fandom.com/wiki/Civilization_VI",
+        "NeedsSearch": true
+    },
+    "XCOM 2": {
+        "BaseUrl": "https://xcom.fandom.com/wiki/XCOM_2",
+        "NeedsSearch": true
+    },
+    "TOTAL WAR: WARHAMMER III": {
+        "BaseUrl": "https://totalwarhammer.fandom.com/wiki/Total_War:_Warhammer_III",
+        "NeedsSearch": true
+    },
+    "HOLLOW KNIGHT": {
+        "BaseUrl": "https://hollowknight.fandom.com/wiki/Hollow_Knight_Wiki",
+        "NeedsSearch": true
+    },
+    "DEEP ROCK GALACTIC": {
+        "BaseUrl": "https://deeprockgalactic.wiki.gg/wiki/Deep_Rock_Galactic_Wiki",
+        "NeedsSearch": true
+    },
+    "PALWORLD": {
+        "BaseUrl": "https://palworld.fandom.com/wiki/Palworld_Wiki",
+        "NeedsSearch": true
     }
 } 

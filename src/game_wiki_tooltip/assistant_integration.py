@@ -40,6 +40,7 @@ class QueryIntent:
     confidence: float
     rewritten_query: Optional[str] = None
     translated_query: Optional[str] = None  # 添加翻译后的查询字段
+    unified_query_result: Optional[object] = None  # 完整的统一查询结果
 
 
 class QueryWorker(QThread):
@@ -104,7 +105,8 @@ class QueryWorker(QThread):
                     processed_query,  # 用于检索的查询
                     game_context=self.game_context,
                     original_query=self.query,  # 原始查询，用于答案生成
-                    skip_query_processing=True  # 跳过RAG内部的查询处理
+                    skip_query_processing=True,  # 跳过RAG内部的查询处理
+                    unified_query_result=intent.unified_query_result  # 传递完整的统一查询结果
                 )
                 
         except Exception as e:
@@ -391,12 +393,14 @@ class RAGIntegration(QObject):
             logger.info(f"统一处理成功: '{query}' -> 意图: {result.intent} (置信度: {result.confidence:.3f})")
             logger.info(f"  翻译结果: '{result.translated_query}'")
             logger.info(f"  重写结果: '{result.rewritten_query}'")
+            logger.info(f"  BM25优化: '{result.bm25_optimized_query}'")
             
             return QueryIntent(
                 intent_type=result.intent,
                 confidence=result.confidence,
                 rewritten_query=result.rewritten_query,
-                translated_query=result.translated_query  # 添加翻译后的查询
+                translated_query=result.translated_query,  # 添加翻译后的查询
+                unified_query_result=result  # 传递完整的统一查询结果
             )
             
         except Exception as e:
@@ -611,8 +615,16 @@ class RAGIntegration(QObject):
         else:
             logger.warning("⚠️ 收到wiki页面回调，但没有待更新的wiki信息")
             
-    async def generate_guide_async(self, query: str, game_context: str = None, original_query: str = None, skip_query_processing: bool = False):
-        """Generate guide response with streaming"""
+    async def generate_guide_async(self, query: str, game_context: str = None, original_query: str = None, skip_query_processing: bool = False, unified_query_result = None):
+        """Generate guide response with streaming
+        
+        Args:
+            query: 处理后的查询文本
+            game_context: 游戏上下文
+            original_query: 原始查询（用于答案生成）
+            skip_query_processing: 是否跳过RAG内部的查询处理
+            unified_query_result: 预处理的统一查询结果（来自process_query_unified）
+        """
         # 如果在受限模式下，显示相应的提示信息
         if self.limited_mode:
             logger.info("🚨 受限模式下，AI攻略功能不可用")
@@ -714,69 +726,51 @@ class RAGIntegration(QObject):
                 logger.info(f"📝 同时使用原始查询进行答案生成: '{original_query}'")
             if skip_query_processing:
                 logger.info("⚡ 跳过RAG内部查询处理，使用已优化的查询")
+            if unified_query_result:
+                logger.info(f"🔄 传递预处理的统一查询结果，避免重复处理")
+                logger.info(f"   - BM25优化查询: '{unified_query_result.bm25_optimized_query}'")
             
-            result = await self.rag_engine.query(query, original_query=original_query)
-            
-            # 检查是否需要切换到wiki模式
-            if result and result.get("fallback_to_wiki"):
-                logger.info(f"🔄 向量库不存在，自动切换到wiki模式: '{query}'")
-                self.streaming_chunk_ready.emit("💡 该游戏暂无攻略数据库，为您自动切换到Wiki搜索模式...\n\n")
+            # 直接使用流式RAG查询，在流式过程中处理所有逻辑
+            logger.info("🌊 使用流式RAG查询")
+            try:
+                has_output = False
+                # 使用真正的流式API
+                async for chunk in self.rag_engine.query_stream(
+                    question=query, 
+                    top_k=3, 
+                    original_query=original_query,
+                    unified_query_result=unified_query_result
+                ):
+                    if chunk.strip():  # 只发送非空内容
+                        has_output = True
+                        self.streaming_chunk_ready.emit(chunk)
+                        await asyncio.sleep(0.01)  # 很短的延迟以保持UI响应性
                 
-                # 自动切换到wiki搜索
-                try:
-                    search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
-                    self.wiki_result_ready.emit(search_url, search_title)
-                    self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
-                except Exception as wiki_error:
-                    logger.error(f"自动Wiki搜索失败: {wiki_error}")
-                    self.streaming_chunk_ready.emit("❌ 自动Wiki搜索失败，请手动点击Wiki搜索按钮\n")
+                # 如果没有任何输出，可能需要切换到wiki模式
+                if not has_output:
+                    logger.info(f"🔄 RAG查询无输出，可能需要切换到wiki模式: '{query}'")
+                    self.streaming_chunk_ready.emit("💡 该游戏暂无攻略数据库，为您自动切换到Wiki搜索模式...\n\n")
+                    
+                    # 自动切换到wiki搜索
+                    try:
+                        search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+                        self.wiki_result_ready.emit(search_url, search_title)
+                        self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                    except Exception as wiki_error:
+                        logger.error(f"自动Wiki搜索失败: {wiki_error}")
+                        self.streaming_chunk_ready.emit("❌ 自动Wiki搜索失败，请手动点击Wiki搜索按钮\n")
+                    return
+                
+                logger.info("✅ 流式RAG查询完成")
                 return
+                    
+            except Exception as e:
+                logger.error(f"流式RAG查询失败，回退到同步模式: {e}")
+                # 继续执行下面的同步逻辑作为回退
             
-            if not result or not result.get("answer"):
-                self.error_occurred.emit("No relevant guide information found. Please try rephrasing your question.")
-                return
-                
-            # Get the answer from the result
-            answer = result["answer"]
-
-            # 检查答案是否包含HTML格式的视频源（需要保持完整性）
-            if '<small>' in answer and '📺 **信息来源：**' in answer:
-                # 包含HTML格式的视频源，需要特殊处理以保持格式完整
-                logger.info("🎬 检测到HTML格式的视频源，保持格式完整性")
-                
-                # 查找视频源部分的起始位置
-                video_source_start = answer.find('---\n<small>')
-                if video_source_start != -1:
-                    # 分离主要内容和视频源
-                    main_content = answer[:video_source_start].strip()
-                    video_sources = answer[video_source_start:].strip()
-                    
-                    # 先发送主要内容（可以按行分割）
-                    if main_content:
-                        main_lines = main_content.split('\n')
-                        for line in main_lines:
-                            if line.strip():
-                                self.streaming_chunk_ready.emit(line + '\n')
-                                await asyncio.sleep(0.05)
-                    
-                    # 添加分隔空行
-                    self.streaming_chunk_ready.emit('\n')
-                    await asyncio.sleep(0.1)
-                    
-                    # 完整发送视频源部分，保持HTML格式
-                    self.streaming_chunk_ready.emit(video_sources)
-                else:
-                    # 如果找不到标准格式，完整发送整个答案
-                    logger.warning("⚠️ 视频源格式异常，完整发送答案")
-                    self.streaming_chunk_ready.emit(answer)
-            else:
-                # 普通答案，按行分割发送（原有逻辑）
-                lines = answer.split('\n')
-                for line in lines:
-                    if line.strip():  # Only emit non-empty lines
-                        self.streaming_chunk_ready.emit(line + '\n')
-                        # Small delay to simulate streaming
-                        await asyncio.sleep(0.05)
+            # 如果流式RAG查询失败，显示错误信息
+            logger.error("流式RAG查询失败，无回退选项")
+            self.error_occurred.emit("Guide generation failed. Please try again.")
                     
         except Exception as e:
             logger.error(f"Guide generation failed: {e}")

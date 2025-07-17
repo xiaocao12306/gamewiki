@@ -14,8 +14,9 @@ import logging
 import asyncio
 import json
 import numpy as np
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, AsyncGenerator
 from pathlib import Path
+import time
 
 # 导入批量嵌入处理器
 try:
@@ -574,6 +575,142 @@ class EnhancedRagQuery:
                 }
             }
     
+    def _search_hybrid_with_processed_query(self, unified_query_result, top_k: int = 3) -> Dict[str, Any]:
+        """
+        使用预处理的统一查询结果进行混合搜索
+        
+        Args:
+            unified_query_result: 统一查询处理结果对象
+            top_k: 返回结果数量
+            
+        Returns:
+            混合搜索结果（包含元数据）
+        """
+        print(f"🔍 [RAG-DEBUG] 进入混合搜索（预处理模式）: top_k={top_k}")
+        
+        if not self.hybrid_retriever:
+            print(f"⚠️ [RAG-DEBUG] 混合检索器未初始化，回退到向量搜索")
+            logger.warning("混合检索器未初始化，回退到向量搜索")
+            # 使用重写后的查询进行向量搜索
+            semantic_query = unified_query_result.rewritten_query
+            results = self._search_faiss(semantic_query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(semantic_query, top_k)
+            return {
+                "results": results,
+                "query": {
+                    "original": unified_query_result.original_query,
+                    "processed_query": semantic_query,
+                    "bm25_optimized_query": unified_query_result.bm25_optimized_query,
+                    "translation_applied": unified_query_result.translation_applied,
+                    "rewrite_applied": unified_query_result.rewrite_applied,
+                    "intent": unified_query_result.intent,
+                    "confidence": unified_query_result.confidence
+                },
+                "metadata": {
+                    "total_results": len(results),
+                    "search_type": "vector_fallback", 
+                    "fusion_method": "none",
+                    "rewrite_info": {
+                        "intent": unified_query_result.intent,
+                        "confidence": unified_query_result.confidence,
+                        "reasoning": unified_query_result.reasoning
+                    }
+                }
+            }
+        
+        # 直接调用混合检索器，禁用其内部的统一处理（避免重复处理）
+        try:
+            print(f"🚀 [RAG-DEBUG] 开始执行混合搜索（使用预处理结果）")
+            print(f"   - 语义查询: '{unified_query_result.rewritten_query}'")
+            print(f"   - BM25查询: '{unified_query_result.bm25_optimized_query}'")
+            
+            # 手动执行混合搜索流程，使用预处理的查询
+            # 向量搜索使用重写查询
+            vector_search_count = 10
+            bm25_search_count = 10
+            
+            print(f"🔍 [HYBRID-DEBUG] 开始向量搜索: query='{unified_query_result.rewritten_query}', top_k={vector_search_count}")
+            vector_results = self.hybrid_retriever.vector_retriever.search(unified_query_result.rewritten_query, vector_search_count)
+            print(f"📊 [HYBRID-DEBUG] 向量搜索结果数量: {len(vector_results)}")
+            
+            # BM25搜索使用优化查询
+            bm25_results = []
+            if self.hybrid_retriever.bm25_indexer:
+                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索:")
+                print(f"   - 原始查询: '{unified_query_result.original_query}'")
+                print(f"   - 语义查询: '{unified_query_result.rewritten_query}'")
+                print(f"   - BM25优化: '{unified_query_result.bm25_optimized_query}'")
+                print(f"   - 检索数量: {bm25_search_count}")
+                
+                bm25_results = self.hybrid_retriever.bm25_indexer.search(unified_query_result.bm25_optimized_query, bm25_search_count)
+                print(f"📊 [HYBRID-DEBUG] BM25搜索结果数量: {len(bm25_results)}")
+            else:
+                print(f"⚠️ [HYBRID-DEBUG] BM25索引器未初始化，跳过BM25搜索")
+            
+            # 分数融合
+            final_result_count = 5
+            print(f"🔄 [HYBRID-DEBUG] 开始分数融合: 方法={self.hybrid_retriever.fusion_method}")
+            
+            final_results = self.hybrid_retriever._fuse_results(vector_results, bm25_results, final_result_count)
+            
+            print(f"✅ [HYBRID-DEBUG] 分数融合完成，最终结果数量: {len(final_results)}")
+            
+            # 构建返回结果
+            return {
+                "results": final_results,
+                "query": {
+                    "original": unified_query_result.original_query,
+                    "processed_query": unified_query_result.rewritten_query,
+                    "bm25_optimized_query": unified_query_result.bm25_optimized_query,
+                    "translation_applied": unified_query_result.translation_applied,
+                    "rewrite_applied": unified_query_result.rewrite_applied,
+                    "intent": unified_query_result.intent,
+                    "confidence": unified_query_result.confidence,
+                    "detected_language": unified_query_result.detected_language,
+                    "processing_method": "preprocessed",
+                    "reasoning": unified_query_result.reasoning
+                },
+                "metadata": {
+                    "fusion_method": self.hybrid_retriever.fusion_method,
+                    "vector_results_count": len(vector_results),
+                    "bm25_results_count": len(bm25_results),
+                    "final_results_count": len(final_results),
+                    "vector_search_count": vector_search_count,
+                    "bm25_search_count": bm25_search_count,
+                    "target_final_count": final_result_count,
+                    "processing_stats": {
+                        "preprocessed_mode": True,
+                        "avoided_duplicate_processing": True
+                    }
+                }
+            }
+            
+        except Exception as e:
+            print(f"❌ [RAG-DEBUG] 混合搜索失败: {e}")
+            logger.error(f"混合搜索失败: {e}")
+            # 回退到向量搜索
+            semantic_query = unified_query_result.rewritten_query
+            results = self._search_faiss(semantic_query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(semantic_query, top_k)
+            return {
+                "results": results,
+                "query": {
+                    "original": unified_query_result.original_query,
+                    "processed_query": semantic_query,
+                    "bm25_optimized_query": unified_query_result.bm25_optimized_query,
+                    "translation_applied": unified_query_result.translation_applied,
+                    "rewrite_applied": unified_query_result.rewrite_applied
+                },
+                "metadata": {
+                    "total_results": len(results),
+                    "search_type": "vector_fallback",
+                    "fusion_method": "none",
+                    "rewrite_info": {
+                        "intent": unified_query_result.intent,
+                        "confidence": unified_query_result.confidence,
+                        "reasoning": f"混合搜索失败: {str(e)}"
+                    }
+                }
+            }
+    
     def _format_answer(self, search_response: Dict[str, Any], question: str) -> str:
         """
         格式化检索结果为答案
@@ -689,10 +826,21 @@ class EnhancedRagQuery:
             
             # 获取游戏上下文
             game_context = None
-            if hasattr(self, 'config') and self.config:
+            # 尝试多种方式获取游戏上下文
+            if chunks:
+                first_chunk = chunks[0]
+                # 方式1: 直接从chunk获取game字段
+                if "game" in first_chunk:
+                    game_context = first_chunk["game"]
+                # 方式2: 从video_info中获取
+                elif "video_info" in first_chunk and isinstance(first_chunk["video_info"], dict):
+                    game_context = first_chunk["video_info"].get("game")
+            
+            # 方式3: 从config获取
+            if not game_context and hasattr(self, 'config') and self.config:
                 game_context = self.config.get("game_name", None)
             
-            # If no game_name in config, use the stored game_name from initialization
+            # 方式4: 使用存储的game_name
             if not game_context and hasattr(self, 'game_name'):
                 game_context = self.game_name
             
@@ -716,6 +864,80 @@ class EnhancedRagQuery:
             # 回退到友好的错误消息
             return "😅 抱歉，我在整理信息时遇到了一点问题。让我用简单的方式回答你：\n\n" + self._format_simple_answer(results)
     
+    async def _format_answer_with_summary_stream(self, search_response: Dict[str, Any], question: str, original_query: str = None) -> AsyncGenerator[str, None]:
+        """
+        使用Gemini摘要器流式格式化检索结果
+        
+        Args:
+            search_response: 搜索响应（包含results和metadata）
+            question: 原始问题
+            original_query: 原始查询
+            
+        Yields:
+            流式摘要内容
+        """
+        results = search_response.get("results", [])
+        
+        if not results:
+            yield "抱歉，没有找到相关信息。请尝试其他关键词。"
+            return
+            
+        try:
+            print(f"🌊 [RAG-STREAM-DEBUG] 开始流式摘要格式化")
+            print(f"   - 检索结果数量: {len(results)}")
+            
+            # 构建摘要数据
+            chunks = []
+            for result in results:
+                chunk = result.get("chunk", result)
+                chunks.append(chunk)
+            
+            # 提取游戏上下文
+            game_context = None
+            # 尝试多种方式获取游戏上下文
+            if chunks:
+                first_chunk = chunks[0]
+                # 方式1: 直接从chunk获取game字段
+                if "game" in first_chunk:
+                    game_context = first_chunk["game"]
+                # 方式2: 从video_info中获取
+                elif "video_info" in first_chunk and isinstance(first_chunk["video_info"], dict):
+                    game_context = first_chunk["video_info"].get("game")
+            
+            # 方式3: 从config或初始化参数获取
+            if not game_context and hasattr(self, 'config') and self.config:
+                game_context = self.config.get("game_name", None)
+            
+            # 方式4: 使用存储的game_name
+            if not game_context and hasattr(self, 'game_name'):
+                game_context = self.game_name
+            
+            print(f"🎮 [RAG-STREAM-DEBUG] 游戏上下文: {game_context}")
+            
+            # 设置游戏名称到摘要器中用于视频源提取
+            if game_context and hasattr(self.summarizer, 'current_game_name'):
+                self.summarizer.current_game_name = game_context
+            
+            # 调用流式摘要器生成结构化回复
+            print(f"🚀 [RAG-STREAM-DEBUG] 调用流式摘要器")
+            async for chunk in self.summarizer.summarize_chunks_stream(
+                chunks=chunks,
+                query=question,
+                original_query=original_query,
+                context=game_context
+            ):
+                print(f"📦 [RAG-STREAM-DEBUG] 收到摘要块: {len(chunk)} 字符")
+                yield chunk
+            
+            print(f"✅ [RAG-STREAM-DEBUG] 流式摘要格式化完成")
+            
+        except Exception as e:
+            logger.error(f"流式摘要生成失败: {e}")
+            print(f"❌ [RAG-STREAM-DEBUG] 流式摘要生成失败: {e}")
+            # 回退到友好的错误消息
+            yield "😅 抱歉，我在整理信息时遇到了一点问题。让我用简单的方式回答你：\n\n"
+            yield self._format_simple_answer(results)
+
     def _format_simple_answer(self, results: List[Dict[str, Any]]) -> str:
         """简单格式化答案（用于摘要失败时的降级）"""
         if not results:
@@ -730,13 +952,15 @@ class EnhancedRagQuery:
         
         return f"根据{topic}：\n{summary}"
     
-    async def query(self, question: str, top_k: int = 3, original_query: str = None) -> Dict[str, Any]:
+    async def query(self, question: str, top_k: int = 3, original_query: str = None, unified_query_result = None) -> Dict[str, Any]:
         """
         执行RAG查询
         
         Args:
             question: 用户问题
             top_k: 检索结果数量
+            original_query: 原始查询（用于摘要）
+            unified_query_result: 预处理的统一查询结果（来自assistant_integration）
             
         Returns:
             包含答案的字典
@@ -759,14 +983,27 @@ class EnhancedRagQuery:
         
         try:
             print(f"🔍 [RAG-DEBUG] 开始RAG查询: {question}")
+            if unified_query_result:
+                print(f"📝 [RAG-DEBUG] 使用预处理的统一查询结果:")
+                print(f"   - 原始查询: '{unified_query_result.original_query}'")
+                print(f"   - 翻译查询: '{unified_query_result.translated_query}'") 
+                print(f"   - 重写查询: '{unified_query_result.rewritten_query}'")
+                print(f"   - BM25优化: '{unified_query_result.bm25_optimized_query}'")
+                print(f"   - 意图: {unified_query_result.intent} (置信度: {unified_query_result.confidence:.3f})")
+            
             start_time = asyncio.get_event_loop().time()
             
             # 执行检索
             if self.vector_store and self.config:
                 # 选择搜索方式
                 if self.enable_hybrid_search and self.hybrid_retriever:
-                    print(f"�� [RAG-DEBUG] 使用混合搜索")
-                    search_response = self._search_hybrid(question, top_k)
+                    print(f"🔍 [RAG-DEBUG] 使用混合搜索")
+                    # 如果有预处理结果，传递给混合搜索
+                    if unified_query_result:
+                        search_response = self._search_hybrid_with_processed_query(unified_query_result, top_k)
+                    else:
+                        search_response = self._search_hybrid(question, top_k)
+                    
                     results = search_response.get("results", [])
                     
                     # 应用意图感知重排序
@@ -918,6 +1155,151 @@ class EnhancedRagQuery:
                 "error": str(e)
             }
 
+    async def query_stream(self, question: str, top_k: int = 3, original_query: str = None, unified_query_result = None) -> AsyncGenerator[str, None]:
+        """
+        执行流式RAG查询
+        
+        Args:
+            question: 用户问题
+            top_k: 检索结果数量
+            original_query: 原始查询
+            unified_query_result: 预处理的统一查询结果（来自assistant_integration）
+            
+        Yields:
+            流式答案内容
+        """
+        if not self.is_initialized:
+            await self.initialize()
+            
+        # 如果初始化后仍然没有向量库，返回fallback信息
+        if not self.is_initialized or not self.vector_store:
+            print(f"❌ [RAG-STREAM-DEBUG] RAG系统未正确初始化，建议切换到wiki模式")
+            yield "抱歉，攻略查询系统出现问题，请稍后重试。"
+            return
+            
+        start_time = time.time()
+        
+        try:
+            print(f"🌊 [RAG-STREAM-DEBUG] 开始流式RAG查询: '{question}'")
+            if unified_query_result:
+                print(f"📝 [RAG-STREAM-DEBUG] 使用预处理的统一查询结果:")
+                print(f"   - 原始查询: '{unified_query_result.original_query}'")
+                print(f"   - 翻译查询: '{unified_query_result.translated_query}'") 
+                print(f"   - 重写查询: '{unified_query_result.rewritten_query}'")
+                print(f"   - BM25优化: '{unified_query_result.bm25_optimized_query}'")
+                print(f"   - 意图: {unified_query_result.intent} (置信度: {unified_query_result.confidence:.3f})")
+            
+            if hasattr(self, 'vector_store') and self.vector_store:
+                # 执行搜索（与query方法相同的逻辑）
+                if self.enable_hybrid_search and self.hybrid_retriever:
+                    print(f"🔍 [RAG-STREAM-DEBUG] 使用混合搜索")
+                    # 如果有预处理结果，传递给混合搜索
+                    if unified_query_result:
+                        search_response = self._search_hybrid_with_processed_query(unified_query_result, top_k)
+                    else:
+                        search_response = self._search_hybrid(question, top_k)
+                    
+                    results = search_response.get("results", [])
+                    
+                    # 应用意图感知重排序
+                    if self.enable_intent_reranking and self.reranker and results:
+                        print(f"🔄 [RAG-STREAM-DEBUG] 应用意图感知重排序")
+                        results = self.reranker.rerank_results(
+                            results, 
+                            question,
+                            intent_weight=self.reranking_config.get("intent_weight", 0.4),
+                            semantic_weight=self.reranking_config.get("semantic_weight", 0.6)
+                        )
+                        search_response["results"] = results
+                        # 在元数据中记录重排序信息
+                        search_response.setdefault("metadata", {})["reranking_applied"] = True
+                    
+                    # 格式化答案（使用流式摘要）
+                    print(f"🔍 [SUMMARY-STREAM-DEBUG] 检查流式摘要条件:")
+                    print(f"   - enable_summarization: {self.enable_summarization}")
+                    print(f"   - summarizer存在: {self.summarizer is not None}")
+                    print(f"   - 结果数量: {len(results)}")
+                    
+                    if self.enable_summarization and self.summarizer and len(results) > 0:
+                        print(f"💬 [RAG-STREAM-DEBUG] 使用Gemini流式摘要格式化答案")
+                        async for chunk in self._format_answer_with_summary_stream(search_response, question, original_query=original_query):
+                            yield chunk
+                    else:
+                        print(f"💬 [RAG-STREAM-DEBUG] 使用原始格式化答案")
+                        if not self.enable_summarization:
+                            print(f"   原因: 摘要功能未启用")
+                        elif not self.summarizer:
+                            print(f"   原因: 摘要器未初始化")
+                        elif len(results) == 0:
+                            print(f"   原因: 没有检索结果")
+                        answer = self._format_answer(search_response, question)
+                        yield answer
+                        
+                else:
+                    # 单一搜索
+                    print(f"🔍 [RAG-STREAM-DEBUG] 使用单一向量搜索")
+                    if self.config["vector_store_type"] == "faiss":
+                        results = self._search_faiss(question, top_k)
+                    else:
+                        results = self._search_qdrant(question, top_k)
+                    
+                    # 应用意图感知重排序
+                    if self.enable_intent_reranking and self.reranker and results:
+                        print(f"🔄 [RAG-STREAM-DEBUG] 应用意图感知重排序（单一搜索模式）")
+                        results = self.reranker.rerank_results(
+                            results, 
+                            question,
+                            intent_weight=self.reranking_config.get("intent_weight", 0.4),
+                            semantic_weight=self.reranking_config.get("semantic_weight", 0.6)
+                        )
+                    
+                    # 构建兼容的search_response格式
+                    search_response = {
+                        "results": results,
+                        "query": {"original": question, "rewritten": question, "rewrite_applied": False},
+                        "metadata": {
+                            "total_results": len(results),
+                            "search_type": "vector_only",
+                            "fusion_method": "none",
+                            "rewrite_info": {
+                                "intent": "unknown",
+                                "confidence": 0.0,
+                                "reasoning": "未使用查询重写"
+                            },
+                            "reranking_applied": self.enable_intent_reranking and self.reranker is not None
+                        }
+                    }
+                    
+                    # 格式化答案（使用流式摘要）
+                    print(f"🔍 [SUMMARY-STREAM-DEBUG] 检查流式摘要条件 (单一搜索):")
+                    print(f"   - enable_summarization: {self.enable_summarization}")
+                    print(f"   - summarizer存在: {self.summarizer is not None}")
+                    print(f"   - 结果数量: {len(results)}")
+                    
+                    if self.enable_summarization and self.summarizer and len(results) > 0:
+                        print(f"💬 [RAG-STREAM-DEBUG] 使用Gemini流式摘要格式化答案")
+                        async for chunk in self._format_answer_with_summary_stream(search_response, question, original_query=original_query):
+                            yield chunk
+                    else:
+                        print(f"💬 [RAG-STREAM-DEBUG] 使用原始格式化答案")
+                        if not self.enable_summarization:
+                            print(f"   原因: 摘要功能未启用")
+                        elif not self.summarizer:
+                            print(f"   原因: 摘要器未初始化")
+                        elif len(results) == 0:
+                            print(f"   原因: 没有检索结果")
+                        answer = self._format_answer(search_response, question)
+                        yield answer
+            else:
+                # 向量库查询失败
+                print(f"❌ [RAG-STREAM-DEBUG] 向量库查询失败")
+                yield "抱歉，攻略查询系统出现问题，请稍后重试。"
+                
+        except Exception as e:
+            print(f"❌ [RAG-STREAM-DEBUG] 流式查询异常: {e}")
+            logger.error(f"Streaming query error: {str(e)}")
+            yield f"抱歉，查询过程中出现错误: {str(e)}"
+
 
 
 # 全局实例
@@ -1025,8 +1407,19 @@ async def query_enhanced_rag(question: str,
     print(f"🔧 [RAG-DEBUG] 初始化RAG引擎")
     await rag_query.initialize(game_name)
     
-    print(f"🔍 [RAG-DEBUG] 执行RAG查询")
-    result = await rag_query.query(question, top_k)
+    print(f"🔍 [RAG-DEBUG] 执行RAG查询（流式）")
+    answer_parts = []
+    async for chunk in rag_query.query_stream(question, top_k):
+        answer_parts.append(chunk)
+    
+    # 构建与原 query 方法兼容的结果格式
+    result = {
+        "answer": "".join(answer_parts),
+        "sources": [],
+        "confidence": 0.0,
+        "query_time": 0.0,
+        "results_count": 0
+    }
     print(f"✅ [RAG-DEBUG] query_enhanced_rag完成")
     return result
 

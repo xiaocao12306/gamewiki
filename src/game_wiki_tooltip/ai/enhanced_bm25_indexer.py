@@ -1,12 +1,12 @@
 """
-增强BM25索引器 - 针对游戏战术信息优化
-=====================================
+简化BM25索引器 - 专注于高效检索
+=================================
 
 功能：
-1. 敌人特定关键词权重提升
-2. 战术术语权重增强  
-3. 智能文本预处理
-4. 多语言支持（中英文）
+1. 智能文本预处理
+2. 多语言支持（中英文）
+3. 简化的BM25检索
+4. 由LLM负责查询优化
 """
 
 import jieba
@@ -17,59 +17,25 @@ import logging
 from rank_bm25 import BM25Okapi
 from typing import List, Dict, Any, Optional, Set, Tuple
 from pathlib import Path
-from .game_keyword_configs import GameKeywordConfig
 
 logger = logging.getLogger(__name__)
 
 class EnhancedBM25Indexer:
-    """增强BM25索引器，支持多游戏优化的战术信息检索"""
+    """简化BM25索引器，专注于高效检索，查询优化由LLM负责"""
     
     def __init__(self, game_name: str = "helldiver2", stop_words: Optional[List[str]] = None):
         """
-        初始化增强BM25索引器
+        初始化简化BM25索引器
         
         Args:
-            game_name: 游戏名称 (helldiver2, dst, eldenring, civilization6)
+            game_name: 游戏名称 (用于敌人名称标准化)
             stop_words: 停用词列表
         """
         self.game_name = game_name
         self.bm25 = None
         self.documents = []
         self.stop_words = self._load_stop_words(stop_words)
-        
-        # 根据游戏加载特定的关键词权重配置
-        self._load_game_config()
-    
-    def _load_game_config(self) -> None:
-        """加载游戏特定的关键词配置"""
-        try:
-            config = GameKeywordConfig.get_config(self.game_name)
-            
-            # 合并所有关键词权重
-            self.keyword_weights = {}
-            self.keyword_weights.update(config['common_keywords'])
-            self.keyword_weights.update(config['enemy_keywords'])
-            self.keyword_weights.update(config['tactical_keywords'])
-            self.keyword_weights.update(config['item_keywords'])
-            self.keyword_weights.update(config['special_keywords'])
-            
-            # 保存各类别关键词用于特殊处理
-            self.enemy_keywords = config['enemy_keywords']
-            self.tactical_keywords = config['tactical_keywords']
-            self.item_keywords = config['item_keywords']
-            self.special_keywords = config['special_keywords']
-            
-            logger.info(f"已加载 {self.game_name} 游戏配置，共 {len(self.keyword_weights)} 个关键词")
-            
-        except Exception as e:
-            logger.error(f"加载游戏配置失败: {e}")
-            # 降级到空配置
-            self.keyword_weights = {}
-            self.enemy_keywords = {}
-            self.tactical_keywords = {}
-            self.item_keywords = {}
-            self.special_keywords = {}
-        
+
     def _load_stop_words(self, stop_words: Optional[List[str]] = None) -> Set[str]:
         """加载停用词，但保留重要的战术术语"""
         default_stop_words = {
@@ -122,14 +88,14 @@ class EnhancedBM25Indexer:
         
     def preprocess_text(self, text: str) -> List[str]:
         """
-        增强文本预处理，重点处理战术信息
-        优化英文分词和单复数匹配
+        简化的文本预处理，专注于高效分词
+        移除复杂的权重逻辑，由LLM负责查询优化
         
         Args:
             text: 输入文本
             
         Returns:
-            处理后的token列表，包含权重信息
+            处理后的token列表
         """
         if not text:
             return []
@@ -177,8 +143,8 @@ class EnhancedBM25Indexer:
                 
             return word
         
-        # 处理token并应用权重
-        weighted_tokens = []
+        # 处理token - 简化版本
+        processed_tokens = []
         for token in tokens:
             token = token.strip()
             
@@ -190,48 +156,41 @@ class EnhancedBM25Indexer:
                 # 对英文单词应用词干提取
                 if not re.search(r'[\u4e00-\u9fa5]', token):  # 非中文
                     stemmed = simple_stem(token)
-                    
-                    # 添加词干形式
-                    weight = self.keyword_weights.get(stemmed, self.keyword_weights.get(token, 1.0))
-                    repeat_count = int(weight)
-                    weighted_tokens.extend([stemmed] * repeat_count)
+                    processed_tokens.append(stemmed)
                     
                     # 如果词干与原词不同，也添加原词
                     if stemmed != token:
-                        weight_orig = self.keyword_weights.get(token, 1.0)
-                        repeat_count_orig = int(weight_orig)
-                        weighted_tokens.extend([token] * repeat_count_orig)
+                        processed_tokens.append(token)
                 else:
                     # 中文词汇直接处理
-                    weight = self.keyword_weights.get(token, 1.0)
-                    repeat_count = int(weight)
-                    weighted_tokens.extend([token] * repeat_count)
+                    processed_tokens.append(token)
         
-        return weighted_tokens
+        return processed_tokens
     
     def build_enhanced_text(self, chunk: Dict[str, Any]) -> str:
         """
-        构建增强的搜索文本，优化敌人和战术信息
+        构建搜索文本，专注于内容提取
+        移除权重逻辑，由LLM负责查询优化
         
         Args:
             chunk: 知识块
             
         Returns:
-            增强的搜索文本
+            搜索文本
         """
         text_parts = []
         
-        # 1. Topic (最高权重 - 重复5次)
+        # 1. Topic（重要内容）
         topic = chunk.get("topic", "")
         if topic:
-            text_parts.extend([topic] * 5)
+            text_parts.append(topic)
             
-        # 2. 关键词 (高权重 - 重复3次)
+        # 2. 关键词
         keywords = chunk.get("keywords", [])
         if keywords:
-            text_parts.extend(keywords * 3)
+            text_parts.extend(keywords)
             
-        # 3. Summary (正常权重)
+        # 3. Summary
         summary = chunk.get("summary", "")
         if summary:
             text_parts.append(summary)
@@ -242,46 +201,46 @@ class EnhancedBM25Indexer:
         return " ".join(text_parts)
     
     def _extract_structured_content(self, chunk: Dict[str, Any], text_parts: List[str]) -> None:
-        """提取结构化内容并添加到文本部分"""
+        """提取结构化内容，专注于内容而非权重"""
         
         # 敌人弱点信息
         if "structured_data" in chunk:
             structured = chunk["structured_data"]
             
-            # 敌人名称 (重复4次)
+            # 敌人名称
             if "enemy_name" in structured:
-                text_parts.extend([structured["enemy_name"]] * 4)
+                text_parts.append(structured["enemy_name"])
                 
-            # 弱点信息 (重复3次)
+            # 弱点信息
             if "weak_points" in structured:
                 for weak_point in structured["weak_points"]:
                     if "name" in weak_point:
-                        text_parts.extend([weak_point["name"]] * 3)
+                        text_parts.append(weak_point["name"])
                     if "notes" in weak_point:
                         text_parts.append(weak_point["notes"])
                         
-            # 推荐武器 (重复2次)
+            # 推荐武器
             if "recommended_weapons" in structured:
                 for weapon in structured["recommended_weapons"]:
-                    text_parts.extend([weapon] * 2)
+                    text_parts.append(weapon)
                     
         # Build信息
         if "build" in chunk:
             build = chunk["build"]
             
-            # Build名称 (重复3次)
+            # Build名称
             if "name" in build:
-                text_parts.extend([build["name"]] * 3)
+                text_parts.append(build["name"])
                 
-            # 战术焦点 (重复2次)
+            # 战术焦点
             if "focus" in build:
-                text_parts.extend([build["focus"]] * 2)
+                text_parts.append(build["focus"])
                 
             # 策略信息
             if "stratagems" in build:
                 for stratagem in build["stratagems"]:
                     if "name" in stratagem:
-                        text_parts.extend([stratagem["name"]] * 2)
+                        text_parts.append(stratagem["name"])
                     if "rationale" in stratagem:
                         text_parts.append(stratagem["rationale"])
     
@@ -349,12 +308,12 @@ class EnhancedBM25Indexer:
             logger.warning("查询预处理后为空")
             return []
         
-        print(f"🔍 [BM25-DEBUG] 增强BM25搜索 - 原始查询: {query}")
+        print(f"🔍 [BM25-DEBUG] 简化BM25搜索 - 原始查询: {query}")
         print(f"   📝 [BM25-DEBUG] 标准化查询: {normalized_query}")
-        print(f"   🔤 [BM25-DEBUG] 权重化分词: {tokenized_query}")
-        logger.info(f"增强BM25搜索 - 原始查询: {query}")
+        print(f"   🔤 [BM25-DEBUG] 分词结果: {tokenized_query}")
+        logger.info(f"简化BM25搜索 - 原始查询: {query}")
         logger.info(f"标准化查询: {normalized_query}")
-        logger.info(f"权重化分词: {tokenized_query}")
+        logger.info(f"分词结果: {tokenized_query}")
         
         # 获取分数
         scores = self.bm25.get_scores(tokenized_query)
@@ -392,16 +351,12 @@ class EnhancedBM25Indexer:
                 print(f"      - 匹配理由: {match_info['relevance_reason']}")
                 print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
                 
-                # 显示关键词权重匹配信息
+                # 显示关键词匹配信息
                 chunk_text = self.build_enhanced_text(chunk).lower()
                 matched_keywords = []
                 for token in set(tokenized_query):
                     if token in chunk_text:
-                        weight = self.keyword_weights.get(token, 1.0)
-                        if weight > 1.0:
-                            matched_keywords.append(f"{token}({weight}x)")
-                        else:
-                            matched_keywords.append(token)
+                        matched_keywords.append(token)
                 if matched_keywords:
                     print(f"      - 匹配关键词: {', '.join(matched_keywords[:10])}")
         
@@ -410,38 +365,28 @@ class EnhancedBM25Indexer:
         return results
     
     def _extract_enemy_from_chunk(self, chunk: Dict[str, Any]) -> str:
-        """从chunk中提取敌人/目标名称 - 基于游戏类型"""
+        """从chunk中提取敌人/目标名称"""
         # 检查结构化数据
         if "structured_data" in chunk and "enemy_name" in chunk["structured_data"]:
             return chunk["structured_data"]["enemy_name"]
             
-        # 检查topic中的敌人关键词
-        topic = chunk.get("topic", "").lower()
-        for enemy in self.enemy_keywords:
-            if enemy in topic:
-                return enemy.title()
+        # 简单提取：从topic中查找可能的敌人名称
+        topic = chunk.get("topic", "")
         
-        # 对于不同游戏类型，查找不同的目标类型
-        if self.game_name == "dst":
-            # DST: 查找Boss、生物或角色名
-            for special in self.special_keywords:
-                if special in topic:
-                    return special.title()
-        elif self.game_name == "eldenring":
-            # Elden Ring: 查找Boss名称
-            for enemy in self.enemy_keywords:
-                if enemy in topic:
-                    return enemy.title()
-        elif self.game_name == "civilization6":
-            # Civilization 6: 查找文明名称
-            for civ in self.special_keywords:
-                if civ in topic:
-                    return civ.title()
-                
-        return "Unknown"
+        # 基本的敌人/目标识别关键词
+        target_indicators = ["enemy", "boss", "敌人", "首领", "怪物", "对手"]
+        if any(indicator in topic.lower() for indicator in target_indicators):
+            # 提取topic中的主要词汇作为目标名称
+            words = topic.split()
+            if len(words) >= 2:
+                # 取前两个词作为目标名称
+                return " ".join(words[:2])
+        
+        # 如果没有明确的敌人标识，返回通用标识
+        return "Target"
     
     def _explain_relevance(self, query_tokens: List[str], chunk: Dict[str, Any], original_query: str = None) -> str:
-        """解释匹配相关性，提供更详细的匹配分析"""
+        """解释匹配相关性，专注于词汇匹配而非权重"""
         chunk_text = self.build_enhanced_text(chunk).lower()
         
         matched_terms = []
@@ -453,10 +398,7 @@ class EnhancedBM25Indexer:
             for token in original_tokens:
                 # 检查原始词和词干形式的匹配
                 if token in chunk_text:
-                    if token in self.keyword_weights:
-                        original_terms.append(f"{token}(权重:{self.keyword_weights[token]})")
-                    else:
-                        original_terms.append(token)
+                    original_terms.append(token)
                 else:
                     # 检查词干匹配
                     # 简单词干提取逻辑（与preprocess_text中的一致）
@@ -468,10 +410,7 @@ class EnhancedBM25Indexer:
         # 分析处理后的token匹配
         for token in set(query_tokens):  # 去重
             if token in chunk_text:
-                if token in self.keyword_weights:
-                    matched_terms.append(f"{token}(权重:{self.keyword_weights[token]})")
-                else:
-                    matched_terms.append(token)
+                matched_terms.append(token)
         
         # 构建匹配说明
         if original_terms and matched_terms:
@@ -484,26 +423,25 @@ class EnhancedBM25Indexer:
             return "无明显匹配"
     
     def save_index(self, path: str) -> None:
-        """保存增强BM25索引"""
+        """保存简化BM25索引"""
         try:
             data = {
                 'bm25': self.bm25,
                 'documents': self.documents,
-                'stop_words': list(self.stop_words),
-                'keyword_weights': self.keyword_weights
+                'stop_words': list(self.stop_words)
             }
             
             with open(path, 'wb') as f:
                 pickle.dump(data, f)
             
-            logger.info(f"增强BM25索引已保存到: {path}")
+            logger.info(f"简化BM25索引已保存到: {path}")
             
         except Exception as e:
-            logger.error(f"保存增强BM25索引失败: {e}")
+            logger.error(f"保存简化BM25索引失败: {e}")
             raise
     
     def load_index(self, path: str) -> None:
-        """加载增强BM25索引"""
+        """加载简化BM25索引"""
         try:
             with open(path, 'rb') as f:
                 data = pickle.load(f)
@@ -511,9 +449,8 @@ class EnhancedBM25Indexer:
             self.bm25 = data['bm25']
             self.documents = data['documents']
             self.stop_words = set(data.get('stop_words', []))
-            self.keyword_weights = data.get('keyword_weights', {})
             
-            logger.info(f"增强BM25索引已加载: {path}")
+            logger.info(f"简化BM25索引已加载: {path}")
             
         except Exception as e:
             logger.error(f"加载增强BM25索引失败: {e}")
@@ -548,7 +485,6 @@ class EnhancedBM25Indexer:
             "status": "已初始化",
             "document_count": len(self.documents),
             "stop_words_count": len(self.stop_words),
-            "keyword_weights_count": len(self.keyword_weights),
             "enemy_distribution": enemy_distribution,
             "average_document_length": avg_doc_length,
             "top_enemies": list(sorted(enemy_distribution.items(), key=lambda x: x[1], reverse=True)[:5])
@@ -631,7 +567,7 @@ def test_enhanced_bm25():
         
         # 显示统计信息
         stats = indexer.get_stats()
-        print(f"📊 索引统计: 文档数={stats['document_count']}, 关键词数={stats['keyword_weights_count']}")
+        print(f"📊 索引统计: 文档数={stats['document_count']}, 停用词数={stats['stop_words_count']}")
         
         # 测试查询
         for query in queries:

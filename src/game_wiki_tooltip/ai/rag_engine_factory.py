@@ -173,11 +173,22 @@ class RAGEngineFactory:
                 reranking_config=config.intent_reranking.to_dict()
             )
         
-        # 使用引擎查询
-        return await engine.query(
+        # 使用引擎查询（流式）
+        answer_parts = []
+        async for chunk in engine.query_stream(
             question,
             top_k=config.top_k
-        )
+        ):
+            answer_parts.append(chunk)
+        
+        # 构建与原 query 方法兼容的结果格式
+        return {
+            "answer": "".join(answer_parts),
+            "sources": [],
+            "confidence": 0.0,
+            "query_time": 0.0,
+            "results_count": 0
+        }
     
     @classmethod
     def clear_cache(cls, game_name: Optional[str] = None):

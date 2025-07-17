@@ -4,11 +4,7 @@
         "NeedsSearch": false
     },
     "Counter-Strike 2": {
-        "BaseUrl": "https://counterstrike.fandom.com/wiki/",
-        "NeedsSearch": false
-    },
-    "三角洲行动": {
-        "BaseUrl": "https://deltaforce.fandom.com/wiki/",
+        "BaseUrl": "www.cs2util.com/dust2",
         "NeedsSearch": false
     },
     "MONSTER HUNTER: WORLD": {
@@ -47,12 +43,8 @@
         "BaseUrl": "https://civilization.fandom.com/wiki/",
         "NeedsSearch": true
     },
-    "ELDEN RING": {
-        "BaseUrl": "https://eldenring.wiki.fextralife.com/Elden+Ring+Wiki",
-        "NeedsSearch": true
-    },
     "DARK SOULS III": {
-        "BaseUrl": "http://darksouls3.wiki.fextralife.com/Dark+Souls+3+Wiki",
+        "BaseUrl": "http://darksouls3.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "BLOODBORNE": {
@@ -60,19 +52,19 @@
         "NeedsSearch": true
     },
     "SEKIRO: SHADOWS DIE TWICE": {
-        "BaseUrl": "https://sekiroshadowsdietwice.wiki.fextralife.com/Sekiro+Shadows+Die+Twice+Wiki",
+        "BaseUrl": "https://sekiroshadowsdietwice.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "LIES OF P": {
-        "BaseUrl": "https://liesofp.wiki.fextralife.com/Lies+of+P+Wiki",
+        "BaseUrl": "https://liesofp.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "NIOH 2": {
-        "BaseUrl": "https://nioh2.wiki.fextralife.com/Nioh+2+Wiki",
+        "BaseUrl": "https://nioh2.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "REMNANT II": {
-        "BaseUrl": "https://remnant2.wiki.fextralife.com/Remnant+2+Wiki",
+        "BaseUrl": "https://remnant2.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "THE WITCHER 3: WILD HUNT": {
@@ -84,11 +76,11 @@
         "NeedsSearch": true
     },
     "BALDUR'S GATE 3": {
-        "BaseUrl": "https://baldursgate3.wiki.fextralife.com/Baldur's+Gate+3+Wiki",
+        "BaseUrl": "https://baldursgate3.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "CYBERPUNK 2077": {
-        "BaseUrl": "https://cyberpunk2077.wiki.fextralife.com/Cyberpunk+2077+Wiki",
+        "BaseUrl": "https://cyberpunk2077.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "FALLOUT 4": {
@@ -96,11 +88,11 @@
         "NeedsSearch": true
     },
     "DIVINITY: ORIGINAL SIN 2": {
-        "BaseUrl": "https://divinityoriginalsin2.wiki.fextralife.com/Divinity+Original+Sin+2+Wiki",
+        "BaseUrl": "https://divinityoriginalsin2.wiki.fextralife.com",
         "NeedsSearch": true
     },
     "KINGDOM COME: DELIVERANCE": {
-        "BaseUrl": "https://kingdom-come-deliverance.fandom.com/wiki/Kingdom_Come:_Deliverance_Wiki",
+        "BaseUrl": "https://kingdom-come-deliverance.fandom.com",
         "NeedsSearch": true
     },
     "PERSONA 5 ROYAL": {
@@ -171,10 +163,6 @@
         "BaseUrl": "https://nomanssky.fandom.com/wiki/No_Man%27s_Sky_Wiki",
         "NeedsSearch": true
     },
-    "STARDEW VALLEY": {
-        "BaseUrl": "https://stardewvalleywiki.com/Stardew_Valley_Wiki",
-        "NeedsSearch": true
-    },
     "RUST": {
         "BaseUrl": "https://rust.fandom.com/wiki/Rust_Wiki",
         "NeedsSearch": true
@@ -187,20 +175,12 @@
         "BaseUrl": "https://pzwiki.net/wiki/Main_Page",
         "NeedsSearch": true
     },
-    "DON'T STARVE": {
-        "BaseUrl": "https://dontstarve.fandom.com/wiki/Don%27t_Starve_Wiki",
-        "NeedsSearch": true
-    },
     "VALHEIM": {
         "BaseUrl": "https://valheim.fandom.com/wiki/Valheim_Wiki",
         "NeedsSearch": true
     },
     "SUBNAUTICA": {
         "BaseUrl": "https://subnautica.fandom.com/wiki/Subnautica_Wiki",
-        "NeedsSearch": true
-    },
-    "7 DAYS TO DIE": {
-        "BaseUrl": "https://7daystodie.fandom.com/wiki/7_Days_to_Die_Wiki",
         "NeedsSearch": true
     },
     "FACTORIO": {
@@ -224,7 +204,7 @@
         "NeedsSearch": true
     },
     "SID MEIER'S CIVILIZATION VI": {
-        "BaseUrl": "https://civilization.fandom.com/wiki/Civilization_VI",
+        "BaseUrl": "https://civilization.fandom.com/wiki",
         "NeedsSearch": true
     },
     "XCOM 2": {

@@ -146,8 +146,19 @@ class RAGQualityEvaluator:
         
         try:
             # 执行RAG查询
-            # 使用RAG引擎执行查询
-            result = await self.rag_engine.query(query, top_k=3)
+            # 使用RAG引擎执行流式查询并收集结果
+            answer_parts = []
+            async for chunk in self.rag_engine.query_stream(query, top_k=3):
+                answer_parts.append(chunk)
+            
+            # 构建与原 query 方法兼容的结果格式
+            result = {
+                "answer": "".join(answer_parts),
+                "sources": [],
+                "confidence": 0.0,
+                "query_time": 0.0,
+                "results_count": 0
+            }
             
             # 计算处理时间
             processing_time = asyncio.get_event_loop().time() - start_time

@@ -1,6 +1,7 @@
 {
   "vector_store_type": "faiss",
   "collection_name": "helldiver2_vectors",
+  "game_name": "helldiver2",
   "model": "jina-embeddings-v4",
   "output_dim": 768,
   "chunk_count": 83,

@@ -23,6 +23,7 @@ class UnifiedQueryResult:
     detected_language: str
     translated_query: str
     rewritten_query: str
+    bm25_optimized_query: str  # 新增：专门为BM25优化的查询
     intent: str
     confidence: float
     search_type: str
@@ -150,7 +151,8 @@ Your task is to analyze the user's query and perform the following tasks in ONE 
 1. **Language Detection**: Detect the language of the query
 2. **Translation**: If the query is in Chinese, translate it to English
 3. **Intent Classification**: Classify the intent (wiki/guide/unknown)
-4. **Query Rewriting**: Optimize the query for better search results
+4. **Query Rewriting**: Optimize the query for semantic search
+5. **BM25 Optimization**: Create a specialized query for keyword-based BM25 search
 
 Original Query: "{query}"
 
@@ -160,7 +162,8 @@ Please provide a JSON response with the following structure:
     "translated_query": "English translation if needed, otherwise same as original",
     "intent": "wiki|guide|unknown",
     "confidence": 0.0-1.0,
-    "rewritten_query": "optimized query for search",
+    "rewritten_query": "optimized query for semantic search",
+    "bm25_optimized_query": "specialized query for BM25 keyword search",
     "reasoning": "explanation of your analysis and optimizations",
     "search_type": "semantic|keyword|hybrid"
 }}
@@ -173,21 +176,59 @@ Please provide a JSON response with the following structure:
 
 **Intent Classification:**
 - **wiki**: User wants factual information, definitions, stats, or specific item/character/enemy data
-  - Examples: "what is wizard", "sword stats", "什么是法师", "角色属性"
+  - Single words or short phrases that look like game-specific terms should be classified as wiki
+  - **Game-specific term indicators:**
+    - Proper nouns (capitalized words like "Excalibur", "Gandalf", "Dragonbone")
+    - Uncommon word combinations that sound like item/character names (e.g. Democratic detonation)
+    - Single technical-sounding words without common modifiers
+    - Foreign or fantasy-sounding terms
+    - Compound words that suggest game items (e.g., "Bloodstone", "Frostbolt", "Ironhelm")
+  - Examples: "wizard", "sword stats", "Excalibur", "什么是法师", "角色属性", "Bloodstone", "铁剑", "法师塔"
   - Keywords: "what is", "info", "stats", "damage", "是什么", "信息", "数据", "属性"
+  - **Rule**: If the query is 1-2 words and doesn't contain guide keywords, classify as wiki
 
 - **guide**: User wants strategies, recommendations, progression advice, or how-to instructions
-  - Examples: "how to beat boss", "best build", "progression guide", "选择什么职业"
-  - Keywords: "how", "best", "recommend", "next", "after", "should", "怎么", "推荐", "下一个", "选择"
+  - Examples: "how to beat boss", "best build", "progression guide", "选择什么职业", "longsword build"
+  - Keywords: "how", "best", "recommend", "next", "after", "should", "build", "guide", "strategy", "tips", "怎么", "推荐", "下一个", "选择", "配置", "攻略", "策略"
+  - **Strategy-related terms**: "build", "setup", "loadout", "combo", "synergy", "meta", "tier", "rotation", "counter", "optimal", "efficient", "playstyle", "progression", "priority", "comparison", "vs", "choice", "unlock", "配置", "搭配", "组合", "连击", "克制", "最优", "高效", "玩法", "进阶", "优先级", "比较", "解锁", "协同"
+  - **Build-related queries**: Any query containing strategy-related terms should be classified as guide
   - Special attention: Queries about "what's next", "what to unlock after X", "progression order" are GUIDE queries
+  - **Rule**: Classify as guide if the query asks for advice, strategy, how-to information, OR contains build/setup-related terms
 
-**Query Rewriting:**
+**Query Rewriting (for semantic search):**
 - DO NOT add any specific game names or prefixes unless they exist in the original query
 - For general terms, keep them general (e.g., "法师" -> "mage" or "wizard", not "GameName mage")
-- For strategy queries, add keywords like "strategy", "guide", "tips"
-- For recommendation queries, add "best", "recommended", "guide"
+- For strategy queries, add keywords like "strategy", "guide"
+- For recommendation queries, add "best", "recommendation"
 - Keep original game-specific terms unchanged only if they appear in the query
 - Preserve the original meaning and scope of the query
+
+**BM25 Query Optimization (CRITICAL - for keyword search):**
+This is a specialized query designed to enhance important game terms while preserving the original query intent.
+
+**Key Principles:**
+1. **Preserve original query structure**: Keep the user's original words and intent
+2. **Enhance game-specific nouns**: Repeat weapon names, character names, item names, location names
+3. **Boost core topic words**: Repeat important concepts like "build", "weapon", "character", "strategy"
+4. **Maintain query coherence**: Don't add unrelated terms that might match wrong content
+5. **Weight through repetition**: Use repetition to increase BM25 term frequency scores
+
+**Examples:**
+- "best warbond" -> "best warbond warbond warbond recommendations"
+- "wizard build guide" -> "wizard wizard build build loadout guide"  
+- "sword recommendations" -> "sword sword weapon recommendations guide"
+- "法师推荐装备" -> "法师 法师 推荐 装备 装备 配置"
+
+**Rules for BM25 optimization:**
+- Keep ALL original query terms
+- Identify game-specific proper nouns and repeat them 2-3 times
+- Identify core topic words (build, weapon, character, boss, etc.) and repeat them 1-2 times
+- Add closely related game terms only if they enhance the topic (e.g., "build" -> add "loadout")
+- For build queries, add: "loadout", "setup", "configuration" 
+- For weapon queries, add: "gear", "equipment"
+- For character queries, add: "class", "hero"
+- NEVER replace words - only enhance through repetition and related terms
+- Maintain readability and avoid excessive repetition (max 3 times per term)
 
 **Search Type:**
 - "semantic": For conceptual queries requiring understanding (recommendations, strategies)
@@ -200,6 +241,7 @@ Please provide a JSON response with the following structure:
 - Only classify as "wiki" when user explicitly wants factual data/definitions
 - DO NOT assume any specific game context unless explicitly mentioned in the query
 - Keep translations and rewrites GENERIC and GAME-AGNOSTIC
+- BM25 optimization should focus on KEYWORDS and SPECIFIC TERMS, not generic descriptors
 """
         
         return prompt
@@ -284,11 +326,15 @@ Please provide a JSON response with the following structure:
             intent = "guide"
             confidence = 0.8
         
+        # 基础BM25优化：移除通用词汇，保留核心词汇
+        bm25_optimized_query = self._basic_bm25_optimization(query)
+        
         return UnifiedQueryResult(
             original_query=query,
             detected_language=detected_language,
             translated_query=query,  # 基础模式不翻译
             rewritten_query=rewritten_query,
+            bm25_optimized_query=bm25_optimized_query,  # 基础模式BM25优化
             intent=intent,
             confidence=confidence,
             search_type="hybrid",
@@ -297,6 +343,68 @@ Please provide a JSON response with the following structure:
             rewrite_applied=rewritten_query != query,
             processing_time=0.001
         )
+    
+    def _basic_bm25_optimization(self, query: str) -> str:
+        """基础BM25优化（LLM不可用时的简单版本）- 使用权重增强"""
+        
+        words = query.lower().split()
+        optimized_words = []
+        
+        # 游戏专有名词指标（可能的游戏术语）
+        game_terms = [
+            # 通用游戏术语
+            'build', 'weapon', 'character', 'boss', 'enemy', 'skill', 'spell', 'item', 'gear',
+            'armor', 'shield', 'sword', 'bow', 'staff', 'magic', 'fire', 'ice', 'poison',
+            # Helldivers 2 相关
+            'warbond', 'stratagem', 'helldiver', 'terminid', 'automaton', 'bile', 'charger',
+            # 中文游戏术语
+            '配装', '武器', '角色', '技能', '装备', '护甲', '法术', '魔法', '敌人', '首领'
+        ]
+        
+        # 主题词汇（核心概念）
+        topic_words = [
+            'build', 'weapon', 'character', 'boss', 'strategy', 'guide', 'tip',
+            '配装', '武器', '角色', '策略', '攻略', '技巧'
+        ]
+        
+        # 通用词汇（降低权重，但不删除）
+        generic_words = [
+            'best', 'good', 'great', 'top', 'recommendation', 'guide', 'tutorial', 'help',
+            '最好', '最佳', '推荐', '攻略', '教程', '帮助'
+        ]
+        
+        for word in words:
+            # 保留原始词汇
+            optimized_words.append(word)
+            
+            # 如果是游戏专有名词，重复2-3次增强权重
+            if word in game_terms:
+                optimized_words.extend([word] * 2)  # 额外重复2次
+                
+            # 如果是主题词汇，重复1次增强权重
+            elif word in topic_words:
+                optimized_words.append(word)  # 额外重复1次
+                
+            # 通用词汇保持原样，不增强也不删除
+        
+        # 根据查询类型添加相关术语
+        query_lower = query.lower()
+        
+        # 如果是build相关查询，添加相关术语
+        if any(term in query_lower for term in ['build', 'setup', 'loadout', '配装', '搭配']):
+            optimized_words.extend(['loadout', 'setup', 'configuration'])
+            
+        # 如果是weapon相关查询，添加相关术语  
+        elif any(term in query_lower for term in ['weapon', 'sword', 'gun', '武器', '剑', '枪']):
+            optimized_words.extend(['gear', 'equipment'])
+            
+        # 如果是character相关查询，添加相关术语
+        elif any(term in query_lower for term in ['character', 'class', 'hero', '角色', '职业', '英雄']):
+            optimized_words.extend(['class', 'hero'])
+        
+        # 清理多余空格并返回
+        optimized = " ".join(optimized_words)
+        return optimized if optimized.strip() else query
     
     def process_query(self, query: str) -> UnifiedQueryResult:
         """
@@ -320,6 +428,7 @@ Please provide a JSON response with the following structure:
             print(f"   - 原始查询: '{cached_result.original_query}'")
             print(f"   - 翻译结果: '{cached_result.translated_query}'")
             print(f"   - 重写结果: '{cached_result.rewritten_query}'")
+            print(f"   - BM25优化: '{cached_result.bm25_optimized_query}'")
             print(f"   - 意图: {cached_result.intent} (置信度: {cached_result.confidence:.3f})")
             logger.info(f"使用缓存结果: {query}")
             return cached_result
@@ -331,6 +440,7 @@ Please provide a JSON response with the following structure:
             print(f"   - 检测语言: {result.detected_language}")
             print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
             print(f"   - 重写查询: '{result.rewritten_query}'")
+            print(f"   - BM25优化: '{result.bm25_optimized_query}'")
             print(f"   - 重写应用: {result.rewrite_applied}")
             self._cache_result(query, result)
             return result
@@ -356,6 +466,7 @@ Please provide a JSON response with the following structure:
                 print(f"   - 检测语言: {detected_language}")
                 print(f"   - 翻译结果: '{translated_query}'")
                 print(f"   - 重写结果: '{rewritten_query}'")
+                print(f"   - BM25优化: '{llm_response.get('bm25_optimized_query', rewritten_query)}'")
                 print(f"   - 意图: {llm_response.get('intent', 'guide')} (置信度: {llm_response.get('confidence', 0.7):.3f})")
                 print(f"   - 搜索类型: {llm_response.get('search_type', 'hybrid')}")
                 print(f"   - 处理时间: {processing_time:.3f}秒")
@@ -366,6 +477,7 @@ Please provide a JSON response with the following structure:
                     detected_language=detected_language,
                     translated_query=translated_query,
                     rewritten_query=rewritten_query,
+                    bm25_optimized_query=llm_response.get("bm25_optimized_query", rewritten_query), # LLM处理不优化
                     intent=llm_response.get("intent", "guide"),
                     confidence=llm_response.get("confidence", 0.7),
                     search_type=llm_response.get("search_type", "hybrid"),
@@ -385,6 +497,7 @@ Please provide a JSON response with the following structure:
                 print(f"   - 检测语言: {result.detected_language}")
                 print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
                 print(f"   - 重写查询: '{result.rewritten_query}'")
+                print(f"   - BM25优化: '{result.bm25_optimized_query}'")
                 print(f"   - 重写应用: {result.rewrite_applied}")
                 self.stats["failed_processing"] += 1
                 logger.warning(f"LLM统一处理失败，使用基础处理: {query}")
@@ -397,6 +510,7 @@ Please provide a JSON response with the following structure:
             print(f"   - 检测语言: {result.detected_language}")
             print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
             print(f"   - 重写查询: '{result.rewritten_query}'")
+            print(f"   - BM25优化: '{result.bm25_optimized_query}'")
             self.stats["failed_processing"] += 1
         
         # 更新平均处理时间

@@ -183,6 +183,7 @@ class HybridSearchRetriever:
                 query_metadata = {
                     "original_query": query,
                     "processed_query": final_query,
+                    "bm25_optimized_query": unified_result.bm25_optimized_query,  # 添加BM25优化查询
                     "translation_applied": translation_applied,
                     "rewrite_applied": rewrite_applied,
                     "intent": unified_result.intent,
@@ -205,6 +206,7 @@ class HybridSearchRetriever:
                 query_metadata = {
                     "original_query": query,
                     "processed_query": final_query,
+                    "bm25_optimized_query": final_query,  # 降级时使用原始查询
                     "translation_applied": False,
                     "rewrite_applied": False,
                     "processing_method": "fallback",
@@ -247,6 +249,7 @@ class HybridSearchRetriever:
             query_metadata = {
                 "original_query": query,
                 "processed_query": final_query,
+                "bm25_optimized_query": final_query,  # 分离处理时使用处理后的查询
                 "translation_applied": translation_applied,
                 "rewrite_applied": rewrite_applied,
                 "processing_method": "separate"
@@ -267,11 +270,18 @@ class HybridSearchRetriever:
                     print(f"         分数: {result.get('score', 0):.4f}")
                     print(f"         摘要: {chunk.get('summary', '')[:80]}...")
             
-            # BM25搜索 - 固定返回10个结果
+            # BM25搜索 - 固定返回10个结果，使用LLM优化的查询
             bm25_results = []
             if self.bm25_indexer:
-                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索: query='{final_query}', top_k={bm25_search_count}")
-                bm25_results = self.bm25_indexer.search(final_query, bm25_search_count)
+                # 使用LLM优化的BM25查询
+                bm25_query = query_metadata.get("bm25_optimized_query", final_query)
+                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索:")
+                print(f"   - 原始查询: '{query}'")
+                print(f"   - 语义查询: '{final_query}'")
+                print(f"   - BM25优化: '{bm25_query}'")
+                print(f"   - 检索数量: {bm25_search_count}")
+                
+                bm25_results = self.bm25_indexer.search(bm25_query, bm25_search_count)
                 print(f"📊 [HYBRID-DEBUG] BM25搜索结果数量: {len(bm25_results)}")
                 
                 if bm25_results:

@@ -54,11 +54,16 @@ class TranslationManager:
                 # 检查是否需要更新
                 updated = False
                 
-                # 添加新键
+                # 添加新键和更新现有键的值
                 for key, value in latest_defaults.items():
                     if key not in existing_translations:
                         existing_translations[key] = value
                         logger.info(f"Added new translation key: {key}")
+                        updated = True
+                    elif existing_translations[key] != value:
+                        # 检测到现有键的值发生变化，更新它
+                        existing_translations[key] = value
+                        logger.info(f"Updated translation value for key: {key}")
                         updated = True
                 
                 # 移除已删除的键
@@ -99,6 +104,11 @@ class TranslationManager:
                         if key not in existing_current:
                             existing_current[key] = value
                             logger.info(f"Added new translation key to {self.current_language}: {key}")
+                            updated = True
+                        elif existing_current[key] != value:
+                            # 检测到现有键的值发生变化，更新它
+                            existing_current[key] = value
+                            logger.info(f"Updated translation value for key in {self.current_language}: {key}")
                             updated = True
                     
                     # 移除过时的键
@@ -199,15 +209,14 @@ class TranslationManager:
                                        "Please configure API key in settings window, or set GOOGLE_API_KEY environment variable.",
             
             # Welcome message
-            "welcome_title": "🎮 Welcome to GameWiki AI Assistant!",
+            "welcome_title": "🎮 Welcome to GameWiki Assistant!",
             "welcome_features": "💡 **Features:**",
-            "welcome_wiki_search": "• **Wiki Search** - Quick access to official game resources",
-            "welcome_ai_guide": "• **AI Guide BETA** - Intelligent game strategy Q&A (requires API key configuration; ONLY support Helldivers2/Elden Ring/Don't Starve Together/Civilization VI so far)",
-            "welcome_examples": "🎯 **Recommended Query Examples:**",
+            "welcome_wiki_search": "• **Wiki Search** - Quick access to website Wiki",
+            "welcome_ai_guide": "• **AI Guide BETA** - Haven't support context memory; ONLY support Helldivers2/Elden Ring/Don't Starve Together/Civilization VI so far; AI could make mistakes, check the attached video link for validity.)",
+            "welcome_examples": "🎯 **Recommended Query Examples for AI Guide:**",
             "welcome_helldivers": "• Helldivers 2: `best warbond to buy first` / `flame weapon combinations`",
             "welcome_eldenring": "• Elden Ring: `boss strategies` / `equipment recommendations`",
-            "welcome_stardew": "• Stardew Valley: `farm layouts` / `relationship guides`",
-            "welcome_dst": "• Don't Starve Together: `survival tips` / `character selection`",
+            "welcome_dst": "• Don't Starve Together: `What to do on day 1` / `character recommendation`",
             "welcome_usage": "📝 **Usage Tips:**",
             "welcome_usage_desc": "Simply type your question, and the system will automatically determine whether to use Wiki search or AI guide functionality.",
             

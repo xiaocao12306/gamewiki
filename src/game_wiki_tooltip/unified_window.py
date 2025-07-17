@@ -169,6 +169,8 @@ def detect_markdown_content(text: str) -> bool:
         r'<a\s+.*?href.*?>.*?</a>', # <a>链接标签
         r'<[^>]+>',  # 其他HTML标签
         r'📺\s*\*\*信息来源：\*\*',  # 视频源标题
+        r'---\s*\n\s*<small>',  # markdown分隔符 + HTML
+        r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
     ]
     
     # 检查markdown模式
@@ -203,7 +205,23 @@ def convert_markdown_to_html(text: str) -> str:
         
         if has_html_tags:
             # 检查是否是混合内容（Markdown + HTML视频源）
-            video_source_start = text.find('---\n<small>')
+            # 改进：使用更灵活的视频源识别方式
+            video_source_patterns = [
+                r'---\s*\n\s*<small>',  # 原有模式
+                r'📺\s*\*\*信息来源：\*\*',  # 视频源标题模式  
+                r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
+            ]
+            
+            video_source_start = -1
+            used_pattern = None
+            
+            for pattern in video_source_patterns:
+                match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
+                if match:
+                    video_source_start = match.start()
+                    used_pattern = pattern
+                    break
+            
             if video_source_start != -1:
                 # 分离Markdown和HTML部分
                 markdown_content = text[:video_source_start].strip()
@@ -239,10 +257,23 @@ def convert_markdown_to_html(text: str) -> str:
                         processed_markdown = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_markdown)
                         processed_markdown = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', processed_markdown)
                 
+                # 处理HTML部分，确保格式正确
+                processed_html = html_content
+                if html_content:
+                    # 清理可能的markdown分隔符
+                    processed_html = re.sub(r'^---\s*\n\s*', '', processed_html, flags=re.MULTILINE)
+                    processed_html = processed_html.strip()
+                    
+                    # 处理视频源中的markdown链接
+                    processed_html = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', processed_html)
+                
                 # 合并处理后的内容
                 combined_content = processed_markdown
-                if html_content:
-                    combined_content += "\n\n" + html_content
+                if processed_html:
+                    # 添加适当的间距
+                    if combined_content and not combined_content.endswith('<br/>'):
+                        combined_content += '<br/><br/>'
+                    combined_content += processed_html
                 
                 # 应用样式包装
                 styled_html = f"""
@@ -258,7 +289,11 @@ def convert_markdown_to_html(text: str) -> str:
                 """
                 return styled_html
             else:
-                # 纯HTML内容，直接包装
+                # 纯HTML内容，但仍需要处理其中的markdown链接
+                processed_text = text
+                # 处理markdown链接
+                processed_text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', processed_text)
+                
                 styled_html = f"""
                 <div style="
                     font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
@@ -267,7 +302,7 @@ def convert_markdown_to_html(text: str) -> str:
                     max-width: 100%;
                     word-wrap: break-word;
                 ">
-                    {text}
+                    {processed_text}
                 </div>
                 """
                 return styled_html
@@ -325,7 +360,8 @@ def convert_markdown_to_html(text: str) -> str:
         return styled_html
         
     except Exception as e:
-        # 静默处理markdown转换失败，避免过多日志输出
+        # 只在转换失败时输出错误信息
+        print(f"❌ [RENDER-ERROR] Markdown转换失败: {e}")
         return text
 
 
@@ -623,6 +659,8 @@ class MessageWidget(QFrame):
                 html_content = convert_markdown_to_html(self.message.content)
                 self.content_label.setText(html_content)
                 self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                # AI回复中可能包含链接，需要连接linkActivated信号
+                self.content_label.linkActivated.connect(self.on_link_clicked)
             else:
                 # 普通文本
                 self.content_label.setText(self.message.content)
@@ -776,6 +814,8 @@ class StreamingMessageWidget(MessageWidget):
         self.render_time_interval = 1.5  # 最长1.5秒进行一次渲染
         self.is_markdown_detected = False  # 缓存markdown检测结果
         self.current_format = Qt.TextFormat.PlainText  # 当前文本格式
+        self.link_signal_connected = False  # 跟踪是否已连接linkActivated信号
+        self.has_video_source = False  # 跟踪是否已检测到视频源
         
         # 优化流式消息的布局，防止闪烁
         self._optimize_for_streaming()
@@ -889,6 +929,14 @@ class StreamingMessageWidget(MessageWidget):
             elif current_time - self.last_render_time >= self.render_time_interval:
                 should_render = True
             
+            # 条件3: 检测到关键内容边界（如video sources开始）
+            elif not self.has_video_source and ('📺' in display_text[-10:] or 
+                  '---\n<small>' in display_text[-20:] or
+                  '<small>' in display_text[-10:]):
+                should_render = True
+                self.has_video_source = True  # 标记已检测到视频源，避免重复打印
+                print(f"🎬 [STREAMING] 检测到视频源内容，触发渲染")
+            
             if should_render and self.message.type == MessageType.AI_STREAMING:
                 # 重新检测内容格式（支持动态变化，如添加HTML视频源）
                 current_has_format = detect_markdown_content(display_text)
@@ -896,7 +944,7 @@ class StreamingMessageWidget(MessageWidget):
                 # 如果检测到格式变化，更新检测状态
                 if current_has_format and not self.is_markdown_detected:
                     self.is_markdown_detected = True
-                    print(f"🔄 [STREAMING] 检测到格式内容，切换到HTML渲染模式")
+                    print(f"🔄 [STREAMING] 检测到格式内容，切换到HTML渲染模式，当前长度: {len(display_text)}")
                 
                 # 进行阶段性渲染
                 if self.is_markdown_detected or current_has_format:
@@ -907,6 +955,12 @@ class StreamingMessageWidget(MessageWidget):
                         self.current_format = Qt.TextFormat.RichText
                         print(f"📝 [STREAMING] 切换到RichText格式，内容长度: {len(display_text)}")
                     self.content_label.setText(html_content)
+                    
+                    # 如果还未连接linkActivated信号，现在连接
+                    if not self.link_signal_connected:
+                        self.content_label.linkActivated.connect(self.on_link_clicked)
+                        self.link_signal_connected = True
+                        print(f"🔗 [STREAMING] 已连接linkActivated信号")
                 else:
                     # 只在格式实际变化时才设置格式，避免闪烁
                     if self.current_format != Qt.TextFormat.PlainText:
@@ -944,14 +998,26 @@ class StreamingMessageWidget(MessageWidget):
                 self.message.type = MessageType.AI_RESPONSE
                 
                 # 输出完成信息
-                has_video_sources = '📺 **信息来源：**' in self.full_text
+                has_video_sources = any(pattern in self.full_text for pattern in [
+                    '📺 **信息来源：**', 
+                    '---\n<small>', 
+                    '<small>.*?来源.*?</small>'
+                ])
                 print(f"🎬 [STREAMING] 流式消息完成，长度: {len(self.full_text)} 字符，包含视频源: {has_video_sources}")
                 
                 # 进行最终的格式检测和转换
-                if detect_markdown_content(self.full_text):
+                # 如果包含视频源，强制使用RichText格式
+                if detect_markdown_content(self.full_text) or has_video_sources:
                     html_content = convert_markdown_to_html(self.full_text)
                     self.content_label.setText(html_content)
                     self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                    
+                    # 流式输出完成后，确保linkActivated信号已连接（避免重复连接）
+                    if not self.link_signal_connected:
+                        self.content_label.linkActivated.connect(self.on_link_clicked)
+                        self.link_signal_connected = True
+                        print(f"🔗 [STREAMING] 最终渲染时连接linkActivated信号")
+                    
                     print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
                 else:
                     self.content_label.setText(self.full_text)

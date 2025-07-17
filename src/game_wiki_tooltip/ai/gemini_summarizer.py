@@ -4,7 +4,7 @@ Gemini Flash 2.5 Lite Summarizer for RAG-retrieved knowledge chunks
 import os
 import json
 import logging
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, AsyncGenerator
 import google.generativeai as genai
 from dataclasses import dataclass
 from pathlib import Path
@@ -142,6 +142,134 @@ class GeminiSummarizer:
             
             return fallback_result
     
+    async def summarize_chunks_stream(
+        self,
+        chunks: List[Dict[str, Any]],
+        query: str,
+        original_query: Optional[str] = None,
+        context: Optional[str] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        流式生成摘要，使用真正的Gemini流式API
+        
+        Args:
+            chunks: 检索到的知识块
+            query: 处理后的查询
+            original_query: 原始查询
+            context: 游戏上下文
+            
+        Yields:
+            摘要内容的流式片段
+        """
+        print(f"🌊 [STREAM-DEBUG] 开始流式摘要生成")
+        print(f"   - 知识块数量: {len(chunks)}")
+        print(f"   - 查询: {query}")
+        if original_query and original_query != query:
+            print(f"   - 原始查询: {original_query}")
+        print(f"   - 游戏上下文: {context}")
+        
+        # Store game context for video source extraction
+        if context:
+            self.current_game_name = context
+            print(f"🎮 [STREAM-DEBUG] Stored game name: {self.current_game_name}")
+        else:
+            print(f"⚠️ [STREAM-DEBUG] No context provided, game name not stored")
+        
+        if not chunks:
+            yield "抱歉，没有找到相关的游戏信息。"
+            return
+            
+        try:
+            print(f"🚀 [STREAM-DEBUG] 调用Gemini流式API")
+            
+            # 构建prompt
+            prompt = self._build_summarization_prompt(chunks, query, original_query, context)
+            
+            # 用于收集完整响应文本以提取视频源
+            complete_response = ""
+            
+            # 使用新的Client API进行流式调用
+            import google.generativeai as genai
+            from google import genai as new_genai
+            
+            try:
+                # 尝试使用新的Client API（推荐方式）
+                client = new_genai.Client()
+                
+                # 流式生成内容
+                response = client.models.generate_content_stream(
+                    model=self.config.model_name,
+                    contents=[prompt]
+                )
+                
+                print(f"✅ [STREAM-DEBUG] 开始接收流式响应（新Client API）")
+                
+                # 实时产出流式内容
+                for chunk in response:
+                    if chunk.text:
+                        print(f"📝 [STREAM-DEBUG] 接收到流式片段: {len(chunk.text)} 字符")
+                        complete_response += chunk.text
+                        yield chunk.text
+                    
+                print(f"🎉 [STREAM-DEBUG] 流式响应完成（新Client API）")
+                
+            except (ImportError, AttributeError) as e:
+                # 如果新API不可用，回退到尝试旧API
+                print(f"⚠️ [STREAM-DEBUG] 新Client API不可用({e})，尝试旧API方式")
+                
+                # 配置生成参数
+                generation_config = genai.types.GenerationConfig(
+                    temperature=self.config.temperature,
+                    max_output_tokens=8192,
+                )
+                
+                # 使用旧的GenerativeModel API
+                model = genai.GenerativeModel(
+                    model_name=self.config.model_name,
+                    generation_config=generation_config,
+                )
+                
+                # 检查是否有流式方法
+                if hasattr(model, 'generate_content_stream'):
+                    print(f"✅ [STREAM-DEBUG] 使用旧API的流式方法")
+                    response = model.generate_content_stream(prompt)
+                    
+                    for chunk in response:
+                        if chunk.text:
+                            print(f"📝 [STREAM-DEBUG] 接收到流式片段: {len(chunk.text)} 字符")
+                            complete_response += chunk.text
+                            yield chunk.text
+                else:
+                    print(f"❌ [STREAM-DEBUG] 旧API也不支持流式，回退到同步方法")
+                    # 完全回退到同步方法
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        complete_response = response.text
+                        yield response.text
+            
+            # 流式输出完成后，添加视频来源信息
+            print(f"🎬 [STREAM-DEBUG] 流式输出完成，开始提取视频来源")
+            video_sources_text = self._extract_video_sources(chunks, complete_response)
+            if video_sources_text:
+                print(f"✅ [STREAM-DEBUG] 找到视频来源，添加到流式输出")
+                # 添加分隔符确保能被正确识别
+                separator = "\n\n---\n"
+                yield separator + video_sources_text
+            else:
+                print(f"❌ [STREAM-DEBUG] 未找到视频来源")
+                    
+        except Exception as e:
+            print(f"❌ [STREAM-DEBUG] 流式API调用失败: {e}")
+            print(f"🔄 [STREAM-DEBUG] 回退到同步方法")
+            
+            # 回退到原有的同步方法
+            try:
+                result = self.summarize_chunks(chunks, query, original_query, context)
+                yield result
+            except Exception as sync_error:
+                print(f"❌ [STREAM-DEBUG] 同步方法也失败: {sync_error}")
+                yield "抱歉，AI摘要服务暂时不可用，请稍后重试。"
+    
     def _build_summarization_prompt(
         self, 
         chunks: List[Dict[str, Any]], 
@@ -180,19 +308,21 @@ class GeminiSummarizer:
 {chunks_json}
 
 回答指南：
-1. **理解JSON结构**：每个知识块包含topic、summary、keywords、type、score等基础信息，以及structured_data详细数据
-2. **双查询理解**：
+1. **开头必须提供一句话总结**：在正式回答之前，用一句话概括答案要点（例如："💡 **总结**：推荐使用火箭筒配合重装甲来对付这个BOSS"）
+2. **理解JSON结构**：每个知识块包含topic、summary、keywords、type、score等基础信息，以及structured_data详细数据
+3. **双查询理解**：
    - 检索查询帮助你理解"召回思路"，判断哪些段落最相关
    - 原始查询帮助你决定回答的措辞、详细程度、写作风格，避免"语义漂移"
-3. **根据问题类型调整回答**：
+4. **根据问题类型调整回答**：
    - 配装推荐：完整列出所有装备/部件信息
    - 敌人攻略：提供弱点、血量、推荐武器等关键信息
    - 游戏策略：给出具体的操作建议和技巧
    - 物品信息：详细说明属性、获取方式、用途等
-4. **回答详细程度**：{detail_instruction}
-5. **利用structured_data**：优先使用结构化数据中的具体数值、名称、配置等信息
+5. **回答详细程度**：{detail_instruction}
+6. **利用structured_data**：优先使用结构化数据中的具体数值、名称、配置等信息
 
 格式要求：
+• 开头先给出一句话总结（用💡标记）
 • 按照原始查询的措辞和细节要求组织答案
 • 使用友好的游戏术语和表情符号
 • 基于JSON中的实际数据，不要编造信息
@@ -218,19 +348,21 @@ Available game knowledge chunks (JSON format):
 {chunks_json}
 
 Response guidelines:
-1. **Understand JSON structure**: Each chunk contains topic, summary, keywords, type, score and structured_data details
-2. **Dual query understanding**:
+1. **Start with a one-sentence summary**: Before the detailed answer, provide a one-sentence summary of the key points (e.g., "💡 **Summary**: Recommended to use rocket launcher with heavy armor against this boss")
+2. **Understand JSON structure**: Each chunk contains topic, summary, keywords, type, score and structured_data details
+3. **Dual query understanding**:
    - Retrieval query helps you understand the "recall approach" to judge which segments are most relevant
    - Original query helps you decide response wording, detail level, and writing style to avoid "semantic drift"
-3. **Adapt response based on question type**:
+4. **Adapt response based on question type**:
    - Build recommendations: List complete equipment/component information
    - Enemy guides: Provide weak points, health, recommended weapons
    - Game strategies: Give specific operation suggestions and tactics
    - Item information: Detail attributes, acquisition methods, uses
-4. **Response detail level**: {detail_instruction}
-5. **Utilize structured_data**: Prioritize specific values, names, configurations from structured data
+5. **Response detail level**: {detail_instruction}
+6. **Utilize structured_data**: Prioritize specific values, names, configurations from structured data
 
 Format requirements:
+• Start with a one-sentence summary (marked with 💡)
 • Organize response according to original query's wording and detail requirements
 • Use friendly gaming terminology and appropriate emojis
 • Base on actual data from JSON, don't fabricate information
@@ -271,10 +403,10 @@ Your response:"""
         detailed_keywords = [
             # Chinese keywords
             "为什么", "原因", "详细", "解释", "说明", "分析", "机制", "深入",
-            "怎么样", "如何", "策略", "技巧", "攻略", "教程",
+            "策略", "技巧", "攻略", "教程",
             # English keywords  
-            "why", "reason", "detailed", "explain", "explanation", "analysis", 
-            "mechanism", "how", "strategy", "tactics", "guide", "tutorial",
+            "why", "reason", "detailed", "explain",  "analysis",
+            "mechanism", "strategy", "tactics",
             "in-depth", "comprehensive"
         ]
         
