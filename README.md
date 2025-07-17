@@ -1,7 +1,7 @@
 # GameWikiTooltip - Intelligent Game Wiki Overlay Tool
 
 An intelligent Wiki overlay tool designed specifically for gamers, featuring automatic game detection and AI-powered RAG (Retrieval-Augmented Generation) capabilities for smart Q&A services.
-
+👉 [中文说明请点击这里](README.zh-CN.md)
 ## 🎮 Key Features
 
 - **Global Hotkey Activation** - Quick Wiki overlay access with customizable hotkey combinations
