@@ -263,11 +263,11 @@ class GameWikiApp(QObject):
         # Check if API keys are configured (both settings.json and environment variables)
         api_config = settings.get('api', {})
         
-        # Check Google API key
-        google_api_key = (
-            api_config.get('google_api_key') or 
-            os.getenv('GOOGLE_API_KEY') or 
-            os.getenv('GEMINI_API_KEY')
+        # Check Gemini API key
+        gemini_api_key = (
+            api_config.get('gemini_api_key') or 
+            os.getenv('GEMINI_API_KEY') or 
+            os.getenv('GOOGLE_API_KEY')
         )
         
         # Check Jina API key (现在也是必需的，不再是可选的)
@@ -278,16 +278,16 @@ class GameWikiApp(QObject):
         
         # Debug information
         logger.info(f"API Key Detection:")
-        logger.info(f"  - settings.json Google API key: {'***found***' if api_config.get('google_api_key') else 'not found'}")
-        logger.info(f"  - Environment GOOGLE_API_KEY: {'***found***' if os.getenv('GOOGLE_API_KEY') else 'not found'}")
+        logger.info(f"  - settings.json Gemini API key: {'***found***' if api_config.get('gemini_api_key') else 'not found'}")
         logger.info(f"  - Environment GEMINI_API_KEY: {'***found***' if os.getenv('GEMINI_API_KEY') else 'not found'}")
-        logger.info(f"  - Final Google API key: {'***found***' if google_api_key else 'not found'}")
+        logger.info(f"  - Environment GOOGLE_API_KEY: {'***found***' if os.getenv('GOOGLE_API_KEY') else 'not found'}")
+        logger.info(f"  - Final Gemini API key: {'***found***' if gemini_api_key else 'not found'}")
         logger.info(f"  - settings.json Jina API key: {'***found***' if api_config.get('jina_api_key') else 'not found'}")
         logger.info(f"  - Environment JINA_API_KEY: {'***found***' if os.getenv('JINA_API_KEY') else 'not found'}")
         logger.info(f"  - Final Jina API key: {'***found***' if jina_api_key else 'not found'}")
         
         # 检查是否同时有两个API key
-        has_both_keys = bool(google_api_key and jina_api_key)
+        has_both_keys = bool(gemini_api_key and jina_api_key)
         dont_remind = settings.get('dont_remind_api_missing', False)
         logger.info(f"  - Both API keys available: {has_both_keys}")
         logger.info(f"  - Don't remind API missing: {dont_remind}")
@@ -299,8 +299,8 @@ class GameWikiApp(QObject):
         elif not has_both_keys:
             # 没有两个API key时，显示信息但不强制退出
             missing_keys = []
-            if not google_api_key:
-                missing_keys.append("Google/Gemini API Key")
+            if not gemini_api_key:
+                missing_keys.append("Gemini API Key")
             if not jina_api_key:
                 missing_keys.append("Jina API Key")
             
@@ -322,6 +322,44 @@ class GameWikiApp(QObject):
     def _initialize_components(self, limited_mode=False):
         """Initialize all components"""
         try:
+            # 确保在初始化新的assistant controller之前，清理可能存在的旧实例
+            if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
+                logger.info("检测到已存在的assistant controller，先进行清理...")
+                
+                # 清理悬浮窗
+                if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
+                    try:
+                        logger.info("清理已存在的悬浮窗...")
+                        self.assistant_ctrl.mini_window.hide()
+                        self.assistant_ctrl.mini_window.close()
+                        self.assistant_ctrl.mini_window.deleteLater()
+                        self.assistant_ctrl.mini_window = None
+                    except Exception as e:
+                        logger.warning(f"清理已存在悬浮窗时出错: {e}")
+                        self.assistant_ctrl.mini_window = None
+                
+                # 清理主窗口
+                if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
+                    try:
+                        logger.info("清理已存在的主窗口...")
+                        self.assistant_ctrl.main_window.hide()
+                        self.assistant_ctrl.main_window.close()
+                        self.assistant_ctrl.main_window.deleteLater()
+                        self.assistant_ctrl.main_window = None
+                    except Exception as e:
+                        logger.warning(f"清理已存在主窗口时出错: {e}")
+                        self.assistant_ctrl.main_window = None
+                
+                # 断开信号连接
+                try:
+                    if hasattr(self.assistant_ctrl, 'rag_integration'):
+                        self.assistant_ctrl.rag_integration.disconnect()
+                except Exception as e:
+                    logger.warning(f"断开旧的RAG integration信号连接时出错: {e}")
+                
+                self.assistant_ctrl = None
+                logger.info("已存在的assistant controller清理完成")
+            
             # Initialize assistant controller with limited mode flag
             self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
             
@@ -406,9 +444,9 @@ class GameWikiApp(QObject):
             self.message_timer.start(50)  # Check every 50ms as backup
             logger.info("Windows消息监听器启动完成（备用）")
             
-            # Show mini assistant
+            # Show mini assistant (延迟显示，确保之前的清理操作完成)
             logger.info("Showing mini assistant...")
-            self.assistant_ctrl.show_mini()
+            QTimer.singleShot(50, self.assistant_ctrl.show_mini)
             logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
             
         except Exception as e:
@@ -455,11 +493,11 @@ class GameWikiApp(QObject):
             settings = self.settings_mgr.get()
             api_config = settings.get('api', {})
             
-            # Check Google API key from both sources
-            google_api_key = (
-                api_config.get('google_api_key') or 
-                os.getenv('GOOGLE_API_KEY') or 
-                os.getenv('GEMINI_API_KEY')
+            # Check Gemini API key from both sources
+            gemini_api_key = (
+                api_config.get('gemini_api_key') or 
+                os.getenv('GEMINI_API_KEY') or 
+                os.getenv('GOOGLE_API_KEY')
             )
             
             # Check Jina API key (现在也是必需的)
@@ -469,7 +507,7 @@ class GameWikiApp(QObject):
             )
             
             # 检查是否同时有两个API key
-            has_both_keys = bool(google_api_key and jina_api_key)
+            has_both_keys = bool(gemini_api_key and jina_api_key)
             dont_remind = settings.get('dont_remind_api_missing', False)
             
             # 检查是否需要切换模式
@@ -477,15 +515,15 @@ class GameWikiApp(QObject):
             new_limited_mode = not has_both_keys
             
             logger.info(f"模式检查: 当前受限模式={current_limited_mode}, 新受限模式={new_limited_mode}")
-            logger.info(f"API key状态: Google={'✓' if google_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
+            logger.info(f"API key状态: Gemini={'✓' if gemini_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
             
             # 检查是否需要显示API key缺失对话框（只在从完整模式切换到受限模式时显示）
             show_api_dialog = (new_limited_mode and not current_limited_mode and not dont_remind)
             
             if show_api_dialog:
                 missing_keys = []
-                if not google_api_key:
-                    missing_keys.append("Google/Gemini API Key")
+                if not gemini_api_key:
+                    missing_keys.append("Gemini API Key")
                 if not jina_api_key:
                     missing_keys.append("Jina API Key")
                 
@@ -508,20 +546,57 @@ class GameWikiApp(QObject):
                 # 需要切换模式，重新初始化组件
                 logger.info(f"模式切换: {current_limited_mode} -> {new_limited_mode}")
                 
-                # 清理现有组件
+                # 清理现有组件（添加正确的清理逻辑）
                 if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
+                    logger.info("正在清理旧的assistant controller...")
+                    
+                    # 清理悬浮窗
+                    if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
+                        try:
+                            logger.info("清理旧的悬浮窗...")
+                            self.assistant_ctrl.mini_window.hide()
+                            self.assistant_ctrl.mini_window.close()
+                            self.assistant_ctrl.mini_window.deleteLater()
+                            self.assistant_ctrl.mini_window = None
+                            logger.info("旧的悬浮窗已清理")
+                        except Exception as e:
+                            logger.warning(f"清理旧悬浮窗时出错: {e}")
+                            self.assistant_ctrl.mini_window = None
+                    
+                    # 清理主窗口
+                    if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
+                        try:
+                            logger.info("清理旧的主窗口...")
+                            self.assistant_ctrl.main_window.hide()
+                            self.assistant_ctrl.main_window.close()
+                            self.assistant_ctrl.main_window.deleteLater()
+                            self.assistant_ctrl.main_window = None
+                            logger.info("旧的主窗口已清理")
+                        except Exception as e:
+                            logger.warning(f"清理旧主窗口时出错: {e}")
+                            self.assistant_ctrl.main_window = None
+                    
+                    # 断开信号连接，避免内存泄漏
+                    try:
+                        if hasattr(self.assistant_ctrl, 'rag_integration'):
+                            self.assistant_ctrl.rag_integration.disconnect()
+                    except Exception as e:
+                        logger.warning(f"断开RAG integration信号连接时出错: {e}")
+                    
+                    # 清理assistant_ctrl引用
                     self.assistant_ctrl = None
+                    logger.info("旧的assistant controller已清理")
                 
-                # 重新初始化组件
-                self._initialize_components(limited_mode=new_limited_mode)
+                # 重新初始化组件（稍微延迟，确保旧窗口完全清理）
+                QTimer.singleShot(100, lambda: self._initialize_components(limited_mode=new_limited_mode))
                 
                 # 显示模式切换通知（但不重复显示热键通知）
                 mode_switched = True  # 标记已进行模式切换
                 if self.tray_icon:
                     if new_limited_mode:
                         missing_keys = []
-                        if not google_api_key:
-                            missing_keys.append("Google/Gemini API Key")
+                        if not gemini_api_key:
+                            missing_keys.append("Gemini API Key")
                         if not jina_api_key:
                             missing_keys.append("Jina API Key")
                         

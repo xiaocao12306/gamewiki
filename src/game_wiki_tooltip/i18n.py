@@ -171,13 +171,13 @@ class TranslationManager:
             # API settings
             "api_title": "API Key Configuration",
             "google_api_label": "Google (Gemini) API Key:",
-            "google_api_placeholder": "Enter your Google API key",
-            "google_api_help": "Get Google API Key",
+                "google_api_placeholder": "Enter your Gemini API key",
+    "google_api_help": "Get Gemini API Key",
             "jina_api_label": "Jina API Key (Optional):",
             "jina_api_placeholder": "Enter your Jina API key",
             "jina_api_help": "Get Jina API Key",
             "api_tips": "Notes:\n"
-                       "• Google API Key is required for AI conversations and content generation\n"
+                       "• Gemini API Key is required for AI conversations and content generation\n"
                        "• Jina API Key is used for advanced semantic search (optional)\n"
                        "• API keys are securely stored in local configuration files",
             
@@ -202,11 +202,11 @@ class TranslationManager:
             
             # Validation messages
             "validation_modifier_required": "Please select at least one modifier key",
-            "validation_api_key_required": "Please enter Google API Key, or set GOOGLE_API_KEY environment variable",
+            "validation_api_key_required": "Please enter Gemini API Key, or set GEMINI_API_KEY environment variable",
             "validation_settings_saved": "Settings saved and applied successfully",
             "validation_setup_incomplete": "Setup incomplete",
-            "validation_api_key_needed": "Google API Key is required to use this program.\n\n"
-                                       "Please configure API key in settings window, or set GOOGLE_API_KEY environment variable.",
+            "validation_api_key_needed": "Gemini API Key is required to use this program.\n\n"
+                                       "Please configure API key in settings window, or set GEMINI_API_KEY environment variable.",
             
             # Welcome message
             "welcome_title": "🎮 Welcome to GameWiki Assistant!",
@@ -254,13 +254,13 @@ class TranslationManager:
                 # API settings
                 "api_title": "API 密钥配置",
                 "google_api_label": "Google (Gemini) API Key:",
-                "google_api_placeholder": "输入您的 Google API 密钥",
-                "google_api_help": "获取 Google API Key",
+                    "google_api_placeholder": "输入您的 Gemini API 密钥",
+    "google_api_help": "获取 Gemini API Key",
                 "jina_api_label": "Jina API Key (可选):",
                 "jina_api_placeholder": "输入您的 Jina API 密钥",
                 "jina_api_help": "获取 Jina API Key",
                 "api_tips": "说明：\n"
-                           "• Google API Key 用于AI对话和内容生成\n"
+                           "• Gemini API Key 用于AI对话和内容生成\n"
                            "• Jina API Key 用于高级语义搜索（可选）\n"
                            "• API密钥将安全保存在本地配置文件中",
                 
@@ -285,11 +285,11 @@ class TranslationManager:
                 
                 # Validation messages
                 "validation_modifier_required": "请至少选择一个修饰键",
-                "validation_api_key_required": "请输入 Google API Key，或在环境变量中设置 GOOGLE_API_KEY",
+                "validation_api_key_required": "请输入 Gemini API Key，或在环境变量中设置 GEMINI_API_KEY",
                 "validation_settings_saved": "设置已保存并应用",
                 "validation_setup_incomplete": "设置未完成",
-                "validation_api_key_needed": "需要配置Google API密钥才能使用本程序。\n\n"
-                                           "请在设置窗口中配置API密钥，或设置环境变量 GOOGLE_API_KEY。",
+                "validation_api_key_needed": "需要配置Gemini API密钥才能使用本程序。\n\n"
+                                           "请在设置窗口中配置API密钥，或设置环境变量 GEMINI_API_KEY。",
 
                 # Welcome message
                 "welcome_title": "🎮 欢迎使用GameWiki智能助手！",

@@ -134,6 +134,7 @@ class RAGIntegration(QObject):
         self.rag_engine = None
         self.query_processor = None
         self._pending_wiki_update = None  # 存储待更新的wiki链接信息
+        self._llm_config = None  # 存储已配置的LLM配置
         
         # 初始化游戏配置管理器
         from src.game_wiki_tooltip.utils import APPDATA_DIR
@@ -196,25 +197,28 @@ class RAGIntegration(QObject):
             # 获取API设置
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
-            google_api_key = api_settings.get('google_api_key', '')
+            gemini_api_key = api_settings.get('gemini_api_key', '')
             jina_api_key = api_settings.get('jina_api_key', '')
             
             # 检查环境变量
-            if not google_api_key:
-                google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+            if not gemini_api_key:
+                gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
             if not jina_api_key:
                 jina_api_key = os.getenv('JINA_API_KEY')
             
             # 检查是否同时有两个API key
-            has_both_keys = bool(google_api_key and jina_api_key)
+            has_both_keys = bool(gemini_api_key and jina_api_key)
             
             if has_both_keys:
                 logger.info("✅ 检测到完整的API密钥配置，初始化AI组件")
                 
                 llm_config = LLMConfig(
-                    api_key=google_api_key,
+                    api_key=gemini_api_key,
                     model='gemini-2.5-flash-lite-preview-06-17'
                 )
+                
+                # 存储LLM配置供其他方法使用
+                self._llm_config = llm_config
                 
                 # Initialize query processor - 移除，我们将直接使用process_query_unified函数
                 # if process_query_unified:
@@ -238,13 +242,13 @@ class RAGIntegration(QObject):
                     logger.info("未检测到前台窗口，跳过RAG初始化")
             else:
                 missing_keys = []
-                if not google_api_key:
-                    missing_keys.append("Google/Gemini API Key")
+                if not gemini_api_key:
+                    missing_keys.append("Gemini API Key")
                 if not jina_api_key:
                     missing_keys.append("Jina API Key")
                 
                 logger.warning(f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}")
-                logger.warning("无法初始化AI组件，需要同时配置Google/Gemini API Key和Jina API Key")
+                logger.warning("无法初始化AI组件，需要同时配置Gemini API Key和Jina API Key")
                     
         except Exception as e:
             logger.error(f"Failed to initialize AI components: {e}")
@@ -278,6 +282,7 @@ class RAGIntegration(QObject):
                 enable_hybrid_search=rag_config.hybrid_search.enabled,
                 hybrid_config=custom_hybrid_config,  # 使用自定义配置
                 llm_config=llm_config,
+                jina_api_key=jina_api_key,  # 传入Jina API密钥
                 enable_query_rewrite=False,  # 禁用查询重写，避免重复LLM调用
                 enable_summarization=rag_config.summarization.enabled,
                 summarization_config=rag_config.summarization.to_dict(),
@@ -369,19 +374,28 @@ class RAGIntegration(QObject):
             return self._simple_intent_detection(query)
             
         try:
-            # 创建LLM配置并检查API密钥
-            llm_config = LLMConfig(
-                model='gemini-2.5-flash-lite-preview-06-17'
-            )
-            
-            # 使用LLMConfig的get_api_key方法获取API密钥（支持GEMINI_API_KEY环境变量）
-            api_key = llm_config.get_api_key()
-            if not api_key:
-                logger.warning("GEMINI_API_KEY未配置，使用简单意图检测")
-                return self._simple_intent_detection(query)
+            # 使用存储的LLM配置，如果没有则创建临时配置
+            llm_config = self._llm_config
+            if not llm_config:
+                # 如果没有存储的配置，创建临时配置并检查API密钥
+                llm_config = LLMConfig(
+                    model='gemini-2.5-flash-lite-preview-06-17'
+                )
                 
-            # 更新配置中的API密钥
-            llm_config.api_key = api_key
+                # 使用LLMConfig的get_api_key方法获取API密钥（支持GEMINI_API_KEY环境变量）
+                api_key = llm_config.get_api_key()
+                if not api_key:
+                    logger.warning("GEMINI_API_KEY未配置，使用简单意图检测")
+                    return self._simple_intent_detection(query)
+                    
+                # 更新配置中的API密钥
+                llm_config.api_key = api_key
+            else:
+                # 使用存储的配置，验证API密钥
+                api_key = llm_config.get_api_key()
+                if not api_key:
+                    logger.warning("存储的LLM配置中没有有效的API密钥，使用简单意图检测")
+                    return self._simple_intent_detection(query)
             
             # 使用统一查询处理器进行处理（合并了翻译、重写、意图判断）
             result = await asyncio.to_thread(
@@ -652,21 +666,21 @@ class RAGIntegration(QObject):
                     # 获取API设置
                     settings = self.settings_manager.get()
                     api_settings = settings.get('api', {})
-                    google_api_key = api_settings.get('google_api_key', '')
+                    gemini_api_key = api_settings.get('gemini_api_key', '')
                     jina_api_key = api_settings.get('jina_api_key', '')
                     
                     # 检查环境变量
-                    if not google_api_key:
-                        google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+                    if not gemini_api_key:
+                        gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
                     if not jina_api_key:
                         jina_api_key = os.getenv('JINA_API_KEY')
                     
                     # 检查是否同时有两个API key
-                    has_both_keys = bool(google_api_key and jina_api_key)
+                    has_both_keys = bool(gemini_api_key and jina_api_key)
                     
                     if has_both_keys:
                         llm_config = LLMConfig(
-                            api_key=google_api_key,
+                            api_key=gemini_api_key,
                             model='gemini-2.5-flash-lite-preview-06-17'
                         )
                         self._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
@@ -687,8 +701,8 @@ class RAGIntegration(QObject):
                             return
                     else:
                         missing_keys = []
-                        if not google_api_key:
-                            missing_keys.append("Google/Gemini API Key")
+                        if not gemini_api_key:
+                            missing_keys.append("Gemini API Key")
                         if not jina_api_key:
                             missing_keys.append("Jina API Key")
                         
@@ -732,18 +746,28 @@ class RAGIntegration(QObject):
             
             # 直接使用流式RAG查询，在流式过程中处理所有逻辑
             logger.info("🌊 使用流式RAG查询")
+            stream_generator = None
             try:
                 has_output = False
-                # 使用真正的流式API
-                async for chunk in self.rag_engine.query_stream(
+                # 获取流式生成器
+                stream_generator = self.rag_engine.query_stream(
                     question=query, 
                     top_k=3, 
                     original_query=original_query,
                     unified_query_result=unified_query_result
-                ):
-                    if chunk.strip():  # 只发送非空内容
+                )
+                
+                # 使用真正的流式API
+                async for chunk in stream_generator:
+                    # 确保chunk是字符串类型
+                    if isinstance(chunk, dict):
+                        logger.warning(f"收到字典类型的chunk，跳过: {chunk}")
+                        continue
+                    
+                    chunk_str = str(chunk) if chunk is not None else ""
+                    if chunk_str.strip():  # 只发送非空内容
                         has_output = True
-                        self.streaming_chunk_ready.emit(chunk)
+                        self.streaming_chunk_ready.emit(chunk_str)
                         await asyncio.sleep(0.01)  # 很短的延迟以保持UI响应性
                 
                 # 如果没有任何输出，可能需要切换到wiki模式
@@ -765,12 +789,28 @@ class RAGIntegration(QObject):
                 return
                     
             except Exception as e:
-                logger.error(f"流式RAG查询失败，回退到同步模式: {e}")
-                # 继续执行下面的同步逻辑作为回退
-            
-            # 如果流式RAG查询失败，显示错误信息
-            logger.error("流式RAG查询失败，无回退选项")
-            self.error_occurred.emit("Guide generation failed. Please try again.")
+                logger.error(f"流式RAG查询失败: {e}")
+                logger.info("尝试自动切换到Wiki搜索模式...")
+                
+                try:
+                    # 如果流式查询失败，自动切换到wiki搜索
+                    self.streaming_chunk_ready.emit("❌ AI攻略查询遇到问题，为您自动切换到Wiki搜索...\n\n")
+                    search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+                    self.wiki_result_ready.emit(search_url, search_title)
+                    self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                    return
+                except Exception as wiki_error:
+                    logger.error(f"Wiki搜索也失败: {wiki_error}")
+                    self.error_occurred.emit("查询失败，请稍后重试或手动使用Wiki搜索功能。")
+                    return
+            finally:
+                # 确保异步生成器正确关闭
+                if stream_generator is not None:
+                    try:
+                        await stream_generator.aclose()
+                        logger.debug("异步生成器已正确关闭")
+                    except Exception as close_error:
+                        logger.warning(f"关闭异步生成器时出错: {close_error}")
                     
         except Exception as e:
             logger.error(f"Guide generation failed: {e}")
@@ -1064,23 +1104,26 @@ class IntegratedAssistantController(AssistantController):
             # 获取API设置
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
-            google_api_key = api_settings.get('google_api_key', '')
+            gemini_api_key = api_settings.get('gemini_api_key', '')
             jina_api_key = api_settings.get('jina_api_key', '')
             
             # 检查环境变量
-            if not google_api_key:
-                google_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+            if not gemini_api_key:
+                gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
             if not jina_api_key:
                 jina_api_key = os.getenv('JINA_API_KEY')
             
             # 检查是否同时有两个API key
-            has_both_keys = bool(google_api_key and jina_api_key)
+            has_both_keys = bool(gemini_api_key and jina_api_key)
             
             if has_both_keys:
                 llm_config = LLMConfig(
-                    api_key=google_api_key,
+                    api_key=gemini_api_key,
                     model='gemini-2.5-flash-lite-preview-06-17'
                 )
+                
+                # 更新存储的LLM配置
+                self._llm_config = llm_config
                 
                 # 异步初始化RAG引擎（不等待完成）
                 self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=False)
@@ -1090,7 +1133,7 @@ class IntegratedAssistantController(AssistantController):
                 self._rag_initializing = True
                 self._target_vector_game = vector_game_name
             else:
-                logger.warning(f"⚠️ API密钥不完整，无法初始化RAG引擎 (Google: {bool(google_api_key)}, Jina: {bool(jina_api_key)})")
+                logger.warning(f"⚠️ API密钥不完整，无法初始化RAG引擎 (Gemini: {bool(gemini_api_key)}, Jina: {bool(jina_api_key)})")
                 
         except Exception as e:
             logger.error(f"RAG引擎重新初始化失败: {e}")

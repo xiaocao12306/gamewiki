@@ -194,7 +194,7 @@ class GeminiSummarizer:
             
             try:
                 # 尝试使用新的Client API（推荐方式）
-                client = new_genai.Client()
+                client = new_genai.Client(api_key=self.config.api_key)
                 
                 # 流式生成内容
                 response = client.models.generate_content_stream(
@@ -261,11 +261,20 @@ class GeminiSummarizer:
         except Exception as e:
             print(f"❌ [STREAM-DEBUG] 流式API调用失败: {e}")
             print(f"🔄 [STREAM-DEBUG] 回退到同步方法")
+            import traceback
+            print(f"❌ [STREAM-DEBUG] 详细错误信息: {traceback.format_exc()}")
+            
+            # 检查是否是API密钥问题
+            error_msg = str(e).lower()
+            if 'api_key' in error_msg or 'authentication' in error_msg or 'unauthorized' in error_msg or 'inputs argument' in error_msg:
+                print(f"🔑 [STREAM-DEBUG] 检测到API密钥相关错误")
+                yield "❌ API密钥配置有问题，请检查Gemini API密钥是否正确配置。\n\n"
+                return
             
             # 回退到原有的同步方法
             try:
                 result = self.summarize_chunks(chunks, query, original_query, context)
-                yield result
+                yield result.get('summary', str(result))
             except Exception as sync_error:
                 print(f"❌ [STREAM-DEBUG] 同步方法也失败: {sync_error}")
                 yield "抱歉，AI摘要服务暂时不可用，请稍后重试。"

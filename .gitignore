@@ -130,7 +130,6 @@ dmypy.json
 .pyre/
 
 # Project specific
-app.spec
 *.exe
 *.msi
 

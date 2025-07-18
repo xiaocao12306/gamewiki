@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from tqdm import tqdm
 import logging
+import sys
 
 # 尝试加载.env文件
 try:
@@ -44,6 +45,31 @@ except ImportError:
     logging.warning("faiss-cpu未安装，向量库功能不可用")
 
 logger = logging.getLogger(__name__)
+
+def get_resource_path(relative_path: str) -> Path:
+    """
+    获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境
+    
+    Args:
+        relative_path: 相对于项目根目录或临时目录的路径
+        
+    Returns:
+        资源文件的绝对路径
+    """
+    try:
+        # PyInstaller打包后的临时目录
+        base_path = Path(sys._MEIPASS)
+        resource_path = base_path / relative_path
+    except AttributeError:
+        # 开发环境：从当前文件位置向上找到项目根目录
+        current_file = Path(__file__).parent  # .../ai/
+        base_path = current_file  # 对于ai目录下的文件，直接使用当前目录
+        # 如果relative_path以"ai/"开头，需要去掉这个前缀
+        if relative_path.startswith("ai/"):
+            relative_path = relative_path[3:]  # 去掉"ai/"前缀
+        resource_path = base_path / relative_path
+    
+    return resource_path
 
 class BatchEmbeddingProcessor:
     """批量嵌入处理器"""
@@ -372,12 +398,12 @@ class BatchEmbeddingProcessor:
             config_dir = Path(self._config_file_path).parent
             index_path = config_dir / Path(config["index_path"]).name
         else:
-            # 如果没有配置文件路径，尝试构建绝对路径
+            # 如果没有配置文件路径，使用资源路径函数
             index_path_str = config["index_path"]
             if not Path(index_path_str).is_absolute():
-                # 使用当前文件的位置来构建绝对路径
-                current_dir = Path(__file__).parent
-                index_path = current_dir / "vectorstore" / Path(index_path_str).name
+                # 使用资源路径函数来构建绝对路径
+                vectorstore_dir = get_resource_path("ai/vectorstore")
+                index_path = vectorstore_dir / Path(index_path_str).name
             else:
                 index_path = Path(index_path_str)
         

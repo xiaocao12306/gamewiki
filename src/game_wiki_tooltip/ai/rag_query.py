@@ -17,6 +17,38 @@ import numpy as np
 from typing import Optional, Dict, Any, List, AsyncGenerator
 from pathlib import Path
 import time
+import sys
+import os
+
+def get_resource_path(relative_path: str) -> Path:
+    """
+    获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境
+    
+    Args:
+        relative_path: 相对于项目根目录或临时目录的路径
+        
+    Returns:
+        资源文件的绝对路径
+    """
+    try:
+        # PyInstaller打包后的临时目录
+        base_path = Path(sys._MEIPASS)
+        resource_path = base_path / relative_path
+        print(f"🔧 [RAG-DEBUG] 使用PyInstaller临时目录: {base_path}")
+        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
+    except AttributeError:
+        # 开发环境：从当前文件位置向上找到项目根目录
+        current_file = Path(__file__).parent  # .../ai/
+        base_path = current_file  # 对于ai目录下的文件，直接使用当前目录
+        # 如果relative_path以"ai/"开头，需要去掉这个前缀
+        if relative_path.startswith("ai/"):
+            relative_path = relative_path[3:]  # 去掉"ai/"前缀
+        resource_path = base_path / relative_path
+        print(f"🔧 [RAG-DEBUG] 使用开发环境路径: {base_path}")
+        print(f"🔧 [RAG-DEBUG] 调整后的相对路径: {relative_path}")
+        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
+    
+    return resource_path
 
 # 导入批量嵌入处理器
 try:
@@ -104,6 +136,7 @@ class EnhancedRagQuery:
                  enable_hybrid_search: bool = True,
                  hybrid_config: Optional[Dict] = None,
                  llm_config: Optional[LLMConfig] = None,
+                 jina_api_key: Optional[str] = None,
                  enable_query_rewrite: bool = True,
                  enable_summarization: bool = True,
                  summarization_config: Optional[Dict] = None,
@@ -137,6 +170,7 @@ class EnhancedRagQuery:
             "rrf_k": 60
         }
         self.llm_config = llm_config
+        self.jina_api_key = jina_api_key
         self.enable_query_rewrite = enable_query_rewrite
         self.hybrid_retriever = None
         
@@ -180,10 +214,8 @@ class EnhancedRagQuery:
             
             # 确定向量库路径
             if self.vector_store_path is None and game_name:
-                # 自动查找向量库 - 使用绝对路径
-                import os
-                current_dir = Path(__file__).parent
-                vector_dir = current_dir / "vectorstore"
+                # 自动查找向量库 - 使用资源路径函数
+                vector_dir = get_resource_path("ai/vectorstore")
                 
                 print(f"🔍 [RAG-DEBUG] 查找向量库目录: {vector_dir}")
                 logger.info(f"查找向量库目录: {vector_dir}")
@@ -209,7 +241,7 @@ class EnhancedRagQuery:
             
             if self.vector_store_path and Path(self.vector_store_path).exists():
                 # 加载向量库
-                self.processor = BatchEmbeddingProcessor()
+                self.processor = BatchEmbeddingProcessor(api_key=self.jina_api_key)
                 self.vector_store = self.processor.load_vector_store(self.vector_store_path)
                 
                 # 加载配置和元数据
@@ -256,15 +288,12 @@ class EnhancedRagQuery:
             from pathlib import Path
             bm25_path = Path(bm25_index_path)
             
-            # 如果是相对路径，基于当前文件位置构建绝对路径
+            # 如果是相对路径，基于资源路径构建绝对路径
             if not bm25_path.is_absolute():
-                # 使用当前文件所在目录作为基础
-                current_dir = Path(__file__).parent
-                # 尝试基于当前目录构建路径
-                bm25_path = current_dir.parent.parent.parent / bm25_index_path
-                # 如果找不到，尝试基于vectorstore目录
-                if not bm25_path.exists():
-                    bm25_path = current_dir / "vectorstore" / Path(bm25_index_path).name
+                # 使用资源路径函数构建路径
+                vectorstore_dir = get_resource_path("ai/vectorstore")
+                # 尝试基于vectorstore目录
+                bm25_path = vectorstore_dir / Path(bm25_index_path).name
             
             if not bm25_path.exists():
                 logger.warning(f"BM25索引文件不存在: {bm25_path}，将仅使用向量搜索")
@@ -309,8 +338,14 @@ class EnhancedRagQuery:
         try:
             import os
             
-            # 获取API密钥
-            api_key = self.summarization_config.get("api_key") or os.environ.get("GEMINI_API_KEY")
+            # 获取API密钥，优先级：LLM配置 > 摘要配置 > 环境变量
+            api_key = None
+            if self.llm_config and hasattr(self.llm_config, 'get_api_key'):
+                api_key = self.llm_config.get_api_key()
+            
+            if not api_key:
+                api_key = self.summarization_config.get("api_key") or os.environ.get("GEMINI_API_KEY")
+            
             if not api_key:
                 logger.warning("未找到Gemini API密钥，摘要功能将被禁用")
                 self.enable_summarization = False
@@ -380,9 +415,9 @@ class EnhancedRagQuery:
             # 使用与BatchEmbeddingProcessor._load_faiss_store相同的路径逻辑
             index_path_str = self.config["index_path"]
             if not Path(index_path_str).is_absolute():
-                # 使用向量库存储路径来构建绝对路径
-                current_dir = Path(__file__).parent
-                index_path = current_dir / "vectorstore" / Path(index_path_str).name
+                # 使用资源路径函数来构建绝对路径
+                vectorstore_dir = get_resource_path("ai/vectorstore")
+                index_path = vectorstore_dir / Path(index_path_str).name
             else:
                 index_path = Path(index_path_str)
             

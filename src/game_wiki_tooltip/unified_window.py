@@ -2332,7 +2332,11 @@ class UnifiedAssistantWindow(QMainWindow):
                             else:
                                 # Try package_file for packaged app
                                 try:
-                                    path_obj = package_file(relative_path)
+                                    # Remove 'assets/' prefix for package_file call
+                                    package_path = relative_path
+                                    if relative_path.startswith('assets/'):
+                                        package_path = relative_path[7:]  # Remove 'assets/'
+                                    path_obj = package_file(package_path)
                                     # For resources, we might need to extract
                                     if hasattr(path_obj, 'read_bytes'):
                                         # It's a resource, we need to save it temporarily

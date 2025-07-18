@@ -30,7 +30,7 @@ python src/game_wiki_tooltip/app.py
 ### Building the Application
 ```bash
 # Build standalone Windows executable
-pyinstaller app.spec
+pyinstaller game_wiki_tooltip.spec
 # Output: dist/app.exe
 ```
 

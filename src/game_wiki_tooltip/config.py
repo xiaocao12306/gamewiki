@@ -71,7 +71,7 @@ class PopupConfig:
 
 @dataclass
 class ApiConfig:
-    google_api_key: str = ""
+    gemini_api_key: str = ""
     jina_api_key: str = ""
 
 

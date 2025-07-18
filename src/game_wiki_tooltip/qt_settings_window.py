@@ -386,7 +386,7 @@ class QtSettingsWindow(QMainWindow):
             url = 'https://' + url
             
         # Get icon path (for now, use a default)
-        icon_path = "assets/icons/default.png"  # You can extend this to let user choose
+        icon_path = "assets/icons/youtube.png"  # 使用存在的图标文件，保持完整路径
         
         # Create shortcut
         shortcut = {
@@ -701,14 +701,14 @@ class QtSettingsWindow(QMainWindow):
         # Load API settings (check both settings.json and environment variables)
         api = settings.get('api', {})
         
-        # Google API key: settings.json -> environment variables
-        google_api_key = (
-            api.get('google_api_key') or 
+        # Gemini API key: settings.json -> environment variables
+        gemini_api_key = (
+            api.get('gemini_api_key') or
+            os.getenv('GEMINI_API_KEY') or
             os.getenv('GOOGLE_API_KEY') or 
-            os.getenv('GEMINI_API_KEY') or 
             ''
         )
-        self.google_api_input.setText(google_api_key)
+        self.google_api_input.setText(gemini_api_key)
         
         # Jina API key: settings.json -> environment variables
         jina_api_key = (
@@ -739,9 +739,9 @@ class QtSettingsWindow(QMainWindow):
             return
             
         # Validate API keys (check both input and environment variables)
-        google_api_key_input = self.google_api_input.text().strip()
-        google_api_key_env = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
-        google_api_key = google_api_key_input or google_api_key_env
+        gemini_api_key_input = self.google_api_input.text().strip()
+        gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+        gemini_api_key = gemini_api_key_input or gemini_api_key_env
         
         jina_api_key_input = self.jina_api_input.text().strip()
         jina_api_key_env = os.getenv('JINA_API_KEY')
@@ -749,8 +749,8 @@ class QtSettingsWindow(QMainWindow):
         
         # Check if both API keys are available
         missing_keys = []
-        if not google_api_key:
-            missing_keys.append("Google/Gemini API Key")
+        if not gemini_api_key:
+            missing_keys.append("Gemini API Key")
         if not jina_api_key:
             missing_keys.append("Jina API Key")
         
@@ -791,7 +791,7 @@ class QtSettingsWindow(QMainWindow):
                 'key': self.key_combo.currentText()
             },
             'api': {
-                'google_api_key': google_api_key_input,  # Only save user input
+                'gemini_api_key': gemini_api_key_input,  # Only save user input
                 'jina_api_key': self.jina_api_input.text().strip()
             },
             'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
