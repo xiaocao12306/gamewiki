@@ -819,6 +819,27 @@ def main():
     if sys.platform != "win32":
         raise RuntimeError("This tool only works on Windows.")
     
+    # Set DPI awareness FIRST before any Qt/Windows API initialization
+    # This prevents "Access Denied" errors when running as packaged exe
+    try:
+        # Try modern API first (Windows 8.1+)
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
+        logger.debug("Successfully set DPI awareness using SetProcessDpiAwareness")
+    except Exception as e:
+        # Log the actual error instead of silently failing
+        if "Access denied" in str(e) or "拒绝访问" in str(e):
+            logger.debug("DPI awareness already set by manifest or parent process")
+        else:
+            logger.debug(f"SetProcessDpiAwareness failed: {e}")
+        
+        # Try legacy API as fallback (Windows Vista+)
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+            logger.debug("Successfully set DPI awareness using SetProcessDPIAware")
+        except Exception as e2:
+            logger.debug(f"SetProcessDPIAware also failed: {e2}")
+            # Continue anyway - Qt will handle DPI awareness with its defaults
+    
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='GameWiki Assistant')
     parser.add_argument('--settings', '--config', action='store_true', 
@@ -827,15 +848,6 @@ def main():
     
     if args.settings:
         logger.info("Settings window will be forced to show")
-        
-    # Enable DPI awareness with better compatibility
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except:
-        try:
-            ctypes.windll.user32.SetProcessDPIAware()
-        except:
-            pass
             
     # Create and run app
     app = GameWikiApp()

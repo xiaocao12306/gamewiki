@@ -6,20 +6,11 @@ An intelligent Wiki overlay tool designed specifically for gamers, featuring aut
 
 - **Global Hotkey Activation** - Quick Wiki overlay access with customizable hotkey combinations
 - **Smart Game Detection** - Automatically detects the currently active game window
-- **Multi-Game Support** - Built-in Wiki configurations for 12 popular games
 - **Floating Overlay** - Displays Wiki content above games without interrupting gameplay
-- **System Tray Management** - Runs in background with system tray icon management
-- **Custom Configuration** - Add new games and customize Wiki links
-- **Keyword Mapping** - Intelligent mapping from in-game keywords to Wiki pages
-- **Dual UI Architecture** - Traditional WebView version and modern Qt version
-- **Unified Window Management** - Integrated search, settings, and display interface
-- **AI RAG Integration** - Google Gemini AI and local vector search engine
-- **Local Vector Search** - FAISS vector database for document retrieval
-- **Multi-Game Knowledge Base** - Built-in knowledge bases and strategy data for multiple games
-- **Hybrid Search** - Combines vector search and BM25 algorithm
-- **Smart Re-ranking** - Intent-aware search result reordering
-- **Quality Assessment** - Built-in RAG system quality evaluation and optimization framework
-- **Adaptive Retrieval** - Intelligent search strategy and parameter optimization
+- **AI-Powered Q&A** - Google Gemini AI with local vector search for intelligent game assistance
+- **Multi-Game Support** - Built-in Wiki configurations and AI knowledge bases
+- **Hybrid Search** - Combines semantic vector search with traditional keyword search
+- **System Tray Management** - Runs quietly in background with easy access
 
 ## 🚀 Quick Start
 
@@ -34,7 +25,7 @@ An intelligent Wiki overlay tool designed specifically for gamers, featuring aut
 
 1. **Clone the project**
    ```bash
-   git clone https://github.com/your-username/gamewiki.git
+   git clone https://github.com/rimulu030/gamewiki.git
    cd gamewiki
    ```
 
@@ -69,36 +60,29 @@ An intelligent Wiki overlay tool designed specifically for gamers, featuring aut
 
 ## 🎯 Supported Games
 
-Currently supports Wiki quick access for the following games:
+### 🤖 AI-Enhanced Games (Full Knowledge Base Support)
+These games feature advanced AI Q&A with comprehensive knowledge bases:
 
-- **VALORANT** - Riot Games' tactical shooter
-- **Counter-Strike 2** - Valve's tactical shooter
-- **Delta Force** - Tactical military shooter
-- **MONSTER HUNTER: WORLD** - Capcom's action RPG
-- **Monster Hunter Wilds** - Upcoming Monster Hunter title
-- **Stardew Valley** - Farming simulation RPG
-- **Don't Starve Together** - Survival game multiplayer
-- **Don't Starve** - Survival adventure game
-- **Elden Ring** - FromSoftware's action RPG
-- **HELLDIVERS 2** - Arrowhead's cooperative shooter
-- **7 Days to Die** - Survival horror game
-- **Civilization VI** - Turn-based strategy game
+- **HELLDIVERS 2** - Cooperative shooter with weapons, stratagems, and enemy data
+- **Elden Ring** - Action RPG with items, weapons, spells, and boss strategies  
+- **Don't Starve Together** - Survival multiplayer with crafting recipes and character guides
+- **Civilization VI** - Strategy game with civilizations, units, and victory guides
 
-## 📚 Game Knowledge Bases
+### 📖 Wiki Access Games
+Basic Wiki overlay support for quick reference:
 
-The project includes detailed knowledge base data for multiple games:
+- **VALORANT, Counter-Strike 2** - Tactical shooters
+- **Monster Hunter Series** - Action RPGs
+- **Stardew Valley** - Farming simulation
+- **7 Days to Die** - Survival horror
+- ... Hundreds of games
+## 🤖 AI Features
 
-### Knowledge Base Data Files
-- **civilization6.json** - Civilization 6 game data
-- **dst.json** - Don't Starve Together data
-- **eldenring.json** - Elden Ring data
-- **helldiver2.json** - Helldivers 2 data
-
-### Special Features
-- **Smart Q&A** - Natural language Q&A based on game knowledge bases
-- **Fast Retrieval** - Millisecond-level search response
-- **Multi-dimensional Search** - Support for weapons, equipment, skills, strategies, and more
-- **Relevance Ranking** - Intelligent ranking of most relevant search results
+### Smart Q&A System
+- **Natural Language Processing** - Ask questions in plain English/Chinese
+- **Fast Vector Search** - Millisecond-level response with FAISS database
+- **Comprehensive Coverage** - Weapons, items, strategies, characters, and game mechanics
+- **Source Citations** - Every answer includes relevant source references
 
 ## 💡 Usage Examples
 
@@ -110,20 +94,10 @@ The project includes detailed knowledge base data for multiple games:
 5. **Close application** - Right-click system tray icon to exit
 
 ### Advanced Features
-- **Keyword Search** - Enter keywords in the overlay for quick searches
-- **Window Adjustment** - Resize and reposition the overlay window
-- **Multi-window Support** - Open multiple Wiki pages simultaneously
-- **AI Smart Q&A** - Intelligent Q&A system based on multi-game knowledge bases
-- **Local Vector Search** - Fast retrieval using local databases
-- **Hybrid Search** - Combines semantic and keyword search
-- **Quality Assessment** - Real-time search result quality evaluation
-- **Multi-game Support** - Specialized knowledge bases for different games
-- **Unified Interface** - Integrated search, settings, and management functions
-
-### Version Selection Guide
-- **Qt Version** - Recommended for better user experience and stability
-- **WebView Version** - Traditional version, suitable for lightweight needs
-- **Unified Window Version** - Single interface integrating all functions
+- **AI Smart Q&A** - Ask natural language questions about supported games
+- **Keyword Search** - Quick Wiki searches with overlay input
+- **Window Adjustment** - Customizable overlay size and position
+- **Multi-window Support** - Open multiple game references simultaneously
 
 ## 🔧 Configuration
 
