@@ -83,6 +83,7 @@ class AppSettings:
     popup: PopupConfig = field(default_factory=PopupConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     dont_remind_api_missing: bool = False  # 用户是否选择了"不再提醒"API缺失
+    shortcuts: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class SettingsManager:
@@ -104,9 +105,12 @@ class SettingsManager:
         except Exception as e:
             print(f"保存设置文件失败: {e}")
 
-    def get(self) -> Dict[str, Any]:
-        """获取当前设置"""
-        return asdict(self._settings)
+    def get(self, key: Optional[str] = None, default: Any = None) -> Any:
+        """获取当前设置或指定键的值"""
+        settings_dict = asdict(self._settings)
+        if key is None:
+            return settings_dict
+        return settings_dict.get(key, default)
 
     def update(self, new_settings: Dict[str, Any]):
         """更新设置"""
@@ -125,9 +129,27 @@ class SettingsManager:
         # 更新"不再提醒"设置
         if 'dont_remind_api_missing' in new_settings:
             self._settings.dont_remind_api_missing = new_settings['dont_remind_api_missing']
+        # 更新快捷网站设置
+        if 'shortcuts' in new_settings:
+            self._settings.shortcuts = new_settings['shortcuts']
         self.save()
 
     # ---- internal ----
+    def _merge_settings(self, default_data: dict, existing_data: dict) -> dict:
+        """合并默认设置和现有设置，保留用户的修改"""
+        merged = existing_data.copy()
+        
+        # 递归合并字典
+        for key, default_value in default_data.items():
+            if key not in merged:
+                # 如果键不存在，使用默认值
+                merged[key] = default_value
+            elif isinstance(default_value, dict) and isinstance(merged.get(key), dict):
+                # 如果都是字典，递归合并
+                merged[key] = self._merge_settings(default_value, merged[key])
+            # 否则保留现有值（用户的修改）
+            
+        return merged
     def _load(self) -> AppSettings:
         """加载设置文件"""
         # 获取默认设置文件路径
@@ -141,6 +163,24 @@ class SettingsManager:
             shutil.copyfile(default_settings_path, self.path)
             print(f"已更新设置文件: {self.path}")
             
+        # 同步确保roaming中的settings包含所有必要字段
+        try:
+            # 读取项目中的默认settings
+            default_data = json.loads(default_settings_path.read_text(encoding="utf-8"))
+            # 读取roaming中的现有settings
+            existing_data = json.loads(self.path.read_text(encoding="utf-8"))
+            
+            # 合并设置，保留用户的修改但确保所有字段都存在
+            merged_data = self._merge_settings(default_data, existing_data)
+            
+            # 如果有更新，保存回roaming
+            if merged_data != existing_data:
+                with self.path.open("w", encoding="utf-8") as f:
+                    json.dump(merged_data, f, indent=4, ensure_ascii=False)
+                print(f"已同步设置文件: {self.path}")
+        except Exception as e:
+            print(f"同步设置文件失败: {e}")
+            
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
             # 关键改动！
@@ -149,13 +189,21 @@ class SettingsManager:
             api = ApiConfig(**data.get('api', {}))
             language = data.get('language', 'en')
             dont_remind_api_missing = data.get('dont_remind_api_missing', False)
-            return AppSettings(
+            shortcuts = data.get('shortcuts', None)
+            
+            settings = AppSettings(
                 language=language,
                 hotkey=hotkey, 
                 popup=popup, 
                 api=api,
                 dont_remind_api_missing=dont_remind_api_missing
             )
+            
+            # Only override shortcuts if they exist in the file
+            if shortcuts is not None:
+                settings.shortcuts = shortcuts
+                
+            return settings
         except Exception as e:
             print(f"加载设置文件失败: {e}")
             return AppSettings()

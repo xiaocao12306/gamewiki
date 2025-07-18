@@ -20,11 +20,11 @@
         "NeedsSearch": true
     },
     "Don't Starve Together": {
-        "BaseUrl": "https://dontstarve.fandom.com/wiki/",
+        "BaseUrl": "dontstarve.wiki.gg/",
         "NeedsSearch": true
     },
     "Don't Starve": {
-        "BaseUrl": "https://dontstarve.fandom.com/wiki/",
+        "BaseUrl": "dontstarve.wiki.gg/",
         "NeedsSearch": true
     },
     "Elden Ring": {
@@ -225,6 +225,206 @@
     },
     "PALWORLD": {
         "BaseUrl": "https://palworld.fandom.com/wiki/Palworld_Wiki",
+        "NeedsSearch": true
+    },
+    "DARK SOULS": {
+        "BaseUrl": "https://darksouls.wiki.fextralife.com/Dark+Souls+Wiki",
+        "NeedsSearch": true
+    },
+    "RED DEAD REDEMPTION 2": {
+        "BaseUrl": "https://reddead.fandom.com/wiki/Red_Dead_Redemption_2",
+        "NeedsSearch": true
+    },
+    "FALLOUT: NEW VEGAS": {
+        "BaseUrl": "https://fallout.fandom.com/wiki/Fallout:_New_Vegas",
+        "NeedsSearch": true
+    },
+    "DRAGON AGE: ORIGINS": {
+        "BaseUrl": "https://dragonage.fandom.com/wiki/Dragon_Age:_Origins",
+        "NeedsSearch": true
+    },
+    "MASS EFFECT 2": {
+        "BaseUrl": "https://masseffect.fandom.com/wiki/Mass_Effect_2",
+        "NeedsSearch": true
+    },
+    "STAR WARS: KNIGHTS OF THE OLD REPUBLIC": {
+        "BaseUrl": "https://starwars.fandom.com/wiki/Star_Wars:_Knights_of_the_Old_Republic",
+        "NeedsSearch": true
+    },
+    "FINAL FANTASY VII REMAKE": {
+        "BaseUrl": "https://finalfantasy7remake.wiki.fextralife.com/Final+Fantasy+7+Remake+Wiki",
+        "NeedsSearch": true
+    },
+    "GHOST OF TSUSHIMA": {
+        "BaseUrl": "https://ghostoftsushima.fandom.com/wiki/Ghost_of_Tsushima_Wiki",
+        "NeedsSearch": true
+    },
+    "DIABLO IV": {
+        "BaseUrl": "https://diablo4.wiki.fextralife.com/Diablo+4+Wiki",
+        "NeedsSearch": true
+    },
+    "TORCHLIGHT II": {
+        "BaseUrl": "https://torchlight.fandom.com/wiki/Torchlight_II",
+        "NeedsSearch": true
+    },
+    "GRIM DAWN": {
+        "BaseUrl": "https://grimdawn.fandom.com/wiki/Grim_Dawn_Wiki",
+        "NeedsSearch": true
+    },
+    "LAST EPOCH": {
+        "BaseUrl": "https://lastepoch.fandom.com/wiki/Last_Epoch_Wiki",
+        "NeedsSearch": true
+    },
+    "NIER: AUTOMATA": {
+        "BaseUrl": "https://nierautomata.wiki.fextralife.com/Nier+Automata+Wiki",
+        "NeedsSearch": true
+    },
+    "DRAGON'S DOGMA 2": {
+        "BaseUrl": "https://dragonsdogma2.wiki.fextralife.com/Dragon's+Dogma+2+Wiki",
+        "NeedsSearch": true
+    },
+    "STARFIELD": {
+        "BaseUrl": "https://starfield.wiki.fextralife.com/Starfield+Wiki",
+        "NeedsSearch": true
+    },
+    "HORIZON FORBIDDEN WEST": {
+        "BaseUrl": "https://horizon.fandom.com/wiki/Horizon_Forbidden_West",
+        "NeedsSearch": true
+    },
+    "ASSASSIN'S CREED VALHALLA": {
+        "BaseUrl": "https://assassinscreed.fandom.com/wiki/Assassin%27s_Creed_Valhalla",
+        "NeedsSearch": true
+    },
+    "SID MEIER'S CIVILIZATION V": {
+        "BaseUrl": "https://civilization.fandom.com/wiki/Civilization_V",
+        "NeedsSearch": true
+    },
+    "TOTAL WAR: THREE KINGDOMS": {
+        "BaseUrl": "https://totalwar.fandom.com/wiki/Total_War:_Three_Kingdoms",
+        "NeedsSearch": true
+    },
+    "AGE OF EMPIRES II: DEFINITIVE EDITION": {
+        "BaseUrl": "https://ageofempires.fandom.com/wiki/Age_of_Empires_II:_Definitive_Edition",
+        "NeedsSearch": true
+    },
+    "DWARF FORTRESS": {
+        "BaseUrl": "https://dwarffortresswiki.org/",
+        "NeedsSearch": true
+    },
+    "OXYGEN NOT INCLUDED": {
+        "BaseUrl": "https://oxygennotincluded.fandom.com/wiki/Oxygen_Not_Included_Wiki",
+        "NeedsSearch": true
+    },
+    "CITIES: SKYLINES": {
+        "BaseUrl": "https://skylines.paradoxwikis.com/Cities:_Skylines_Wiki",
+        "NeedsSearch": true
+    },
+    "KERBAL SPACE PROGRAM": {
+        "BaseUrl": "https://wiki.kerbalspaceprogram.com/",
+        "NeedsSearch": true
+    },
+    "PLANET ZOO": {
+        "BaseUrl": "https://planetzoo.fandom.com/wiki/Planet_Zoo_Wiki",
+        "NeedsSearch": true
+    },
+    "THE SIMS 4": {
+        "BaseUrl": "https://sims.fandom.com/wiki/The_Sims_4",
+        "NeedsSearch": true
+    },
+    "EURO TRUCK SIMULATOR 2": {
+        "BaseUrl": "https://truck-simulator.fandom.com/wiki/Euro_Truck_Simulator_2",
+        "NeedsSearch": true
+    },
+    "FOOTBALL MANAGER 2024": {
+        "BaseUrl": "https://fm-wiki.net/",
+        "NeedsSearch": true
+    },
+    "HADES": {
+        "BaseUrl": "https://hades.fandom.com/wiki/Hades_Wiki",
+        "NeedsSearch": true
+    },
+    "DEAD CELLS": {
+        "BaseUrl": "https://deadcells.wiki.gg/wiki/Dead_Cells_Wiki",
+        "NeedsSearch": true
+    },
+    "SLAY THE SPIRE": {
+        "BaseUrl": "https://slay-the-spire.fandom.com/wiki/Slay_the_Spire_Wiki",
+        "NeedsSearch": true
+    },
+    "THE BINDING OF ISAAC: REBIRTH": {
+        "BaseUrl": "https://bindingofisaacrebirth.fandom.com/wiki/Binding_of_Isaac:_Rebirth_Wiki",
+        "NeedsSearch": true
+    },
+    "RISK OF RAIN 2": {
+        "BaseUrl": "https://riskofrain2.fandom.com/wiki/Risk_of_Rain_2_Wiki",
+        "NeedsSearch": true
+    },
+    "ENTER THE GUNGEON": {
+        "BaseUrl": "https://enterthegungeon.fandom.com/wiki/Enter_the_Gungeon_Wiki",
+        "NeedsSearch": true
+    },
+    "FTL: FASTER THAN LIGHT": {
+        "BaseUrl": "https://ftl-faster-than-light.fandom.com/wiki/FTL:_Faster_Than_Light_Wiki",
+        "NeedsSearch": true
+    },
+    "DARKEST DUNGEON": {
+        "BaseUrl": "https://darkestdungeon.wiki.gg/wiki/Darkest_Dungeon_Wiki",
+        "NeedsSearch": true
+    },
+    "STREET FIGHTER 6": {
+        "BaseUrl": "https://streetfighter.fandom.com/wiki/Street_Fighter_6",
+        "NeedsSearch": true
+    },
+    "TEKKEN 8": {
+        "BaseUrl": "https://tekken.fandom.com/wiki/Tekken_8",
+        "NeedsSearch": true
+    },
+    "SUPER SMASH BROS. ULTIMATE": {
+        "BaseUrl": "https://www.ssbwiki.com/Super_Smash_Bros._Ultimate",
+        "NeedsSearch": true
+    },
+    "DRAGON BALL FIGHTERZ": {
+        "BaseUrl": "https://dbfz.fandom.com/wiki/Dragon_Ball_FighterZ_Wiki",
+        "NeedsSearch": true
+    },
+    "GUILTY GEAR -STRIVE-": {
+        "BaseUrl": "https://www.dustloop.com/w/GGST",
+        "NeedsSearch": true
+    },
+    "MORTAL KOMBAT 1": {
+        "BaseUrl": "https://mortalkombat.fandom.com/wiki/Mortal_Kombat_1",
+        "NeedsSearch": true
+    },
+    "HONKAI: STAR RAIL": {
+        "BaseUrl": "https://honkai-star-rail.fandom.com/wiki/Honkai:_Star_Rail_Wiki",
+        "NeedsSearch": true
+    },
+    "WUTHERING WAVES": {
+        "BaseUrl": "https://wutheringwaves.fandom.com/wiki/Wuthering_Waves_Wiki",
+        "NeedsSearch": true
+    },
+    "ARKNIGHTS": {
+        "BaseUrl": "https://arknights.fandom.com/wiki/Arknights_Wiki",
+        "NeedsSearch": true
+    },
+    "FATE/GRAND ORDER": {
+        "BaseUrl": "https://fategrandorder.fandom.com/wiki/Fate/Grand_Order_Wikia",
+        "NeedsSearch": true
+    },
+    "UNDERTALE": {
+        "BaseUrl": "https://undertale.fandom.com/wiki/Undertale_Wiki",
+        "NeedsSearch": true
+    },
+    "CUPHEAD": {
+        "BaseUrl": "https://cuphead.fandom.com/wiki/Cuphead_Wiki",
+        "NeedsSearch": true
+    },
+    "OUTER WILDS": {
+        "BaseUrl": "https://outerwilds.fandom.com/wiki/Outer_Wilds_Wiki",
+        "NeedsSearch": true
+    },
+    "PAPERS, PLEASE": {
+        "BaseUrl": "https://papersplease.fandom.com/wiki/Papers,_Please_Wiki",
         "NeedsSearch": true
     }
 } 

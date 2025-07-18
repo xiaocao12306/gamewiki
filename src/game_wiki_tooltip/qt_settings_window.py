@@ -9,7 +9,8 @@ from typing import Dict, Optional, Callable, List
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QLabel, QPushButton, QCheckBox, QComboBox, QLineEdit,
-    QGridLayout, QFrame, QMessageBox, QGroupBox, QDialog
+    QGridLayout, QFrame, QMessageBox, QGroupBox, QDialog,
+    QListWidget, QListWidgetItem, QInputDialog, QToolButton
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
@@ -167,6 +168,7 @@ class QtSettingsWindow(QMainWindow):
         
         # Create tabs - hotkey first, language last
         self._create_hotkey_tab()
+        self._create_shortcuts_tab()  # Add shortcuts tab as second
         self._create_api_tab()
         self._create_language_tab()
         
@@ -269,9 +271,217 @@ class QtSettingsWindow(QMainWindow):
         
     def switch_to_api_tab(self):
         """切换到API配置标签页"""
-        # API配置标签页是第二个，索引为1
-        self.tab_widget.setCurrentIndex(1)
+        # API配置标签页是第三个，索引为2
+        self.tab_widget.setCurrentIndex(2)
         
+    def _create_shortcuts_tab(self):
+        """Create shortcuts management tab"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(20)
+        
+        # Title
+        title_label = QLabel("Manage Quick Access Websites")
+        title_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        layout.addWidget(title_label)
+        
+        # Explanation
+        info_label = QLabel("Add or remove quick access buttons for your favorite websites.\n"
+                           "These buttons will appear above the input field for easy access.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666;")
+        layout.addWidget(info_label)
+        
+        # List widget for shortcuts
+        self.shortcuts_list = QListWidget()
+        self.shortcuts_list.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 5px;
+                background-color: white;
+            }
+            QListWidget::item {
+                padding: 5px;
+                border-bottom: 1px solid #eee;
+                color: #333;
+                background-color: transparent;
+            }
+            QListWidget::item:selected {
+                background-color: #e3f2fd;
+                color: #1976d2;
+            }
+            QListWidget::item:hover {
+                background-color: #f5f5f5;
+            }
+            QListWidget::item:last-child {
+                border-bottom: none;
+            }
+        """)
+        
+        # Load existing shortcuts
+        self._load_shortcuts_list()
+        
+        layout.addWidget(self.shortcuts_list)
+        
+        # Buttons for add/remove
+        button_layout = QHBoxLayout()
+        
+        self.add_shortcut_btn = QPushButton("Add Website")
+        self.add_shortcut_btn.clicked.connect(self._add_shortcut)
+        button_layout.addWidget(self.add_shortcut_btn)
+        
+        self.edit_shortcut_btn = QPushButton("Edit Selected")
+        self.edit_shortcut_btn.clicked.connect(self._edit_shortcut)
+        button_layout.addWidget(self.edit_shortcut_btn)
+        
+        self.toggle_visibility_btn = QPushButton("Hide/Show Selected")
+        self.toggle_visibility_btn.clicked.connect(self._toggle_visibility)
+        button_layout.addWidget(self.toggle_visibility_btn)
+        
+        self.remove_shortcut_btn = QPushButton("Remove Selected")
+        self.remove_shortcut_btn.clicked.connect(self._remove_shortcut)
+        button_layout.addWidget(self.remove_shortcut_btn)
+        
+        button_layout.addStretch()
+        
+        layout.addLayout(button_layout)
+        layout.addStretch()
+        
+        self.tab_widget.addTab(tab, "Quick Access")
+    
+    def _load_shortcuts_list(self):
+        """Load shortcuts into the list widget"""
+        self.shortcuts_list.clear()
+        
+        # Get shortcuts from settings
+        shortcuts = self.settings_manager.get('shortcuts', [])
+        
+        # Add items to list
+        for shortcut in shortcuts:
+            # Show visibility status in the text
+            visibility_status = " (hidden)" if not shortcut.get('visible', True) else ""
+            item_text = f"{shortcut['name']} - {shortcut['url']}{visibility_status}"
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.ItemDataRole.UserRole, shortcut)
+            # Set different color for hidden items
+            if not shortcut.get('visible', True):
+                item.setForeground(Qt.GlobalColor.gray)
+            self.shortcuts_list.addItem(item)
+    
+    def _add_shortcut(self):
+        """Add a new shortcut"""
+        # Get name
+        name, ok = QInputDialog.getText(self, "Add Website", "Website name:")
+        if not ok or not name:
+            return
+            
+        # Get URL
+        url, ok = QInputDialog.getText(self, "Add Website", "Website URL:")
+        if not ok or not url:
+            return
+            
+        # Ensure URL has protocol
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+            
+        # Get icon path (for now, use a default)
+        icon_path = "assets/icons/default.png"  # You can extend this to let user choose
+        
+        # Create shortcut
+        shortcut = {
+            "name": name,
+            "url": url,
+            "icon": icon_path,
+            "visible": True
+        }
+        
+        # Add to list
+        item_text = f"{name} - {url}"
+        item = QListWidgetItem(item_text)
+        item.setData(Qt.ItemDataRole.UserRole, shortcut)
+        self.shortcuts_list.addItem(item)
+    
+    def _edit_shortcut(self):
+        """Edit selected shortcut"""
+        current_item = self.shortcuts_list.currentItem()
+        if not current_item:
+            return
+            
+        shortcut = current_item.data(Qt.ItemDataRole.UserRole)
+        if not shortcut:
+            return
+            
+        # Get new name
+        name, ok = QInputDialog.getText(
+            self, "Edit Website", "Website name:", 
+            text=shortcut.get('name', '')
+        )
+        if not ok or not name:
+            return
+            
+        # Get new URL
+        url, ok = QInputDialog.getText(
+            self, "Edit Website", "Website URL:", 
+            text=shortcut.get('url', '')
+        )
+        if not ok or not url:
+            return
+            
+        # Ensure URL has protocol
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+            
+        # Update shortcut
+        shortcut['name'] = name
+        shortcut['url'] = url
+        
+        # Update list item display
+        current_item.setText(f"{name} - {url}")
+        current_item.setData(Qt.ItemDataRole.UserRole, shortcut)
+    
+    def _toggle_visibility(self):
+        """Toggle visibility of selected shortcut"""
+        current_item = self.shortcuts_list.currentItem()
+        if not current_item:
+            return
+            
+        shortcut = current_item.data(Qt.ItemDataRole.UserRole)
+        if not shortcut:
+            return
+            
+        # Toggle visibility
+        current_visibility = shortcut.get('visible', True)
+        shortcut['visible'] = not current_visibility
+        
+        # Update the item display
+        visibility_status = " (hidden)" if not shortcut['visible'] else ""
+        current_item.setText(f"{shortcut['name']} - {shortcut['url']}{visibility_status}")
+        current_item.setData(Qt.ItemDataRole.UserRole, shortcut)
+        
+        # Update color
+        if not shortcut['visible']:
+            current_item.setForeground(Qt.GlobalColor.gray)
+        else:
+            current_item.setForeground(Qt.GlobalColor.black)
+    
+    def _remove_shortcut(self):
+        """Remove selected shortcut"""
+        current_item = self.shortcuts_list.currentItem()
+        if current_item:
+            row = self.shortcuts_list.row(current_item)
+            self.shortcuts_list.takeItem(row)
+    
+    def _get_shortcuts_from_list(self):
+        """Get all shortcuts from the list widget"""
+        shortcuts = []
+        for i in range(self.shortcuts_list.count()):
+            item = self.shortcuts_list.item(i)
+            shortcut = item.data(Qt.ItemDataRole.UserRole)
+            if shortcut:
+                shortcuts.append(shortcut)
+        return shortcuts
+    
     def _create_hotkey_tab(self):
         """Create hotkey configuration tab"""
         tab = QWidget()
@@ -422,9 +632,10 @@ class QtSettingsWindow(QMainWindow):
         self.setWindowTitle(t("settings_title"))
         
         # Tab titles
-        self.tab_widget.setTabText(0, t("language_tab"))
-        self.tab_widget.setTabText(1, t("hotkey_tab"))
+        self.tab_widget.setTabText(0, t("hotkey_tab"))
+        self.tab_widget.setTabText(1, "Quick Access")  # Shortcuts tab
         self.tab_widget.setTabText(2, t("api_tab"))
+        self.tab_widget.setTabText(3, t("language_tab"))
         
         # Buttons
         self.apply_button.setText(t("apply_button"))
@@ -582,7 +793,8 @@ class QtSettingsWindow(QMainWindow):
             'api': {
                 'google_api_key': google_api_key_input,  # Only save user input
                 'jina_api_key': self.jina_api_input.text().strip()
-            }
+            },
+            'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
         })
         
         # Emit signal

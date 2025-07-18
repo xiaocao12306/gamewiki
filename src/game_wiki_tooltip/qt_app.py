@@ -585,6 +585,11 @@ class GameWikiApp(QObject):
                 logger.info("Reinitializing RAG components with new API keys...")
                 # Reinitialize RAG integration
                 self.assistant_ctrl.rag_integration._init_ai_components()
+            
+            # Refresh shortcuts in the main window
+            if self.assistant_ctrl:
+                logger.info("Refreshing shortcuts in main window...")
+                self.assistant_ctrl.refresh_shortcuts()
                 
         except Exception as e:
             logger.error(f"Failed to apply settings: {e}")

@@ -10,6 +10,7 @@ import ctypes
 import logging
 import re
 import time
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
@@ -40,7 +41,8 @@ try:
     from PyQt6.QtWidgets import (
         QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
-        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit
+        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit,
+        QToolButton, QMenu
     )
     from PyQt6.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
@@ -64,7 +66,8 @@ except ImportError:
     from PyQt5.QtWidgets import (
         QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
-        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit
+        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit,
+        QToolButton, QMenu
     )
     from PyQt5.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
@@ -95,6 +98,131 @@ def _get_scale() -> float:
     except Exception:
         pass
     return 1.0
+
+
+class ExpandableIconButton(QPushButton):
+    """Icon button that expands to show text on hover"""
+    
+    def __init__(self, icon_path: str, text: str, url: str, name: str = "", parent=None):
+        super().__init__(parent)
+        self.icon_path = icon_path
+        self.full_text = text
+        self.url = url
+        self.name = name  # Store the website name
+        self.expanded = False
+        self._animation_callback = None
+        self.has_icon = False
+        
+        # Try to set icon
+        try:
+            print(f"[ExpandableIconButton] Attempting to load icon from: {icon_path}")
+            if icon_path and os.path.exists(icon_path):
+                print(f"[ExpandableIconButton] File exists at {icon_path}")
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    print(f"[ExpandableIconButton] Pixmap loaded successfully, size: {pixmap.size()}")
+                    self.setIcon(QIcon(pixmap))
+                    self.has_icon = True
+                    self.setText("")  # Initially show icon only
+                else:
+                    print(f"[ExpandableIconButton] Failed to load pixmap from {icon_path} - pixmap is null")
+            else:
+                print(f"[ExpandableIconButton] File does not exist at {icon_path}")
+        except Exception as e:
+            print(f"[ExpandableIconButton] Exception loading icon {icon_path}: {e}")
+        
+        # If no icon, show full name
+        if not self.has_icon and self.name:
+            # Show full name
+            self.setText(self.name)
+        
+        self.setIconSize(QSize(20, 20))
+        self.setFixedHeight(28)
+        # Adjust minimum width based on content
+        if self.has_icon:
+            self.setMinimumWidth(28)
+        else:
+            # Calculate width based on text
+            fm = self.fontMetrics()
+            text_width = fm.horizontalAdvance(self.name) if hasattr(fm, 'horizontalAdvance') else fm.width(self.name)
+            self.setMinimumWidth(text_width + 20)  # Add padding
+        
+        # Animation for width
+        self.animation = QPropertyAnimation(self, b"minimumWidth")
+        self.animation.setDuration(200)
+        self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # Styling
+        self.setFlat(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 14px;
+                padding: 0 8px;
+                font-size: 13px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #f0f0f0;
+                border-color: #e0e0e0;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """)
+        
+    def enterEvent(self, event):
+        """Expand to show text on hover"""
+        if not self.expanded:
+            self.expanded = True
+            # Stop any ongoing animation
+            self.animation.stop()
+            # Disconnect any existing connections
+            try:
+                self.animation.finished.disconnect()
+            except:
+                pass
+            
+            # Show full text with or without icon
+            if self.has_icon:
+                self.setText(f"  {self.full_text}")
+            else:
+                self.setText(self.full_text)
+            
+            self.animation.setStartValue(self.minimumWidth())
+            self.animation.setEndValue(140)
+            self.animation.start()
+        super().enterEvent(event)
+        
+    def leaveEvent(self, event):
+        """Collapse to show icon only"""
+        if self.expanded:
+            self.expanded = False
+            # Stop any ongoing animation
+            self.animation.stop()
+            # Disconnect any existing connections
+            try:
+                self.animation.finished.disconnect()
+            except:
+                pass
+            
+            # Create callback function
+            def clear_text():
+                if not self.expanded:  # Double check we're still collapsed
+                    if self.has_icon:
+                        self.setText("")
+                    else:
+                        # Show full name for non-icon buttons
+                        self.setText(self.name)
+            
+            # Connect new callback
+            self.animation.finished.connect(clear_text)
+            self.animation.setStartValue(self.minimumWidth())
+            self.animation.setEndValue(28)
+            self.animation.start()
+        super().leaveEvent(event)
 
 
 class WindowMode(Enum):
@@ -1814,7 +1942,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Wiki view
         self.wiki_view = WikiView()
-        self.wiki_view.back_requested.connect(self.show_chat_view)
+        self.wiki_view.back_requested.connect(self.show_chat_view)  # This will restore input/shortcuts
         self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
         # 确保Wiki视图有合理的最小尺寸但不强制固定尺寸
         self.wiki_view.setSizePolicy(
@@ -1825,18 +1953,92 @@ class UnifiedAssistantWindow(QMainWindow):
         self.content_stack.addWidget(self.chat_view)
         self.content_stack.addWidget(self.wiki_view)
         
+        # Shortcuts container (above input area)
+        self.shortcut_container = QFrame()
+        self.shortcut_container.setFixedHeight(35)
+        self.shortcut_container.setStyleSheet("""
+            QFrame {
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #e0e0e0;
+            }
+        """)
+        
+        self.shortcut_layout = QHBoxLayout(self.shortcut_container)
+        self.shortcut_layout.setContentsMargins(10, 4, 10, 4)
+        self.shortcut_layout.setSpacing(8)
+        
+        # Load shortcuts
+        self.load_shortcuts()
+        
         # Input area
-        input_container = QFrame()
-        input_container.setFixedHeight(60)
-        input_container.setStyleSheet("""
+        self.input_container = QFrame()
+        self.input_container.setFixedHeight(60)
+        self.input_container.setStyleSheet("""
             QFrame {
                 background-color: #f8f9fa;
                 border-top: 1px solid #e0e0e0;
             }
         """)
         
-        input_layout = QHBoxLayout(input_container)
+        input_layout = QHBoxLayout(self.input_container)
         input_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Mode selection button
+        self.mode_button = QToolButton()
+        self.mode_button.setText("Search wiki")
+        self.mode_button.setFixedSize(160, 45)
+        self.mode_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.mode_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.mode_button.setArrowType(Qt.ArrowType.NoArrow)  # We'll use custom arrow
+        self.mode_button.setStyleSheet("""
+            QToolButton {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 22px;
+                padding: 0 15px;
+                font-size: 14px;
+                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+            }
+            QToolButton:hover {
+                border-color: #4096ff;
+            }
+            QToolButton::menu-indicator {
+                image: none;
+                subcontrol-position: right center;
+                subcontrol-origin: padding;
+                width: 16px;
+            }
+        """)
+        
+        # Create menu for mode selection
+        mode_menu = QMenu(self.mode_button)
+        mode_menu.setStyleSheet("""
+            QMenu {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                border-radius: 4px;
+            }
+            QMenu::item:hover {
+                background-color: #f0f0f0;
+            }
+        """)
+        
+        # Add mode options
+        wiki_action = mode_menu.addAction("Search wiki / guide")
+        wiki_action.triggered.connect(lambda: self.set_mode("wiki"))
+        
+        url_action = mode_menu.addAction("Go to URL")
+        url_action.triggered.connect(lambda: self.set_mode("url"))
+        
+        self.mode_button.setMenu(mode_menu)
+        
+        # Update button text to include arrow
+        self.mode_button.setText("Search wiki ▼")
         
         # Input field - use QLineEdit for single line input
         self.input_field = QLineEdit()
@@ -1856,8 +2058,8 @@ class UnifiedAssistantWindow(QMainWindow):
                 outline: none;
             }
         """)
-        # Connect Enter key to send
-        self.input_field.returnPressed.connect(self.on_send_clicked)
+        # Connect Enter key - will be handled based on mode
+        self.input_field.returnPressed.connect(self.on_input_return_pressed)
         
         # Send button
         self.send_button = QPushButton("Send")
@@ -1881,12 +2083,17 @@ class UnifiedAssistantWindow(QMainWindow):
         """)
         self.send_button.clicked.connect(self.on_send_clicked)
         
+        # Current mode
+        self.current_mode = "wiki"
+        
+        input_layout.addWidget(self.mode_button)
         input_layout.addWidget(self.input_field)
         input_layout.addWidget(self.send_button)
         
         # Add to main layout with stretch factor
         main_layout.addWidget(self.content_stack, 1)  # 拉伸因子1，占据所有可用空间
-        main_layout.addWidget(input_container, 0)     # 拉伸因子0，保持固定高度
+        main_layout.addWidget(self.shortcut_container, 0)  # 快捷按钮栏
+        main_layout.addWidget(self.input_container, 0)     # 拉伸因子0，保持固定高度
         
         # Window styling
         self.setStyleSheet("""
@@ -1986,10 +2193,17 @@ class UnifiedAssistantWindow(QMainWindow):
     def show_chat_view(self):
         """Switch to chat view"""
         self.content_stack.setCurrentWidget(self.chat_view)
+        # Show input area and shortcuts in chat mode
+        if hasattr(self, 'input_container'):
+            self.input_container.show()
+        if hasattr(self, 'shortcut_container'):
+            self.shortcut_container.show()
         # 切换到聊天视图时重置尺寸约束
         self.reset_size_constraints()
-        # 确保消息宽度正确
+        # 确保消息宽度正确并触发完整的布局更新
         QTimer.singleShot(50, self.chat_view.update_all_message_widths)
+        # 延迟执行完整的布局更新，确保内容完整显示
+        QTimer.singleShot(100, self.chat_view._performDelayedResize)
         
     def show_wiki_page(self, url: str, title: str):
         """Switch to wiki view and load page"""
@@ -1997,6 +2211,11 @@ class UnifiedAssistantWindow(QMainWindow):
         logger.info(f"🌐 UnifiedAssistantWindow.show_wiki_page 被调用: URL={url}, Title={title}")
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
+        # Hide input area and shortcuts in wiki mode
+        if hasattr(self, 'input_container'):
+            self.input_container.hide()
+        if hasattr(self, 'shortcut_container'):
+            self.shortcut_container.hide()
         # 切换到Wiki视图时也重置尺寸约束
         self.reset_size_constraints()
         logger.info(f"✅ 已切换到Wiki视图并加载页面")
@@ -2007,6 +2226,152 @@ class UnifiedAssistantWindow(QMainWindow):
         # 发出信号给controller处理
         self.wiki_page_found.emit(url, title)
         
+    def set_mode(self, mode: str):
+        """Set the input mode (wiki or url)"""
+        self.current_mode = mode
+        if mode == "url":
+            self.mode_button.setText("Go to URL ▼")
+            self.input_field.setPlaceholderText("Enter URL...")
+            self.send_button.setText("Open")
+            # Disconnect and reconnect send button
+            try:
+                self.send_button.clicked.disconnect()
+            except:
+                pass
+            self.send_button.clicked.connect(self.on_open_url_clicked)
+        else:
+            self.mode_button.setText("Search guidance ▼")
+            self.input_field.setPlaceholderText("Enter message...")
+            self.send_button.setText("Send")
+            # Disconnect and reconnect send button
+            try:
+                self.send_button.clicked.disconnect()
+            except:
+                pass
+            self.send_button.clicked.connect(self.on_send_clicked)
+    
+    def on_input_return_pressed(self):
+        """Handle return key press based on current mode"""
+        if self.current_mode == "url":
+            self.on_open_url_clicked()
+        else:
+            self.on_send_clicked()
+    
+    def on_open_url_clicked(self):
+        """Handle URL open button click"""
+        url = self.input_field.text().strip()
+        if url:
+            # Ensure URL has protocol
+            if not url.startswith(('http://', 'https://')):
+                url = 'https://' + url
+            self.open_url(url)
+            self.input_field.clear()
+    
+    def open_url(self, url: str):
+        """Open a URL in the wiki view"""
+        # Extract domain as title
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            title = parsed.netloc or url
+        except:
+            title = url
+            
+        # Switch to wiki view and load URL
+        self.show_wiki_page(url, title)
+    
+    def load_shortcuts(self):
+        """Load shortcut buttons from settings"""
+        try:
+            # Clear existing buttons
+            while self.shortcut_layout.count() > 0:
+                item = self.shortcut_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # Get shortcuts from settings
+            shortcuts = []
+            if self.settings_manager:
+                try:
+                    shortcuts = self.settings_manager.get('shortcuts', [])
+                except Exception as e:
+                    print(f"Failed to get shortcuts from settings: {e}")
+                    
+            
+            # Filter out hidden shortcuts
+            visible_shortcuts = [s for s in shortcuts if s.get('visible', True)]
+            
+            # Hide container if no visible shortcuts
+            if not visible_shortcuts:
+                self.shortcut_container.hide()
+                return
+            
+            self.shortcut_container.show()
+            
+            # Create buttons for visible shortcuts only
+            for shortcut in visible_shortcuts:
+                try:
+                    # Use package_file to get correct path
+                    from src.game_wiki_tooltip.utils import package_file
+                    icon_path = ""
+                    if shortcut.get('icon'):
+                        try:
+                            relative_path = shortcut.get('icon', '')
+                            print(f"[load_shortcuts] Trying to load icon: {relative_path}")
+                            
+                            # Get the actual file path
+                            import pathlib
+                            # Try direct path first (for development)
+                            base_path = pathlib.Path(__file__).parent
+                            # relative_path already contains "assets/icons/..."
+                            direct_path = base_path / relative_path
+                            
+                            if direct_path.exists():
+                                icon_path = str(direct_path)
+                                print(f"[load_shortcuts] Using direct path: {icon_path}")
+                            else:
+                                # Try package_file for packaged app
+                                try:
+                                    path_obj = package_file(relative_path)
+                                    # For resources, we might need to extract
+                                    if hasattr(path_obj, 'read_bytes'):
+                                        # It's a resource, we need to save it temporarily
+                                        import tempfile
+                                        data = path_obj.read_bytes()
+                                        suffix = pathlib.Path(relative_path).suffix
+                                        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                                            tmp.write(data)
+                                            icon_path = tmp.name
+                                        print(f"[load_shortcuts] Extracted resource to: {icon_path}")
+                                    else:
+                                        icon_path = str(path_obj)
+                                        print(f"[load_shortcuts] package_file path: {icon_path}")
+                                except Exception as e:
+                                    print(f"[load_shortcuts] Failed with package_file: {e}")
+                                    icon_path = ""
+                        except Exception as e:
+                            print(f"[load_shortcuts] Failed to get icon path: {e}")
+                            icon_path = ""
+                    
+                    name = shortcut.get('name', 'Website')
+                    btn = ExpandableIconButton(
+                        icon_path,
+                        f"Go to {name}",
+                        shortcut.get('url', 'https://google.com'),
+                        name  # Pass the name for text display
+                    )
+                    btn.clicked.connect(lambda checked, url=shortcut.get('url', ''): self.open_url(url))
+                    self.shortcut_layout.addWidget(btn)
+                except Exception as e:
+                    print(f"Failed to create shortcut button: {e}")
+            
+            # Add stretch at the end
+            self.shortcut_layout.addStretch()
+        except Exception as e:
+            print(f"Error in load_shortcuts: {e}")
+            # Hide the container if there's an error
+            self.shortcut_container.hide()
+    
     def on_send_clicked(self):
         """Handle send button click"""
         text = self.input_field.text().strip()
@@ -2184,6 +2549,11 @@ class AssistantController:
         logger = logging.getLogger(__name__)
         logger.info(f"🔗 AssistantController收到wiki页面信号: {title} -> {url}")
         # 基础实现：什么都不做，子类（IntegratedAssistantController）会重写此方法
+    
+    def refresh_shortcuts(self):
+        """刷新快捷按钮栏"""
+        if self.main_window:
+            self.main_window.load_shortcuts()
         
     def handle_query(self, query: str):
         """Handle user query"""
