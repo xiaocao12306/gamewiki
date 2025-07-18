@@ -26,6 +26,11 @@ def print_success(message):
 
 def run_command(command, cwd=None):
     """执行命令并返回结果"""
+    import locale
+    
+    # 获取系统默认编码
+    system_encoding = locale.getpreferredencoding()
+    
     try:
         result = subprocess.run(
             command, 
@@ -34,11 +39,32 @@ def run_command(command, cwd=None):
             cwd=cwd,
             capture_output=True,
             text=True,
-            encoding='utf-8'
+            encoding=system_encoding,
+            errors='replace'  # 遇到编码错误时用替换字符处理
         )
         return True, result.stdout
     except subprocess.CalledProcessError as e:
-        return False, e.stderr
+        # 确保错误信息也能正确解码
+        error_msg = e.stderr if e.stderr else str(e)
+        return False, error_msg
+    except UnicodeDecodeError as e:
+        print_error(f"编码错误，尝试使用UTF-8: {e}")
+        # 如果系统编码失败，尝试UTF-8
+        try:
+            result = subprocess.run(
+                command, 
+                shell=True, 
+                check=True, 
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            return True, result.stdout
+        except subprocess.CalledProcessError as e2:
+            error_msg = e2.stderr if e2.stderr else str(e2)
+            return False, error_msg
 
 def install_dependencies():
     """安装依赖包"""
@@ -182,6 +208,15 @@ def create_portable_package():
 
 def main():
     """主函数"""
+    # 设置控制台编码，确保中文字符正确显示
+    if sys.platform == "win32":
+        import locale
+        try:
+            # 尝试设置控制台编码为UTF-8
+            os.system("chcp 65001 >nul 2>&1")
+        except:
+            pass
+    
     print("🚀 GameWiki Assistant 打包工具")
     print("=" * 50)
     

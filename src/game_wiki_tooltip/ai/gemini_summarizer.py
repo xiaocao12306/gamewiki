@@ -9,6 +9,9 @@ import google.generativeai as genai
 from dataclasses import dataclass
 from pathlib import Path
 
+# Import i18n for internationalization
+from src.game_wiki_tooltip.i18n import t
+
 logger = logging.getLogger(__name__)
 
 
@@ -602,7 +605,7 @@ Your response:"""
                 return ""
             
             # Build the sources text
-            sources_lines = ["---", "<small>", "📺 **信息来源：**"]
+            sources_lines = ["---", "<small>", f"📺 **{t('video_sources_label')}**"]
             
             for url, info in video_sources.items():
                 title = info["title"]

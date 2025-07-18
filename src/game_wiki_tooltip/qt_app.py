@@ -363,10 +363,14 @@ class GameWikiApp(QObject):
             # Initialize assistant controller with limited mode flag
             self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
             
+            # Connect visibility change handler
+            self.assistant_ctrl.visibility_changed = self._on_assistant_visibility_changed
+            
             # Initialize tray icon
             self.tray_icon = QtTrayIcon()
             self.tray_icon.settings_requested.connect(self._show_settings)
             self.tray_icon.exit_requested.connect(self._quit_application)
+            self.tray_icon.toggle_visibility_requested.connect(self._toggle_assistant_visibility)
             self.tray_icon.show()
             
             # Initialize hotkey manager with conflict resolution
@@ -470,11 +474,24 @@ class GameWikiApp(QObject):
         self.settings_window.raise_()
         self.settings_window.activateWindow()
         
+    def _toggle_assistant_visibility(self):
+        """Toggle assistant window visibility"""
+        if self.assistant_ctrl:
+            self.assistant_ctrl.toggle_visibility()
+            # Update tray icon menu text
+            is_visible = self.assistant_ctrl.is_visible()
+            self.tray_icon.update_toggle_text(is_visible)
+        
     def _on_initial_setup_closed(self):
         """Handle initial setup window closed - deprecated, kept for compatibility"""
         # 这个方法现在不再使用，因为我们不再强制要求API key
         # 保留是为了兼容性，但实际上不会被调用
         pass
+        
+    def _on_assistant_visibility_changed(self, is_visible):
+        """Handle assistant visibility change to update tray icon"""
+        if self.tray_icon:
+            self.tray_icon.update_toggle_text(is_visible)
             
     def _on_settings_applied(self):
         """Handle settings applied"""
@@ -746,6 +763,9 @@ class GameWikiApp(QObject):
                 self.assistant_ctrl.expand_to_chat()
                 logger.info("expand_to_chat()执行成功")
                 
+                # 更新托盘图标菜单文本
+                self.tray_icon.update_toggle_text(True)
+                
                 # 3. 窗口显示后，异步初始化RAG引擎
                 QTimer.singleShot(100, lambda: self.assistant_ctrl.set_current_game_window(game_window_title))
                 logger.info("RAG引擎初始化已安排为异步任务")
@@ -808,7 +828,7 @@ def main():
     if args.settings:
         logger.info("Settings window will be forced to show")
         
-    # Enable DPI awareness
+    # Enable DPI awareness with better compatibility
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except:

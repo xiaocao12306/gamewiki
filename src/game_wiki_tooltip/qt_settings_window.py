@@ -215,7 +215,7 @@ class QtSettingsWindow(QMainWindow):
                 background-color: #e0e0e0;
             }
         """)
-        self.cancel_button.clicked.connect(self.close)
+        self.cancel_button.clicked.connect(self._on_cancel)
         button_layout.addWidget(self.cancel_button)
         
         layout.addLayout(button_layout)
@@ -814,4 +814,55 @@ class QtSettingsWindow(QMainWindow):
         QMessageBox.information(self, t("success"), success_msg)
         
         # Close window
-        self.close() 
+        self.close()
+        
+    def _on_cancel(self):
+        """Handle cancel button click with API key validation"""
+        # Check current API key configuration
+        gemini_api_key_input = self.google_api_input.text().strip()
+        gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+        gemini_api_key = gemini_api_key_input or gemini_api_key_env
+        
+        jina_api_key_input = self.jina_api_input.text().strip()
+        jina_api_key_env = os.getenv('JINA_API_KEY')
+        jina_api_key = jina_api_key_input or jina_api_key_env
+        
+        # Check if both API keys are available
+        missing_keys = []
+        if not gemini_api_key:
+            missing_keys.append("Gemini API Key")
+        if not jina_api_key:
+            missing_keys.append("Jina API Key")
+        
+        if missing_keys:
+            # Check if user previously chose "don't remind me again"
+            current_settings = self.settings_manager.get()
+            dont_remind = current_settings.get('dont_remind_api_missing', False)
+            
+            if not dont_remind:
+                # Show the dialog
+                dialog = ApiKeyMissingDialog(missing_keys, parent=self)
+                dialog.exec()
+                
+                # Handle user's choice
+                if dialog.dont_remind:
+                    logger.info("User selected 'Don't remind me again' when canceling settings")
+                    self.settings_manager.update({'dont_remind_api_missing': True})
+                
+                if dialog.open_settings:
+                    # User chose to configure API keys, switch to API tab and don't close
+                    logger.info("User chose to configure API keys from cancel dialog, switching to API tab")
+                    self.switch_to_api_tab()
+                    return  # Don't close the window
+                else:
+                    # User chose "Maybe Later", close the window
+                    logger.info("User chose to close settings without configuring API keys")
+                    self.close()
+            else:
+                # User previously chose "don't remind me again", close directly
+                logger.info("User previously chose 'Don't remind me again', closing settings directly")
+                self.close()
+        else:
+            # API keys are configured, close normally
+            logger.info("API keys are configured, closing settings normally")
+            self.close() 

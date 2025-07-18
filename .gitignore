@@ -165,3 +165,10 @@ test_*.py
 
 # Claude editor settings
 .claude/
+
+# debug
+CLAUDE.md
+debug_assets.py
+debug_dpi_dlls.bat
+debug_dpi_dlls.py
+debug_package.py

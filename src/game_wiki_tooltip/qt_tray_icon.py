@@ -22,6 +22,7 @@ class QtTrayIcon(QObject):
     # Signals
     settings_requested = pyqtSignal()
     exit_requested = pyqtSignal()
+    toggle_visibility_requested = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -39,6 +40,14 @@ class QtTrayIcon(QObject):
         
         # Create context menu
         menu = QMenu()
+        
+        # Toggle visibility action
+        self.toggle_action = QAction(t("tray_show_overlay"), self)
+        self.toggle_action.triggered.connect(self.toggle_visibility_requested.emit)
+        menu.addAction(self.toggle_action)
+        
+        # Separator
+        menu.addSeparator()
         
         # Settings action
         settings_action = QAction(t("tray_settings"), self)
@@ -78,9 +87,12 @@ class QtTrayIcon(QObject):
             menu = self.tray_icon.contextMenu()
             if menu:
                 actions = menu.actions()
-                if len(actions) >= 2:
-                    actions[0].setText(t("tray_settings"))  # Settings
-                    actions[2].setText(t("tray_exit"))      # Exit (skip separator)
+                if len(actions) >= 5:  # We now have more actions
+                    # Toggle action is at index 0
+                    # Settings is at index 2 (after separator)
+                    # Exit is at index 4 (after another separator)
+                    actions[2].setText(t("tray_settings"))  # Settings
+                    actions[4].setText(t("tray_exit"))      # Exit
             
             # Update tooltip
             self.tray_icon.setToolTip(t("tray_tooltip"))
@@ -94,6 +106,11 @@ class QtTrayIcon(QObject):
         """Hide tray icon"""
         if self.tray_icon:
             self.tray_icon.hide()
+            
+    def update_toggle_text(self, is_visible: bool):
+        """Update toggle action text based on visibility state"""
+        if hasattr(self, 'toggle_action'):
+            self.toggle_action.setText(t("tray_hide_overlay") if is_visible else t("tray_show_overlay"))
             
     def show_notification(self, title: str, message: str):
         """Show system notification"""

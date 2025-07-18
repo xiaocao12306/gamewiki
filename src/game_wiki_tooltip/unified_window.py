@@ -296,7 +296,7 @@ def detect_markdown_content(text: str) -> bool:
         r'<small.*?>.*?</small>',  # <small>标签
         r'<a\s+.*?href.*?>.*?</a>', # <a>链接标签
         r'<[^>]+>',  # 其他HTML标签
-        r'📺\s*\*\*信息来源：\*\*',  # 视频源标题
+        r'📺\s*\*\*info source：\*\*',  # 视频源标题
         r'---\s*\n\s*<small>',  # markdown分隔符 + HTML
         r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
     ]
@@ -336,7 +336,7 @@ def convert_markdown_to_html(text: str) -> str:
             # 改进：使用更灵活的视频源识别方式
             video_source_patterns = [
                 r'---\s*\n\s*<small>',  # 原有模式
-                r'📺\s*\*\*信息来源：\*\*',  # 视频源标题模式  
+                r'📺\s*\*\*info source：\*\*',  # 视频源标题模式  
                 r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
             ]
             
@@ -497,6 +497,7 @@ class MiniAssistant(QWidget):
     """Circular mini assistant window"""
     
     clicked = pyqtSignal()
+    visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -546,6 +547,18 @@ class MiniAssistant(QWidget):
         font = QFont("Arial", 16, QFont.Weight.Bold)
         painter.setFont(font)
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "AI")
+        
+    def contextMenuEvent(self, event):
+        """处理右键菜单事件"""
+        menu = QMenu(self)
+        hide_action = menu.addAction(t("menu_hide_overlay"))
+        hide_action.triggered.connect(self._on_hide_requested)
+        menu.exec(event.globalPos())
+        
+    def _on_hide_requested(self):
+        """Handle hide request from context menu"""
+        self.hide()
+        self.visibility_changed.emit(False)
         
     def mousePressEvent(self, event):
         import logging
@@ -1127,7 +1140,7 @@ class StreamingMessageWidget(MessageWidget):
                 
                 # 输出完成信息
                 has_video_sources = any(pattern in self.full_text for pattern in [
-                    '📺 **信息来源：**', 
+                    '📺 **info source：**', 
                     '---\n<small>', 
                     '<small>.*?来源.*?</small>'
                 ])
@@ -1883,6 +1896,102 @@ class WikiView(QWidget):
                 webbrowser.open(self.current_url)
             except Exception as e:
                 print(f"Failed to open browser: {e}")
+    
+    def stop_media_playback(self):
+        """停止页面中所有正在播放的媒体内容"""
+        if self.web_view:
+            try:
+                # 执行JavaScript来暂停所有视频和音频元素
+                javascript_code = """
+                // 暂停所有视频元素
+                var videos = document.querySelectorAll('video');
+                for (var i = 0; i < videos.length; i++) {
+                    videos[i].pause();
+                }
+                
+                // 暂停所有音频元素
+                var audios = document.querySelectorAll('audio');
+                for (var i = 0; i < audios.length; i++) {
+                    audios[i].pause();
+                }
+                
+                // 尝试停止iframe中的媒体（如YouTube嵌入）
+                var iframes = document.querySelectorAll('iframe');
+                for (var i = 0; i < iframes.length; i++) {
+                    try {
+                        // 重新设置src可以停止iframe中的媒体播放
+                        var src = iframes[i].src;
+                        iframes[i].src = '';
+                        // 延迟恢复src，但这会停止当前播放
+                        setTimeout(function(iframe, originalSrc) {
+                            return function() {
+                                iframe.src = originalSrc;
+                            };
+                        }(iframes[i], src), 100);
+                    } catch(e) {
+                        // 跨域iframe可能无法访问，忽略错误
+                    }
+                }
+                
+                console.log('媒体播放已停止');
+                """
+                
+                self.web_view.page().runJavaScript(javascript_code)
+                print("🔇 WikiView: 已执行媒体停止脚本")
+                
+            except Exception as e:
+                print(f"⚠️ WikiView: 停止媒体播放失败: {e}")
+                
+    def pause_page(self):
+        """暂停页面活动（包括媒体播放）"""
+        if self.web_view:
+            try:
+                # 停止媒体播放
+                self.stop_media_playback()
+                
+                # 可选：设置页面为不可见状态，某些网站会自动暂停媒体
+                self.web_view.page().runJavaScript("""
+                // 触发页面可见性变化事件，某些网站会响应此事件暂停媒体
+                Object.defineProperty(document, 'hidden', {value: true, writable: false});
+                Object.defineProperty(document, 'visibilityState', {value: 'hidden', writable: false});
+                
+                var event = new Event('visibilitychange');
+                document.dispatchEvent(event);
+                """)
+                
+                print("🚫 WikiView: 页面已暂停")
+                
+            except Exception as e:
+                print(f"⚠️ WikiView: 暂停页面失败: {e}")
+                
+    def resume_page(self):
+        """恢复页面活动"""
+        if self.web_view:
+            try:
+                # 恢复页面可见性状态
+                self.web_view.page().runJavaScript("""
+                Object.defineProperty(document, 'hidden', {value: false, writable: false});
+                Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: false});
+                
+                var event = new Event('visibilitychange');
+                document.dispatchEvent(event);
+                """)
+                
+                print("▶️ WikiView: 页面已恢复")
+                
+            except Exception as e:
+                 print(f"⚠️ WikiView: 恢复页面失败: {e}")
+                 
+    def hideEvent(self, event):
+        """当WikiView被隐藏时自动暂停媒体播放"""
+        self.pause_page()
+        super().hideEvent(event)
+        
+    def showEvent(self, event):
+        """当WikiView被显示时恢复页面活动"""
+        super().showEvent(event)
+        # 延迟恢复，确保页面已完全显示
+        QTimer.singleShot(100, self.resume_page)
 
 
 class UnifiedAssistantWindow(QMainWindow):
@@ -1891,6 +2000,7 @@ class UnifiedAssistantWindow(QMainWindow):
     query_submitted = pyqtSignal(str)
     window_closing = pyqtSignal()  # Signal when window is closing
     wiki_page_found = pyqtSignal(str, str)  # 新信号：传递真实wiki页面信息到controller
+    visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
     
     def __init__(self, settings_manager=None):
         super().__init__()
@@ -1985,7 +2095,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Mode selection button
         self.mode_button = QToolButton()
-        self.mode_button.setText("Search wiki")
+        self.mode_button.setText("Search guidance")
         self.mode_button.setFixedSize(160, 45)
         self.mode_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.mode_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
@@ -2038,7 +2148,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.mode_button.setMenu(mode_menu)
         
         # Update button text to include arrow
-        self.mode_button.setText("Search wiki ▼")
+        self.mode_button.setText("Search guidance ▼")
         
         # Input field - use QLineEdit for single line input
         self.input_field = QLineEdit()
@@ -2192,6 +2302,10 @@ class UnifiedAssistantWindow(QMainWindow):
             
     def show_chat_view(self):
         """Switch to chat view"""
+        # 首先停止WikiView中的媒体播放
+        if hasattr(self, 'wiki_view') and self.wiki_view:
+            self.wiki_view.pause_page()
+            
         self.content_stack.setCurrentWidget(self.chat_view)
         # Show input area and shortcuts in chat mode
         if hasattr(self, 'input_container'):
@@ -2211,6 +2325,10 @@ class UnifiedAssistantWindow(QMainWindow):
         logger.info(f"🌐 UnifiedAssistantWindow.show_wiki_page 被调用: URL={url}, Title={title}")
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
+        
+        # 恢复WikiView的页面活动（如果之前被暂停）
+        self.wiki_view.resume_page()
+        
         # Hide input area and shortcuts in wiki mode
         if hasattr(self, 'input_container'):
             self.input_container.hide()
@@ -2383,8 +2501,31 @@ class UnifiedAssistantWindow(QMainWindow):
             self.input_field.clear()
             self.query_submitted.emit(text)
             
+    def contextMenuEvent(self, event):
+        """处理右键菜单事件"""
+        menu = QMenu(self)
+        
+        # 最小化到迷你窗口
+        minimize_action = menu.addAction(t("menu_minimize_to_mini"))
+        minimize_action.triggered.connect(lambda: self.window_closing.emit())
+        
+        # 隐藏到托盘
+        hide_action = menu.addAction(t("menu_hide_to_tray"))
+        hide_action.triggered.connect(self._on_hide_to_tray)
+        
+        menu.exec(event.globalPos())
+        
+    def _on_hide_to_tray(self):
+        """Handle hide to tray request"""
+        self.hide()
+        self.visibility_changed.emit(False)
+        
     def closeEvent(self, event):
         """Handle close event - emit signal to return to mini mode"""
+        # 停止WikiView中的媒体播放
+        if hasattr(self, 'wiki_view') and self.wiki_view:
+            self.wiki_view.pause_page()
+            
         self.save_geometry()
         event.ignore()  # Don't actually close
         self.hide()  # Just hide the window
@@ -2431,6 +2572,7 @@ class AssistantController:
             logger.info("Creating new MiniAssistant window")
             self.mini_window = MiniAssistant()
             self.mini_window.clicked.connect(self.expand_to_chat)
+            self.mini_window.visibility_changed.connect(self._on_mini_window_visibility_changed)
             logger.info("MiniAssistant created and signal connected")
         
         # 确保窗口显示在屏幕上
@@ -2466,6 +2608,7 @@ class AssistantController:
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
+            self.main_window.visibility_changed.connect(self._on_main_window_visibility_changed)
             logger.info("UnifiedAssistantWindow created and signals connected")
         
         # 确保窗口显示
@@ -2709,6 +2852,55 @@ class AssistantController:
         """隐藏处理状态信息"""
         if self.main_window and self.main_window.chat_view:
             self.main_window.chat_view.hide_status()
+            
+    def hide_all(self):
+        """隐藏所有窗口"""
+        if self.mini_window:
+            self.mini_window.hide()
+        if self.main_window:
+            self.main_window.hide()
+        self.current_mode = None
+        
+    def toggle_visibility(self):
+        """切换显示/隐藏状态"""
+        if self.is_visible():
+            # 记录当前显示的窗口模式
+            self._last_visible_mode = self.current_mode
+            self.hide_all()
+        else:
+            self.restore_last_window()
+            
+    def is_visible(self):
+        """检查是否有窗口在显示"""
+        mini_visible = self.mini_window and self.mini_window.isVisible()
+        main_visible = self.main_window and self.main_window.isVisible()
+        return mini_visible or main_visible
+        
+    def restore_last_window(self):
+        """恢复上次显示的窗口状态"""
+        # 如果有记录的模式，恢复到该模式
+        if hasattr(self, '_last_visible_mode') and self._last_visible_mode:
+            if self._last_visible_mode == WindowMode.MINI:
+                self.show_mini()
+            elif self._last_visible_mode == WindowMode.CHAT:
+                self.expand_to_chat()
+        else:
+            # 默认显示迷你窗口
+            self.show_mini()
+            
+    def _on_mini_window_visibility_changed(self, is_visible: bool):
+        """Handle mini window visibility change"""
+        # This is called when mini window is hidden via context menu
+        # We need to notify any external listeners (like tray icon)
+        if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
+            self.visibility_changed(is_visible)
+        
+    def _on_main_window_visibility_changed(self, is_visible: bool):
+        """Handle main window visibility change"""
+        # This is called when main window is hidden via context menu
+        # We need to notify any external listeners (like tray icon)
+        if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
+            self.visibility_changed(is_visible)
 
 
 # Demo/Testing

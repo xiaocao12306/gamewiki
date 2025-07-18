@@ -193,6 +193,13 @@ class TranslationManager:
             "tray_settings": "Settings",
             "tray_exit": "Exit",
             "tray_tooltip": "GameWiki Assistant",
+            "tray_show_overlay": "Show Overlay",
+            "tray_hide_overlay": "Hide Overlay",
+            
+            # Right-click menu options
+            "menu_hide_overlay": "Hide Overlay",
+            "menu_minimize_to_mini": "Minimize to Mini Window",
+            "menu_hide_to_tray": "Hide to Tray",
             
             # Notifications
             "hotkey_registered": "Started, press {hotkey} to invoke assistant",
@@ -227,7 +234,10 @@ class TranslationManager:
             "warning": "Warning",
             "error": "Error",
             "info": "Information",
-            "success": "Success"
+            "success": "Success",
+            
+            # Video sources
+            "video_sources_label": "Information Sources:"
         }
     
     def _create_language_translations(self, language: str) -> Dict[str, str]:
@@ -276,6 +286,13 @@ class TranslationManager:
                 "tray_settings": "设置",
                 "tray_exit": "退出",
                 "tray_tooltip": "GameWiki Assistant",
+                "tray_show_overlay": "显示悬浮窗",
+                "tray_hide_overlay": "隐藏悬浮窗",
+                
+                # 右键菜单选项
+                "menu_hide_overlay": "隐藏悬浮窗",
+                "menu_minimize_to_mini": "最小化到迷你窗口",
+                "menu_hide_to_tray": "隐藏到托盘",
                 
                 # Notifications
                 "hotkey_registered": "已启动，按 {hotkey} 呼出助手",
@@ -311,7 +328,10 @@ class TranslationManager:
                 "warning": "警告",
                 "error": "错误",
                 "info": "信息",
-                "success": "成功"
+                "success": "成功",
+                
+                # Video sources
+                "video_sources_label": "信息来源："
             }
         else:
             # 对于其他语言，返回英语翻译作为基础
