@@ -32,7 +32,7 @@
         "NeedsSearch": true
     },
     "HELLDIVERS 2": {
-        "BaseUrl": "https://helldivers.fandom.com/wiki/",
+        "BaseUrl": "helldivers.wiki.gg/wiki",
         "NeedsSearch": true
     },
     "7 Days to Die": {
