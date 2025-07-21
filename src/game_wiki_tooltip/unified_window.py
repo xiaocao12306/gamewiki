@@ -11,12 +11,14 @@ import logging
 import re
 import time
 import os
+import pathlib
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
 from dataclasses import dataclass, field
 
 from src.game_wiki_tooltip.i18n import t
+from src.game_wiki_tooltip.config import PopupConfig
 
 # 导入 markdown 支持
 try:
@@ -1725,10 +1727,10 @@ class ChatView(QScrollArea):
 
 
 class WikiView(QWidget):
-    """Wiki page viewer"""
+    """Wiki page viewer - 简化版本以避免崩溃"""
     
     back_requested = pyqtSignal()
-    wiki_page_loaded = pyqtSignal(str, str)  # 新信号：url, title
+    wiki_page_loaded = pyqtSignal(str, str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1799,20 +1801,41 @@ class WikiView(QWidget):
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.open_browser_button)
         
-        # Content area - 延迟WebView创建以避免崩溃
+        # Content area - 简化WebView创建逻辑
+        self.web_view = None
+        self.content_widget = None
+        
+        # 尝试创建WebView，如果失败则使用文本视图
         if WEBENGINE_AVAILABLE and QWebEngineView:
-            print("🔧 开始创建WebEngine组件...")
-            
-            # 延迟创建WebView，避免在Qt完全初始化前创建
-            self.web_view = None
-            self.content_widget = self._create_fallback_text_view()  # 先使用文本视图
-            
-            # 使用QTimer延迟创建WebView，给Qt应用更多初始化时间
-            QTimer.singleShot(1000, self._delayed_webview_creation)
+            try:
+                print("🔧 尝试创建WebEngine...")
+                self.web_view = QWebEngineView()
+                
+                # 配置WebEngine设置以允许加载外部内容
+                try:
+                    if hasattr(self.web_view, 'settings'):
+                        settings = self.web_view.settings()
+                        if QWebEngineSettings:
+                            # 允许JavaScript
+                            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+                            # 允许本地内容访问远程资源（重要！）
+                            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+                            # 允许本地内容访问文件
+                            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+                            print("✅ WebEngine设置已配置")
+                except Exception as settings_error:
+                    print(f"⚠️ WebEngine设置配置失败: {settings_error}")
+                
+                self.content_widget = self.web_view
+                self._webview_ready = True
+                print("✅ WebEngine创建成功")
+            except Exception as e:
+                print(f"❌ WebEngine创建失败: {e}")
+                self.web_view = None
+                self.content_widget = self._create_fallback_text_view()
         else:
-            # Fallback to text view
+            print("⚠️ WebEngine不可用，使用文本视图")
             self.content_widget = self._create_fallback_text_view()
-            self.web_view = None
         
         layout.addWidget(toolbar)
         layout.addWidget(self.content_widget)
@@ -1966,6 +1989,29 @@ class WikiView(QWidget):
                     except Exception as cookie_error:
                         print(f"⚠️ Cookie策略配置失败: {cookie_error}")
                 
+                # 配置本地文件访问权限（用于DST任务流程等本地HTML文件）
+                try:
+                    # 允许访问本地文件
+                    if hasattr(profile, 'settings'):
+                        settings = profile.settings()
+                        if hasattr(settings, 'setAttribute'):
+                            # 启用本地文件访问
+                            try:
+                                from PyQt6.QtWebEngineCore import QWebEngineSettings
+                                settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+                                settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+                                print("✅ 本地文件访问权限配置成功 (PyQt6)")
+                            except ImportError:
+                                try:
+                                    from PyQt5.QtWebEngineWidgets import QWebEngineSettings
+                                    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+                                    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+                                    print("✅ 本地文件访问权限配置成功 (PyQt5)")
+                                except Exception as settings_error:
+                                    print(f"⚠️ 本地文件访问权限配置失败: {settings_error}")
+                except Exception as access_error:
+                    print(f"⚠️ 无法配置本地文件访问权限: {access_error}")
+                
                 # 尝试设置WebView使用自定义Profile（关键步骤）
                 try:
                     try:
@@ -2082,6 +2128,7 @@ class WikiView(QWidget):
                     old_widget = self.content_widget
                     self.content_widget = new_web_view
                     self.web_view = new_web_view
+                    self._webview_ready = True  # 标记WebView已准备好
                     
                     # 更新布局
                     layout = self.layout()
@@ -2158,8 +2205,25 @@ class WikiView(QWidget):
         self.title_label.setText(title)
         
         if self.web_view:
-            # Use WebEngine
-            self.web_view.load(QUrl(url))
+            try:
+                # 对于本地文件，直接使用load方法以保留外部资源加载能力
+                if url.startswith('file:///'):
+                    # 创建QUrl对象
+                    qurl = QUrl(url)
+                    print(f"📄 加载本地文件: {url}")
+                    
+                    # 直接加载文件URL，让WebEngine处理外部资源
+                    self.web_view.load(qurl)
+                    print(f"✅ 使用load方法加载本地HTML，保留外部资源加载")
+                else:
+                    # 非本地文件，正常加载
+                    self.web_view.load(QUrl(url))
+            except Exception as e:
+                print(f"❌ 加载wiki页面失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 显示错误信息
+                self.web_view.setHtml(f"<h2>Error</h2><p>Failed to load page: {str(e)}</p>")
         else:
             # Show fallback message
             fallback_text = f"""
@@ -2329,13 +2393,16 @@ class UnifiedAssistantWindow(QMainWindow):
     wiki_page_found = pyqtSignal(str, str)  # 新信号：传递真实wiki页面信息到controller
     visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
     stop_generation_requested = pyqtSignal()  # 新信号：停止生成请求
-    
+
     def __init__(self, settings_manager=None):
         super().__init__()
         self.settings_manager = settings_manager
-        self.current_mode = WindowMode.MINI
-        self.is_generating = False  # 跟踪是否正在生成内容
-        self.current_streaming_msg = None  # 当前流式消息组件
+        self.current_mode = "wiki"
+        self.is_generating = False
+        self.streaming_widget = None
+        self.current_game_window = None  # 记录当前游戏窗口标题
+        self.dst_task_button = None  # DST任务流程按钮
+        
         self.init_ui()
         self.restore_geometry()
         
@@ -2981,6 +3048,9 @@ class UnifiedAssistantWindow(QMainWindow):
                 except Exception as e:
                     print(f"Failed to create shortcut button: {e}")
             
+            # Add DST task flow button (conditionally visible)
+            self._create_dst_task_button()
+            
             # Add stretch at the end
             self.shortcut_layout.addStretch()
         except Exception as e:
@@ -2988,6 +3058,342 @@ class UnifiedAssistantWindow(QMainWindow):
             # Hide the container if there's an error
             self.shortcut_container.hide()
     
+    def _create_dst_task_button(self):
+        """创建DST任务流程按钮"""
+        try:
+            if self.dst_task_button:
+                # 如果按钮已存在，先移除
+                self.shortcut_layout.removeWidget(self.dst_task_button)
+                self.dst_task_button.deleteLater()
+                self.dst_task_button = None
+            
+            # 创建DST任务流程按钮
+            self.dst_task_button = QPushButton("📋 DST任务流程")
+            self.dst_task_button.setFixedHeight(27)
+            self.dst_task_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 13px;
+                    padding: 4px 12px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                }
+                QPushButton:pressed {
+                    background-color: #3d8b40;
+                }
+            """)
+            self.dst_task_button.clicked.connect(self._open_dst_task_flow)
+            
+            # 添加到布局
+            self.shortcut_layout.addWidget(self.dst_task_button)
+            
+            # 初始时隐藏按钮
+            self.dst_task_button.hide()
+            
+        except Exception as e:
+            print(f"Failed to create DST task button: {e}")
+    
+    def _open_dst_task_flow(self):
+        """打开DST任务流程HTML文件"""
+        try:
+            # 获取当前语言设置
+            current_language = 'en'
+            if self.settings_manager:
+                settings = self.settings_manager.get()
+                current_language = settings.get('language', 'en')
+            
+            # 根据语言选择对应的HTML文件
+            html_filename = "dst_zh.html" if current_language == 'zh' else "dst_en.html"
+            
+            # 获取HTML文件路径
+            import pathlib
+            base_path = pathlib.Path(__file__).parent
+            html_path = base_path / "assets" / "html" / html_filename
+            
+            if html_path.exists():
+                print(f"Loading DST task flow from: {html_path}")
+                
+                # 直接在应用内显示，与wiki链接逻辑一致
+                try:
+                    title = "DST 任务流程" if current_language == 'zh' else "DST Task Flow"
+                    
+                    # 使用与其他wiki链接相同的显示逻辑
+                    self._load_local_html_in_wiki_view(html_path, title)
+                    
+                except Exception as html_error:
+                    print(f"Failed to load HTML content: {html_error}")
+                    self._show_simple_dst_info(current_language)
+            else:
+                print(f"DST task flow file not found: {html_path}")
+                self._show_simple_dst_info(current_language)
+                
+        except Exception as e:
+            print(f"Failed to open DST task flow: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _load_local_html_in_wiki_view(self, html_path: pathlib.Path, title: str):
+        """使用与其他wiki链接相同的逻辑加载本地HTML文件"""
+        try:
+            # 创建file:// URL，这与正常wiki链接的处理方式一致
+            file_url = html_path.as_uri()
+            print(f"Loading local HTML with file URL: {file_url}")
+            
+            # 使用标准的show_wiki_page方法，确保与其他wiki链接的行为一致
+            self.show_wiki_page(file_url, title)
+            
+        except Exception as e:
+            print(f"Failed to load local HTML in wiki view: {e}")
+            # 降级到简化显示
+            self._show_simple_dst_info('zh' if '任务流程' in title else 'en')
+    
+    def _show_simple_dst_info(self, language: str):
+        """显示简化的DST信息作为降级方案"""
+        try:
+            if language == 'zh':
+                title = "DST 任务流程"
+                content = """
+                <h1>饥荒联机版 - 生存指南</h1>
+                <p>由于技术问题，无法显示完整的任务流程页面。</p>
+                <p>建议访问以下资源：</p>
+                <ul>
+                    <li><a href="https://dontstarve.fandom.com/zh/wiki/">饥荒官方Wiki</a></li>
+                    <li>基础生存：收集树枝、燧石制作工具</li>
+                    <li>食物获取：采集浆果、胡萝卜</li>
+                    <li>建造基地：选择好位置建立营火</li>
+                    <li>过冬准备：储备食物和燃料</li>
+                </ul>
+                """
+            else:
+                title = "DST Task Flow"
+                content = """
+                <h1>Don't Starve Together - Survival Guide</h1>
+                <p>Unable to display the complete task flow page due to technical issues.</p>
+                <p>Recommended resources:</p>
+                <ul>
+                    <li><a href="https://dontstarve.fandom.com/wiki/">Official Don't Starve Wiki</a></li>
+                    <li>Basic Survival: Collect twigs and flint to craft tools</li>
+                    <li>Food Gathering: Pick berries and carrots</li>
+                    <li>Base Building: Choose a good location for your campfire</li>
+                    <li>Winter Preparation: Stock up on food and fuel</li>
+                </ul>
+                """
+            
+            # 直接使用简单的HTML显示
+            self._show_simple_content(content, title)
+            
+        except Exception as e:
+            print(f"Failed to show simple DST info: {e}")
+    
+    def _show_simple_content(self, content: str, title: str):
+        """显示简单内容的安全方法"""
+        try:
+            # 切换到Wiki视图
+            self.content_stack.setCurrentWidget(self.wiki_view)
+            self.shortcut_container.hide()
+            self.input_container.hide()
+            
+            # 设置标题
+            self.wiki_view.title_label.setText(title)
+            self.wiki_view.current_title = title
+            self.wiki_view.current_url = "local://simple_content.html"
+            
+            # 创建完整的HTML
+            full_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{title}</title>
+                <style>
+                    body {{
+                        font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                        margin: 20px;
+                        line-height: 1.6;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }}
+                    h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+                    a {{ color: #3498db; text-decoration: none; }}
+                    a:hover {{ text-decoration: underline; }}
+                    ul {{ padding-left: 20px; }}
+                    li {{ margin: 8px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    {content}
+                </div>
+            </body>
+            </html>
+            """
+            
+            # 只使用文本视图显示，避免WebEngine的问题
+            if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
+                self.wiki_view.content_widget.setHtml(full_html)
+                print("✅ Simple content loaded in text view")
+            else:
+                print("❌ No content widget available for simple content")
+                
+        except Exception as e:
+            print(f"Failed to show simple content: {e}")
+            # 最终降级：只更新标题
+            try:
+                self.wiki_view.title_label.setText(f"错误: 无法显示内容")
+            except:
+                pass
+    
+    def _show_html_content(self, html_content: str, title: str):
+        """直接显示HTML内容到WikiView"""
+        try:
+            # 切换到Wiki视图
+            self.content_stack.setCurrentWidget(self.wiki_view)
+            self.shortcut_container.hide()
+            self.input_container.hide()
+            
+            # 设置标题
+            self.wiki_view.title_label.setText(title)
+            self.wiki_view.current_title = title
+            self.wiki_view.current_url = "local://dst_task_flow.html"
+            
+            # 先检查WebEngine是否可用并已创建
+            if (WEBENGINE_AVAILABLE and 
+                hasattr(self.wiki_view, 'web_view') and 
+                self.wiki_view.web_view is not None):
+                try:
+                    # 使用QWebEngineView的setHtml方法来显示HTML内容
+                    base_url = QUrl.fromLocalFile(str(pathlib.Path(__file__).parent / "assets" / "html" / ""))
+                    self.wiki_view.web_view.setHtml(html_content, base_url)
+                    print("✅ HTML content loaded in WebEngine")
+                    return
+                except Exception as web_error:
+                    print(f"⚠️ WebEngine loading failed: {web_error}")
+                    # 继续到降级方案
+            
+            # 降级到文本视图 - 这个应该总是可用的
+            if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
+                try:
+                    self.wiki_view.content_widget.setHtml(html_content)
+                    print("✅ HTML content loaded in text view")
+                    return
+                except Exception as text_error:
+                    print(f"⚠️ Text view loading failed: {text_error}")
+            
+            # 如果都失败了，显示错误信息
+            print("❌ No content widget available")
+            self._show_error_message(title, "无法找到可用的显示组件")
+                    
+        except Exception as e:
+            print(f"Failed to show HTML content: {e}")
+            import traceback
+            traceback.print_exc()
+            self._show_error_message(title, str(e))
+    
+    def _show_error_message(self, title: str, error_msg: str):
+        """显示错误信息的安全方法"""
+        try:
+            error_html = f"""
+            <html>
+            <head>
+                <title>Error</title>
+                <style>
+                    body {{ 
+                        font-family: "Microsoft YaHei", "Segoe UI", Arial; 
+                        margin: 20px; 
+                        background-color: #f5f5f5;
+                    }}
+                    .error-container {{ 
+                        background-color: white; 
+                        padding: 20px; 
+                        border-radius: 8px; 
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }}
+                    h2 {{ color: #d32f2f; }}
+                    .error-msg {{ 
+                        background-color: #ffebee; 
+                        padding: 10px; 
+                        border-left: 4px solid #d32f2f; 
+                        margin: 10px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="error-container">
+                    <h2>无法显示 {title}</h2>
+                    <div class="error-msg">
+                        <strong>错误信息:</strong> {error_msg}
+                    </div>
+                    <p>建议解决方案：</p>
+                    <ul>
+                        <li>确保HTML文件存在且格式正确</li>
+                        <li>重新启动应用程序</li>
+                        <li>检查WebEngine组件是否正常安装</li>
+                    </ul>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # 尝试在任何可用的组件中显示错误信息
+            if (hasattr(self.wiki_view, 'web_view') and 
+                self.wiki_view.web_view is not None):
+                self.wiki_view.web_view.setHtml(error_html)
+            elif (hasattr(self.wiki_view, 'content_widget') and 
+                  self.wiki_view.content_widget):
+                self.wiki_view.content_widget.setHtml(error_html)
+            else:
+                # 最后的降级方案：在标题中显示错误
+                self.wiki_view.title_label.setText(f"错误: {error_msg}")
+                
+        except Exception as final_error:
+            print(f"连错误信息都无法显示: {final_error}")
+            # 最终降级：只更新标题
+            try:
+                self.wiki_view.title_label.setText("加载失败")
+            except:
+                pass
+    
+    def set_current_game_window(self, game_window_title: str):
+        """设置当前游戏窗口标题并更新DST按钮可见性"""
+        self.current_game_window = game_window_title
+        self._update_dst_button_visibility()
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
+    
+    def _update_dst_button_visibility(self):
+        """根据当前游戏窗口更新DST按钮的可见性"""
+        try:
+            if self.dst_task_button:
+                # 检查当前游戏是否为Don't Starve Together
+                is_dst_game = False
+                if self.current_game_window:
+                    game_title_lower = self.current_game_window.lower()
+                    is_dst_game = "don't starve together" in game_title_lower or "dst" in game_title_lower
+                
+                if is_dst_game:
+                    self.dst_task_button.show()
+                    print(f"DST task button shown for game: {self.current_game_window}")
+                else:
+                    self.dst_task_button.hide()
+                    
+        except Exception as e:
+            print(f"Failed to update DST button visibility: {e}")
+
     def on_send_clicked(self):
         """Handle send button click"""
         if self.is_generating:
@@ -3007,7 +3413,7 @@ class UnifiedAssistantWindow(QMainWindow):
     def set_generating_state(self, is_generating: bool, streaming_msg=None):
         """设置生成状态"""
         self.is_generating = is_generating
-        self.current_streaming_msg = streaming_msg
+        self.streaming_widget = streaming_msg
         
         if is_generating:
             # 切换到停止模式
@@ -3038,8 +3444,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.stop_generation_requested.emit()
         
         # 如果有当前的流式消息，标记为已停止
-        if self.current_streaming_msg:
-            self.current_streaming_msg.mark_as_stopped()
+        if self.streaming_widget:
+            self.streaming_widget.mark_as_stopped()
             
         # 恢复UI状态
         self.set_generating_state(False)
@@ -3067,40 +3473,18 @@ class UnifiedAssistantWindow(QMainWindow):
         self.visibility_changed.emit(False)
         
     def closeEvent(self, event):
-        """Handle close event - emit signal to return to mini mode"""
-        print("🔄 正在关闭窗口...")
+        """Handle close event - just hide the window"""
+        event.ignore()  # Don't actually close the window
+        self.hide()  # Just hide it
         
-        # 最重要的操作：先发出信号，确保能回到mini模式
+        # 保存几何信息
         try:
-            self.window_closing.emit()
-            print("✅ 窗口关闭信号已发出")
-        except Exception as e:
-            print(f"⚠️ 信号发出失败: {e}")
-        
-        # 次要操作：清理资源（如果失败不影响窗口关闭）
-        try:
-            # 简单的WikiView清理
-            if hasattr(self, 'wiki_view') and self.wiki_view and hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view:
-                try:
-                    self.wiki_view.web_view.stop()
-                    print("✅ WebView已停止")
-                except Exception:
-                    pass
+            self.save_geometry()
+        except Exception:
+            pass
             
-            # 保存几何信息
-            try:
-                self.save_geometry()
-                print("✅ 几何信息已保存")
-            except Exception:
-                pass
-            
-        except Exception as e:
-            print(f"⚠️ 清理操作失败: {e}")
-        
-        # 无论如何都要隐藏窗口
-        event.ignore()  # Don't actually close
-        self.hide()  # Just hide the window
-        print("✅ 窗口已隐藏")
+        # 通知控制器窗口已关闭
+        self.window_closing.emit()
         
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
@@ -3148,7 +3532,7 @@ class AssistantController:
             self.mini_window.visibility_changed.connect(self._on_mini_window_visibility_changed)
             logger.info("MiniAssistant created and signal connected")
         
-        # 确保窗口显示在屏幕上
+        # 显示mini窗口
         logger.info("Showing mini window")
         self.mini_window.show()
         self.mini_window.raise_()
@@ -3165,6 +3549,11 @@ class AssistantController:
     def set_current_game_window(self, game_window_title: str):
         """设置当前游戏窗口标题"""
         self.current_game_window = game_window_title
+        
+        # 将游戏窗口信息传递给主窗口
+        if self.main_window:
+            self.main_window.set_current_game_window(game_window_title)
+        
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
@@ -3179,9 +3568,15 @@ class AssistantController:
             logger.info("Creating new UnifiedAssistantWindow")
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
             self.main_window.query_submitted.connect(self.handle_query)
+            # 窗口关闭时回到mini模式
             self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             self.main_window.visibility_changed.connect(self._on_main_window_visibility_changed)
+            
+            # 如果有当前游戏窗口信息，传递给新窗口
+            if self.current_game_window:
+                self.main_window.set_current_game_window(self.current_game_window)
+            
             logger.info("UnifiedAssistantWindow created and signals connected")
         
         # 确保窗口显示

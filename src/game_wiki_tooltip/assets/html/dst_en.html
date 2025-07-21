@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Don't Starve Together - The Ultimate Survival Almanac</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Neutrals -->
+    <!-- Application Structure Plan: This version merges the user's preferred design (V1 tabs) with the required content depth (PDF). The structure is a horizontal tabbed interface for "Autumn," "Winter," "Spring," "Summer," and a new "Post-Year One" section. This provides clear, high-level navigation. Within each tab, the content is meticulously structured to mirror the PDF's chronological phases (e.g., Days 1-10, 11-15), using cards and subheadings. This approach allows users to easily select a season and then drill down into specific, day-by-day instructions without being overwhelmed, perfectly blending usability with comprehensive detail. -->
+    <!-- Visualization & Content Choices:
+        1. Report Info: All textual content from the PDF. Goal: Present detailed instructions and strategies. Viz/Presentation: Interactive Checklists, styled blockquotes (callouts), and structured text within tabbed sections. Interaction: Click to toggle task completion. Justification: This directly translates the PDF's dense text into an actionable, easy-to-read format. Callouts highlight critical warnings from the source.
+        2. Report Info: Data tables (Base locations, Winter gear). Goal: Present comparative data for decision-making. Viz/Presentation: Responsive HTML tables. Interaction: Static. Justification: Makes the PDF's tables web-native and easily accessible within their context.
+        3. Report Info: Game progression and phases. Goal: Organize content logically. Viz/Presentation: Horizontal Tabs for major sections (seasons), with vertical sub-sections for day-based phases. Interaction: Click to switch tabs. Justification: This architecture, requested by the user, provides a clear and intuitive navigation path through the game's entire first year and beyond.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF6;
+            color: #402A24;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #D5A062;
+            color: #8C5A32;
+        }
+        .task-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #D5A062;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .task-card.completed {
+            opacity: 0.6;
+            background-color: #F0EBE3;
+            border-left-color: #A8A29E;
+        }
+        .task-card.completed .task-title {
+            text-decoration: line-through;
+        }
+        .progress-bar-bg {
+            background-color: #E7E5E4;
+        }
+        .progress-bar-fill {
+            background-color: #B08968;
+            transition: width 0.5s ease-in-out;
+        }
+        .callout {
+            background-color: #FFFBF2;
+            border-left: 4px solid #D5A062;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        .callout-danger {
+            background-color: #FEF2F2;
+            border-left-color: #EF4444;
+            color: #991B1B;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #E7E5E4;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #F5F5F4;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#8C5A32]">The Constant's Almanac: Ultimate Survival Guide</h1>
+            <p class="text-lg text-stone-600 mt-2">A Detailed Seasonal Roadmap to Guide You from Surviving to Thriving</p>
+        </header>
+
+        <section id="overview-section" class="mb-12 bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+            <h2 class="text-2xl font-bold text-center mb-4 text-[#8C5A32]">Year-Round Core Activity Priorities</h2>
+            <div class="chart-container">
+                <canvas id="seasonalPriorityChart"></canvas>
+            </div>
+        </section>
+
+        <main>
+            <nav id="season-nav" class="flex flex-wrap justify-center border-b border-stone-200 mb-8 -space-x-px">
+                <button data-season="autumn" class="nav-button active text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🍂 Autumn (Days 1-20)</button>
+                <button data-season="winter" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">❄️ Winter (Days 21-35)</button>
+                <button data-season="spring" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🌸 Spring (Days 36-55)</button>
+                <button data-season="summer" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">☀️ Summer (Days 56-70)</button>
+                <button data-season="post-year" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🗺️ Post-Year One</button>
+            </nav>
+
+            <div id="content-container">
+                <!-- Autumn Content -->
+                <div id="autumn-content" class="season-content space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">The Bountiful Autumn: Laying the Foundation</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">Autumn is the most forgiving season in The Constant and the most crucial phase of the entire game. These 20 days are your golden window to establish a foundation for survival. Any mistakes during this period can lead to a catastrophic chain reaction in the following seasons.</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="autumn-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.1 The Nomadic Phase: Mapping Your World (Days 1-10)</h3>
+                        <p class="mb-4 text-stone-600">The goal of this phase is not to settle down, but to gather information. Before deciding on a settlement, you must have a comprehensive understanding of the entire world's layout. This is a crucial investment for long-term success.</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Core Resource Gathering</h4><p class="text-stone-600 text-sm">Upon starting, the primary task is to collect three basic resources along the way: Twigs, Grass, and Flint. The goal is to gather a full stack (40) of each as quickly as possible.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Tool Crafting Order</h4><p class="text-stone-600 text-sm">Prioritize crafting an Axe, then a Pickaxe. The Axe is for chopping mature trees to get Logs, while the Pickaxe is for breaking boulders with golden veins to get Rocks and crucial Gold Nuggets.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Increase Efficiency</h4><p class="text-stone-600 text-sm">Craft a Backpack as soon as possible. At night, use a Torch to explore while walking instead of building a campfire. Pro-tip: When you hear Charlie's warning sound in the dark, quickly equipping and unequipping the torch can reset the attack timer, saving durability.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Exploration Strategy</h4><p class="text-stone-600 text-sm">Walk along the world's coastline or edge to reveal the entire map boundary. Mark key biomes: Swamp, Dragonfly Desert, Oasis Desert, Pig King's location, and the Beefalo Savanna.</p></div>
+                             <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Food & Worm Holes</h4><p class="text-stone-600 text-sm">Collect Berries, Carrots, and Seeds along the way, but don't pick everything at once. Discover and use Worm Holes, remembering their connections for fast travel and escaping danger.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.2 Laying the Cornerstone: Choosing Your Home (Days 11-15)</h3>
+                        <div class="callout"><p class="font-bold">Base Location Criteria:</p><p class="text-sm text-stone-600">The ideal base should be in a central area of the map, close to non-transplantable resources (Pig King, Swamp, Cave Entrances), and near an efficient wormhole network. The Oasis Desert is a top-tier strategic choice because it is immune to smoldering in summer.</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Initial Construction</h4><p class="text-stone-600 text-sm">Build a permanent Fire Pit, a Science Machine, and immediately upgrade to an Alchemy Engine (smash the old one to recover some resources). Build several Chests and a Lightning Rod.</p></div>
+                        </div>
+                        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 mt-4"><thead><tr><th colspan="6" class="text-center">Base Location Strategy Analysis</th></tr><tr><th>Location</th><th>Pros</th><th>Cons</th><th>Key Resources</th><th>Seasonal Advantage</th><th>Overall Rating</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr><td>Central Grasslands</td><td>Central location, balanced travel to all biomes; usually has Beefalo and many Rabbit Holes.</td><td>No specific seasonal advantage, requires full preparation for every season.</td><td>Beefalo (Manure, Wool, Meat, Horns), Rabbits, abundant basic resources.</td><td>None</td><td>A</td></tr><tr><td>Oasis Desert</td><td>Immune to smoldering in summer, no need for Ice Flingomatics; has Cacti and Tumbleweeds.</td><td>Often far from the map's center, travel to Swamp or Pig King may be long.</td><td>Cactus (Food, Sanity), Tumbleweeds (random resources), Volt Goats.</td><td>Summer (S-Tier)</td><td>A+</td></tr><tr><td>Near Pig King/Birchnut Forest</td><td>Close to Pig King for easy gold trading; lots of Birchnut trees and Pig Houses.</td><td>Pigs turn into Werepigs on full moons; Birchnut forests have falling leaves in autumn and Glommer in spring.</td><td>Pig King (Gold), Pigs (Manure, Pig Skin), Birchnuts.</td><td>None</td><td>B+</td></tr><tr><td>Swamp Edge</td><td>Close to Reeds and Tentacles for key materials and defense.</td><td>The swamp itself is very dangerous with Merms, Mosquitoes, and Tentacles; high moisture, rapid sanity drain.</td><td>Reeds, Tentacles (Tentacle Spike, Tentacle Spots), Spiders, Merms.</td><td>Defense (A-Tier)</td><td>B</td></tr></tbody></table></div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.3 The Sprint Before Winter: Preparing for the Cold (Days 16-20)</h3>
+                        <div class="callout"><p class="font-bold">Core Objective:</p><p class="text-sm text-stone-600">Transition from a scavenger to a producer. Establish a sustainable food cycle and craft all essential winter gear.</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Food Production Chain</h4><p class="text-stone-600 text-sm">Build at least 1 Crock Pot, 1 Ice Box (top priority, get Gears from Clockwork monsters), and 6-8 Drying Racks.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Resource Transplanting</h4><p class="text-stone-600 text-sm">Use a Shovel to move Berry Bushes, Grass Tufts, and Saplings to your base and fertilize them with Manure.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Establish a Birdcage</h4><p class="text-stone-600 text-sm">Craft a Bird Trap and Birdcage. A caged bird can convert cooked Monster Meat into fresh Eggs, a key ingredient for many advanced recipes.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Prepare Winter Gear</h4><p class="text-stone-600 text-sm">You must craft a Thermal Stone. Hunt spiders for Silk to make a Winter Hat. If possible, hunt a Koalefant for a Breezy Vest or shave Beefalo for a Beefalo Hat.</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winter Content -->
+                <div id="winter-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">The Long Night: Conquering Winter</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">Winter is the first true test for survivors in The Constant. Starting on day 21 and lasting 15 days, the environment itself becomes hostile. All your preparations from autumn will be put to the test here.</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="winter-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.1 Winter Survival Kit: Managing Temperature</h3>
+                        <div class="callout"><p class="font-bold">Core Mechanic: Thermal Stone</p><p class="text-sm text-stone-600">This stone is your lifeline. Heat it by a fire, and it will glow orange or red. It radiates heat to keep you warm while you're out. You must return to a fire source to reheat it before it turns completely gray (loses heat), or your temperature will drop rapidly, and you'll start taking freezing damage. In an emergency, lighting a tree on fire can serve as a temporary heat source.</p></div>
+                        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 mt-4"><thead><tr><th colspan="6" class="text-center">Winter Insulation Gear Comparison</th></tr><tr><th>Item</th><th>Slot</th><th>Insulation (s)</th><th>Durability (days)</th><th>Materials</th><th>Notes & Trade-offs</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr><td>Beefalo Hat</td><td>Head</td><td>240</td><td>10</td><td>8x Beefalo Wool, 1x Beefalo Horn</td><td>Best head insulation, but requires a Beefalo Horn.</td></tr><tr><td>Winter Hat</td><td>Head</td><td>120</td><td>10</td><td>4x Beefalo Wool, 4x Silk</td><td>Excellent alternative, relatively easy to make.</td></tr><tr><td>Rabbit Earmuffs</td><td>Head</td><td>60</td><td>5</td><td>2x Rabbits, 1x Twig</td><td>Emergency option, limited insulation.</td></tr><tr><td>Puffy Vest</td><td>Body</td><td>240</td><td>15</td><td>1x Winter Koalefant Trunk, 8x Silk, 2x Rope</td><td>Best body insulation, frees up the backpack slot.</td></tr><tr><td>Tam o' Shanter</td><td>Head</td><td>120</td><td>25</td><td>Dropped by MacTusk</td><td>Excellent insulation and sanity restoration, but risky to obtain.</td></tr></tbody></table></div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.2 The Lean Season: Winter Livelihood</h3>
+                        <p class="mb-4 text-stone-600">With most surface plants ceasing to grow, maintaining a stable food source is another major challenge of winter.</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Trapping</h4><p class="text-stone-600 text-sm">Rabbits are still active in winter and are a stable source of meat. Placing traps directly on rabbit holes is the most efficient way to catch them, no bait needed.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Tracking & Hunting</h4><p class="text-stone-600 text-sm">Track and hunt the Winter Koalefant for 8 large meats and a trunk for the Puffy Vest. Go to the Walrus Camp to hunt MacTusk for the Tusk (for a Walking Cane) and the Tam o' Shanter.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Utilizing Ice</h4><p class="text-stone-600 text-sm">Glaciers can be mined for Ice. Ice can be used as a filler in the Crock Pot, acting as a non-perishable free vegetable. For example, 1 meat and 3 ice make Meatballs.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Rely on Reserves</h4><p class="text-stone-600 text-sm">This is the reward for your autumn efforts. Rely on your stored Jerky and ingredients in the Ice Box. Honey in Bee Boxes won't spoil before harvesting, making it an excellent emergency food reserve.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.3 Boss Guide: Deerclops, the Eye of Destruction</h3>
+                        <p class="mb-4 text-stone-600">The ultimate test of winter, usually appearing around day 30. Its core AI is programmed to destroy player structures.</p>
+                        <div class="callout callout-danger"><p class="font-bold">🚨 CRITICAL WARNING: Never fight Deerclops in your main base!</p><p class="text-sm">When you hear its low growl, immediately grab your gear and run to a pre-prepared "battle arena" far from your base.</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Combat Strategy: Kiting</h4><p class="text-stone-600 text-sm">The standard method. Wait for it to raise its arms for a ground slam, run away to dodge, then rush in to attack 2-3 times during its recovery animation, then retreat. Repeat. A Ham Bat or Tentacle Spike and armor are recommended.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Combat Strategy: Tanking</h4><p class="text-stone-600 text-sm">Requires multiple Football Helmets and Log Suits (or better, Marble Suits), and a full stack of healing food like Pierogi.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Combat Strategy: Environmental Use</h4><p class="text-stone-600 text-sm">Lure Deerclops into a dense forest to spawn Treeguards, or into a swamp to have Tentacles attack it. A pre-set field of Tooth Traps is also very effective.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Sanity & Loot</h4><p class="text-stone-600 text-sm">Deerclops has a massive sanity-draining aura; be prepared with sanity-restoring food. The loot, the Deerclops Eyeball, is one of the most important boss drops, used to craft the Eyebrella, which provides 100% rain protection and excellent insulation, making it key for spring and summer.</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spring Content -->
+                <div id="spring-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">The Thaw and the Fury: Mastering Spring</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">Spring (20 days by default) is a season of rebirth and life, but also of annoyance. The world comes back to life, but brings with it constant new threats.</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="spring-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.1 Weathering the Storm: Rain and Wetness</h3>
+                        <div class="callout"><p class="font-bold">Core Mechanic: Wetness</p><p class="text-sm text-stone-600">When your character gets wet, Sanity drops quickly, tools become slippery (chance to drop from hand), and you can lose body heat. Items in your inventory also get wet, further accelerating sanity loss.</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Solution: Waterproof Gear</h4><p class="text-stone-600 text-sm">The Eyebrella is the best choice, offering 100% waterproofing. An alternative is an Umbrella paired with a Straw Hat or Football Helmet. The Piggyback and Krampus Sack are waterproof backpacks.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Dealing with Lightning</h4><p class="text-stone-600 text-sm">Spring storms bring lightning. The Lightning Rod you built in autumn is now crucial to protect your base from fire.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.2 A Mad World: Hostile Flora and Fauna</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Dealing with Hostile Creatures</h4><p class="text-stone-600 text-sm">Bees turn red and become aggressive. Beefalo are in heat all spring; wear a Beefalo Hat to move among them safely.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Dealing with Frog Rain</h4><p class="text-stone-600 text-sm">One of spring's most infamous events. The best strategy is to stay away from them or lure them to other creatures, like Tentacles or the seasonal boss, turning a threat into a weapon.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.3 Boss Guide: Moose/Goose, the Winged Menace</h3>
+                        <p class="mb-4 text-stone-600">The spring seasonal boss, Moose/Goose, appears near one of several nests generated at world creation.</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Combat Strategy</h4><p class="text-stone-600 text-sm">Its main attack is a swipe. After three swipes, it will honk, which knocks your weapon out of your hands. You can unequip your weapon before the honk to avoid this. The standard kiting rhythm is 2-3 hits between its attacks.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Moslings</h4><p class="text-stone-600 text-sm">If the mother is killed and leaves Moslings, they will become enraged, spinning into small tornadoes that call down lightning on you. Dodge the tornadoes and attack when they are dizzy. It's recommended to place a Lightning Rod nearby beforehand.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Loot: Down Feathers</h4><p class="text-stone-600 text-sm">This is the key material for crafting the powerful magic weapon, the Weather Pain, and the summer cooling item, the Luxury Fan.</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summer Content -->
+                <div id="summer-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">The Scorching Calamity: Enduring Summer</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">Summer (15 days by default) is the most threatening season for your base. The dual threats of extreme heat and smoldering can undo all the work of an unprepared player.</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="summer-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">4.1 Conquering Heat and Wildfires</h3>
+                        <div class="callout callout-danger"><p class="font-bold">🚨 The Ultimate Solution: Ice Flingomatic</p><p class="text-sm">This is an irreplaceable, base-saving core structure. It automatically shoots snowballs at smoldering or burning objects to extinguish them. You need Gears to build it and fuel to keep it running. Remember, your fire pit must be outside its range. Alternative strategies: build your base in the Oasis Desert (completely avoids smoldering) or spend the entire summer in the caves.</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Cooling Solutions</h4><p class="text-stone-600 text-sm">Stand next to an Endothermic Fire Pit. Carry a Thermal Stone that has been cooled in an Ice Box. Wear cooling clothes like the Fashion Melon or Floral Shirt. The Eyebrella from winter is also a top-tier item in summer due to its excellent heat insulation.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">4.2 Boss Guide: Antlion, the World Shaker</h3>
+                        <p class="mb-4 text-stone-600">The summer boss, Antlion, resides in the Oasis Desert. Unless you satisfy its demands, it will periodically create destructive Sinkholes at your location.</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Strategy 1: Appeasement</h4><p class="text-stone-600 text-sm">You can pacify the Antlion by "gifting" it various items (like rocks, trinkets, eggs) to stop the sinkholes. This is a peaceful, non-combat solution. Giving it specific trinkets can also get you the blueprint for the Lazy Deserter.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Strategy 2: Combat</h4><p class="text-stone-600 text-sm">The Antlion is a stationary boss. It attacks by summoning sand spikes under your feet and trapping you in sand castles. You must constantly move to dodge the spikes while dealing continuous damage to prevent it from healing by eating rocks. Killing it will permanently stop the sinkholes for the season.</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post-Year Content -->
+                <div id="post-year-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">Post-Year One: Exploring New Frontiers</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">After successfully surviving a full year, you've mastered the basic survival laws of the surface world. Now, it's time to challenge the non-seasonal, permanent domains to obtain powerful late-game loot.</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="post-year-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">5.1 Delving Deep: Intro to Caves and Ruins</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">The Caves</h4><p class="text-stone-600 text-sm">Enter by mining a Plugged Sinkhole on the surface. The caves are in perpetual darkness and require a light source like a Miner Hat or Lantern. Surface hound attacks are replaced by Depths Worms.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">The Ruins</h4><p class="text-stone-600 text-sm">Entered through another sinkhole within the caves. The Nightmare Cycle is the core mechanic here. It's home to powerful Damaged Clockworks and the Ancient Guardian boss. The main reward is Thulecite, a material for crafting top-tier magic items.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Boss Intro: Ancient Guardian</h4><p class="text-stone-600 text-sm">A giant, chariot-like boss. The core combat mechanic is to bait its charge attack into the surrounding pillars, which stuns it and creates an opening for you to attack. It drops the Guardian's Horn, used to craft the powerful Houndius Shootius turret.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">5.2 Sailing the Constant Sea: An Explorer's Primer</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Setting Sail</h4><p class="text-stone-600 text-sm">Craft a Boat Kit and practice sailing in coastal areas first. Always carry Boat Patches for emergencies.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Why Go to Sea?</h4><p class="text-stone-600 text-sm">The ocean holds unique islands and resources not found on the mainland. A key destination is the Lunar Island, which has Stone Fruit, Kelp Fronds, and Glass. The Moon Quay island allows you to craft docks.</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Boss Intro: Malbatross</h4><p class="text-stone-600 text-sm">A sea-based boss summoned by fishing at specific shoals. The fight takes place entirely at sea. It drops the Malbatross Bill and Feathers, used to craft the fastest sail in the game.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const nav = document.getElementById('season-nav');
+            const contentContainer = document.getElementById('content-container');
+
+            function updateProgress(season) {
+                const contentEl = document.getElementById(`${season}-content`);
+                if (!contentEl) return;
+
+                const taskElements = contentEl.querySelectorAll('.task-card');
+                const completedTasks = contentEl.querySelectorAll('.task-card.completed');
+                const progressBar = document.getElementById(`${season}-progress-bar`);
+
+                const totalTasks = taskElements.length;
+                const completedCount = completedTasks.length;
+
+                const percentage = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
+
+                if (progressBar) {
+                    progressBar.style.width = `${percentage}%`;
+                }
+            }
+
+            nav.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const season = e.target.dataset.season;
+
+                    nav.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    contentContainer.querySelectorAll('.season-content').forEach(content => {
+                        content.classList.add('hidden');
+                    });
+
+                    const activeContent = document.getElementById(`${season}-content`);
+                    if (activeContent) {
+                        activeContent.classList.remove('hidden');
+                    }
+                }
+            });
+
+            contentContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.task-card');
+                if (card) {
+                    card.classList.toggle('completed');
+                    const seasonContent = card.closest('.season-content');
+                    if (seasonContent) {
+                        const seasonId = seasonContent.id.replace('-content', '');
+                        updateProgress(seasonId);
+                    }
+                }
+            });
+
+            const ctx = document.getElementById('seasonalPriorityChart').getContext('2d');
+            const seasonalPriorityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['🍂 Autumn', '❄️ Winter', '🌸 Spring', '☀️ Summer'],
+                    datasets: [
+                        { label: 'Exploration & Base Building', data: [9, 2, 4, 3], backgroundColor: '#A87C53' },
+                        { label: 'Food & Resources', data: [8, 9, 7, 6], backgroundColor: '#D5A062' },
+                        { label: 'Combat & Bosses', data: [4, 8, 7, 5], backgroundColor: '#E5C9A9' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 10, title: { display: true, text: 'Priority (out of 10)' } }, x: { grid: { display: false } } },
+                    plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } }
+                }
+            });
+
+            ['autumn', 'winter', 'spring', 'summer', 'post-year'].forEach(updateProgress);
+        });
+    </script>
+</body>
+</html>

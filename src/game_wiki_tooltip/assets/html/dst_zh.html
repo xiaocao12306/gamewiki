@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>饥荒联机版 - 终极生存年鉴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Neutrals -->
+    <!-- Application Structure Plan: This version merges the user's preferred design (V1 tabs) with the required content depth (PDF). The structure is a horizontal tabbed interface for "Autumn," "Winter," "Spring," "Summer," and a new "Post-Year One" section. This provides clear, high-level navigation. Within each tab, the content is meticulously structured to mirror the PDF's chronological phases (e.g., Days 1-10, 11-15), using cards and subheadings. This approach allows users to easily select a season and then drill down into specific, day-by-day instructions without being overwhelmed, perfectly blending usability with comprehensive detail. -->
+    <!-- Visualization & Content Choices: 
+        1. Report Info: All textual content from the PDF. Goal: Present detailed instructions and strategies. Viz/Presentation: Interactive Checklists, styled blockquotes (callouts), and structured text within tabbed sections. Interaction: Click to toggle task completion. Justification: This directly translates the PDF's dense text into an actionable, easy-to-read format. Callouts highlight critical warnings from the source.
+        2. Report Info: Data tables (Base locations, Winter gear). Goal: Present comparative data for decision-making. Viz/Presentation: Responsive HTML tables. Interaction: Static. Justification: Makes the PDF's tables web-native and easily accessible within their context.
+        3. Report Info: Game progression and phases. Goal: Organize content logically. Viz/Presentation: Horizontal Tabs for major sections (seasons), with vertical sub-sections for day-based phases. Interaction: Click to switch tabs. Justification: This architecture, requested by the user, provides a clear and intuitive navigation path through the game's entire first year and beyond.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #FDFBF6;
+            color: #402A24;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #D5A062;
+            color: #8C5A32;
+        }
+        .task-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #D5A062;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .task-card.completed {
+            opacity: 0.6;
+            background-color: #F0EBE3;
+            border-left-color: #A8A29E;
+        }
+        .task-card.completed .task-title {
+            text-decoration: line-through;
+        }
+        .progress-bar-bg {
+            background-color: #E7E5E4;
+        }
+        .progress-bar-fill {
+            background-color: #B08968;
+            transition: width 0.5s ease-in-out;
+        }
+        .callout {
+            background-color: #FFFBF2;
+            border-left: 4px solid #D5A062;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        .callout-danger {
+            background-color: #FEF2F2;
+            border-left-color: #EF4444;
+            color: #991B1B;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #E7E5E4;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #F5F5F4;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#8C5A32]">永恒大陆年鉴：终极生存指南</h1>
+            <p class="text-lg text-stone-600 mt-2">一份详尽的季节性路线图，指引你从幸存到征服</p>
+        </header>
+
+        <section id="overview-section" class="mb-12 bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+            <h2 class="text-2xl font-bold text-center mb-4 text-[#8C5A32]">全年核心活动优先级</h2>
+            <div class="chart-container">
+                <canvas id="seasonalPriorityChart"></canvas>
+            </div>
+        </section>
+
+        <main>
+            <nav id="season-nav" class="flex flex-wrap justify-center border-b border-stone-200 mb-8 -space-x-px">
+                <button data-season="autumn" class="nav-button active text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🍂 秋季 (1-20天)</button>
+                <button data-season="winter" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">❄️ 冬季 (21-35天)</button>
+                <button data-season="spring" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🌸 春季 (36-55天)</button>
+                <button data-season="summer" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">☀️ 夏季 (56-70天)</button>
+                <button data-season="post-year" class="nav-button text-base sm:text-lg font-bold py-3 px-3 sm:px-6 text-stone-600 hover:text-[#8C5A32]">🗺️ 首年之后</button>
+            </nav>
+
+            <div id="content-container">
+                <!-- Autumn Content -->
+                <div id="autumn-content" class="season-content space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">丰饶之秋：奠定根基</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">秋季是永恒大陆最仁慈的季节，也是整个游戏进程中至关重要的阶段。这20天是你建立生存基础的黄金窗口。在此期间的任何失误，都可能导致在后续季节中产生灾难性的连锁反应。</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="autumn-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+                    
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.1 游牧阶段: 绘制你的世界 (第1-10天)</h3>
+                        <p class="mb-4 text-stone-600">此阶段的目标并非安家，而是信息收集。在决定定居点之前，必须对整个世界的轮廓有全面的了解。这是一项对长远成功至关重要的投资。</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">核心资源收集</h4><p class="text-stone-600 text-sm">游戏开始后,首要任务是沿途收集三种基础资源:树枝(Twigs)、草(Grass)和燧石(Flint)。目标是尽快各集满一整组(40个)。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">工具制作顺序</h4><p class="text-stone-600 text-sm">优先制作一把斧头(Axe),然后是镐(Pickaxe)。斧头用于砍伐成年的大树以获取木头(Logs),而镐则用于敲碎带有金色条纹的巨石,以获得岩石(Rocks)和至关重要的金块(Gold Nuggets)。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">提升效率</h4><p class="text-stone-600 text-sm">尽快用收集到的材料制作一个背包(Backpack)。在夜晚,使用火炬(Torch)边走边探索,而不是建造篝火。技巧:在黑暗中听到查理(Charlie)的警告声时,快速装备再卸下火炬,可以瞬间重置攻击计时,从而极大地节省火炬的耐久度。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">探索策略</h4><p class="text-stone-600 text-sm">沿着世界的海岸线或边缘行走,直到揭示整个地图的边界。标记关键生态:沼泽地(Swamp),蜻蜓沙漠(Dragonfly Desert),绿洲沙漠(Oasis Desert),猪王(Pig King)所在地,以及牛群草原(Beefalo Savanna)。</p></div>
+                             <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">食物与虫洞</h4><p class="text-stone-600 text-sm">沿途收集浆果、胡萝卜和种子,但不要一次性采光。发现并使用虫洞(Worm Holes),记住它们的连接关系。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.2 奠定基石: 选择你的家园 (第11-15天)</h3>
+                        <div class="callout"><p class="font-bold">选址标准:</p><p class="text-sm text-stone-600">理想的基地应位于地图的中心区域,靠近无法移植的资源点(猪王、沼泽、洞穴入口),靠近一个高效的虫洞网络。绿洲沙漠是一个顶级的建家地点,因为它在夏季可以完全避免自燃现象。</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">初期建设</h4><p class="text-stone-600 text-sm">建造一个永久性的石火坑(Fire Pit)、科学机器(Science Machine)并立即升级到炼金引擎(Alchemy Engine),然后用锤子砸掉科学机器回收部分资源。建造数个箱子(Chests)和一根避雷针(Lightning Rod)。</p></div>
+                        </div>
+                        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 mt-4"><thead><tr><th colspan="6" class="text-center">基地选址策略分析</th></tr><tr><th>基地位置</th><th>优点</th><th>缺点</th><th>关键资源</th><th>季节优势</th><th>综合评级</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr><td>中央草原</td><td>地理位置中心,前往各生态区距离均衡;通常有牛群和大量兔子洞。</td><td>无特定季节优势,需要为每个季节做足准备。</td><td>牛群(粪便、毛、肉、角),兔子,大量基础资源。</td><td>无</td><td>A</td></tr><tr><td>绿洲沙漠</td><td>夏季免疫自燃,无需建造冰雪喷射器保护基地;有仙人掌和风滚草。</td><td>通常远离地图中心,前往沼泽或猪王可能路途遥远。</td><td>仙人掌(食物、理智),风滚草(随机资源),伏特山羊。</td><td>夏季(S级)</td><td>A+</td></tr><tr><td>猪王/桦木林附近</td><td>靠近猪王,方便用肉换取黄金;有大量桦木和猪人房。</td><td>猪人会在月圆之夜变成狂暴的疯猪;桦木林在秋季有落叶,春季有咕嚕咪。</td><td>猪王(黄金),猪人(粪便、猪皮),桦木坚果。</td><td>无</td><td>B+</td></tr><tr><td>沼泽边缘</td><td>靠近芦苇和触手,方便获取关键材料和利用触手进行防御。</td><td>沼泽本身非常危险,有鱼人、蚊子和触手;环境潮湿,理智下降快。</td><td>芦苇,触手(触手棒、触手皮),蜘蛛,鱼人。</td><td>防御(A级)</td><td>B</td></tr></tbody></table></div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">1.3 冬季前的冲刺: 为严寒做准备 (第16-20天)</h3>
+                        <div class="callout"><p class="font-bold">核心目标:</p><p class="text-sm text-stone-600">从一个拾荒者转变为一个生产者。建立可持续的食物循环系统,并制作出所有过冬的必备装备。</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">食物生产链</h4><p class="text-stone-600 text-sm">建造至少1个烹饪锅(Crock Pot)、1个冰箱(Ice Box)(最高优先级,通过击杀发条生物获得齿轮)、6-8个晾肉架(Drying Racks)。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">资源移植</h4><p class="text-stone-600 text-sm">使用铲子(Shovel)将野外的浆果丛(Berry Bushes)、草丛(Grass Tufts)和树苗(Saplings)移植到基地附近,并用粪便(Manure)施肥。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">建立鸟笼</h4><p class="text-stone-600 text-sm">制作捕鸟陷阱(Bird Trap)和鸟笼(Birdcage)。笼中鸟可以将烤熟的怪物肉(Monster Meat)转化为新鲜的鸟蛋(Eggs),这是许多高级食谱的关键原料。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">冬季装备准备</h4><p class="text-stone-600 text-sm">务必制作一个暖石(Thermal Stone)。狩猎蜘蛛获取蜘蛛丝(Silk)制作冬帽(Winter Hat)。如果可能,猎杀大象(Koalefant)制作小巧背心(Breezy Vest)或刮牛毛制作牛帽(Beefalo Hat)。</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winter Content -->
+                <div id="winter-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">漫长黑夜：征服冬季</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">冬季是永恒大陆对幸存者的第一次真正考验。从第21天开始，持续15天，环境本身将变得充满敌意。你在秋季的所有准备工作，都将在这里得到检验。</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="winter-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.1 冬季生存套件: 管理体温</h3>
+                        <div class="callout"><p class="font-bold">核心机制: 暖石</p><p class="text-sm text-stone-600">这块石头是你的生命线。将它放在火边加热,它会发出橙色或红色的光芒。当你外出时,它会不断散发热量为你保暖。你必须在它完全变灰(失去热量)之前返回火源重新加热,否则你的体温将迅速下降并开始受到冰冻伤害。在紧急情况下,点燃一棵树可以作为临时的热源。</p></div>
+                        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 mt-4"><thead><tr><th colspan="6" class="text-center">冬季保暖衣物性能对比</th></tr><tr><th>装备</th><th>部位</th><th>保暖值(秒)</th><th>耐久度(天)</th><th>制作材料</th><th>备注与权衡</th></tr></thead><tbody class="bg-white divide-y divide-gray-200"><tr><td>牛帽(Beefalo Hat)</td><td>头部</td><td>240</td><td>10</td><td>8x牛毛, 1x牛角</td><td>最佳头部保暖装备,但需要牛角。</td></tr><tr><td>冬帽(Winter Hat)</td><td>头部</td><td>120</td><td>10</td><td>4x牛毛, 4x蜘蛛丝</td><td>优秀的替代品,制作相对容易。</td></tr><tr><td>兔耳罩(Rabbit Earmuffs)</td><td>头部</td><td>60</td><td>5</td><td>2x兔子, 1x树枝</td><td>应急选择,保暖效果有限。</td></tr><tr><td>小巧背心(Breezy Vest)</td><td>身体</td><td>240</td><td>15</td><td>1x冬季大象鼻, 8x蜘蛛丝, 2x绳子</td><td>最佳身体保暖装备,解放背包栏位。</td></tr><tr><td>苏格兰帽(Tam o' Shanter)</td><td>头部</td><td>120</td><td>25</td><td>麦克塔斯克掉落</td><td>优秀的保暖和理智恢复装备,但获取有风险。</td></tr></tbody></table></div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.2 匮乏的季节: 冬季的生计</h3>
+                        <p class="mb-4 text-stone-600">当大部分地表植物停止生长时,如何维持稳定的食物来源是冬季的另一大挑战。</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">陷阱捕猎</h4><p class="text-stone-600 text-sm">兔子在冬季依然活跃,是稳定的肉食来源。将陷阱直接放在兔子洞口是最高效的捕捉方式,无需诱饵。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">追踪狩猎</h4><p class="text-stone-600 text-sm">追踪并猎杀冬季大象(Winter Koalefant),可获得8块大肉和制作厚马甲的象鼻。前往海象营地(Walrus Camp)狩猎麦克塔斯克(MacTusk),他会掉落制作步行手杖的海象牙和苏格兰帽。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">冰块利用</h4><p class="text-stone-600 text-sm">随处可见的冰川可以被开采,获得冰(Ice)。冰块在烹饪锅中可以作为填充物,相当于一种不会腐烂的免费蔬菜。例如,1块肉加3块冰就可以制作出肉丸。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">依赖储备</h4><p class="text-stone-600 text-sm">这是你秋季努力的回报。依赖你储备的肉干和冰箱里的食材。蜂箱里的蜂蜜在收获前不会腐烂,是绝佳的应急食物储备。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">2.3 Boss指南: 独眼巨鹿, 毁灭之瞳</h3>
+                        <p class="mb-4 text-stone-600">冬季的终极考验,通常在第30天左右出现,其核心AI设定就是摧毁玩家的建筑。</p>
+                        <div class="callout callout-danger"><p class="font-bold">🚨 关键警告: 永远不要在你的主基地里与独眼巨鹿战斗！</p><p class="text-sm">当你听到独眼巨鹿低沉的咆哮声时,立刻带上你的装备,跑向一个远离你主基地的、预先准备好的“战斗场地”。</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">战斗策略: 风筝(Kiting)</h4><p class="text-stone-600 text-sm">最标准的打法。等待它抬手准备发动砸地攻击,迅速跑开躲避,然后在它攻击的硬直期间冲上去攻击2-3次,再迅速后退。如此循环。推荐使用火腿棒(Ham Bat)或触手棒(Tentacle Spike),并穿戴护甲。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">战斗策略: 硬抗(Tanking)</h4><p class="text-stone-600 text-sm">需要准备多个橄榄球头盔(Football Helmets)和木甲(Log Suits)(或更好的大理石甲),以及一整组恢复生命的食物,如饺子(Pierogi)。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">战斗策略: 环境利用</h4><p class="text-stone-600 text-sm">将巨鹿引诱到茂密的森林中生成树人守卫,或引到沼泽地让触手攻击它。一个预先布置好的犬牙陷阱(Tooth Traps)阵地也非常有效。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">理智管理与战利品</h4><p class="text-stone-600 text-sm">巨鹿拥有巨大的理智降低光环,准备好恢复理智的食物。战利品巨鹿眼球(Deerclops Eyeball)是游戏中最重要的Boss掉落物之一,用于制作眼球伞(Eyebrella),它提供100%防雨和优秀隔热,是通往春夏的关键。</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spring Content -->
+                <div id="spring-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">解冻与狂怒：驾驭春季</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">春季(默认20天)是一个万物复苏、充满生机,但也令人烦躁的季节。世界重焕活力,但也带来了持续不断的全新威胁。</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="spring-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.1 抵御风暴: 雨水与潮湿度</h3>
+                        <div class="callout"><p class="font-bold">核心机制: 潮湿度(Wetness)</p><p class="text-sm text-stone-600">角色变湿后,理智值(Sanity)会快速下降,工具会变得湿滑(有几率从手中滑落),并且可能导致体温下降。物品栏里的物品也会变湿,进一步加剧理智的流失。</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">解决方案: 防水装备</h4><p class="text-stone-600 text-sm">眼球伞(Eyebrella)是最佳选择,提供100%防水。备选方案是一把雨伞(Umbrella)搭配草帽(Straw Hat)或橄榄球头盔。猪皮包(Piggyback)和坎普斯背包(Krampus Sack)是防水的。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">应对雷电</h4><p class="text-stone-600 text-sm">春季的暴风雨会带来雷电。你在秋季建造的避雷针在此时将发挥至关重要的作用,保护你的基地免受雷击。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.2 疯狂的世界: 充满敌意的动植物</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">应对敌意生物</h4><p class="text-stone-600 text-sm">蜜蜂会变成红色并主动攻击。整个春季,牛群都处于发情期,戴上牛帽可以让你在牛群中安全穿行。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">应对青蛙雨</h4><p class="text-stone-600 text-sm">这是春季最臭名昭著的事件之一。最佳策略是远离它们,或者将它们引向其他生物,如触手或季节Boss,将威胁转化为武器。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">3.3 Boss指南: 鹿角鹅, 羽翼的威胁</h3>
+                        <p class="mb-4 text-stone-600">春季的季节Boss是鹿角鹅(Moose/Goose)。它会出现在世界生成时产生的几个巢穴之一附近。</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">战斗策略</h4><p class="text-stone-600 text-sm">它的主要攻击方式是挥击。每三次挥击后,它会发出一声鸣叫(honk),这个攻击会将你手中的武器震飞。你可以在它鸣叫前主动卸下武器来避免这一效果。标准的风筝节奏是在两次攻击之间攻击2-3次。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">鹿角鹅宝宝(Moslings)</h4><p class="text-stone-600 text-sm">如果母鹅被击杀后留下小鹅,它们会变得狂暴,旋转成小型的龙卷风并引来雷电攻击你。躲避龙卷风,并在它们头晕目眩时进行攻击。建议在战斗场地附近提前放置一根避雷针。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">战利品: 羽绒(Down Feathers)</h4><p class="text-stone-600 text-sm">这是制作强力魔法武器风向标(Weather Pain)和夏季降温神器奢华风扇(Luxury Fan)的关键材料。</p></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Summer Content -->
+                <div id="summer-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">灼热天灾：忍耐夏季</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">夏季(默认15天)是对基地威胁最大的季节。酷热和自燃的双重威胁,足以让准备不足的玩家前功尽弃。</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="summer-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">4.1 战胜酷热与燎原之火</h3>
+                        <div class="callout callout-danger"><p class="font-bold">🚨 终极解决方案: 冰雪喷射器(Ice Flingomatic)</p><p class="text-sm">这是一个无可替代的、拯救基地的核心建筑。它会自动向冒烟或着火的物体发射雪球来灭火。你需要齿轮来建造它,并用燃料维持其运作。切记,你的火坑必须建在它的作用范围之外。替代策略: 将基地建在绿洲沙漠(完全避免自燃)或整个夏天都在洞穴中度过。</p></div>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">降温方案</h4><p class="text-stone-600 text-sm">站在吸热火坑(Endothermic Fire Pit)旁边。携带一个在冰箱中冷却过的暖石。穿戴西瓜帽(Fashion Melon)或花衬衫(Floral Shirt)。眼球伞因其优秀的隔热效果,在夏季同样是顶级装备。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">4.2 Boss指南: 蚁狮, 世界撼动者</h3>
+                        <p class="mb-4 text-stone-600">夏季的Boss蚁狮(Antlion)居住在绿洲沙漠中。除非你满足它的要求,否则它会周期性地在你的位置制造具有毁灭性的地陷(Sinkholes)。</p>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">策略一: 安抚</h4><p class="text-stone-600 text-sm">你可以通过向蚁狮“进贡”各种物品(如岩石、玩具、鸟蛋)来平息它的愤怒,从而阻止地陷的发生。这是一种和平的、非战斗的解决方案。给它特定的玩具还能换取懒人沙漠传送塔(Lazy Deserter)的蓝图。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">策略二: 战斗</h4><p class="text-stone-600 text-sm">蚁狮是一个固定位置的Boss。它通过在你脚下召唤沙刺和用沙堡困住你来进行攻击。你必须不停地移动来躲避沙刺,同时持续对它造成伤害,以防止它通过吃岩石来回血。击杀蚁狮将永久停止本季节的地陷。</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post-Year Content -->
+                <div id="post-year-content" class="season-content hidden space-y-8">
+                    <div class="text-center bg-white/30 p-4 rounded-lg">
+                        <h2 class="text-3xl font-bold text-[#8C5A32]">首年之后：探索未知领域</h2>
+                        <p class="mt-2 text-stone-600 max-w-3xl mx-auto">在成功度过一整年后,你已经掌握了地表世界的基本生存法则。现在,是时候去挑战那些非季节性的、永久存在的领域,以获取游戏后期的强大战利品了。</p>
+                    </div>
+                    <div class="w-full bg-stone-200 rounded-full h-4"><div id="post-year-progress-bar" class="progress-bar-fill h-4 rounded-full" style="width: 0%"></div></div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">5.1 深入地底: 洞穴与远古遗迹入门</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">洞穴 (Caves)</h4><p class="text-stone-600 text-sm">用镐敲开地表上堵住的落水洞(Plugged Sinkhole)进入。洞穴中是永恒的黑暗,需要可靠的光源,如矿工帽(Miner Hat)或提灯(Lantern)。地表的猎犬攻击被深渊蠕虫(Depths Worms)的袭击所取代。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">远古遗迹 (The Ruins)</h4><p class="text-stone-600 text-sm">通过洞穴中的另一个落水洞进入。梦魇循环(Nightmare Cycle)是这里的核心机制。这里是强大的损坏的发条生物和Boss远古守护者(Ancient Guardian)的家园。主要奖励是铥矿(Thulecite)——制作游戏中顶级魔法物品的材料。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Boss入门: 远古守护者</h4><p class="text-stone-600 text-sm">一个巨大的、类似发条战车的Boss。核心战斗机制是引诱它的冲锋攻击撞向周围的柱子,这会使它陷入眩晕状态,从而为你创造输出机会。掉落守护者之角(Guardian's Horn),用于制作强大的防御炮塔排箫(Houndius Shootius)。</p></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 border-b-2 border-[#D5A062] pb-2 text-[#8C5A32]">5.2 航向永恒之海: 探险家入门</h3>
+                        <div class="space-y-3">
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">扬帆起航</h4><p class="text-stone-600 text-sm">制作一个船具套件(Boat Kit),先在近海区域航行,熟悉船只的操作。务必随身携带船补丁(Boat Patches)以备不时之需。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">为何出海?</h4><p class="text-stone-600 text-sm">海洋中蕴藏着大陆上没有的独特岛屿和资源。关键目标地点是月亮岛(Lunar Island),这里有石果(Stone Fruit)、海带和月亮玻璃。猴岛(Moon Quay)可以制作码头。</p></div>
+                            <div class="task-card bg-white p-4 rounded-lg cursor-pointer"><h4 class="font-bold text-lg task-title">Boss入门: 邪天翁(Malbatross)</h4><p class="text-stone-600 text-sm">一个基于海洋的Boss,可以通过在特定的鱼群点钓鱼来召唤。战斗完全在海上进行。掉落邪天翁的喙和羽毛,用于制作游戏中速度最快的船帆。</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const nav = document.getElementById('season-nav');
+            const contentContainer = document.getElementById('content-container');
+
+            function updateProgress(season) {
+                const contentEl = document.getElementById(`${season}-content`);
+                if (!contentEl) return;
+
+                const taskElements = contentEl.querySelectorAll('.task-card');
+                const completedTasks = contentEl.querySelectorAll('.task-card.completed');
+                const progressBar = document.getElementById(`${season}-progress-bar`);
+                
+                const totalTasks = taskElements.length;
+                const completedCount = completedTasks.length;
+                
+                const percentage = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
+                
+                if (progressBar) {
+                    progressBar.style.width = `${percentage}%`;
+                }
+            }
+
+            nav.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const season = e.target.dataset.season;
+                    
+                    nav.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    contentContainer.querySelectorAll('.season-content').forEach(content => {
+                        content.classList.add('hidden');
+                    });
+
+                    const activeContent = document.getElementById(`${season}-content`);
+                    if (activeContent) {
+                        activeContent.classList.remove('hidden');
+                    }
+                }
+            });
+
+            contentContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.task-card');
+                if (card) {
+                    card.classList.toggle('completed');
+                    const seasonContent = card.closest('.season-content');
+                    if (seasonContent) {
+                        const seasonId = seasonContent.id.replace('-content', '');
+                        updateProgress(seasonId);
+                    }
+                }
+            });
+            
+            const ctx = document.getElementById('seasonalPriorityChart').getContext('2d');
+            const seasonalPriorityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['🍂 秋季', '❄️ 冬季', '🌸 春季', '☀️ 夏季'],
+                    datasets: [
+                        { label: '探索 & 建家', data: [9, 2, 4, 3], backgroundColor: '#A87C53' },
+                        { label: '食物 & 资源', data: [8, 9, 7, 6], backgroundColor: '#D5A062' },
+                        { label: '战斗 & Boss', data: [4, 8, 7, 5], backgroundColor: '#E5C9A9' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 10, title: { display: true, text: '优先级 (满分10)' } }, x: { grid: { display: false } } },
+                    plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } }
+                }
+            });
+            
+            ['autumn', 'winter', 'spring', 'summer', 'post-year'].forEach(updateProgress);
+        });
+    </script>
+</body>
+</html>
