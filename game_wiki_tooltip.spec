@@ -31,7 +31,7 @@ hiddenimports = [
     'numpy',
     'tqdm',
     'jieba',
-    'rank_bm25',
+    'bm25s',  # 替换rank_bm25为bm25s
     'qdrant_client',
     'langchain_community',
     'langchain_text_splitters',
