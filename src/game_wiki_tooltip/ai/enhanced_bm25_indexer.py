@@ -17,6 +17,9 @@ import logging
 from typing import List, Dict, Any, Optional, Set, Tuple
 from pathlib import Path
 
+# 导入翻译函数
+from src.game_wiki_tooltip.i18n import t
+
 # 尝试导入bm25s，更现代、更快的BM25实现
 try:
     import bm25s
@@ -52,7 +55,7 @@ class EnhancedBM25Indexer:
         self.documents = []
         
         if not BM25_AVAILABLE:
-            error_msg = f"BM25搜索功能初始化失败: bm25s包导入错误 - {BM25_IMPORT_ERROR}"
+            error_msg = t("bm25_package_unavailable", error=BM25_IMPORT_ERROR)
             error_msg += "\n请尝试以下解决方案："
             error_msg += "\n1. 安装bm25s: pip install bm25s"
             error_msg += "\n2. 如果仍有问题，尝试重新安装: pip uninstall bm25s && pip install bm25s"
@@ -282,7 +285,7 @@ class EnhancedBM25Indexer:
             BM25UnavailableError: 当BM25功能不可用时
         """
         if not BM25_AVAILABLE:
-            raise BM25UnavailableError("BM25索引构建失败: bm25s包不可用")
+            raise BM25UnavailableError(t("bm25_build_failed"))
             
         logger.info(f"开始构建增强BM25索引，共 {len(chunks)} 个知识块")
         
@@ -318,7 +321,7 @@ class EnhancedBM25Indexer:
             self.corpus_tokens = search_texts
             logger.info("增强BM25索引构建完成")
         except Exception as e:
-            error_msg = f"增强BM25索引构建失败: {e}"
+            error_msg = t("bm25_build_error", error=str(e))
             logger.error(error_msg)
             raise BM25UnavailableError(error_msg)
 
@@ -337,10 +340,10 @@ class EnhancedBM25Indexer:
             BM25UnavailableError: 当BM25功能不可用时
         """
         if not BM25_AVAILABLE:
-            raise BM25UnavailableError("BM25搜索失败: bm25s包不可用")
+            raise BM25UnavailableError(t("bm25_search_failed"))
             
         if not self.bm25:
-            raise BM25UnavailableError("BM25搜索失败: 索引未初始化，请先调用build_index()方法")
+            raise BM25UnavailableError(t("bm25_search_not_initialized"))
             
         # 预处理查询 - 使用与索引构建相同的逻辑
         normalized_query = self._normalize_enemy_name(query.lower())
@@ -409,7 +412,7 @@ class EnhancedBM25Indexer:
             return results
             
         except Exception as e:
-            error_msg = f"BM25搜索执行失败: {e}"
+            error_msg = t("bm25_search_execution_failed", error=str(e))
             logger.error(error_msg)
             raise BM25UnavailableError(error_msg)
     
@@ -479,7 +482,7 @@ class EnhancedBM25Indexer:
             BM25UnavailableError: 当BM25功能不可用时
         """
         if not BM25_AVAILABLE:
-            raise BM25UnavailableError("BM25索引保存失败: bm25s包不可用")
+            raise BM25UnavailableError(t("bm25_save_not_available"))
             
         try:
             # 使用bm25s的保存方法
@@ -502,7 +505,7 @@ class EnhancedBM25Indexer:
             logger.info(f"简化BM25索引已保存到: {path} (BM25数据: {bm25_dir})")
             
         except Exception as e:
-            error_msg = f"保存简化BM25索引失败: {e}"
+            error_msg = t("bm25_save_failed", error=str(e))
             logger.error(error_msg)
             raise BM25UnavailableError(error_msg)
     
@@ -514,7 +517,7 @@ class EnhancedBM25Indexer:
             BM25UnavailableError: 当BM25功能不可用时
         """
         if not BM25_AVAILABLE:
-            error_msg = f"BM25索引加载失败: bm25s包不可用 - {BM25_IMPORT_ERROR}"
+            error_msg = t("bm25_package_unavailable", error=BM25_IMPORT_ERROR)
             logger.error(error_msg)
             raise BM25UnavailableError(error_msg)
             
@@ -540,12 +543,12 @@ class EnhancedBM25Indexer:
                     self.bm25 = bm25s.BM25()
                     self.bm25.index(self.corpus_tokens)
                 else:
-                    raise FileNotFoundError(f"无法找到BM25索引目录且无法重建: {bm25_dir}")
+                    raise FileNotFoundError(t("bm25_index_missing", path=str(bm25_dir)))
             
             logger.info(f"简化BM25索引已加载: {path}")
             
         except Exception as e:
-            error_msg = f"加载增强BM25索引失败: {e}"
+            error_msg = t("bm25_load_failed", error=str(e))
             logger.error(error_msg)
             raise BM25UnavailableError(error_msg)
     
@@ -557,7 +560,7 @@ class EnhancedBM25Indexer:
             BM25UnavailableError: 当BM25功能不可用时
         """
         if not BM25_AVAILABLE:
-            raise BM25UnavailableError("获取BM25统计信息失败: bm25s包不可用")
+            raise BM25UnavailableError(t("bm25_stats_failed"))
             
         if not self.bm25:
             return {"status": "未初始化", "error": "BM25索引未构建"}

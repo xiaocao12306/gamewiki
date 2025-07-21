@@ -245,7 +245,23 @@ class TranslationManager:
             "rag_init_failed": "❌ RAG engine initialization failed",
             "rag_error_occurred": "Guide query system error",
             "rag_vector_store_error": "Vector store unavailable",
-            "rag_bm25_error": "BM25 search function unavailable"
+            "rag_bm25_error": "BM25 search function unavailable",
+            
+            # BM25 Index Error Messages
+            "bm25_load_failed": "Failed to load enhanced BM25 index: {error}",
+            "bm25_index_missing": "BM25 index directory not found and cannot rebuild: {path}",
+            "bm25_package_unavailable": "BM25 index loading failed: bm25s package unavailable - {error}",
+            "bm25_save_failed": "Failed to save simplified BM25 index: {error}",
+            "bm25_stats_failed": "Failed to get BM25 statistics: bm25s package unavailable",
+            "bm25_search_failed": "BM25 search failed: bm25s package not available",
+            "bm25_build_failed": "BM25 index build failed: bm25s package not available",
+            "bm25_build_error": "Enhanced BM25 index build failed: {error}",
+            "bm25_search_not_initialized": "BM25 search failed: index not initialized, please call build_index() method first",
+            "bm25_save_not_available": "BM25 index save failed: bm25s package unavailable",
+            "bm25_search_execution_failed": "BM25 search execution failed: {error}",
+            "enhanced_bm25_load_failed": "Enhanced BM25 index loading failed: {error}",
+            "bm25_index_build_failed": "BM25 index build failed: {error}",
+            "enhanced_bm25_index_build_failed": "Enhanced BM25 index build failed: {error}"
         }
     
     def _create_language_translations(self, language: str) -> Dict[str, str]:
@@ -347,7 +363,23 @@ class TranslationManager:
                 "rag_init_failed": "❌ RAG引擎初始化失败",
                 "rag_error_occurred": "攻略查询系统出现错误",
                 "rag_vector_store_error": "向量库不可用",
-                "rag_bm25_error": "BM25搜索功能不可用"
+                "rag_bm25_error": "BM25搜索功能不可用",
+                
+                # BM25 索引错误信息
+                "bm25_load_failed": "加载增强BM25索引失败: {error}",
+                "bm25_index_missing": "无法找到BM25索引目录且无法重建: {path}",
+                "bm25_package_unavailable": "BM25索引加载失败: bm25s包不可用 - {error}",
+                "bm25_save_failed": "保存简化BM25索引失败: {error}",
+                "bm25_stats_failed": "获取BM25统计信息失败: bm25s包不可用",
+                "bm25_search_failed": "BM25搜索失败: bm25s包不可用",
+                "bm25_build_failed": "BM25索引构建失败: bm25s包不可用",
+                "bm25_build_error": "增强BM25索引构建失败: {error}",
+                "bm25_search_not_initialized": "BM25搜索失败: 索引未初始化，请先调用build_index()方法",
+                "bm25_save_not_available": "BM25索引保存失败: bm25s包不可用",
+                "bm25_search_execution_failed": "BM25搜索执行失败: {error}",
+                "enhanced_bm25_load_failed": "增强BM25索引加载失败: {error}",
+                "bm25_index_build_failed": "构建BM25索引失败: {error}",
+                "enhanced_bm25_index_build_failed": "构建增强BM25索引失败: {error}"
             }
         else:
             # 对于其他语言，返回英语翻译作为基础

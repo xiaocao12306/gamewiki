@@ -51,12 +51,15 @@ try:
     # Try to import WebEngine, but handle gracefully if it fails
     try:
         from PyQt6.QtWebEngineWidgets import QWebEngineView
+        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
         WEBENGINE_AVAILABLE = True
     except ImportError as e:
         print(f"Warning: PyQt6 WebEngine not available: {e}")
         print("Wiki view functionality will be disabled. Using fallback text view.")
         WEBENGINE_AVAILABLE = False
         QWebEngineView = None
+        QWebEngineProfile = None
+        QWebEngineSettings = None
 except ImportError:
     from PyQt5.QtCore import (
         Qt, QTimer, QPropertyAnimation, QRect, QSize, QPoint,
@@ -76,12 +79,15 @@ except ImportError:
     # Try to import WebEngine for PyQt5, but handle gracefully if it fails
     try:
         from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PyQt5.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
         WEBENGINE_AVAILABLE = True
     except ImportError as e:
         print(f"Warning: PyQt5 WebEngine not available: {e}")
         print("Wiki view functionality will be disabled. Using fallback text view.")
         WEBENGINE_AVAILABLE = False
         QWebEngineView = None
+        QWebEngineProfile = None
+        QWebEngineSettings = None
 
 
 def _get_scale() -> float:
@@ -1621,14 +1627,13 @@ class ChatView(QScrollArea):
         if parent_width > 0 and abs(current_width - parent_width) > 5:  # 超过5px差异
             self.resize(parent_width, self.height())
         
-        # 使用防抖动机制延迟更新消息宽度
+        # 使用防抖动机制延迟更新消息宽度（恢复原有逻辑）
         self.resize_timer.stop()  # 停止之前的计时器
         self.resize_timer.start(200)  # 0.2秒后执行更新
         
     def _performDelayedResize(self):
         """延迟执行的resize更新操作"""
-        # 调试：只在防抖动完成后输出一次信息
-        print(f"📏 ChatView尺寸稳定，执行布局更新: {self.size()}")
+        print(f"📏 ChatView布局更新: {self.size()}")
         
         # 更新所有现有消息的宽度
         for widget in self.messages:
@@ -1645,27 +1650,65 @@ class ChatView(QScrollArea):
         
     def _ensureContentComplete(self):
         """确保所有消息内容完整显示"""
-        for widget in self.messages:
-            if hasattr(widget, 'content_label'):
-                # 强制内容标签重新计算高度
-                widget.content_label.updateGeometry()
-                widget.updateGeometry()
-                
-                # 对于流式消息，特别处理
-                if isinstance(widget, StreamingMessageWidget):
-                    # 如果是已完成的流式消息，确保所有内容都可见
-                    if widget.message.type == MessageType.AI_RESPONSE and widget.full_text:
-                        # 重新设置文本以触发高度重新计算
-                        current_text = widget.content_label.text()
+        try:
+            # 更新所有消息的显示
+            for widget in self.messages:
+                if hasattr(widget, 'content_label'):
+                    try:
+                        # 1. 更新消息宽度
+                        self._update_message_width(widget)
+                        
+                        # 2. 强制内容标签重新计算尺寸
+                        content_label = widget.content_label
+                        
+                        # 获取当前文本并重新设置以强制重新渲染
+                        current_text = content_label.text()
                         if current_text:
-                            widget.content_label.setText("")
-                            widget.content_label.setText(current_text)
-                            widget.content_label.updateGeometry()
-                            widget.updateGeometry()
-        
-        # 强制整个容器重新布局
-        self.container.updateGeometry()
-        self.updateGeometry()
+                            content_label.setText("")
+                            content_label.updateGeometry()
+                            content_label.setText(current_text)
+                            content_label.updateGeometry()
+                            content_label.setWordWrap(True)
+                            content_label.adjustSize()
+                        
+                        # 3. 对于流式消息的特别处理
+                        if isinstance(widget, StreamingMessageWidget):
+                            if hasattr(widget, 'full_text') and widget.full_text:
+                                widget._update_bubble_width()
+                                widget.updateGeometry()
+                        
+                        # 4. 强制更新整个消息widget
+                        widget.updateGeometry()
+                        widget.update()
+                        
+                    except Exception:
+                        # 静默处理单个消息的更新失败
+                        pass
+            
+            # 更新状态消息
+            if self.current_status_widget:
+                try:
+                    self._update_status_width(self.current_status_widget)
+                except Exception:
+                    pass
+            
+            # 强制整个容器重新布局
+            self.container.updateGeometry()
+            self.updateGeometry()
+            self.verticalScrollBar().update()
+            
+        except Exception:
+            # 静默处理全局失败
+            pass
+    
+    def _force_content_refresh(self):
+        """强制刷新所有内容显示（简化版本）"""
+        try:
+            # 简单的内容刷新，确保滚动位置正确
+            if hasattr(self, 'near_bottom_before_resize') and self.near_bottom_before_resize:
+                self.scroll_to_bottom()
+        except Exception:
+            pass
             
     def update_all_message_widths(self):
         """更新所有消息的宽度（用于窗口显示后的初始化）"""
@@ -1756,41 +1799,19 @@ class WikiView(QWidget):
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.open_browser_button)
         
-        # Content area
+        # Content area - 延迟WebView创建以避免崩溃
         if WEBENGINE_AVAILABLE and QWebEngineView:
-            # Use WebEngine view
-            self.web_view = QWebEngineView()
-            # 修复尺寸问题：设置更小的最小尺寸，避免影响整体布局
-            self.web_view.setMinimumSize(100, 100)  # 减小最小尺寸
-            self.web_view.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
-            # 设置尺寸策略为可扩展，允许自由调整
-            self.web_view.setSizePolicy(
-                QSizePolicy.Policy.Expanding,
-                QSizePolicy.Policy.Expanding
-            )
+            print("🔧 开始创建WebEngine组件...")
             
-            # 连接页面加载完成信号
-            self.web_view.loadFinished.connect(self._on_page_load_finished)
+            # 延迟创建WebView，避免在Qt完全初始化前创建
+            self.web_view = None
+            self.content_widget = self._create_fallback_text_view()  # 先使用文本视图
             
-            self.content_widget = self.web_view
+            # 使用QTimer延迟创建WebView，给Qt应用更多初始化时间
+            QTimer.singleShot(1000, self._delayed_webview_creation)
         else:
             # Fallback to text view
-            self.content_widget = QTextEdit()
-            self.content_widget.setReadOnly(True)
-            self.content_widget.setMinimumSize(100, 100)  # 减小最小尺寸，避免影响布局
-            self.content_widget.setSizePolicy(
-                QSizePolicy.Policy.Expanding,
-                QSizePolicy.Policy.Expanding
-            )
-            self.content_widget.setStyleSheet("""
-                QTextEdit {
-                    background-color: white;
-                    border: none;
-                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
-                    font-size: 14px;
-                    line-height: 1.6;
-                }
-            """)
+            self.content_widget = self._create_fallback_text_view()
             self.web_view = None
         
         layout.addWidget(toolbar)
@@ -1894,6 +1915,239 @@ class WikiView(QWidget):
             
         except Exception as e:
             print(f"处理页面标题失败: {e}")
+    
+    def _create_persistent_webview(self):
+        """创建带有持久化Cookie配置的QWebEngineView - 简化版本避免崩溃"""
+        if not WEBENGINE_AVAILABLE or not QWebEngineView or not QWebEngineProfile:
+            return None
+            
+        print("🔧 开始创建持久化WebView...")
+        
+        try:
+            # 先创建基本WebView
+            web_view = QWebEngineView()
+            print("✅ 基本WebView创建成功")
+            
+            # 尝试配置持久化Profile（如果失败不影响WebView使用）
+            try:
+                # 导入路径工具
+                from src.game_wiki_tooltip.utils import APPDATA_DIR
+                
+                # 使用较短的存储名称，避免路径问题
+                storage_name = "GameWiki"
+                
+                # 创建持久化Profile
+                profile = QWebEngineProfile(storage_name)
+                print(f"✅ 创建Profile成功: {storage_name}")
+                
+                # 设置存储路径（如果失败不中断）
+                try:
+                    profile_path = APPDATA_DIR / "webengine_profile"
+                    cache_path = APPDATA_DIR / "webengine_cache"
+                    profile_path.mkdir(parents=True, exist_ok=True)
+                    cache_path.mkdir(parents=True, exist_ok=True)
+                    
+                    profile.setPersistentStoragePath(str(profile_path))
+                    profile.setCachePath(str(cache_path))
+                    print("✅ 存储路径配置成功")
+                except Exception as path_error:
+                    print(f"⚠️ 存储路径配置失败（使用默认）: {path_error}")
+                
+                # 设置Cookie策略（如果失败不中断）
+                try:
+                    # 尝试PyQt6风格
+                    profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+                    print("✅ Cookie策略配置成功 (PyQt6)")
+                except AttributeError:
+                    try:
+                        # 尝试PyQt5风格
+                        profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
+                        print("✅ Cookie策略配置成功 (PyQt5)")
+                    except Exception as cookie_error:
+                        print(f"⚠️ Cookie策略配置失败: {cookie_error}")
+                
+                # 尝试设置WebView使用自定义Profile（关键步骤）
+                try:
+                    try:
+                        from PyQt6.QtWebEngineCore import QWebEnginePage
+                    except ImportError:
+                        from PyQt5.QtWebEngineCore import QWebEnginePage
+                    
+                    page = QWebEnginePage(profile, web_view)
+                    web_view.setPage(page)
+                    print("✅ Profile与WebView关联成功")
+                    
+                    # 验证Profile状态
+                    if hasattr(profile, 'isOffTheRecord') and not profile.isOffTheRecord():
+                        print("✅ Profile支持持久化Cookie")
+                    else:
+                        print("⚠️ Profile可能不支持持久化")
+                        
+                except Exception as page_error:
+                    print(f"⚠️ Profile关联失败，使用默认Profile: {page_error}")
+                    
+            except Exception as profile_error:
+                print(f"⚠️ Profile配置失败，使用默认配置: {profile_error}")
+            
+            print("✅ WebView创建完成")
+            return web_view
+                
+        except Exception as e:
+            print(f"❌ WebView创建完全失败: {e}")
+            return None
+    
+    def _create_fallback_text_view(self):
+        """创建降级的文本视图"""
+        text_view = QTextEdit()
+        text_view.setReadOnly(True)
+        text_view.setMinimumSize(100, 100)  # 减小最小尺寸，避免影响布局
+        text_view.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
+        text_view.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                border: none;
+                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        """)
+        return text_view
+    
+    def _check_webengine_ready(self):
+        """检查WebEngine是否已准备就绪"""
+        try:
+            # 检查基本可用性
+            if not WEBENGINE_AVAILABLE or not QWebEngineView:
+                return False, "WebEngine不可用"
+            
+            # 检查是否可以访问Profile
+            try:
+                test_profile = QWebEngineProfile.defaultProfile()
+                if test_profile is None:
+                    return False, "无法访问默认Profile"
+            except Exception as e:
+                return False, f"Profile访问失败: {e}"
+            
+            # 尝试创建一个临时的WebView进行测试
+            try:
+                temp_view = QWebEngineView()
+                temp_view.deleteLater()
+                return True, "WebEngine就绪"
+            except Exception as e:
+                return False, f"WebView创建测试失败: {e}"
+                
+        except Exception as e:
+            return False, f"WebEngine检查失败: {e}"
+    
+    def _delayed_webview_creation(self):
+        """延迟创建WebView，在Qt应用完全初始化后执行"""
+        try:
+            print("🔧 开始延迟WebView创建...")
+            
+            # 首先检查WebEngine是否准备就绪
+            ready, message = self._check_webengine_ready()
+            if not ready:
+                print(f"❌ WebEngine未就绪: {message}")
+                print("继续使用文本视图")
+                return
+            
+            print(f"✅ WebEngine状态检查通过: {message}")
+            
+            # 尝试创建WebView
+            new_web_view = self._create_persistent_webview_safe()
+            
+            if new_web_view is not None:
+                print("✅ WebView延迟创建成功")
+                
+                # 配置WebView属性
+                try:
+                    new_web_view.setMinimumSize(100, 100)
+                    new_web_view.setMaximumSize(16777215, 16777215)
+                    new_web_view.setSizePolicy(
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.Expanding
+                    )
+                    
+                    # 连接信号
+                    new_web_view.loadFinished.connect(self._on_page_load_finished)
+                    print("✅ WebView配置完成")
+                except Exception as config_error:
+                    print(f"⚠️ WebView配置失败: {config_error}")
+                
+                # 替换内容组件
+                try:
+                    old_widget = self.content_widget
+                    self.content_widget = new_web_view
+                    self.web_view = new_web_view
+                    
+                    # 更新布局
+                    layout = self.layout()
+                    if layout:
+                        # 查找旧的content_widget并替换
+                        for i in range(layout.count()):
+                            item = layout.itemAt(i)
+                            if item and item.widget() == old_widget:
+                                layout.removeWidget(old_widget)
+                                layout.addWidget(new_web_view)
+                                # 延迟删除旧组件，避免立即删除引起问题
+                                QTimer.singleShot(100, old_widget.deleteLater)
+                                break
+                    
+                    print("✅ WebView已成功替换文本视图")
+                except Exception as replace_error:
+                    print(f"⚠️ WebView替换失败: {replace_error}")
+                    # 如果替换失败，清理新创建的WebView
+                    new_web_view.deleteLater()
+            else:
+                print("⚠️ WebView创建失败，继续使用文本视图")
+                
+        except Exception as e:
+            print(f"❌ 延迟WebView创建过程失败: {e}")
+            print("继续使用文本视图作为降级方案")
+    
+    def _create_persistent_webview_safe(self):
+        """安全创建WebView的方法，包含更多错误处理"""
+        try:
+            print("🔧 开始安全创建WebView...")
+            
+            # 分步骤创建，每步都检查
+            
+            # 步骤1：测试基本WebView创建
+            try:
+                test_view = QWebEngineView()
+                test_view.deleteLater()  # 立即清理
+                print("✅ 基本WebView创建能力确认")
+            except Exception as test_error:
+                print(f"❌ 基本WebView创建测试失败: {test_error}")
+                return None
+            
+            # 步骤2：短暂等待，确保清理完成
+            import time
+            time.sleep(0.1)
+            
+            # 步骤3：尝试创建实际的WebView
+            web_view = self._create_persistent_webview()
+            
+            if web_view is not None:
+                print("✅ 持久化WebView创建成功")
+                return web_view
+            else:
+                print("⚠️ 持久化WebView创建失败，尝试基本WebView")
+                # 最后尝试：创建最基本的WebView
+                try:
+                    basic_view = QWebEngineView()
+                    print("✅ 降级到基本WebView成功")
+                    return basic_view
+                except Exception as basic_error:
+                    print(f"❌ 基本WebView创建也失败: {basic_error}")
+                    return None
+            
+        except Exception as e:
+            print(f"❌ 安全WebView创建完全失败: {e}")
+            return None
         
     def load_wiki(self, url: str, title: str):
         """Load a wiki page"""
@@ -1975,23 +2229,67 @@ class WikiView(QWidget):
         """暂停页面活动（包括媒体播放）"""
         if self.web_view:
             try:
-                # 停止媒体播放
-                self.stop_media_playback()
+                print("🔄 正在暂停WikiView页面...")
                 
-                # 可选：设置页面为不可见状态，某些网站会自动暂停媒体
-                self.web_view.page().runJavaScript("""
-                // 触发页面可见性变化事件，某些网站会响应此事件暂停媒体
-                Object.defineProperty(document, 'hidden', {value: true, writable: false});
-                Object.defineProperty(document, 'visibilityState', {value: 'hidden', writable: false});
+                # 1. 停止当前网络请求
+                try:
+                    self.web_view.stop()
+                    print("✅ WebView网络请求已停止")
+                except Exception as stop_error:
+                    print(f"⚠️ WebView停止失败: {stop_error}")
                 
-                var event = new Event('visibilitychange');
-                document.dispatchEvent(event);
-                """)
+                # 2. 停止媒体播放
+                try:
+                    self.stop_media_playback()
+                    print("✅ 媒体播放已停止")
+                except Exception as media_error:
+                    print(f"⚠️ 媒体停止失败: {media_error}")
                 
-                print("🚫 WikiView: 页面已暂停")
+                # 3. 设置页面为不可见状态，某些网站会自动暂停媒体
+                try:
+                    self.web_view.page().runJavaScript("""
+                    // 触发页面可见性变化事件，某些网站会响应此事件暂停媒体
+                    Object.defineProperty(document, 'hidden', {value: true, writable: false});
+                    Object.defineProperty(document, 'visibilityState', {value: 'hidden', writable: false});
+                    
+                    var event = new Event('visibilitychange');
+                    document.dispatchEvent(event);
+                    """)
+                    print("✅ 页面可见性状态已设置")
+                except Exception as js_error:
+                    print(f"⚠️ JavaScript执行失败: {js_error}")
+                
+                # 4. 不在这里断开信号连接，避免崩溃
+                # 信号断开在safe_cleanup中单独处理
+                print("✅ 页面状态设置完成")
+                
+                print("✅ WikiView页面暂停完成")
                 
             except Exception as e:
                 print(f"⚠️ WikiView: 暂停页面失败: {e}")
+    
+    def safe_cleanup(self):
+        """安全清理WikiView资源，用于窗口关闭时"""
+        try:
+            print("🔄 开始WikiView简化清理...")
+            
+            if self.web_view:
+                # 只执行最基本的清理操作，避免复杂的JavaScript或信号操作
+                try:
+                    # 停止网络活动
+                    self.web_view.stop()
+                    print("✅ WebView已停止")
+                except Exception:
+                    # 如果停止失败，继续处理
+                    pass
+                
+                # 不执行复杂的媒体停止、JavaScript执行或信号断开操作
+                # 这些可能导致崩溃
+            
+            print("✅ WikiView简化清理完成")
+            
+        except Exception as e:
+            print(f"❌ WikiView清理失败: {e}")
                 
     def resume_page(self):
         """恢复页面活动"""
@@ -2273,74 +2571,229 @@ class UnifiedAssistantWindow(QMainWindow):
         pass
         
     def restore_geometry(self):
-        """Restore window geometry from settings with DPI scaling support"""
+        """Restore window geometry from settings with enhanced screen compatibility"""
         if self.settings_manager:
             try:
                 scale = _get_scale()  # 获取DPI缩放因子
                 settings = self.settings_manager.get()
-                popup = settings.get('popup', {})
+                popup_dict = settings.get('popup', {})
                 
-                # 从逻辑像素转换为物理像素
-                phys_x = int(popup.get('left', 100) * scale)
-                phys_y = int(popup.get('top', 100) * scale)
-                phys_w = int(popup.get('width', 500) * scale)
-                phys_h = int(popup.get('height', 700) * scale)
+                # 使用availableGeometry获取可用屏幕区域（排除任务栏等）
+                screen = QApplication.primaryScreen().availableGeometry()
                 
-                # 确保窗口在屏幕范围内
-                screen = QApplication.primaryScreen().geometry()
+                # 检查是否为首次使用或配置不完整
+                is_first_use = not popup_dict or len(popup_dict) < 4
                 
-                # 调整位置确保窗口可见
-                if phys_x + phys_w > screen.width():
-                    phys_x = screen.width() - phys_w - 10
-                if phys_y + phys_h > screen.height():
-                    phys_y = screen.height() - phys_h - 40
-                if phys_x < 0:
-                    phys_x = 10
-                if phys_y < 0:
-                    phys_y = 30
+                if is_first_use:
+                    # 首次使用，创建智能默认配置
+                    popup_config = PopupConfig.create_smart_default(screen)
+                    print(f"📍 首次使用，创建智能默认窗口配置")
+                else:
+                    # 从设置创建PopupConfig实例
+                    popup_config = PopupConfig(**popup_dict)
+                
+                # 获取绝对坐标（已包含屏幕适配和边界检查）
+                phys_x, phys_y, phys_w, phys_h = popup_config.get_absolute_geometry(screen)
+                
+                # 应用DPI缩放
+                if scale != 1.0:
+                    # 如果使用相对坐标，不需要额外的DPI缩放（已在get_absolute_geometry中处理）
+                    if not popup_config.use_relative_position:
+                        phys_x = int(phys_x * scale)
+                        phys_y = int(phys_y * scale)
+                    if not popup_config.use_relative_size:
+                        phys_w = int(phys_w * scale)
+                        phys_h = int(phys_h * scale)
+                
+                # 最终边界检查（考虑DPI缩放后的值）
+                phys_x, phys_y, phys_w, phys_h = self._final_geometry_check(
+                    phys_x, phys_y, phys_w, phys_h, screen
+                )
                 
                 self.setGeometry(phys_x, phys_y, phys_w, phys_h)
-                logging.info(f"恢复窗口几何: x={phys_x}, y={phys_y}, w={phys_w}, h={phys_h}, scale={scale}")
+                
+                # 记录详细的窗口恢复信息
+                screen_info = f"{screen.width()}x{screen.height()}"
+                position_type = "相对坐标" if popup_config.use_relative_position else "绝对坐标"
+                size_type = "相对尺寸" if popup_config.use_relative_size else "固定尺寸"
+                
+                logging.info(f"恢复窗口几何: 位置({phys_x},{phys_y}) 尺寸({phys_w}x{phys_h}) "
+                           f"屏幕({screen_info}) DPI缩放({scale:.2f}) "
+                           f"配置({position_type}+{size_type})")
                 
                 # 恢复几何后重置尺寸约束，确保可以自由调整大小
                 self.reset_size_constraints()
                 
+                # 如果是首次使用且创建了智能默认配置，保存到设置中
+                if is_first_use:
+                    self._save_initial_geometry_config(popup_config)
+                
             except Exception as e:
                 logging.error(f"恢复窗口几何信息失败: {e}")
-                # 失败时使用默认值
-                self.setGeometry(617, 20, 514, 32)
-                self.reset_size_constraints()
+                # 失败时使用安全的默认值
+                self._apply_safe_default_geometry()
         else:
-            self.setGeometry(617, 20, 514, 32)
-            self.reset_size_constraints()
+            self._apply_safe_default_geometry()
+    
+    def _final_geometry_check(self, x, y, width, height, screen):
+        """
+        最终的几何检查，确保窗口完全可见且可操作
+        
+        Args:
+            x, y, width, height: 窗口几何参数
+            screen: 屏幕可用区域
             
+        Returns:
+            tuple: 调整后的(x, y, width, height)
+        """
+        # 确保最小尺寸
+        min_width, min_height = 300, 200
+        width = max(min_width, width)
+        height = max(min_height, height)
+        
+        # 确保最大尺寸不超过屏幕
+        max_width = screen.width() - 20
+        max_height = screen.height() - 40
+        width = min(width, max_width)
+        height = min(height, max_height)
+        
+        # 确保位置在可见范围内
+        margin = 10
+        max_x = screen.x() + screen.width() - width - margin
+        max_y = screen.y() + screen.height() - height - margin
+        min_x = screen.x() + margin
+        min_y = screen.y() + margin
+        
+        x = max(min_x, min(x, max_x))
+        y = max(min_y, min(y, max_y))
+        
+        return x, y, width, height
+    
+    def _apply_safe_default_geometry(self):
+        """应用安全的默认几何配置"""
+        try:
+            screen = QApplication.primaryScreen().availableGeometry()
+            # 使用屏幕中心偏右的安全位置
+            safe_width = min(600, screen.width() - 100)
+            safe_height = min(500, screen.height() - 100)
+            safe_x = screen.x() + (screen.width() - safe_width) // 2 + 50
+            safe_y = screen.y() + (screen.height() - safe_height) // 4
+            
+            self.setGeometry(safe_x, safe_y, safe_width, safe_height)
+            logging.info(f"应用安全默认几何: ({safe_x},{safe_y},{safe_width},{safe_height})")
+        except Exception as e:
+            # 最后的兜底方案
+            logging.error(f"应用安全默认几何失败: {e}")
+            self.setGeometry(100, 100, 600, 500)
+        
+        self.reset_size_constraints()
+    
+    def _save_initial_geometry_config(self, popup_config):
+        """
+        保存初始几何配置到设置文件
+        
+        Args:
+            popup_config: PopupConfig实例
+        """
+        try:
+            from dataclasses import asdict
+            popup_dict = asdict(popup_config)
+            self.settings_manager.update({'popup': popup_dict})
+            logging.info("已保存智能默认窗口配置到设置文件")
+        except Exception as e:
+            logging.warning(f"保存初始几何配置失败: {e}")
+    
     def save_geometry(self):
-        """Save window geometry to settings with DPI scaling support"""
+        """Save window geometry to settings with enhanced format support"""
         if self.settings_manager:
             try:
                 scale = _get_scale()  # 获取DPI缩放因子
                 geo = self.geometry()
+                screen = QApplication.primaryScreen().availableGeometry()
                 
-                # 将物理像素转换为逻辑像素
-                css_x = int(geo.x() / scale)
-                css_y = int(geo.y() / scale)
-                css_w = int(geo.width() / scale)
-                css_h = int(geo.height() / scale)
+                # 获取当前设置以保持配置一致性
+                current_settings = self.settings_manager.get()
+                current_popup = current_settings.get('popup', {})
+                
+                # 检查当前配置是否使用相对坐标
+                use_relative_position = current_popup.get('use_relative_position', False)
+                use_relative_size = current_popup.get('use_relative_size', False)
+                
+                if use_relative_position:
+                    # 保存为相对坐标（0.0-1.0）
+                    left_percent = (geo.x() - screen.x()) / screen.width() if screen.width() > 0 else 0.5
+                    top_percent = (geo.y() - screen.y()) / screen.height() if screen.height() > 0 else 0.1
+                    
+                    # 确保相对坐标在合理范围内
+                    left_percent = max(0.0, min(1.0, left_percent))
+                    top_percent = max(0.0, min(1.0, top_percent))
+                else:
+                    # 保存为绝对坐标（逻辑像素）
+                    left_percent = current_popup.get('left_percent', 0.6)
+                    top_percent = current_popup.get('top_percent', 0.1)
+                
+                if use_relative_size:
+                    # 保存为相对尺寸
+                    width_percent = geo.width() / screen.width() if screen.width() > 0 else 0.4
+                    height_percent = geo.height() / screen.height() if screen.height() > 0 else 0.7
+                    
+                    # 确保相对尺寸在合理范围内
+                    width_percent = max(0.2, min(0.9, width_percent))
+                    height_percent = max(0.3, min(0.9, height_percent))
+                else:
+                    # 保存为固定尺寸
+                    width_percent = current_popup.get('width_percent', 0.4)
+                    height_percent = current_popup.get('height_percent', 0.7)
+                
+                # 转换为逻辑像素坐标（用于向后兼容）
+                css_x = int(geo.x() / scale) if scale != 1.0 else geo.x()
+                css_y = int(geo.y() / scale) if scale != 1.0 else geo.y()
+                css_w = int(geo.width() / scale) if scale != 1.0 else geo.width()
+                css_h = int(geo.height() / scale) if scale != 1.0 else geo.height()
+                
+                # 构建完整的popup配置
+                popup_config = {
+                    # 传统固定坐标（向后兼容）
+                    'left': css_x,
+                    'top': css_y,
+                    'width': css_w,
+                    'height': css_h,
+                    # 新的相对坐标系统
+                    'use_relative_position': use_relative_position,
+                    'left_percent': left_percent,
+                    'top_percent': top_percent,
+                    'width_percent': width_percent,
+                    'height_percent': height_percent,
+                    'use_relative_size': use_relative_size,
+                }
                 
                 # 更新配置
-                self.settings_manager.update({
-                    'popup': {
-                        'left': css_x,
-                        'top': css_y,
-                        'width': css_w,
-                        'height': css_h
-                    }
-                })
+                self.settings_manager.update({'popup': popup_config})
                 
-                logging.info(f"保存窗口几何: x={css_x}, y={css_y}, w={css_w}, h={css_h}, scale={scale}")
+                # 记录保存信息
+                pos_type = "相对" if use_relative_position else "绝对"
+                size_type = "相对" if use_relative_size else "固定"
+                logging.info(f"保存窗口几何: {pos_type}位置({css_x},{css_y}|{left_percent:.2f},{top_percent:.2f}) "
+                           f"{size_type}尺寸({css_w}x{css_h}|{width_percent:.2f}x{height_percent:.2f}) "
+                           f"DPI缩放({scale:.2f})")
+                
             except Exception as e:
                 logging.error(f"保存窗口几何信息失败: {e}")
-            
+                # 兜底保存基本信息
+                try:
+                    geo = self.geometry()
+                    self.settings_manager.update({
+                        'popup': {
+                            'left': geo.x(),
+                            'top': geo.y(),
+                            'width': geo.width(),
+                            'height': geo.height()
+                        }
+                    })
+                    logging.warning("使用基本格式保存窗口几何信息")
+                except Exception as fallback_error:
+                    logging.error(f"基本格式保存也失败: {fallback_error}")
+    
     def show_chat_view(self):
         """Switch to chat view"""
         # 首先停止WikiView中的媒体播放
@@ -2615,14 +3068,39 @@ class UnifiedAssistantWindow(QMainWindow):
         
     def closeEvent(self, event):
         """Handle close event - emit signal to return to mini mode"""
-        # 停止WikiView中的媒体播放
-        if hasattr(self, 'wiki_view') and self.wiki_view:
-            self.wiki_view.pause_page()
+        print("🔄 正在关闭窗口...")
+        
+        # 最重要的操作：先发出信号，确保能回到mini模式
+        try:
+            self.window_closing.emit()
+            print("✅ 窗口关闭信号已发出")
+        except Exception as e:
+            print(f"⚠️ 信号发出失败: {e}")
+        
+        # 次要操作：清理资源（如果失败不影响窗口关闭）
+        try:
+            # 简单的WikiView清理
+            if hasattr(self, 'wiki_view') and self.wiki_view and hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view:
+                try:
+                    self.wiki_view.web_view.stop()
+                    print("✅ WebView已停止")
+                except Exception:
+                    pass
             
-        self.save_geometry()
+            # 保存几何信息
+            try:
+                self.save_geometry()
+                print("✅ 几何信息已保存")
+            except Exception:
+                pass
+            
+        except Exception as e:
+            print(f"⚠️ 清理操作失败: {e}")
+        
+        # 无论如何都要隐藏窗口
         event.ignore()  # Don't actually close
         self.hide()  # Just hide the window
-        self.window_closing.emit()  # Emit signal to show mini window
+        print("✅ 窗口已隐藏")
         
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
@@ -2643,6 +3121,8 @@ class UnifiedAssistantWindow(QMainWindow):
                     self.window_closing.emit()
                 ))
         super().changeEvent(event)
+    
+
 
 
 class AssistantController:

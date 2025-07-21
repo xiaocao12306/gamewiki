@@ -27,7 +27,7 @@ class WindowsGraphicsCompatibility:
     
     def __init__(self):
         self.windows_version = self._get_windows_version()
-        self.is_windows_10 = self.windows_version.startswith("10.")
+        self.is_windows_10 = self._is_windows_10(self.windows_version)
         self.graphics_mode = GraphicsMode.AUTO
         
     def _get_windows_version(self) -> str:
@@ -36,6 +36,31 @@ class WindowsGraphicsCompatibility:
             return platform.version()
         except:
             return "unknown"
+    
+    def _is_windows_10(self, version: str) -> bool:
+        """
+        Check if the current Windows version is Windows 10.
+        Windows 11 still has version numbers starting with "10." but with build numbers >= 22000.
+        
+        Args:
+            version: Version string like "10.0.22621" or "10.0.19044"
+            
+        Returns:
+            True if Windows 10, False if Windows 11 or unknown
+        """
+        try:
+            # Split version string to get build number
+            # Format: "major.minor.build" e.g., "10.0.22621"
+            parts = version.split('.')
+            if len(parts) >= 3 and parts[0] == "10" and parts[1] == "0":
+                build_number = int(parts[2])
+                # Windows 11 starts from build 22000
+                return build_number < 22000
+            # If not in expected format, assume Windows 10 for safety
+            return True
+        except (ValueError, IndexError):
+            # If we can't parse the version, assume Windows 10 for compatibility
+            return True
     
     def apply_compatibility_fixes(self, mode: GraphicsMode = GraphicsMode.AUTO) -> None:
         """Apply graphics compatibility fixes based on the specified mode"""
@@ -48,7 +73,7 @@ class WindowsGraphicsCompatibility:
                 logger.info("Windows 10 detected, using SOFTWARE rendering mode")
             else:
                 mode = GraphicsMode.D3D11
-                logger.info("Windows 11+ detected, using D3D11 rendering mode")
+                logger.info("Windows 11 detected, using D3D11 rendering mode")
         
         logger.info(f"Applying graphics compatibility fixes for mode: {mode.value}")
         
@@ -223,7 +248,7 @@ def set_qt_attributes_before_app_creation(mode: GraphicsMode = GraphicsMode.AUTO
         # Auto-detect Windows version if needed
         if mode == GraphicsMode.AUTO:
             windows_version = platform.version()
-            is_windows_10 = windows_version.startswith("10.")
+            is_windows_10 = graphics_compatibility._is_windows_10(windows_version)
             if is_windows_10:
                 mode = GraphicsMode.SOFTWARE
             else:

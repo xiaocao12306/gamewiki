@@ -63,10 +63,201 @@ class HotkeyConfig:
 
 @dataclass
 class PopupConfig:
-    width: int = 800
-    height: int = 600
+    width: int = 600
+    height: int = 500
     left: int = 100
-    top: int = 100
+    top: int = 50
+    # 统一使用相对坐标作为默认配置
+    use_relative_position: bool = True
+    left_percent: float = 0.55  # 屏幕宽度的55%位置（右侧偏中）
+    top_percent: float = 0.1    # 屏幕高度的10%位置（顶部留白）
+    width_percent: float = 0.35 # 屏幕宽度的35%（适中大小）
+    height_percent: float = 0.65 # 屏幕高度的65%（足够内容显示）
+    use_relative_size: bool = True
+    
+    def get_absolute_geometry(self, screen_geometry=None):
+        """
+        获取绝对坐标几何信息
+        
+        Args:
+            screen_geometry: 屏幕几何信息，如果为None则自动获取
+            
+        Returns:
+            tuple: (x, y, width, height) 绝对像素坐标
+        """
+        if screen_geometry is None:
+            try:
+                from PyQt6.QtWidgets import QApplication
+                screen_geometry = QApplication.primaryScreen().availableGeometry()
+            except ImportError:
+                try:
+                    from PyQt5.QtWidgets import QApplication
+                    screen_geometry = QApplication.primaryScreen().availableGeometry()
+                except ImportError:
+                    # 如果PyQt不可用，使用默认值
+                    return self.left, self.top, self.width, self.height
+        
+        # 兼容不同类型的screen_geometry对象
+        def get_screen_value(obj, attr_name):
+            """获取屏幕几何属性值，兼容方法调用和属性访问"""
+            try:
+                # 首先尝试方法调用（PyQt对象）
+                attr = getattr(obj, attr_name)
+                if callable(attr):
+                    return attr()
+                else:
+                    return attr
+            except (AttributeError, TypeError):
+                # 如果失败，尝试直接属性访问（测试对象）
+                return getattr(obj, attr_name, 0)
+        
+        screen_x = get_screen_value(screen_geometry, 'x')
+        screen_y = get_screen_value(screen_geometry, 'y') 
+        screen_width = get_screen_value(screen_geometry, 'width')
+        screen_height = get_screen_value(screen_geometry, 'height')
+        
+        # 计算尺寸
+        if self.use_relative_size:
+            calc_width = int(screen_width * self.width_percent)
+            calc_height = int(screen_height * self.height_percent)
+            # 确保最小尺寸
+            calc_width = max(300, min(calc_width, 1200))
+            calc_height = max(200, min(calc_height, 900))
+        else:
+            calc_width = self.width
+            calc_height = self.height
+        
+        # 计算位置
+        if self.use_relative_position:
+            calc_x = int(screen_x + screen_width * self.left_percent)
+            calc_y = int(screen_y + screen_height * self.top_percent)
+        else:
+            calc_x = self.left
+            calc_y = self.top
+        
+        # 确保窗口在屏幕可见区域内
+        return self._ensure_window_visible(
+            calc_x, calc_y, calc_width, calc_height, 
+            screen_x, screen_y, screen_width, screen_height
+        )
+    
+    def _ensure_window_visible(self, x, y, width, height, screen_x, screen_y, screen_width, screen_height):
+        """
+        确保窗口在屏幕可见区域内
+        
+        Args:
+            x, y, width, height: 窗口几何参数
+            screen_x, screen_y, screen_width, screen_height: 屏幕几何参数
+            
+        Returns:
+            tuple: 调整后的(x, y, width, height)
+        """
+        # 最小可见区域（确保用户能看到并操作窗口）
+        min_visible_width = min(200, width // 2)
+        min_visible_height = min(100, height // 4)
+        
+        # 右边界检查
+        if x > screen_x + screen_width - min_visible_width:
+            x = screen_x + screen_width - width - 10
+        
+        # 下边界检查  
+        if y > screen_y + screen_height - min_visible_height:
+            y = screen_y + screen_height - height - 10
+        
+        # 左边界检查
+        if x < screen_x - width + min_visible_width:
+            x = screen_x + 10
+        
+        # 上边界检查
+        if y < screen_y:
+            y = screen_y + 10
+        
+        # 尺寸检查 - 如果窗口比屏幕大，调整尺寸
+        max_width = screen_width - 20
+        max_height = screen_height - 40  # 留出任务栏空间
+        
+        if width > max_width:
+            width = max_width
+            x = screen_x + 10
+        
+        if height > max_height:
+            height = max_height
+            y = screen_y + 10
+        
+        return x, y, width, height
+    
+    @classmethod
+    def create_smart_default(cls, screen_geometry=None):
+        """
+        创建智能默认配置
+        统一使用相对坐标系统，根据屏幕尺寸优化百分比参数
+        
+        Args:
+            screen_geometry: 屏幕几何信息
+            
+        Returns:
+            PopupConfig: 智能默认配置实例
+        """
+        if screen_geometry is None:
+            try:
+                from PyQt6.QtWidgets import QApplication
+                screen_geometry = QApplication.primaryScreen().availableGeometry()
+            except ImportError:
+                try:
+                    from PyQt5.QtWidgets import QApplication  
+                    screen_geometry = QApplication.primaryScreen().availableGeometry()
+                except ImportError:
+                    # 回退到传统固定值
+                    return cls()
+        
+        # 兼容不同类型的screen_geometry对象
+        def get_screen_value(obj, attr_name):
+            """获取屏幕几何属性值，兼容方法调用和属性访问"""
+            try:
+                # 首先尝试方法调用（PyQt对象）
+                attr = getattr(obj, attr_name)
+                if callable(attr):
+                    return attr()
+                else:
+                    return attr
+            except (AttributeError, TypeError):
+                # 如果失败，尝试直接属性访问（测试对象）
+                return getattr(obj, attr_name, 0)
+        
+        # 根据屏幕尺寸智能选择配置策略
+        screen_width = get_screen_value(screen_geometry, 'width')
+        screen_height = get_screen_value(screen_geometry, 'height')
+        
+        if screen_width >= 1920 and screen_height >= 1080:
+            # 大屏幕：可以使用更大的窗口和更靠右的位置
+            return cls(
+                use_relative_position=True,
+                use_relative_size=True,
+                left_percent=0.58,    # 更靠右侧，充分利用大屏幕
+                top_percent=0.08,     # 稍微靠上
+                width_percent=0.38,   # 稍大一些的宽度
+                height_percent=0.75,  # 更高的窗口
+            )
+        elif screen_width >= 1366 and screen_height >= 768:
+            # 中等屏幕：平衡的配置
+            return cls(
+                use_relative_position=True,
+                use_relative_size=True,
+                left_percent=0.55,    # 标准右侧位置
+                top_percent=0.1,      # 标准顶部位置
+                width_percent=0.35,   # 标准宽度
+                height_percent=0.65,  # 标准高度
+            )
+        else:
+            # 小屏幕：更紧凑的配置，确保内容可见
+            return cls(
+                use_relative_position=True,
+                use_relative_size=True,
+                left_percent=0.52,    # 稍微居中一些，避免过于靠边
+                top_percent=0.05,     # 更靠上，节省垂直空间
+                width_percent=0.42,   # 相对更宽，确保内容可读
+                height_percent=0.7,   # 相对更高，充分利用屏幕
+            )
 
 
 @dataclass
@@ -173,40 +364,130 @@ class SettingsManager:
             # 合并设置，保留用户的修改但确保所有字段都存在
             merged_data = self._merge_settings(default_data, existing_data)
             
-            # 如果有更新，保存回roaming
+            # 特殊处理：升级旧的popup配置到新格式
+            merged_data = self._upgrade_popup_config(merged_data)
+            
+            # 如果合并后的数据与现有数据不同，保存更新
             if merged_data != existing_data:
-                with self.path.open("w", encoding="utf-8") as f:
-                    json.dump(merged_data, f, indent=4, ensure_ascii=False)
-                print(f"已同步设置文件: {self.path}")
-        except Exception as e:
-            print(f"同步设置文件失败: {e}")
+                self.path.write_text(json.dumps(merged_data, indent=4, ensure_ascii=False), encoding="utf-8")
+                print(f"已同步设置文件字段: {self.path}")
             
-        try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-            # 关键改动！
-            hotkey = HotkeyConfig(**data.get('hotkey', {}))
-            popup = PopupConfig(**data.get('popup', {}))
-            api = ApiConfig(**data.get('api', {}))
-            language = data.get('language', 'en')
-            dont_remind_api_missing = data.get('dont_remind_api_missing', False)
-            shortcuts = data.get('shortcuts', None)
-            
-            settings = AppSettings(
-                language=language,
-                hotkey=hotkey, 
-                popup=popup, 
-                api=api,
-                dont_remind_api_missing=dont_remind_api_missing
+            # 从合并后的数据创建AppSettings实例
+            return AppSettings(
+                language=merged_data.get('language', 'en'),
+                hotkey=HotkeyConfig(**merged_data.get('hotkey', {})),
+                popup=PopupConfig(**merged_data.get('popup', {})),
+                api=ApiConfig(**merged_data.get('api', {})),
+                dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
+                shortcuts=merged_data.get('shortcuts', [])
             )
-            
-            # Only override shortcuts if they exist in the file
-            if shortcuts is not None:
-                settings.shortcuts = shortcuts
-                
-            return settings
         except Exception as e:
-            print(f"加载设置文件失败: {e}")
-            return AppSettings()
+            print(f"处理设置文件时出错: {e}")
+            # 出错时使用默认设置
+            default_data = json.loads(default_settings_path.read_text(encoding="utf-8"))
+            return AppSettings(
+                language=default_data.get('language', 'en'),
+                hotkey=HotkeyConfig(**default_data.get('hotkey', {})),
+                popup=PopupConfig(**default_data.get('popup', {})),
+                api=ApiConfig(**default_data.get('api', {})),
+                shortcuts=default_data.get('shortcuts', [])
+            )
+    
+    def _upgrade_popup_config(self, data: dict) -> dict:
+        """
+        升级旧的popup配置到新格式
+        统一使用智能相对坐标系统
+        
+        Args:
+            data: 设置数据字典
+            
+        Returns:
+            dict: 升级后的设置数据
+        """
+        popup = data.get('popup', {})
+        
+        # 检查是否需要升级（缺少新字段）
+        new_fields = ['use_relative_position', 'left_percent', 'top_percent', 
+                     'width_percent', 'height_percent', 'use_relative_size']
+        needs_upgrade = not all(field in popup for field in new_fields)
+        
+        if needs_upgrade:
+            print("🔄 检测到旧版popup配置，升级为智能相对坐标系统...")
+            
+            # 检查是否有基本的坐标信息
+            has_basic_coords = all(field in popup for field in ['left', 'top', 'width', 'height'])
+            
+            if has_basic_coords:
+                # 保留原有坐标作为兜底，但统一使用相对坐标
+                left = popup.get('left', 100)
+                top = popup.get('top', 50)
+                width = popup.get('width', 600)
+                height = popup.get('height', 500)
+                
+                # 检查是否是极端不合理的坐标（例如超大值或负值）
+                is_extreme_coords = (left > 3000 or top > 2000 or 
+                                   left < 0 or top < 0 or 
+                                   width > 2000 or height > 1500 or
+                                   width < 100 or height < 100)
+                
+                if is_extreme_coords:
+                    print(f"⚠️  检测到极端坐标值，使用标准智能配置")
+                    # 使用标准智能相对坐标
+                    popup.update({
+                        'left': 100,
+                        'top': 50,
+                        'width': 600,
+                        'height': 500,
+                        'use_relative_position': True,
+                        'left_percent': 0.55,
+                        'top_percent': 0.1,
+                        'width_percent': 0.35,
+                        'height_percent': 0.65,
+                        'use_relative_size': True
+                    })
+                else:
+                    # 普通坐标，统一升级为智能相对坐标
+                    popup.update({
+                        'use_relative_position': True,
+                        'left_percent': 0.55,
+                        'top_percent': 0.1,
+                        'width_percent': 0.35,
+                        'height_percent': 0.65,
+                        'use_relative_size': True
+                    })
+                    
+                print(f"✅ 已升级为智能相对坐标配置（原坐标: {left},{top},{width}x{height}）")
+            else:
+                # 没有基本坐标，创建标准智能配置
+                popup.update({
+                    'left': 100,
+                    'top': 50,
+                    'width': 600,
+                    'height': 500,
+                    'use_relative_position': True,
+                    'left_percent': 0.55,
+                    'top_percent': 0.1,
+                    'width_percent': 0.35,
+                    'height_percent': 0.65,
+                    'use_relative_size': True
+                })
+                print(f"✅ 已创建标准智能相对坐标配置")
+            
+            data['popup'] = popup
+        else:
+            # 已有新字段，检查是否需要从固定坐标迁移到相对坐标
+            if not popup.get('use_relative_position', True):
+                print("🔄 检测到固定坐标配置，建议升级为相对坐标...")
+                popup['use_relative_position'] = True
+                popup['use_relative_size'] = True
+                popup['left_percent'] = 0.55
+                popup['top_percent'] = 0.1
+                popup['width_percent'] = 0.35
+                popup['height_percent'] = 0.65
+                print(f"✅ 已从固定坐标升级为智能相对坐标")
+                data['popup'] = popup
+        
+        return data
 
 
 # ---------- Game-configs ----------

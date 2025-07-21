@@ -18,6 +18,7 @@ from pathlib import Path
 from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
 from .unified_query_processor import process_query_unified, UnifiedQueryResult
 from ..config import LLMConfig
+from src.game_wiki_tooltip.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class HybridSearchRetriever:
             logger.error(f"混合搜索初始化失败: {e}")
             raise e
         except Exception as e:
-            error_msg = f"增强BM25索引加载失败: {e}"
+            error_msg = t("enhanced_bm25_load_failed", error=str(e))
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         

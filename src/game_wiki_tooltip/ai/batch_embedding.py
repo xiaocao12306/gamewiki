@@ -71,6 +71,9 @@ def get_resource_path(relative_path: str) -> Path:
     
     return resource_path
 
+# 导入翻译函数
+from src.game_wiki_tooltip.i18n import t
+
 class BatchEmbeddingProcessor:
     """批量嵌入处理器"""
     
@@ -337,11 +340,11 @@ class BatchEmbeddingProcessor:
             bm25_path_str = f"{collection_name}/enhanced_bm25_index.pkl"
             
         except BM25UnavailableError as e:
-            error_msg = f"构建BM25索引失败: {e}"
+            error_msg = t("bm25_index_build_failed", error=str(e))
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         except Exception as e:
-            error_msg = f"构建增强BM25索引失败: {e}"
+            error_msg = t("enhanced_bm25_index_build_failed", error=str(e))
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         
