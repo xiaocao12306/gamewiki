@@ -58,6 +58,7 @@ class QueryWorker(QThread):
         self.query = query
         self.game_context = game_context
         self._stop_requested = False
+        self._current_task = None  # 当前运行的异步任务
         
     def run(self):
         """Run the query processing in thread"""
@@ -79,11 +80,20 @@ class QueryWorker(QThread):
     async def _process_query(self):
         """Process the query asynchronously"""
         try:
+            # 检查是否已请求停止
+            if self._stop_requested:
+                return
+                
             # 使用统一查询处理器进行意图检测和查询优化
             intent = await self.rag_integration.process_query_async(
                 self.query, 
                 game_context=self.game_context
             )
+            
+            # 再次检查是否已请求停止
+            if self._stop_requested:
+                return
+                
             self.intent_detected.emit(intent)
             
             if intent.intent_type == "unsupported":
@@ -92,30 +102,53 @@ class QueryWorker(QThread):
                 self.error_occurred.emit(error_msg)
                 return
             elif intent.intent_type == "wiki":
+                # 检查是否已请求停止
+                if self._stop_requested:
+                    return
+                    
                 # 对于wiki搜索，使用原始查询（因为wiki搜索不需要优化的查询）
                 search_url, search_title = await self.rag_integration.prepare_wiki_search_async(
                     self.query,  # 使用原始查询进行wiki搜索
                     game_context=self.game_context
                 )
-                self.wiki_result.emit(search_url, search_title)
+                
+                if not self._stop_requested:
+                    self.wiki_result.emit(search_url, search_title)
             else:
+                # 检查是否已请求停止
+                if self._stop_requested:
+                    return
+                    
                 # 对于攻略查询，同时传递原始查询和处理后的查询
                 processed_query = intent.rewritten_query or intent.translated_query or self.query
-                await self.rag_integration.generate_guide_async(
+                
+                # 设置当前任务并传递停止标志
+                self._current_task = self.rag_integration.generate_guide_async(
                     processed_query,  # 用于检索的查询
                     game_context=self.game_context,
                     original_query=self.query,  # 原始查询，用于答案生成
                     skip_query_processing=True,  # 跳过RAG内部的查询处理
-                    unified_query_result=intent.unified_query_result  # 传递完整的统一查询结果
+                    unified_query_result=intent.unified_query_result,  # 传递完整的统一查询结果
+                    stop_flag=lambda: self._stop_requested  # 传递停止标志检查函数
                 )
+                await self._current_task
                 
+        except asyncio.CancelledError:
+            logger.info("查询处理被取消")
         except Exception as e:
-            logger.error(f"Query processing error: {e}")
-            self.error_occurred.emit(str(e))
+            if not self._stop_requested:  # 只有在非停止状态下才报告错误
+                logger.error(f"Query processing error: {e}")
+                self.error_occurred.emit(str(e))
             
     def stop(self):
         """Request to stop the worker"""
         self._stop_requested = True
+        logger.info("🛑 QueryWorker停止请求已发出")
+        
+        # 如果有当前任务，尝试取消
+        if self._current_task and not self._current_task.done():
+            self._current_task.cancel()
+            logger.info("🛑 当前异步任务已取消")
 
 
 class RAGIntegration(QObject):
@@ -300,10 +333,14 @@ class RAGIntegration(QObject):
                     logger.info(f"✅ RAG引擎初始化完成 (游戏: {game_name})")
                     self._rag_init_complete = True
                     self._current_rag_game = game_name  # 记录当前RAG引擎对应的游戏
+                    # 清除错误信息
+                    if hasattr(self, '_rag_init_error'):
+                        delattr(self, '_rag_init_error')
                 except Exception as e:
                     logger.error(f"❌ RAG引擎初始化失败 (游戏: {game_name}): {e}")
                     self.rag_engine = None
                     self._rag_init_complete = False
+                    self._rag_init_error = str(e)  # 记录初始化错误
                     self._current_rag_game = None
                 finally:
                     loop.close()
@@ -629,7 +666,7 @@ class RAGIntegration(QObject):
         else:
             logger.warning("⚠️ 收到wiki页面回调，但没有待更新的wiki信息")
             
-    async def generate_guide_async(self, query: str, game_context: str = None, original_query: str = None, skip_query_processing: bool = False, unified_query_result = None):
+    async def generate_guide_async(self, query: str, game_context: str = None, original_query: str = None, skip_query_processing: bool = False, unified_query_result = None, stop_flag = None):
         """Generate guide response with streaming
         
         Args:
@@ -688,16 +725,35 @@ class RAGIntegration(QObject):
                         if not self.rag_engine:
                             # 检查是否是向量库不存在的问题
                             logger.info(f"📋 游戏 '{vector_game_name}' 的向量库不存在，提供降级方案")
-                            self.error_occurred.emit(
-                                f"🎮 游戏 '{game_context}' 暂时没有攻略数据库\n\n"
-                                "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
-                                "📚 目前支持攻略查询的游戏：\n"
-                                "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
-                                "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
-                                "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
-                                "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
-                                "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
-                            )
+                            
+                            # 使用国际化的错误信息
+                            from src.game_wiki_tooltip.i18n import t, get_current_language
+                            current_lang = get_current_language()
+                            
+                            if current_lang == 'zh':
+                                error_msg = (
+                                    f"🎮 游戏 '{game_context}' 暂时没有攻略数据库\n\n"
+                                    "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
+                                    "📚 目前支持攻略查询的游戏：\n"
+                                    "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
+                                    "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
+                                    "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
+                                    "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
+                                    "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
+                                )
+                            else:
+                                error_msg = (
+                                    f"🎮 Game '{game_context}' doesn't have a guide database yet\n\n"
+                                    "💡 Suggestion: You can try using the Wiki search function to find related information\n\n"
+                                    "📚 Games currently supporting guide queries:\n"
+                                    "• HELLDIVERS 2 - Weapon builds, enemy guides, etc.\n"
+                                    "• Elden Ring - Boss guides, equipment recommendations, etc.\n"
+                                    "• Don't Starve Together - Survival tips, character guides, etc.\n"
+                                    "• Civilization VI - Civilization features, victory strategies, etc.\n"
+                                    "• 7 Days to Die - Construction, weapon crafting, etc."
+                                )
+                            
+                            self.error_occurred.emit(error_msg)
                             return
                     else:
                         missing_keys = []
@@ -706,28 +762,64 @@ class RAGIntegration(QObject):
                         if not jina_api_key:
                             missing_keys.append("Jina API Key")
                         
-                        self.error_occurred.emit(
-                            f"❌ Missing required API keys: {', '.join(missing_keys)}\n\n"
-                            "AI guide features require both API keys to be configured:\n"
-                            "• Google/Gemini API Key - for AI reasoning\n"
-                            "• Jina API Key - for vector search\n\n"
-                            "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-                            "Jina vector search is essential for complete AI guide features.\n\n"
-                            "Please configure complete API keys in settings and try again."
-                        )
+                        # 使用国际化的错误信息
+                        from src.game_wiki_tooltip.i18n import get_current_language
+                        current_lang = get_current_language()
+                        
+                        if current_lang == 'zh':
+                            error_msg = (
+                                f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}\n\n"
+                                "AI攻略功能需要同时配置两个API密钥：\n"
+                                "• Google/Gemini API Key - 用于AI推理\n"
+                                "• Jina API Key - 用于向量搜索\n\n"
+                                "⚠️ 注意：仅有Gemini API无法提供高质量的RAG功能。\n"
+                                "Jina向量搜索对完整的AI攻略功能至关重要。\n\n"
+                                "请在设置中配置完整的API密钥并重试。"
+                            )
+                        else:
+                            error_msg = (
+                                f"❌ Missing required API keys: {', '.join(missing_keys)}\n\n"
+                                "AI guide features require both API keys to be configured:\n"
+                                "• Google/Gemini API Key - for AI reasoning\n"
+                                "• Jina API Key - for vector search\n\n"
+                                "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
+                                "Jina vector search is essential for complete AI guide features.\n\n"
+                                "Please configure complete API keys in settings and try again."
+                            )
+                        
+                        self.error_occurred.emit(error_msg)
                         return
                 else:
                     logger.info(f"📋 窗口 '{game_context}' 不支持攻略查询")
-                    self.error_occurred.emit(
-                        f"🎮 窗口 '{game_context}' 暂时不支持攻略查询\n\n"
-                        "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
-                        "📚 目前支持攻略查询的游戏：\n"
-                        "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
-                        "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
-                        "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
-                        "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
-                        "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
-                    )
+                    
+                    # 使用国际化的错误信息
+                    from src.game_wiki_tooltip.i18n import get_current_language
+                    current_lang = get_current_language()
+                    
+                    if current_lang == 'zh':
+                        error_msg = (
+                            f"🎮 窗口 '{game_context}' 暂时不支持攻略查询\n\n"
+                            "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
+                            "📚 目前支持攻略查询的游戏：\n"
+                            "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
+                            "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
+                            "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
+                            "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
+                            "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
+                        )
+                    else:
+                        error_msg = (
+                            f"🎮 Window '{game_context}' doesn't support guide queries yet\n\n"
+                            "💡 Suggestion: You can try using the Wiki search function to find related information\n\n"
+                            "📚 Games currently supporting guide queries:\n"
+                            "• HELLDIVERS 2 - Weapon builds, enemy guides, etc.\n"
+                            "• Elden Ring - Boss guides, equipment recommendations, etc.\n"
+                            "• Don't Starve Together - Survival tips, character guides, etc.\n"
+                            "• Civilization VI - Civilization features, victory strategies, etc.\n"
+                            "• 7 Days to Die - Construction, weapon crafting, etc."
+                        )
+                    
+                    self.error_occurred.emit(error_msg)
                     return
             else:
                 self.error_occurred.emit("RAG engine not initialized and no game context provided")
@@ -759,6 +851,11 @@ class RAGIntegration(QObject):
                 
                 # 使用真正的流式API
                 async for chunk in stream_generator:
+                    # 检查是否被请求停止
+                    if stop_flag and stop_flag():
+                        logger.info("🛑 检测到停止请求，中断流式生成")
+                        break
+                        
                     # 确保chunk是字符串类型
                     if isinstance(chunk, dict):
                         logger.warning(f"收到字典类型的chunk，跳过: {chunk}")
@@ -773,36 +870,85 @@ class RAGIntegration(QObject):
                 # 如果没有任何输出，可能需要切换到wiki模式
                 if not has_output:
                     logger.info(f"🔄 RAG查询无输出，可能需要切换到wiki模式: '{query}'")
-                    self.streaming_chunk_ready.emit("💡 该游戏暂无攻略数据库，为您自动切换到Wiki搜索模式...\n\n")
+                    
+                    from src.game_wiki_tooltip.i18n import get_current_language
+                    current_lang = get_current_language()
+                    
+                    if current_lang == 'zh':
+                        self.streaming_chunk_ready.emit("💡 该游戏暂无攻略数据库，为您自动切换到Wiki搜索模式...\n\n")
+                    else:
+                        self.streaming_chunk_ready.emit("💡 No guide database for this game, automatically switching to Wiki search mode...\n\n")
                     
                     # 自动切换到wiki搜索
                     try:
                         search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
                         self.wiki_result_ready.emit(search_url, search_title)
-                        self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                        
+                        if current_lang == 'zh':
+                            self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                        else:
+                            self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
                     except Exception as wiki_error:
                         logger.error(f"自动Wiki搜索失败: {wiki_error}")
-                        self.streaming_chunk_ready.emit("❌ 自动Wiki搜索失败，请手动点击Wiki搜索按钮\n")
+                        if current_lang == 'zh':
+                            self.streaming_chunk_ready.emit("❌ 自动Wiki搜索失败，请手动点击Wiki搜索按钮\n")
+                        else:
+                            self.streaming_chunk_ready.emit("❌ Auto Wiki search failed, please click Wiki search button manually\n")
                     return
                 
                 logger.info("✅ 流式RAG查询完成")
                 return
                     
             except Exception as e:
-                logger.error(f"流式RAG查询失败: {e}")
-                logger.info("尝试自动切换到Wiki搜索模式...")
+                # 处理特定的RAG错误类型
+                from src.game_wiki_tooltip.ai.rag_query import VectorStoreUnavailableError
+                from src.game_wiki_tooltip.ai.enhanced_bm25_indexer import BM25UnavailableError
+                from src.game_wiki_tooltip.i18n import t, get_current_language
                 
-                try:
-                    # 如果流式查询失败，自动切换到wiki搜索
-                    self.streaming_chunk_ready.emit("❌ AI攻略查询遇到问题，为您自动切换到Wiki搜索...\n\n")
-                    search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
-                    self.wiki_result_ready.emit(search_url, search_title)
-                    self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
-                    return
-                except Exception as wiki_error:
-                    logger.error(f"Wiki搜索也失败: {wiki_error}")
-                    self.error_occurred.emit("查询失败，请稍后重试或手动使用Wiki搜索功能。")
-                    return
+                current_lang = get_current_language()
+                
+                if isinstance(e, VectorStoreUnavailableError):
+                    if current_lang == 'zh':
+                        error_msg = f"❌ {t('rag_vector_store_error')}: {str(e)}"
+                    else:
+                        error_msg = f"❌ {t('rag_vector_store_error')}: {str(e)}"
+                elif isinstance(e, BM25UnavailableError):
+                    if current_lang == 'zh':
+                        error_msg = f"❌ {t('rag_bm25_error')}: {str(e)}"
+                    else:
+                        error_msg = f"❌ {t('rag_bm25_error')}: {str(e)}"
+                else:
+                    # 通用错误 - 尝试自动切换到wiki模式
+                    logger.error(f"流式RAG查询失败: {e}")
+                    logger.info("尝试自动切换到Wiki搜索模式...")
+                    
+                    try:
+                        # 如果流式查询失败，自动切换到wiki搜索
+                        if current_lang == 'zh':
+                            self.streaming_chunk_ready.emit("❌ AI攻略查询遇到问题，为您自动切换到Wiki搜索...\n\n")
+                        else:
+                            self.streaming_chunk_ready.emit("❌ AI guide query encountered an issue, automatically switching to Wiki search...\n\n")
+                        
+                        search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+                        self.wiki_result_ready.emit(search_url, search_title)
+                        
+                        if current_lang == 'zh':
+                            self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                        else:
+                            self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
+                        return
+                    except Exception as wiki_error:
+                        logger.error(f"自动Wiki搜索也失败: {wiki_error}")
+                        if current_lang == 'zh':
+                            error_msg = f"❌ AI攻略查询失败，Wiki搜索也失败了。请稍后重试。\n错误详情: {str(e)}"
+                        else:
+                            error_msg = f"❌ AI guide query failed, and Wiki search also failed. Please try again later.\nError details: {str(e)}"
+                    
+                # 发送错误信息（对于特定错误类型或wiki搜索失败的情况）
+                if 'error_msg' in locals():
+                    logger.error(f"发送错误信息到聊天窗口: {error_msg}")
+                    self.streaming_chunk_ready.emit(error_msg)
+                return
             finally:
                 # 确保异步生成器正确关闭
                 if stream_generator is not None:
@@ -893,8 +1039,9 @@ class IntegratedAssistantController(AssistantController):
         # 检查RAG引擎初始化状态
         if getattr(self, '_rag_initializing', False):
             # RAG引擎正在初始化中，显示等待状态
+            from src.game_wiki_tooltip.i18n import t
             logger.info("🔄 RAG引擎正在初始化中，显示等待提示")
-            self.main_window.chat_view.show_status("🚀 游戏攻略系统正在初始化中，请稍候...")
+            self.main_window.chat_view.show_status(t("rag_initializing"))
             
             # 延迟处理查询，定期检查初始化状态
             self._pending_query = query
@@ -906,6 +1053,8 @@ class IntegratedAssistantController(AssistantController):
         
     def _check_rag_init_status(self):
         """定期检查RAG初始化状态"""
+        from src.game_wiki_tooltip.i18n import t
+        
         if hasattr(self.rag_integration, '_rag_init_complete') and self.rag_integration._rag_init_complete:
             # 初始化完成
             logger.info("✅ RAG引擎初始化完成，开始处理查询")
@@ -916,16 +1065,74 @@ class IntegratedAssistantController(AssistantController):
             if hasattr(self, '_pending_query'):
                 self._process_query_immediately(self._pending_query)
                 delattr(self, '_pending_query')
+        elif hasattr(self.rag_integration, '_rag_init_complete') and self.rag_integration._rag_init_complete is False:
+            # 初始化失败
+            logger.error("❌ RAG引擎初始化失败")
+            self._rag_initializing = False
+            self.main_window.chat_view.hide_status()
+            
+            # 显示错误信息
+            if hasattr(self.rag_integration, '_rag_init_error'):
+                error_msg = self.rag_integration._rag_init_error
+                logger.error(f"RAG初始化错误详情: {error_msg}")
+                # 将错误发送到聊天窗口
+                self.main_window.chat_view.add_message(
+                    MessageType.AI_RESPONSE,
+                    f"{t('rag_init_failed')}: {error_msg}"
+                )
+            else:
+                # 通用错误信息
+                self.main_window.chat_view.add_message(
+                    MessageType.AI_RESPONSE,
+                    t("rag_init_failed")
+                )
+            
+            # 清理等待中的查询
+            if hasattr(self, '_pending_query'):
+                delattr(self, '_pending_query')
         else:
-            # 继续等待，每500ms检查一次
-            QTimer.singleShot(500, self._check_rag_init_status)
+            # 继续等待，每500ms检查一次，最多等待10秒
+            if not hasattr(self, '_rag_init_start_time'):
+                import time
+                self._rag_init_start_time = time.time()
+            
+            import time
+            if time.time() - self._rag_init_start_time > 10:  # 超时10秒
+                logger.warning("RAG初始化超时")
+                self._rag_initializing = False
+                self.main_window.chat_view.hide_status()
+                
+                # 显示超时错误
+                self.main_window.chat_view.add_message(
+                    MessageType.ERROR,
+                    f"{t('rag_init_failed')}: 初始化超时"
+                )
+                
+                # 清理
+                if hasattr(self, '_pending_query'):
+                    delattr(self, '_pending_query')
+                if hasattr(self, '_rag_init_start_time'):
+                    delattr(self, '_rag_init_start_time')
+            else:
+                # 继续等待
+                QTimer.singleShot(500, self._check_rag_init_status)
             
     def _process_query_immediately(self, query: str):
         """立即处理查询（RAG引擎已准备好）"""
-        # Stop any existing worker
+        # Stop any existing worker and reset UI state
         if self._current_worker and self._current_worker.isRunning():
+            logger.info("🛑 新查询开始，停止上一次的生成")
             self._current_worker.stop()
             self._current_worker.wait()
+            
+            # 如果有当前的流式消息，标记为已停止
+            if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+                self._current_streaming_msg.mark_as_stopped()
+                
+            # 重置UI状态
+            if self.main_window:
+                self.main_window.set_generating_state(False)
+                logger.info("🛑 UI状态已重置为非生成状态")
             
         # 断开RAG integration的所有信号连接，防止重复
         try:
@@ -985,6 +1192,14 @@ class IntegratedAssistantController(AssistantController):
         if hasattr(self, '_current_transition_msg'):
             self._current_transition_msg.hide()
         self._current_streaming_msg = self.main_window.chat_view.add_streaming_message()
+        
+        # 连接完成信号
+        self._current_streaming_msg.streaming_finished.connect(self._on_streaming_finished)
+        
+        # 设置UI为生成状态
+        if self.main_window:
+            self.main_window.set_generating_state(True, self._current_streaming_msg)
+            logger.info("🔄 UI已设置为生成状态")
         
     def _on_wiki_result_from_worker(self, url: str, title: str):
         """Handle wiki result from worker"""
@@ -1063,6 +1278,15 @@ class IntegratedAssistantController(AssistantController):
         """Handle streaming chunk from RAG"""
         if hasattr(self, '_current_streaming_msg'):
             self._current_streaming_msg.append_chunk(chunk)
+    
+    def _on_streaming_finished(self):
+        """处理流式输出完成"""
+        logger.info("✅ 流式输出已完成")
+        
+        # 重置UI状态
+        if self.main_window:
+            self.main_window.set_generating_state(False)
+            logger.info("✅ UI状态已重置为非生成状态")
             
     def _on_wiki_result(self, url: str, title: str):
         """Handle wiki search result from RAG integration"""
@@ -1157,6 +1381,31 @@ class IntegratedAssistantController(AssistantController):
             logger.info(f"⏳ 跳过临时状态的wiki页面更新：{title}")
             # 对于临时状态，仍然调用，但不会触发聊天窗口的最终更新
             
+    def expand_to_chat(self):
+        """重写expand_to_chat方法以连接停止信号"""
+        # 调用父类的expand_to_chat方法
+        super().expand_to_chat()
+        
+        # 连接停止生成信号
+        if self.main_window and hasattr(self.main_window, 'stop_generation_requested'):
+            self.main_window.stop_generation_requested.connect(self.stop_current_generation)
+            logger.info("✅ 已连接停止生成信号")
+    
+    def stop_current_generation(self):
+        """停止当前的生成过程"""
+        logger.info("🛑 收到停止生成请求")
+        
+        # 停止当前的worker
+        if self._current_worker and self._current_worker.isRunning():
+            logger.info("🛑 停止当前QueryWorker")
+            self._current_worker.stop()
+            # 不等待worker结束，让它异步结束
+            
+        # 恢复UI状态
+        if self.main_window:
+            self.main_window.set_generating_state(False)
+            logger.info("🛑 UI状态已恢复为非生成状态")
+    
     def switch_game(self, game_name: str):
         """Switch to a different game (game_name应该是窗口标题)"""
         # Stop current worker

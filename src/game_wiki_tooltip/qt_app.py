@@ -24,6 +24,7 @@ from src.game_wiki_tooltip.qt_hotkey_manager import QtHotkeyManager, HotkeyError
 from src.game_wiki_tooltip.assistant_integration import IntegratedAssistantController
 from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
 from src.game_wiki_tooltip.i18n import init_translations, t
+from src.game_wiki_tooltip.graphics_compatibility import apply_windows_10_fixes, set_application_attributes, get_graphics_debug_info, set_qt_attributes_before_app_creation
 
 # 热键常量 - 与test_hotkey_only.py保持一致
 MOD_CONTROL = 0x0002
@@ -220,6 +221,7 @@ class GameWikiApp(QObject):
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication(sys.argv)
+            logger.info("QApplication created successfully with graphics compatibility attributes")
             
         # Set application properties
         self.app.setQuitOnLastWindowClosed(False)
@@ -783,6 +785,59 @@ class GameWikiApp(QObject):
         """Quit application"""
         logger.info("Quitting application...")
         
+        # Clean up assistant controller and its windows first
+        if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
+            logger.info("正在清理assistant controller和相关窗口...")
+            
+            # Clean up mini window (悬浮窗)
+            if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
+                try:
+                    logger.info("关闭悬浮窗...")
+                    self.assistant_ctrl.mini_window.hide()
+                    self.assistant_ctrl.mini_window.close()
+                    self.assistant_ctrl.mini_window.deleteLater()
+                    self.assistant_ctrl.mini_window = None
+                    logger.info("悬浮窗已关闭")
+                except Exception as e:
+                    logger.warning(f"关闭悬浮窗时出错: {e}")
+                    self.assistant_ctrl.mini_window = None
+            
+            # Clean up main window (主窗口)
+            if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
+                try:
+                    logger.info("关闭主窗口...")
+                    self.assistant_ctrl.main_window.hide()
+                    self.assistant_ctrl.main_window.close()
+                    self.assistant_ctrl.main_window.deleteLater()
+                    self.assistant_ctrl.main_window = None
+                    logger.info("主窗口已关闭")
+                except Exception as e:
+                    logger.warning(f"关闭主窗口时出错: {e}")
+                    self.assistant_ctrl.main_window = None
+            
+            # Stop any running workers
+            if hasattr(self.assistant_ctrl, '_current_worker') and self.assistant_ctrl._current_worker:
+                try:
+                    logger.info("停止当前工作线程...")
+                    if self.assistant_ctrl._current_worker.isRunning():
+                        self.assistant_ctrl._current_worker.stop()
+                        self.assistant_ctrl._current_worker.wait()
+                    logger.info("工作线程已停止")
+                except Exception as e:
+                    logger.warning(f"停止工作线程时出错: {e}")
+            
+            # Disconnect RAG integration signals
+            try:
+                if hasattr(self.assistant_ctrl, 'rag_integration') and self.assistant_ctrl.rag_integration:
+                    logger.info("断开RAG integration信号连接...")
+                    self.assistant_ctrl.rag_integration.disconnect()
+                    logger.info("RAG integration信号连接已断开")
+            except Exception as e:
+                logger.warning(f"断开RAG integration信号连接时出错: {e}")
+            
+            self.assistant_ctrl = None
+            logger.info("assistant controller清理完成")
+        
         # Remove native event filter
         if self.native_filter:
             logger.info("移除Windows原生事件过滤器...")
@@ -819,26 +874,13 @@ def main():
     if sys.platform != "win32":
         raise RuntimeError("This tool only works on Windows.")
     
-    # Set DPI awareness FIRST before any Qt/Windows API initialization
-    # This prevents "Access Denied" errors when running as packaged exe
-    try:
-        # Try modern API first (Windows 8.1+)
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
-        logger.debug("Successfully set DPI awareness using SetProcessDpiAwareness")
-    except Exception as e:
-        # Log the actual error instead of silently failing
-        if "Access denied" in str(e) or "拒绝访问" in str(e):
-            logger.debug("DPI awareness already set by manifest or parent process")
-        else:
-            logger.debug(f"SetProcessDpiAwareness failed: {e}")
-        
-        # Try legacy API as fallback (Windows Vista+)
-        try:
-            ctypes.windll.user32.SetProcessDPIAware()
-            logger.debug("Successfully set DPI awareness using SetProcessDPIAware")
-        except Exception as e2:
-            logger.debug(f"SetProcessDPIAware also failed: {e2}")
-            # Continue anyway - Qt will handle DPI awareness with its defaults
+    # Apply Windows 10 PyQt6 graphics compatibility fixes BEFORE any Qt initialization
+    logger.info("Applying PyQt6 Windows graphics compatibility fixes...")
+    apply_windows_10_fixes()  # Auto-detects Windows version and applies appropriate fixes
+    
+    # Log graphics configuration for debugging
+    debug_info = get_graphics_debug_info()
+    logger.info(f"Graphics configuration: {debug_info}")
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='GameWiki Assistant')
@@ -848,7 +890,17 @@ def main():
     
     if args.settings:
         logger.info("Settings window will be forced to show")
-            
+    
+    # Set Qt application attributes and DPI policy BEFORE creating QApplication
+    # This prevents attribute and DPI policy errors
+    try:
+        from src.game_wiki_tooltip.graphics_compatibility import GraphicsMode
+        set_qt_attributes_before_app_creation(GraphicsMode.AUTO)  # Auto-detect Windows version
+        logger.info("Qt application attributes and DPI policy set successfully")
+    except Exception as e:
+        logger.error(f"Failed to set Qt application attributes: {e}")
+        # Continue anyway, but the app might have graphics issues
+        
     # Create and run app
     app = GameWikiApp()
     sys.exit(app.run())

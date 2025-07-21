@@ -20,6 +20,10 @@ import time
 import sys
 import os
 
+class VectorStoreUnavailableError(Exception):
+    """向量库不可用错误"""
+    pass
+
 def get_resource_path(relative_path: str) -> Path:
     """
     获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境
@@ -88,6 +92,18 @@ try:
 except ImportError:
     RERANKER_AVAILABLE = False
     logging.warning("意图重排序模块不可用")
+
+# 导入混合检索器和BM25错误类
+try:
+    from .hybrid_retriever import HybridSearchRetriever, VectorRetrieverAdapter
+    from .enhanced_bm25_indexer import BM25UnavailableError
+    HYBRID_RETRIEVER_AVAILABLE = True
+except ImportError as e:
+    HybridSearchRetriever = None
+    VectorRetrieverAdapter = None
+    BM25UnavailableError = Exception  # 回退到基础异常类
+    HYBRID_RETRIEVER_AVAILABLE = False
+    logging.warning(f"混合检索器模块不可用: {e}")
 
 # 导入配置和查询重写
 from ..config import LLMConfig
@@ -207,10 +223,10 @@ class EnhancedRagQuery:
             logger.info("初始化增强RAG系统...")
             
             if not BATCH_EMBEDDING_AVAILABLE:
-                print(f"⚠️ [RAG-DEBUG] 批量嵌入模块不可用，设置为未初始化状态")
-                logger.warning("批量嵌入模块不可用，设置为未初始化状态")
-                self.is_initialized = False  # 设置为未初始化，后续查询时会返回fallback_to_wiki
-                return
+                error_msg = "向量搜索功能不可用: 批量嵌入模块导入失败。请检查以下依赖是否正确安装:\n1. numpy\n2. faiss-cpu\n3. 其他嵌入相关依赖"
+                print(f"❌ [RAG-DEBUG] {error_msg}")
+                logger.error(error_msg)
+                raise VectorStoreUnavailableError(error_msg)
             
             # 确定向量库路径
             if self.vector_store_path is None and game_name:
@@ -226,21 +242,30 @@ class EnhancedRagQuery:
                     print(f"✅ [RAG-DEBUG] 找到向量库配置: {self.vector_store_path}")
                     logger.info(f"找到向量库配置: {self.vector_store_path}")
                 else:
-                    print(f"❌ [RAG-DEBUG] 未找到游戏 {game_name} 的向量库")
-                    logger.warning(f"未找到游戏 {game_name} 的向量库，搜索路径: {vector_dir}")
-                    logger.warning(f"查找模式: {game_name}_vectors_config.json")
+                    error_msg = f"向量库不存在: 未找到游戏 '{game_name}' 的向量库配置文件\n搜索路径: {vector_dir}\n查找模式: {game_name}_vectors_config.json"
+                    
                     # 列出现有的文件用于调试
                     try:
                         existing_files = list(vector_dir.glob("*_vectors_config.json"))
-                        print(f"📁 [RAG-DEBUG] 现有向量库文件: {[f.name for f in existing_files]}")
-                        logger.info(f"现有的向量库配置文件: {[f.name for f in existing_files]}")
+                        if existing_files:
+                            available_games = [f.stem.replace("_vectors_config", "") for f in existing_files]
+                            error_msg += f"\n可用的游戏向量库: {', '.join(available_games)}"
+                        else:
+                            error_msg += "\n未找到任何向量库配置文件"
                     except Exception as e:
-                        logger.error(f"列出现有文件失败: {e}")
-                    # 不立即返回，让后续代码处理这种情况
-                    self.vector_store_path = None
+                        error_msg += f"\n无法列出现有文件: {e}"
+                    
+                    print(f"❌ [RAG-DEBUG] {error_msg}")
+                    logger.error(error_msg)
+                    raise VectorStoreUnavailableError(error_msg)
             
-            if self.vector_store_path and Path(self.vector_store_path).exists():
-                # 加载向量库
+            if not self.vector_store_path or not Path(self.vector_store_path).exists():
+                error_msg = f"向量库配置文件不存在: {self.vector_store_path}"
+                logger.error(error_msg)
+                raise VectorStoreUnavailableError(error_msg)
+            
+            # 加载向量库
+            try:
                 self.processor = BatchEmbeddingProcessor(api_key=self.jina_api_key)
                 self.vector_store = self.processor.load_vector_store(self.vector_store_path)
                 
@@ -260,48 +285,56 @@ class EnhancedRagQuery:
                 if self.enable_hybrid_search:
                     self._initialize_hybrid_retriever()
                     
-            else:
-                logger.warning("向量库不可用，设置为未初始化状态")
+            except Exception as e:
+                error_msg = f"向量库加载失败: {e}"
+                logger.error(error_msg)
+                raise VectorStoreUnavailableError(error_msg)
             
             self.is_initialized = True
             logger.info("增强RAG系统初始化完成")
             
-        except Exception as e:
-            logger.error(f"RAG系统初始化失败: {e}")
+        except VectorStoreUnavailableError:
+            # 重新抛出向量库特定错误
             self.is_initialized = False
+            raise
+        except Exception as e:
+            error_msg = f"RAG系统初始化失败: {e}"
+            logger.error(error_msg)
+            self.is_initialized = False
+            raise VectorStoreUnavailableError(error_msg)
     
     def _initialize_hybrid_retriever(self):
-        """初始化混合检索器"""
+        """
+        初始化混合检索器
+        
+        Raises:
+            VectorStoreUnavailableError: 当混合搜索初始化失败时
+        """
         if not self.enable_hybrid_search:
             logger.warning("混合搜索未启用，将仅使用向量搜索")
             return
         
+        if not HYBRID_RETRIEVER_AVAILABLE:
+            error_msg = "混合搜索初始化失败: 混合检索器模块不可用"
+            logger.error(error_msg)
+            raise VectorStoreUnavailableError(error_msg)
+        
         try:
-            from .hybrid_retriever import HybridSearchRetriever, VectorRetrieverAdapter
-            
-            bm25_index_path = self.config.get("bm25_index_path")
-            if not bm25_index_path:
-                logger.warning("BM25索引路径未找到，将仅使用向量搜索")
-                return
-            
             # 检查BM25索引文件是否存在 - 修复路径解析问题
             from pathlib import Path
-            bm25_path = Path(bm25_index_path)
+            bm25_index_path = self.config.get("bm25_index_path")
+            if not bm25_index_path:
+                error_msg = "混合搜索初始化失败: BM25索引路径未在配置中找到"
+                logger.error(error_msg)
+                raise VectorStoreUnavailableError(error_msg)
             
             # 如果是相对路径，基于资源路径构建绝对路径
+            bm25_path = Path(bm25_index_path)
             if not bm25_path.is_absolute():
                 # 使用资源路径函数构建路径
                 vectorstore_dir = get_resource_path("ai/vectorstore")
                 # 尝试基于vectorstore目录
-                bm25_path = vectorstore_dir / Path(bm25_index_path).name
-            
-            if not bm25_path.exists():
-                logger.warning(f"BM25索引文件不存在: {bm25_path}，将仅使用向量搜索")
-                return
-            
-            # 使用解析后的绝对路径
-            bm25_index_path = str(bm25_path)
-            logger.info(f"找到BM25索引文件: {bm25_index_path}")
+                bm25_path = vectorstore_dir / bm25_index_path
             
             # 创建向量检索器适配器
             vector_retriever = VectorRetrieverAdapter(self)
@@ -313,7 +346,7 @@ class EnhancedRagQuery:
             
             self.hybrid_retriever = HybridSearchRetriever(
                 vector_retriever=vector_retriever,
-                bm25_index_path=bm25_index_path,
+                bm25_index_path=str(bm25_path),
                 fusion_method=self.hybrid_config.get("fusion_method", "rrf"),
                 vector_weight=self.hybrid_config.get("vector_weight", 0.3),
                 bm25_weight=self.hybrid_config.get("bm25_weight", 0.7),
@@ -329,9 +362,20 @@ class EnhancedRagQuery:
             else:
                 logger.info("混合检索器初始化成功（独立处理模式，禁用统一处理）")
             
+        except BM25UnavailableError as e:
+            # BM25特定错误，重新包装为向量库错误
+            error_msg = f"混合搜索初始化失败: {e}"
+            logger.error(error_msg)
+            raise VectorStoreUnavailableError(error_msg)
+        except (FileNotFoundError, RuntimeError) as e:
+            # 文件不存在或其他运行时错误
+            error_msg = f"混合搜索初始化失败: {e}"
+            logger.error(error_msg)
+            raise VectorStoreUnavailableError(error_msg)
         except Exception as e:
-            logger.error(f"混合检索器初始化失败: {e}")
-            logger.info("将回退到仅使用向量搜索模式")
+            error_msg = f"混合检索器初始化失败: {e}"
+            logger.error(error_msg)
+            raise VectorStoreUnavailableError(error_msg)
     
     def _initialize_summarizer(self):
         """初始化Gemini摘要器"""

@@ -14,11 +14,24 @@ import json
 import pickle
 import re
 import logging
-from rank_bm25 import BM25Okapi
 from typing import List, Dict, Any, Optional, Set, Tuple
 from pathlib import Path
 
+# 尝试导入bm25s，更现代、更快的BM25实现
+try:
+    import bm25s
+    BM25_AVAILABLE = True
+    BM25_IMPORT_ERROR = None
+except ImportError as e:
+    BM25_AVAILABLE = False
+    bm25s = None
+    BM25_IMPORT_ERROR = str(e)
+
 logger = logging.getLogger(__name__)
+
+class BM25UnavailableError(Exception):
+    """BM25功能不可用错误"""
+    pass
 
 class EnhancedBM25Indexer:
     """简化BM25索引器，专注于高效检索，查询优化由LLM负责"""
@@ -30,11 +43,25 @@ class EnhancedBM25Indexer:
         Args:
             game_name: 游戏名称 (用于敌人名称标准化)
             stop_words: 停用词列表
+            
+        Raises:
+            BM25UnavailableError: 当bm25s包不可用时
         """
         self.game_name = game_name
         self.bm25 = None
         self.documents = []
+        
+        if not BM25_AVAILABLE:
+            error_msg = f"BM25搜索功能初始化失败: bm25s包导入错误 - {BM25_IMPORT_ERROR}"
+            error_msg += "\n请尝试以下解决方案："
+            error_msg += "\n1. 安装bm25s: pip install bm25s"
+            error_msg += "\n2. 如果仍有问题，尝试重新安装: pip uninstall bm25s && pip install bm25s"
+            error_msg += "\n3. 确保numpy和scipy已正确安装: pip install numpy scipy"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
+            
         self.stop_words = self._load_stop_words(stop_words)
+        logger.info(f"BM25索引器初始化成功 - 游戏: {game_name}")
 
     def _load_stop_words(self, stop_words: Optional[List[str]] = None) -> Set[str]:
         """加载停用词，但保留重要的战术术语"""
@@ -250,7 +277,13 @@ class EnhancedBM25Indexer:
         
         Args:
             chunks: 知识块列表
+            
+        Raises:
+            BM25UnavailableError: 当BM25功能不可用时
         """
+        if not BM25_AVAILABLE:
+            raise BM25UnavailableError("BM25索引构建失败: bm25s包不可用")
+            
         logger.info(f"开始构建增强BM25索引，共 {len(chunks)} 个知识块")
         
         self.documents = chunks
@@ -279,12 +312,16 @@ class EnhancedBM25Indexer:
         
         # 创建BM25索引
         try:
-            self.bm25 = BM25Okapi(search_texts)
+            self.bm25 = bm25s.BM25()
+            self.bm25.index(search_texts)
+            # 保存原始文档以便后续使用
+            self.corpus_tokens = search_texts
             logger.info("增强BM25索引构建完成")
         except Exception as e:
-            logger.error(f"增强BM25索引构建失败: {e}")
-            raise
-    
+            error_msg = f"增强BM25索引构建失败: {e}"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
+
     def search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
         """
         增强BM25搜索
@@ -295,10 +332,15 @@ class EnhancedBM25Indexer:
             
         Returns:
             搜索结果列表
+            
+        Raises:
+            BM25UnavailableError: 当BM25功能不可用时
         """
+        if not BM25_AVAILABLE:
+            raise BM25UnavailableError("BM25搜索失败: bm25s包不可用")
+            
         if not self.bm25:
-            logger.warning("增强BM25索引未初始化")
-            return []
+            raise BM25UnavailableError("BM25搜索失败: 索引未初始化，请先调用build_index()方法")
             
         # 预处理查询 - 使用与索引构建相同的逻辑
         normalized_query = self._normalize_enemy_name(query.lower())
@@ -315,54 +357,61 @@ class EnhancedBM25Indexer:
         logger.info(f"标准化查询: {normalized_query}")
         logger.info(f"分词结果: {tokenized_query}")
         
-        # 获取分数
-        scores = self.bm25.get_scores(tokenized_query)
-        print(f"   📊 [BM25-DEBUG] 所有文档分数范围: {scores.min():.4f} - {scores.max():.4f}")
-        
-        # 获取top_k结果
-        top_indices = scores.argsort()[-top_k:][::-1]
-        print(f"   📋 [BM25-DEBUG] Top {top_k} 索引: {top_indices}")
-        print(f"   📋 [BM25-DEBUG] 对应分数: {scores[top_indices]}")
-        
-        results = []
-        for i, idx in enumerate(top_indices):
-            score = scores[idx]
-            if score > 0:
-                chunk = self.documents[idx]
-                match_info = {
-                    "topic": chunk.get("topic", ""),
-                    "enemy": self._extract_enemy_from_chunk(chunk),
-                    "relevance_reason": self._explain_relevance(tokenized_query, chunk, original_query=query)
-                }
-                result = {
-                    "chunk": chunk,
-                    "score": float(score),
-                    "rank": i + 1,
-                    "match_info": match_info
-                }
-                results.append(result)
-                
-                # 详细的匹配调试信息
-                print(f"   📋 [BM25-DEBUG] 结果 {i+1}:")
-                print(f"      - 索引: {idx}")
-                print(f"      - 分数: {score:.4f}")
-                print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
-                print(f"      - 敌人: {match_info['enemy']}")
-                print(f"      - 匹配理由: {match_info['relevance_reason']}")
-                print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
-                
-                # 显示关键词匹配信息
-                chunk_text = self.build_enhanced_text(chunk).lower()
-                matched_keywords = []
-                for token in set(tokenized_query):
-                    if token in chunk_text:
-                        matched_keywords.append(token)
-                if matched_keywords:
-                    print(f"      - 匹配关键词: {', '.join(matched_keywords[:10])}")
-        
-        print(f"✅ [BM25-DEBUG] 增强BM25搜索完成，找到 {len(results)} 个结果")
-        logger.info(f"增强BM25搜索完成，找到 {len(results)} 个结果")
-        return results
+        try:
+            # 使用bm25s的retrieve方法
+            results_ids, scores = self.bm25.retrieve(tokenized_query, k=top_k)
+            # results_ids shape: (1, top_k), scores shape: (1, top_k)
+            top_indices = results_ids[0]  # 获取第一个查询的结果
+            top_scores = scores[0]  # 获取第一个查询的分数
+            
+            print(f"   📊 [BM25-DEBUG] Top {len(top_scores)} 结果分数: {top_scores}")
+            print(f"   📋 [BM25-DEBUG] Top {top_k} 索引: {top_indices}")
+            print(f"   📋 [BM25-DEBUG] 对应分数: {top_scores}")
+            
+            results = []
+            for i, idx in enumerate(top_indices):
+                score = top_scores[i]  # 使用已排序的分数
+                if score > 0:
+                    chunk = self.documents[idx]
+                    match_info = {
+                        "topic": chunk.get("topic", ""),
+                        "enemy": self._extract_enemy_from_chunk(chunk),
+                        "relevance_reason": self._explain_relevance(tokenized_query, chunk, original_query=query)
+                    }
+                    result = {
+                        "chunk": chunk,
+                        "score": float(score),
+                        "rank": i + 1,
+                        "match_info": match_info
+                    }
+                    results.append(result)
+                    
+                    # 详细的匹配调试信息
+                    print(f"   📋 [BM25-DEBUG] 结果 {i+1}:")
+                    print(f"      - 索引: {idx}")
+                    print(f"      - 分数: {score:.4f}")
+                    print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
+                    print(f"      - 敌人: {match_info['enemy']}")
+                    print(f"      - 匹配理由: {match_info['relevance_reason']}")
+                    print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
+                    
+                    # 显示关键词匹配信息
+                    chunk_text = self.build_enhanced_text(chunk).lower()
+                    matched_keywords = []
+                    for token in set(tokenized_query):
+                        if token in chunk_text:
+                            matched_keywords.append(token)
+                    if matched_keywords:
+                        print(f"      - 匹配关键词: {', '.join(matched_keywords[:10])}")
+            
+            print(f"✅ [BM25-DEBUG] 增强BM25搜索完成，找到 {len(results)} 个结果")
+            logger.info(f"增强BM25搜索完成，找到 {len(results)} 个结果")
+            return results
+            
+        except Exception as e:
+            error_msg = f"BM25搜索执行失败: {e}"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
     
     def _extract_enemy_from_chunk(self, chunk: Dict[str, Any]) -> str:
         """从chunk中提取敌人/目标名称"""
@@ -423,43 +472,95 @@ class EnhancedBM25Indexer:
             return "无明显匹配"
     
     def save_index(self, path: str) -> None:
-        """保存简化BM25索引"""
+        """
+        保存简化BM25索引
+        
+        Raises:
+            BM25UnavailableError: 当BM25功能不可用时
+        """
+        if not BM25_AVAILABLE:
+            raise BM25UnavailableError("BM25索引保存失败: bm25s包不可用")
+            
         try:
-            data = {
-                'bm25': self.bm25,
+            # 使用bm25s的保存方法
+            path_obj = Path(path)
+            bm25_dir = path_obj.parent / f"{path_obj.stem}_bm25s"
+            
+            # 保存BM25索引
+            self.bm25.save(str(bm25_dir))
+            
+            # 保存附加数据（文档和停用词）
+            additional_data = {
                 'documents': self.documents,
-                'stop_words': list(self.stop_words)
+                'stop_words': list(self.stop_words),
+                'corpus_tokens': getattr(self, 'corpus_tokens', [])
             }
             
             with open(path, 'wb') as f:
-                pickle.dump(data, f)
+                pickle.dump(additional_data, f)
             
-            logger.info(f"简化BM25索引已保存到: {path}")
+            logger.info(f"简化BM25索引已保存到: {path} (BM25数据: {bm25_dir})")
             
         except Exception as e:
-            logger.error(f"保存简化BM25索引失败: {e}")
-            raise
+            error_msg = f"保存简化BM25索引失败: {e}"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
     
     def load_index(self, path: str) -> None:
-        """加载简化BM25索引"""
+        """
+        加载简化BM25索引
+        
+        Raises:
+            BM25UnavailableError: 当BM25功能不可用时
+        """
+        if not BM25_AVAILABLE:
+            error_msg = f"BM25索引加载失败: bm25s包不可用 - {BM25_IMPORT_ERROR}"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
+            
         try:
+            # 加载附加数据
             with open(path, 'rb') as f:
                 data = pickle.load(f)
-            
-            self.bm25 = data['bm25']
+                
             self.documents = data['documents']
             self.stop_words = set(data.get('stop_words', []))
+            self.corpus_tokens = data.get('corpus_tokens', [])
+            
+            # 加载BM25索引
+            path_obj = Path(path)
+            bm25_dir = path_obj.parent / f"{path_obj.stem}_bm25s"
+            
+            if bm25_dir.exists():
+                self.bm25 = bm25s.BM25.load(str(bm25_dir))
+            else:
+                # 如果bm25s目录不存在，尝试重建索引
+                logger.warning(f"BM25索引目录不存在: {bm25_dir}，尝试重建索引")
+                if self.corpus_tokens:
+                    self.bm25 = bm25s.BM25()
+                    self.bm25.index(self.corpus_tokens)
+                else:
+                    raise FileNotFoundError(f"无法找到BM25索引目录且无法重建: {bm25_dir}")
             
             logger.info(f"简化BM25索引已加载: {path}")
             
         except Exception as e:
-            logger.error(f"加载增强BM25索引失败: {e}")
-            raise
+            error_msg = f"加载增强BM25索引失败: {e}"
+            logger.error(error_msg)
+            raise BM25UnavailableError(error_msg)
     
     def get_stats(self) -> Dict[str, Any]:
-        """获取增强索引统计信息"""
+        """
+        获取增强索引统计信息
+        
+        Raises:
+            BM25UnavailableError: 当BM25功能不可用时
+        """
+        if not BM25_AVAILABLE:
+            raise BM25UnavailableError("获取BM25统计信息失败: bm25s包不可用")
+            
         if not self.bm25:
-            return {"status": "未初始化"}
+            return {"status": "未初始化", "error": "BM25索引未构建"}
         
         # 分析敌人分布
         enemy_distribution = {}
@@ -469,7 +570,7 @@ class EnhancedBM25Indexer:
         
         # 计算平均文档长度（修复corpus_size访问错误）
         try:
-            # BM25Okapi的corpus是文档token列表的列表
+            # bm25s的corpus是文档token列表的列表
             if hasattr(self.bm25, 'corpus') and self.bm25.corpus:
                 avg_doc_length = sum(len(doc) for doc in self.bm25.corpus) / len(self.bm25.corpus)
             elif hasattr(self.bm25, 'corpus_size') and isinstance(self.bm25.corpus_size, int):

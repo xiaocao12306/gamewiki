@@ -221,7 +221,7 @@ class TranslationManager:
             "welcome_wiki_search": "• **Wiki Search** - Quick access to website Wiki",
             "welcome_ai_guide": "• **AI Guide BETA** - Haven't support context memory; ONLY support Helldivers2/Elden Ring/Don't Starve Together/Civilization VI so far; AI could make mistakes, check the attached video link for validity.)",
             "welcome_examples": "🎯 **Recommended Query Examples for AI Guide:**",
-            "welcome_helldivers": "• Helldivers 2: `best warbond to buy first` / `flame weapon combinations`",
+            "welcome_helldivers": "• Helldivers 2: `best warbond to buy first` / `low level loadout`",
             "welcome_eldenring": "• Elden Ring: `boss strategies` / `equipment recommendations`",
             "welcome_dst": "• Don't Starve Together: `What to do on day 1` / `character recommendation`",
             "welcome_usage": "📝 **Usage Tips:**",
@@ -237,7 +237,15 @@ class TranslationManager:
             "success": "Success",
             
             # Video sources
-            "video_sources_label": "Information Sources:"
+            "video_sources_label": "Sources:",
+            
+            # RAG System Status Messages
+            "rag_initializing": "🚀 Game guide system is initializing, please wait...",
+            "rag_init_complete": "✅ RAG engine initialization complete",
+            "rag_init_failed": "❌ RAG engine initialization failed",
+            "rag_error_occurred": "Guide query system error",
+            "rag_vector_store_error": "Vector store unavailable",
+            "rag_bm25_error": "BM25 search function unavailable"
         }
     
     def _create_language_translations(self, language: str) -> Dict[str, str]:
@@ -331,7 +339,15 @@ class TranslationManager:
                 "success": "成功",
                 
                 # Video sources
-                "video_sources_label": "信息来源："
+                "video_sources_label": "信息来源：",
+                
+                # RAG System Status Messages
+                "rag_initializing": "🚀 游戏攻略系统正在初始化中，请稍候...",
+                "rag_init_complete": "✅ RAG引擎初始化完成",
+                "rag_init_failed": "❌ RAG引擎初始化失败",
+                "rag_error_occurred": "攻略查询系统出现错误",
+                "rag_vector_store_error": "向量库不可用",
+                "rag_bm25_error": "BM25搜索功能不可用"
             }
         else:
             # 对于其他语言，返回英语翻译作为基础

@@ -130,6 +130,9 @@ dmypy.json
 # Project specific
 *.exe
 *.msi
+GameWikiAssistant_Portable/
+build/
+dist/
 
 # IDE files
 .vscode/
@@ -170,3 +173,49 @@ debug_assets.py
 debug_dpi_dlls.bat
 debug_dpi_dlls.py
 debug_package.py
+
+# Project specific
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# VS Code
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PyCharm
+.idea/
+
+# Test output
+test_output/
+*.test
+
+# Custom app data and logs
+*.log
+logs/
+
+# Local config files
+config.local.json
+settings.local.json
+
+# Build artifacts
+*.spec.bak
+build_temp/
+
+# Testing and development files
+test_graphics_fix.py
+Windows10_Graphics_Fix_README.md
+
+# Backup files
+*.bak
+*.backup
+*~

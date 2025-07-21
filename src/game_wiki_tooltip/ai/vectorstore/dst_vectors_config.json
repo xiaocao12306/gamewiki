@@ -5,7 +5,7 @@
   "model": "jina-embeddings-v4",
   "output_dim": 768,
   "chunk_count": 111,
-  "index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\dst_vectors",
-  "bm25_index_path": "C:\\Users\\chuwe\\PycharmProjects\\gamewiki\\src\\game_wiki_tooltip\\ai\\vectorstore\\dst_vectors\\enhanced_bm25_index.pkl",
+  "index_path": "dst_vectors",
+  "bm25_index_path": "dst_vectors/enhanced_bm25_index.pkl",
   "hybrid_search_enabled": true
 }

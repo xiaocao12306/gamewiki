@@ -15,7 +15,7 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
-from .enhanced_bm25_indexer import EnhancedBM25Indexer
+from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
 from .unified_query_processor import process_query_unified, UnifiedQueryResult
 from ..config import LLMConfig
 
@@ -95,23 +95,24 @@ class HybridSearchRetriever:
         # 初始化增强BM25索引器
         self.bm25_indexer = None
         bm25_path = Path(bm25_index_path)
-        if bm25_path.exists():
-            try:
-                self.bm25_indexer = EnhancedBM25Indexer()
-                self.bm25_indexer.load_index(str(bm25_path))
-                logger.info(f"增强BM25索引加载成功: {bm25_index_path}")
-            except Exception as e:
-                logger.error(f"增强BM25索引加载失败: {e}")
-                self.bm25_indexer = None
-        else:
-            logger.warning(f"增强BM25索引文件不存在: {bm25_index_path}")
-            logger.info("将查找legacy BM25索引文件...")
-            # 尝试查找旧的BM25索引文件
-            legacy_bm25_path = bm25_path.parent / "bm25_index.pkl"
-            if legacy_bm25_path.exists():
-                logger.warning(f"找到旧BM25索引，建议重新构建增强索引: {legacy_bm25_path}")
-                # 可以选择性地加载旧索引作为降级方案
-                # 但这里我们选择不加载，以促使用户使用新的增强索引
+        
+        if not bm25_path.exists():
+            error_msg = f"BM25索引文件不存在: {bm25_index_path}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+        
+        try:
+            self.bm25_indexer = EnhancedBM25Indexer()
+            self.bm25_indexer.load_index(str(bm25_path))
+            logger.info(f"增强BM25索引加载成功: {bm25_index_path}")
+        except BM25UnavailableError as e:
+            # 重新抛出BM25特定错误，保持错误信息完整
+            logger.error(f"混合搜索初始化失败: {e}")
+            raise e
+        except Exception as e:
+            error_msg = f"增强BM25索引加载失败: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         # 统计信息
         self.unified_processing_stats = {

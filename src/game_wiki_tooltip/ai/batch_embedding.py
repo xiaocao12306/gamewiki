@@ -321,7 +321,7 @@ class BatchEmbeddingProcessor:
         # 构建增强BM25索引
         logger.info("开始构建增强BM25索引...")
         try:
-            from .enhanced_bm25_indexer import EnhancedBM25Indexer
+            from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
             
             # 从collection_name中提取游戏名称
             game_name = collection_name.replace("_vectors", "") if "_vectors" in collection_name else collection_name
@@ -334,12 +334,18 @@ class BatchEmbeddingProcessor:
             enhanced_bm25_indexer.save_index(str(bm25_path))
             
             logger.info(f"增强BM25索引构建完成（游戏: {game_name}），保存到: {bm25_path}")
+            bm25_path_str = f"{collection_name}/enhanced_bm25_index.pkl"
             
+        except BM25UnavailableError as e:
+            error_msg = f"构建BM25索引失败: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         except Exception as e:
-            logger.error(f"构建增强BM25索引失败: {e}")
-            bm25_path = None
+            error_msg = f"构建增强BM25索引失败: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
-        # 保存配置
+        # 保存配置 - 修复：使用相对路径而不是绝对路径
         config = {
             "vector_store_type": "faiss",
             "collection_name": collection_name,
@@ -347,9 +353,9 @@ class BatchEmbeddingProcessor:
             "model": self.model,
             "output_dim": self.output_dim,
             "chunk_count": len(chunks),
-            "index_path": str(index_path.resolve()),  # 使用绝对路径
-            "bm25_index_path": str(bm25_path.resolve()) if bm25_path else None,  # 使用绝对路径
-            "hybrid_search_enabled": bm25_path is not None
+            "index_path": collection_name,  # 使用相对路径，不再使用绝对路径
+            "bm25_index_path": bm25_path_str,  # 使用相对路径
+            "hybrid_search_enabled": True  # BM25索引构建成功
         }
         
         config_path = output_path / f"{collection_name}_config.json"

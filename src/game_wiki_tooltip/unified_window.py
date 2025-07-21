@@ -943,10 +943,14 @@ class MessageWidget(QFrame):
 class StreamingMessageWidget(MessageWidget):
     """Message widget with streaming/typing animation support"""
     
+    # 添加信号
+    streaming_finished = pyqtSignal()  # 流式输出完成信号
+    
     def __init__(self, message: ChatMessage, parent=None):
         super().__init__(message, parent)
         self.full_text = ""
         self.display_index = 0
+        self.is_stopped = False  # 标记是否被用户停止
         
         # Markdown渲染控制
         self.last_render_index = 0  # 上次渲染时的字符位置
@@ -1042,15 +1046,37 @@ class StreamingMessageWidget(MessageWidget):
         
     def append_chunk(self, chunk: str):
         """Append text chunk for streaming display"""
-        self.full_text += chunk
-        if not self.typing_timer.isActive():
-            self.dots_timer.stop()
-            # 初始化渲染时间戳和markdown检测
-            self.last_render_time = time.time()
-            # 提前检测是否可能包含markdown（基于首个chunk）
-            if len(self.full_text) > 10:  # 有一定长度时再检测
-                self.is_markdown_detected = detect_markdown_content(self.full_text)
-            self.typing_timer.start(20)  # 20ms per character
+        if not self.is_stopped:
+            self.full_text += chunk
+            if not self.typing_timer.isActive():
+                self.dots_timer.stop()
+                # 初始化渲染时间戳和markdown检测
+                self.last_render_time = time.time()
+                # 提前检测是否可能包含markdown（基于首个chunk）
+                if len(self.full_text) > 10:  # 有一定长度时再检测
+                    self.is_markdown_detected = detect_markdown_content(self.full_text)
+                self.typing_timer.start(20)  # 20ms per character
+    
+    def mark_as_stopped(self):
+        """标记为已停止"""
+        self.is_stopped = True
+        self.typing_timer.stop()
+        self.dots_timer.stop()
+        
+        # 在当前位置添加停止标记
+        if self.display_index < len(self.full_text):
+            stopped_text = self.full_text[:self.display_index] + "\n\n*[Generation stopped by user]*"
+        else:
+            stopped_text = self.full_text + "\n\n*[Generation stopped by user]*"
+            
+        # 立即显示所有已生成的文本加上停止标记
+        self.content_label.setText(stopped_text)
+        self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+        
+        # 转换消息类型为AI_RESPONSE
+        self.message.type = MessageType.AI_RESPONSE
+        
+        print(f"🛑 流式消息已停止，显示位置: {self.display_index}/{len(self.full_text)}")
             
     def show_next_char(self):
         """Show next character in typing animation"""
@@ -1134,7 +1160,7 @@ class StreamingMessageWidget(MessageWidget):
             self.typing_timer.stop()
             
             # 最终完成时，转换消息类型并进行最终渲染
-            if self.message.type == MessageType.AI_STREAMING and self.full_text:
+            if self.message.type == MessageType.AI_STREAMING and self.full_text and not self.is_stopped:
                 # 将消息类型改为AI_RESPONSE，表示流式输出已完成
                 self.message.type = MessageType.AI_RESPONSE
                 
@@ -1145,6 +1171,9 @@ class StreamingMessageWidget(MessageWidget):
                     '<small>.*?来源.*?</small>'
                 ])
                 print(f"🎬 [STREAMING] 流式消息完成，长度: {len(self.full_text)} 字符，包含视频源: {has_video_sources}")
+                
+                # 发出完成信号
+                self.streaming_finished.emit()
                 
                 # 进行最终的格式检测和转换
                 # 如果包含视频源，强制使用RichText格式
@@ -2001,11 +2030,14 @@ class UnifiedAssistantWindow(QMainWindow):
     window_closing = pyqtSignal()  # Signal when window is closing
     wiki_page_found = pyqtSignal(str, str)  # 新信号：传递真实wiki页面信息到controller
     visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
+    stop_generation_requested = pyqtSignal()  # 新信号：停止生成请求
     
     def __init__(self, settings_manager=None):
         super().__init__()
         self.settings_manager = settings_manager
         self.current_mode = WindowMode.MINI
+        self.is_generating = False  # 跟踪是否正在生成内容
+        self.current_streaming_msg = None  # 当前流式消息组件
         self.init_ui()
         self.restore_geometry()
         
@@ -2189,6 +2221,15 @@ class UnifiedAssistantWindow(QMainWindow):
             }
             QPushButton:pressed {
                 background-color: #1668dc;
+            }
+            QPushButton[stop_mode="true"] {
+                background-color: #ff4d4f;
+            }
+            QPushButton[stop_mode="true"]:hover {
+                background-color: #ff7875;
+            }
+            QPushButton[stop_mode="true"]:pressed {
+                background-color: #d32f2f;
             }
         """)
         self.send_button.clicked.connect(self.on_send_clicked)
@@ -2496,10 +2537,62 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def on_send_clicked(self):
         """Handle send button click"""
-        text = self.input_field.text().strip()
-        if text:
-            self.input_field.clear()
-            self.query_submitted.emit(text)
+        if self.is_generating:
+            # 如果正在生成，停止生成
+            self.stop_generation()
+        else:
+            # 正常发送
+            text = self.input_field.text().strip()
+            if text:
+                # 检查是否需要停止当前的生成（如果有的话）
+                if self.is_generating:
+                    self.stop_generation()
+                    
+                self.input_field.clear()
+                self.query_submitted.emit(text)
+    
+    def set_generating_state(self, is_generating: bool, streaming_msg=None):
+        """设置生成状态"""
+        self.is_generating = is_generating
+        self.current_streaming_msg = streaming_msg
+        
+        if is_generating:
+            # 切换到停止模式
+            self.send_button.setText("Stop")
+            self.send_button.setProperty("stop_mode", "true")
+            self.input_field.setPlaceholderText("Click Stop to cancel generation...")
+            self.input_field.setEnabled(False)  # 禁用输入框
+        else:
+            # 切换回发送模式
+            if self.current_mode == "url":
+                self.send_button.setText("Open")
+            else:
+                self.send_button.setText("Send")
+            self.send_button.setProperty("stop_mode", "false")
+            self.input_field.setPlaceholderText("Enter message..." if self.current_mode != "url" else "Enter URL...")
+            self.input_field.setEnabled(True)  # 启用输入框
+            
+        # 刷新样式
+        self.send_button.style().unpolish(self.send_button)
+        self.send_button.style().polish(self.send_button)
+        self.send_button.update()
+    
+    def stop_generation(self):
+        """停止当前的生成"""
+        print("🛑 用户请求停止生成")
+        
+        # 发出停止信号
+        self.stop_generation_requested.emit()
+        
+        # 如果有当前的流式消息，标记为已停止
+        if self.current_streaming_msg:
+            self.current_streaming_msg.mark_as_stopped()
+            
+        # 恢复UI状态
+        self.set_generating_state(False)
+        
+        # 隐藏状态信息
+        self.chat_view.hide_status()
             
     def contextMenuEvent(self, event):
         """处理右键菜单事件"""

@@ -49,6 +49,9 @@ hiddenimports = [
     'markdown',
     'brotli',
     'python_dotenv',
+    
+    # Graphics compatibility module (for Windows 10 PyQt6 fixes)
+    'src.game_wiki_tooltip.graphics_compatibility',
 ]
 
 # Collect data files
