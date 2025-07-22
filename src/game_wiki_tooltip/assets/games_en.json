@@ -39,10 +39,6 @@
         "BaseUrl": "https://7daystodie.fandom.com/wiki/",
         "NeedsSearch": true
     },
-    "Civilization VI": {
-        "BaseUrl": "https://civilization.fandom.com/wiki/",
-        "NeedsSearch": true
-    },
     "DARK SOULS III": {
         "BaseUrl": "http://darksouls3.wiki.fextralife.com",
         "NeedsSearch": true
@@ -203,8 +199,8 @@
         "BaseUrl": "https://hoi4.paradoxwikis.com/Hearts_of_Iron_4_Wiki",
         "NeedsSearch": true
     },
-    "SID MEIER'S CIVILIZATION VI": {
-        "BaseUrl": "https://civilization.fandom.com/wiki",
+    "Sid Meier's Civilization VI": {
+        "BaseUrl": "civilization.fandom.com/wiki/Civilization_VI",
         "NeedsSearch": true
     },
     "XCOM 2": {

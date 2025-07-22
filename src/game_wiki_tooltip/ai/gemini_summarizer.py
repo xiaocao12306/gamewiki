@@ -336,7 +336,7 @@ class GeminiSummarizer:
 格式要求：
 • 开头先给出一句话总结（用💡标记）
 • 按照原始查询的措辞和细节要求组织答案
-• 使用友好的游戏术语和表情符号
+• 使用友好的游戏术语
 • 基于JSON中的实际数据，不要编造信息
 • 如果信息不相关或不足，请明确说明
 
@@ -376,7 +376,7 @@ Response guidelines:
 Format requirements:
 • Start with a one-sentence summary (marked with 💡)
 • Organize response according to original query's wording and detail requirements
-• Use friendly gaming terminology and appropriate emojis
+• Use friendly gaming terminology
 • Base on actual data from JSON, don't fabricate information
 • If information is irrelevant or insufficient, clearly state so
 

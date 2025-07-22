@@ -1609,6 +1609,9 @@ class ChatView(QScrollArea):
         self._content_stable_timer.setSingleShot(True)
         self._content_stable_timer.timeout.connect(self._check_content_stability)
         
+        # 动画状态标志
+        self._is_animating = False
+        
         self.init_ui()
         
     def init_ui(self):
@@ -2008,6 +2011,10 @@ class ChatView(QScrollArea):
         
     def _update_message_width(self, widget: MessageWidget):
         """更新消息控件的最大宽度"""
+        # 如果正在动画中，跳过更新
+        if self._is_animating:
+            return
+            
         # 获取多层容器的宽度信息，用于调试
         viewport_width = self.viewport().width()
         scroll_area_width = self.width()
@@ -2054,6 +2061,10 @@ class ChatView(QScrollArea):
     def resizeEvent(self, event):
         """窗口大小改变时触发防抖动更新"""
         super().resizeEvent(event)
+        
+        # 如果正在动画中，跳过更新，避免卡顿
+        if self._is_animating:
+            return
         
         # 强制ChatView保持正确的宽度（立即执行，避免显示异常）
         parent_width = self.parent().width() if self.parent() else 0
@@ -4328,12 +4339,29 @@ class AssistantController:
         self.main_window = None
         self.current_mode = WindowMode.MINI
         self.current_game_window = None  # 记录当前游戏窗口标题
+        self._is_manually_hidden = False  # 记录用户是否主动隐藏了悬浮窗
+        self._was_hidden_before_hotkey = False  # 记录热键触发前的隐藏状态
         
     def show_mini(self):
         """Show mini assistant"""
         import logging
         logger = logging.getLogger(__name__)
         logger.info("show_mini() called")
+        
+        # 检查是否需要恢复之前的隐藏状态
+        if hasattr(self, '_was_hidden_before_hotkey') and self._was_hidden_before_hotkey:
+            logger.info("Restoring hidden state from before hotkey")
+            self._is_manually_hidden = True
+            self._was_hidden_before_hotkey = False  # 重置标志
+        
+        # 如果用户主动隐藏了悬浮窗，则不显示
+        if self._is_manually_hidden:
+            logger.info("Mini window was manually hidden, skipping show")
+            # 如果有主窗口，也要隐藏它
+            if self.main_window:
+                logger.info("Hiding main window")
+                self.main_window.hide()
+            return
         
         if not self.mini_window:
             logger.info("Creating new MiniAssistant window")
@@ -4374,6 +4402,14 @@ class AssistantController:
         logger = logging.getLogger(__name__)
         logger.info("expand_to_chat() called")
         
+        # 记录热键触发前的隐藏状态
+        self._was_hidden_before_hotkey = self._is_manually_hidden
+        logger.info(f"Recording hidden state before hotkey: {self._was_hidden_before_hotkey}")
+        
+        # 用户主动展开窗口，清除手动隐藏标志
+        self._is_manually_hidden = False
+        
+        # 检查窗口是否已创建但被隐藏
         if not self.main_window:
             logger.info("Creating new UnifiedAssistantWindow")
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
@@ -4388,83 +4424,74 @@ class AssistantController:
                 self.main_window.set_current_game_window(self.current_game_window)
             
             logger.info("UnifiedAssistantWindow created and signals connected")
+        else:
+            logger.info("Reusing existing UnifiedAssistantWindow")
+            # 如果游戏窗口改变了，更新它
+            if self.current_game_window:
+                self.main_window.set_current_game_window(self.current_game_window)
         
-        # 确保窗口显示
-        logger.info("Showing main window")
+        # 设置窗口初始透明度为0（准备渐显动画）
+        self.main_window.setWindowOpacity(0.0)
+        
+        # 确保窗口显示并获得焦点
+        logger.info("Showing main window with fade-in animation")
         self.main_window.show()
         self.main_window.raise_()
         self.main_window.activateWindow()
         
+        # 创建渐显动画
+        self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
+        self._fade_in_animation.setDuration(200)  # 200ms的渐显动画
+        self._fade_in_animation.setStartValue(0.0)
+        self._fade_in_animation.setEndValue(1.0)
+        self._fade_in_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
+        # 动画完成后聚焦到输入框并更新消息宽度
+        def on_fade_in_finished():
+            logger.info("Fade-in animation completed")
+            # 更新所有消息宽度
+            if hasattr(self.main_window, 'chat_view'):
+                self.main_window.chat_view.update_all_message_widths()
+            # 聚焦输入框
+            if hasattr(self.main_window, 'query_input'):
+                self.main_window.query_input.setFocus()
+                
+        self._fade_in_animation.finished.connect(on_fade_in_finished)
+        self._fade_in_animation.start()
+        
         if self.mini_window:
-            logger.info("Mini window exists, starting animation")
-            
-            # Get screen geometry
-            screen = QApplication.primaryScreen().geometry()
-            
-            # Get mini window position and settings
-            mini_pos = self.mini_window.pos()
-            
-            # 从设置中获取保存的窗口位置和大小
-            settings = self.settings_manager.get() if self.settings_manager else {}
-            popup = settings.get('popup', {})
-            scale = _get_scale()
-            
-            # 从逻辑像素转换为物理像素
-            target_width = int(popup.get('width', 514) * scale)
-            target_height = int(popup.get('height', 32) * scale)
-            
-            # 使用保存的位置而不是根据mini window计算
-            saved_x = int(popup.get('left', 617) * scale)
-            saved_y = int(popup.get('top', 20) * scale)
-            
-            # 确保窗口在屏幕范围内（使用保存的位置）
-            target_x = max(10, min(saved_x, screen.width() - target_width - 10))
-            target_y = max(30, min(saved_y, screen.height() - target_height - 40))
-            
-            logger.info(f"Using saved position: saved=({saved_x}, {saved_y}), adjusted=({target_x}, {target_y})")
-            logger.info(f"Animation: from ({mini_pos.x()}, {mini_pos.y()}, 60, 60) to ({target_x}, {target_y}, {target_width}, {target_height})")
-            
-            # Set initial position and size
-            self.main_window.setGeometry(
-                mini_pos.x(), mini_pos.y(), 60, 60
-            )
-            
-            # Hide mini window
+            logger.info("Mini window exists, hiding it")
+            # 隐藏mini窗口
             self.mini_window.hide()
             
-            # Animate to target size and position
-            self.expand_animation = QPropertyAnimation(
-                self.main_window, b"geometry"
-            )
-            self.expand_animation.setDuration(300)
-            self.expand_animation.setStartValue(
-                QRect(mini_pos.x(), mini_pos.y(), 60, 60)
-            )
-            self.expand_animation.setEndValue(
-                QRect(target_x, target_y, target_width, target_height)
-            )
-            self.expand_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            # 直接恢复主窗口到之前保存的位置和大小
+            self.main_window.restore_geometry()
             
-            # 添加动画完成回调，自动设置输入框焦点
-            def on_animation_finished():
-                logger.info("Animation finished, setting focus to input field")
-                if self.main_window and self.main_window.input_field:
-                    self.main_window.input_field.setFocus()
-                    self.main_window.input_field.activateWindow()
-                    
-            self.expand_animation.finished.connect(on_animation_finished)
-            self.expand_animation.start()
+            # 确保窗口在屏幕范围内
+            screen = QApplication.primaryScreen().geometry()
+            window_rect = self.main_window.geometry()
             
-            logger.info("Animation started")
+            # 调整位置确保窗口可见
+            x = max(10, min(window_rect.x(), screen.width() - window_rect.width() - 10))
+            y = max(30, min(window_rect.y(), screen.height() - window_rect.height() - 40))
+            
+            if x != window_rect.x() or y != window_rect.y():
+                self.main_window.move(x, y)
+                logger.info(f"Adjusted window position to ensure visibility: ({x}, {y})")
+            
+            # 消息宽度更新和输入框焦点设置将在动画完成后进行
+            
+            logger.info("Window position adjusted, fade-in animation in progress")
         else:
-            logger.info("No mini window, directly showing main window")
+            logger.info("No mini window, showing main window with fade-in animation")
             # 使用restore_geometry恢复上次的窗口位置和大小
             self.main_window.restore_geometry()
             
+            # 窗口动画效果播放期间不需要更新消息宽度（动画结束后会更新）
+            
         self.current_mode = WindowMode.CHAT
         
-        # 确保消息宽度在窗口显示后正确设置
-        QTimer.singleShot(200, self.main_window.chat_view.update_all_message_widths)
+        # 动画结束后会自动聚焦输入框，这里不需要额外处理
         
         logger.info("expand_to_chat() completed")
         
@@ -4644,8 +4671,10 @@ class AssistantController:
         if self.is_visible():
             # 记录当前显示的窗口模式
             self._last_visible_mode = self.current_mode
+            self._is_manually_hidden = True  # 用户主动隐藏
             self.hide_all()
         else:
+            self._is_manually_hidden = False  # 用户主动显示
             self.restore_last_window()
             
     def is_visible(self):
@@ -4670,6 +4699,9 @@ class AssistantController:
         """Handle mini window visibility change"""
         # This is called when mini window is hidden via context menu
         # We need to notify any external listeners (like tray icon)
+        if not is_visible:
+            # 如果是隐藏操作，设置手动隐藏标志
+            self._is_manually_hidden = True
         if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
             self.visibility_changed(is_visible)
         
@@ -4677,6 +4709,9 @@ class AssistantController:
         """Handle main window visibility change"""
         # This is called when main window is hidden via context menu
         # We need to notify any external listeners (like tray icon)
+        if not is_visible:
+            # 如果是隐藏操作，设置手动隐藏标志
+            self._is_manually_hidden = True
         if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
             self.visibility_changed(is_visible)
 

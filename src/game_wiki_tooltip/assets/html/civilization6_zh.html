@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文明VI：交互式战略指南 (完整版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthly Harmony (Warm neutrals: bg-stone-100, bg-stone-200; Main text: text-stone-800; Accent: accent-teal-600, bg-teal-500) -->
+    <!-- Application Structure Plan: The application structure has been refined. The "Core Concepts" are now a static, always-visible introduction, providing foundational context. The main content remains in a tabbed interface for non-linear access, but is now expanded into four richer sections: "游戏阶段" (covering early/mid-game tasks from the source doc), "胜利蓝图" (detailed victory checklists), "进阶战略" (new section for advanced concepts), and "战略数据库" (for filterable wonders). This hybrid static/tabbed structure allows users to grasp fundamentals first, then dive deep into specific areas of interest, perfectly aligning with the comprehensive nature of the source report. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Comprehensive task descriptions -> Goal: Organize dense text -> Viz/Method: Multi-level collapsible accordions with styled "Strategic Deep Dive" callout boxes -> Interaction: Click to expand/collapse -> Justification: Manages the vastly increased information density, allowing users to progressively disclose details without being overwhelmed.
+        - Report Info: Victory condition checklists -> Goal: Provide actionable steps -> Viz/Method: Interactive HTML checklists with progress bars, now with more detailed tasks from the source doc -> Interaction: Clicking updates progress -> Justification: Retains the satisfying interactive element while providing more granular, actionable guidance.
+        - Report Info: Detailed Wonders table -> Goal: Allow targeted search -> Viz/Method: Filterable card gallery, now populated with the detailed descriptions and strategic values from the source doc -> Interaction: Buttons filter wonders -> Justification: Enhances the utility of the wonder database with richer context.
+        - Report Info: Advanced Concepts (Synergy, Flexibility) -> Goal: Present high-level strategy -> Viz/Method: A new dedicated tab with well-structured text sections -> Interaction: None, informational -> Justification: Separates foundational/task-based knowledge from high-level strategic thinking, creating a clear learning path.
+        - Library/Method: All interactions powered by vanilla JS. Visualizations use Chart.js or structured HTML/Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #f5f5f4; scroll-behavior: smooth; }
+        .tab-button { transition: all 0.3s ease; }
+        .tab-button.active { border-color: #0d9488; color: #0f766e; background-color: #ccfbf1; }
+        .tab-button:not(.active):hover { border-color: #5eead4; background-color: #f0fdfa; }
+        .content-section { display: none; animation: fadeIn 0.5s; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .accordion-header { cursor: pointer; transition: background-color 0.3s; }
+        .accordion-header:hover { background-color: #e7e5e4; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+        .wonder-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .wonder-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        .task-list-item { transition: all 0.3s ease; }
+        .task-list-item input:checked + label { text-decoration: line-through; color: #78716c; }
+        .progress-bar-fill { transition: width 0.5s ease-in-out; }
+        .deep-dive { background-color: #f0fdfa; border-left: 4px solid #14b8a6; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-800">文明VI：终极玩家任务指南</h1>
+            <p class="text-stone-600 mt-2">从石器时代到星辰大海</p>
+        </header>
+
+        <section id="core-concepts" class="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-3xl font-bold mb-4 text-teal-700">伟大文明的蓝图</h2>
+            <p class="mb-4 text-stone-600">欢迎来到《文明VI》，领袖。您即将踏上一段跨越数千年的旅程，将一个原始部落培育成一个能够经受住时间考验的伟大文明。本指南将作为您的战略蓝图，其目标不仅是引导您走向胜利，更是为了揭示游戏深层的内在节奏——一个贯穿于每个成功帝国背后的，关于探索、扩张、发展与专业化的核心循环。我们将把这场宏大的历史交响曲分解为一系列清晰、有序且可执行的任务，确保您在每个时代都能做出最明智的决策。</p>
+            <h3 class="text-2xl font-semibold mb-4 text-stone-700">核心概念：文明发展的五大基石</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="p-4 bg-green-50 rounded-lg border border-green-200"><h4 class="font-bold text-xl text-green-800">食物 🌳</h4><p class="text-sm text-green-700">城市人口增长的基石。更多的人口意味着可以运作更多的地块，解锁更多区域容量。</p></div>
+                <div class="p-4 bg-orange-50 rounded-lg border border-orange-200"><h4 class="font-bold text-xl text-orange-800">生产力 ⚙️</h4><p class="text-sm text-orange-700">建造单位、建筑、区域和奇观的速度。高生产力是实现任何战略目标的物理保障。</p></div>
+                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200"><h4 class="font-bold text-xl text-yellow-800">金币 💰</h4><p class="text-sm text-yellow-700">帝国的通用货币。用于维护、购买和外交。强大的经济是灵活战略的后盾。</p></div>
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200"><h4 class="font-bold text-xl text-blue-800">科技 🔬</h4><p class="text-sm text-blue-700">推动文明在科技树上前进的动力。解锁更强大的单位、建筑和奇观。</p></div>
+                <div class="p-4 bg-purple-50 rounded-lg border border-purple-200"><h4 class="font-bold text-xl text-purple-800">文化 🎭</h4><p class="text-sm text-purple-700">推动文明在市政树上前进的动力。解锁新的政策、政体和帝国管理能力。</p></div>
+            </div>
+        </section>
+
+        <nav class="flex flex-wrap justify-center border-b-2 border-stone-300 mb-8 gap-2">
+            <button class="tab-button active text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('phases')">游戏阶段</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('victories')">胜利蓝图</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('advanced')">进阶战略</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('database')">战略数据库</button>
+        </nav>
+
+        <main>
+            <!-- Game Phases Section -->
+            <section id="phases" class="content-section active">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">帝国征程：按时代划分的任务</h2>
+                    <p class="mb-6 text-stone-600">文明的旅程是一场跨越时代的宏大史诗。本节将游戏分解为关键的发展阶段，并为每个阶段提供核心任务。点击标题以展开或折叠详细任务。</p>
+                    <div class="space-y-4">
+                        <!-- Chapter 1 -->
+                        <div class="accordion-item border border-stone-200 rounded-lg">
+                            <div class="accordion-header p-4 bg-stone-50 rounded-t-lg flex justify-between items-center"><h3 class="text-2xl font-semibold text-teal-800">第一章：文明的黎明 (1-100回合)</h3><span class="text-2xl font-light text-teal-600 transform transition-transform duration-300">+</span></div>
+                            <div class="accordion-content p-6 border-t border-stone-200">
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">任务1: 奠定基石 - 首都选址与开局序列</h4>
+                                        <p class="mb-3 text-stone-600"><b>目标:</b> 建立一个潜力巨大的首都，并执行一套经过验证的开局策略，以最大化早期发展势头。</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>首都选址:</b> 务必将城市建在淡水（河流/湖泊）旁以获得住房。寻找兼具食物（草原）和生产力（丘陵）的均衡地块。确保城市范围能覆盖至少两种加成或奢侈品资源。花费1-2回合移动开拓者寻找更优越的建城点是值得的。</li>
+                                            <li><b>开局生产队列:</b> 高效顺序为 <b>侦察兵 -> 投石索/纪念碑 -> 开拓者</b>。侦察兵用于探索、获取奖励；投石索用于防御和触发“尤里卡”；纪念碑加速文化；尽快生产开拓者以扩张帝国。</li>
+                                            <li><b>开局科技与市政:</b> 科技路径为 <b>畜牧 -> 陶器</b>。市政路径在获得法典后，研究 <b>对外贸易</b>，然后全力冲刺 <b>政治哲学</b> 以解锁第一个高级政体。</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">战略深潜：前25回合是一场竞赛</h5><p class="text-sm text-teal-800">最初25回合并非和平发展，而是争夺有限资源（宜居土地、部落村庄、城邦首会）的竞赛。您的每一个决策都伴随巨大机会成本，先行者将获得不成比例的巨大优势。</p></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">任务2: 区域规划的艺术</h4>
+                                        <p class="mb-3 text-stone-600"><b>目标:</b> 理解并精通《文明VI》的区域系统，包括邻接加成和战略布局，以打造高效、专业化的城市。</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>专业化是核心:</b> 城市的力量源于区域。根据胜利目标规划城市功能（科技-学院，文化-剧院广场，宗教-圣地）。</li>
+                                            <li><b>邻接加成:</b> 必须掌握的核心机制。将区域放置在特定地貌或区域旁以获得巨额产出加成（如学院靠山，商业中心靠河）。追求+3或更高的邻接加成。</li>
+                                            <li><b>第一个区域的选择:</b> 宗教胜利强制首发<b>圣地</b>；科技胜利首选<b>学院</b>；通用策略下，<b>商业中心</b>或<b>港口</b>是绝佳选择，它们提供的商路是帝国经济的命脉。</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">战略深潜：“锁定成本”技巧</h5><p class="text-sm text-teal-800">区域成本随科技/市政解锁数增加。在人口足够时，立即“拍下”规划好的区域，即可用极低成本锁定它，稍后再建。这能为您节省海量生产力。</p></div>
+                                    </div>
+                                     <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">任务3: 信仰的萌芽与政体的确立</h4>
+                                        <p class="mb-3 text-stone-600"><b>目标:</b> 获得一个万神殿，确立宗教策略，并选择您的第一个高级政体以获得强大的政策卡槽位和加成。</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>万神殿:</b> 尽快获得。<b>宗教移民</b>（免费开拓者）和<b>生育仪式</b>（+10%发展速度，免费建造者）是公认的最强早期信条。</li>
+                                            <li><b>创立宗教:</b> 若追求宗教或文化胜利，则必须全力产出伟大先知点数。否则可以跳过，但拥有宗教总能提供便利。</li>
+                                            <li><b>选择你的第一政府:</b> 解锁政治哲学后，您将面临第一个重大的战略分岔路口。<b>寡头政体</b>适合战争；<b>古典共和</b>适合和平发展；<b>独裁主义</b>适合抢建大量早期奇观。</li>
+                                        </ul>
+                                        <div class="mt-6 p-4 bg-teal-50 border-l-4 border-teal-500 rounded-r-lg">
+                                            <h5 class="font-bold text-teal-900">战略抉择：T1政体对比</h5>
+                                            <p class="text-sm text-teal-800 mb-4">下方的雷达图直观地比较了三种政体在不同政策槽位上的分布，帮助您做出最符合战略的决策。</p>
+                                            <div class="chart-container"><canvas id="governmentChart"></canvas></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Chapter 2 -->
+                        <div class="accordion-item border border-stone-200 rounded-lg">
+                            <div class="accordion-header p-4 bg-stone-50 rounded-t-lg flex justify-between items-center"><h3 class="text-2xl font-semibold text-teal-800">第二章：帝国的成长 (100-200回合)</h3><span class="text-2xl font-light text-teal-600 transform transition-transform duration-300">+</span></div>
+                            <div class="accordion-content p-6 border-t border-stone-200">
+                               <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">任务4: 确立胜利方向与城市专业化</h4>
+                                        <p class="mb-3 text-stone-600"><b>目标:</b> 评估帝国当前的优势与劣势，明确一个主攻的胜利方向，并开始对城市进行专业化分工，以最高效率追求目标。</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>评估你的帝国:</b> 在第100回合左右，打开胜利进度面板，根据现实情况（科技、宗教、军事实力）最终确定主攻胜利路线。</li>
+                                            <li><b>城市专业化:</b> 避免“万能城市”。建立<b>生产中心</b>（工业区）、<b>科研中心</b>（学院）、<b>经济中心</b>（商业中心/港口）和<b>文化中心</b>（剧院广场），形成高效协作的帝国网络。</li>
+                                            <li><b>总督任命:</b> 善用总督强化分工。<b>马格努斯</b>驻扎生产中心，<b>平伽拉</b>驻扎科研/文化中心，<b>梁</b>加速基建，<b>维克多</b>守护边境。</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">战略深潜：“铺城”的力量</h5><p class="text-sm text-teal-800">在《文明VI》中，拥有更多城市（“铺城”）几乎总是优于少数高人口城市。根本原因在于区域是产出的主要来源，而增加区域总数的唯一方法就是增加城市的总数。您的目标是建立尽可能多的“产出工厂”。</p></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">任务5: 时代脉搏 - 驾驭时代变迁</h4>
+                                        <p class="mb-3 text-stone-600"><b>目标:</b> 理解时代得分系统，从而稳定地获得黄金时代，并学会策略性地利用黑暗时代，为更强大的英雄时代做准备。</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>赚取时代分:</b> 通过完成“历史时刻”（首次完成的成就）来获得。</li>
+                                            <li><b>黄金时代与英雄时代:</b> 进入黄金时代可选一个强大的“时代焦点”加成。从黑暗时代直接进入黄金时代，会升级为无比强大的<b>英雄时代</b>，允许您同时选择<b>三个</b>时代焦点，这是最重要的翻盘机制。</li>
+                                            <li><b>黑暗时代与政策:</b> 黑暗时代会降低忠诚度，但会解锁独特而强大的黑暗时代政策卡，能帮助您渡过难关并为接下来的英雄时代蓄力。</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">战略深潜：“弹弓”战术</h5><p class="text-sm text-teal-800">若难以进入黄金时代，不如策略性放弃，坦然接受黑暗时代。将可获得的历史时刻“储存”起来，在下个时代一次性触发，确保进入拥有三个时代焦点的、无比强大的英雄时代，实现战略翻盘。</p></div>
+                                    </div>
+                               </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Victory Blueprints Section -->
+            <section id="victories" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">胜利蓝图：最终任务清单</h2>
+                    <p class="mb-6 text-stone-600">当您的帝国进入工业时代，胜利的轮廓已然清晰。现在，您需要的是一份精确的行动清单，指引您完成最后的冲刺。</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Domination -->
+                        <div class="victory-card border border-red-200 bg-red-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-red-800 mb-3">统治胜利 ⚔️</h3><p class="text-red-700 mb-4">目标：占领每一个其他文明的原始首都。</p><div class="w-full bg-red-200 rounded-full h-2.5 mb-4"><div id="domination-progress" class="progress-bar-fill bg-red-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="domination">
+                            <div class="task-list-item"><input type="checkbox" id="dom1"><label for="dom1" class="ml-2"><b>建立军事科技优势:</b> 优先研究弹道学（弩手）、飞行（飞机）和隐形技术（隐形轰炸机），形成代差打击。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom2"><label for="dom2" class="ml-2"><b>采用强力战争政体:</b> 后期必须切换至法西斯主义，以获得无与伦比的战斗力加成和单位生产力。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom3"><label for="dom3" class="ml-2"><b>精通攻城战:</b> 面对城墙，必须使用攻城槌、攻城塔，或后期的轰炸机和火炮。永远不要盲目攻击城市。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom4"><label for="dom4" class="ml-2"><b>无情地劫掠:</b> 劫掠敌方区域和改良设施，以战养战。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom5"><label for="dom5" class="ml-2"><b>组建军团与集团军:</b> 解锁相应市政后，将同类单位合并为更强大的军团和集团军。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom6"><label for="dom6" class="ml-2"><b>利用战争借口:</b> 永远不要发动“突袭战争”。利用“圣战”、“解放战争”等理由宣战，以减少好战度。</label></div>
+                        </div></div>
+                        <!-- Science -->
+                        <div class="victory-card border border-blue-200 bg-blue-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-blue-800 mb-3">科技胜利 🚀</h3><p class="text-blue-700 mb-4">目标：完成太空竞赛，殖民系外行星。</p><div class="w-full bg-blue-200 rounded-full h-2.5 mb-4"><div id="science-progress" class="progress-bar-fill bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="science">
+                            <div class="task-list-item"><input type="checkbox" id="sci1"><label for="sci1" class="ml-2"><b>阶段一: 发射地球卫星:</b> 研究火箭技术，建造太空基地并完成项目。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci2"><label for="sci2" class="ml-2"><b>阶段二: 载人登月:</b> 研究卫星科技，完成项目。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci3"><label for="sci3" class="ml-2"><b>阶段三: 建立火星殖民地:</b> 完成三个独立的模块项目，分别需要机器人学、纳米技术和核聚变科技。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci4"><label for="sci4" class="ml-2"><b>阶段四: 发射系外行星远征队:</b> 研究智慧材料科技，启动项目。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci5"><label for="sci5" class="ml-2"><b>阶段五: 加速远征:</b> 反复执行地面和拉格朗日激光站项目，提升远征队速度直至胜利。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci6"><label for="sci6" class="ml-2"><b>关键基础设施:</b> 大量建设学院和工业区，并在多个城市建立太空基地以同时进行项目。</label></div>
+                        </div></div>
+                        <!-- Culture -->
+                        <div class="victory-card border border-purple-200 bg-purple-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-purple-800 mb-3">文化胜利 🗿</h3><p class="text-purple-700 mb-4">目标：国际游客数量超过任何文明的国内游客。</p><div class="w-full bg-purple-200 rounded-full h-2.5 mb-4"><div id="culture-progress" class="progress-bar-fill bg-purple-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="culture">
+                            <div class="task-list-item"><input type="checkbox" id="cul1"><label for="cul1" class="ml-2"><b>产出海量文化与旅游业绩:</b> 建造剧院广场，用各类伟人的巨作填满所有槽位。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul2"><label for="cul2" class="ml-2"><b>主题化您的博物馆:</b> 将艺术和考古博物馆进行主题化，使其文化和旅游业绩产出翻倍。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul3"><label for="cul3" class="ml-2"><b>建造关键奇观:</b> 埃菲尔铁塔（加魅力）和基督像（加成海滨度假区）是决胜法宝。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul4"><label for="cul4" class="ml-2"><b>建立国家公园:</b> 研究保护主义，用信仰购买自然学家，在四块高魅力地块上建立国家公园。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul5"><label for="cul5" class="ml-2"><b>开启世界巡演:</b> 研究冷战市政，用信仰购买摇滚乐队，派往他国演出以产生爆炸性旅游业绩。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul6"><label for="cul6" class="ml-2"><b>最大化加成效果:</b> 保持开放边境和商路。研究计算机和社交媒体，解锁更多加成政策卡。</label></div>
+                        </div></div>
+                        <!-- Religion -->
+                        <div class="victory-card border border-yellow-200 bg-yellow-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-yellow-800 mb-3">宗教胜利 🙏</h3><p class="text-yellow-700 mb-4">目标：让您的宗教成为每个文明的主流宗教。</p><div class="w-full bg-yellow-200 rounded-full h-2.5 mb-4"><div id="religion-progress" class="progress-bar-fill bg-yellow-500 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="religion">
+                            <div class="task-list-item"><input type="checkbox" id="rel1"><label for="rel1" class="ml-2"><b>尽早创立宗教:</b> 建造圣地，执行项目，抢在所有伟大先知被招募完之前创立宗教。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel2"><label for="rel2" class="ml-2"><b>选择强力信条:</b> 清真寺（+1传播次数）和劝导（+2信仰/外国信教城市）是顶级信条。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel3"><label for="rel3" class="ml-2"><b>精通神学战争:</b> 使用使徒主动攻击并击败敌方宗教单位，以降低其影响力。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel4"><label for="rel4" class="ml-2"><b>组建宗教大军:</b> 传教士用于传播，使徒是核心作战单位，审判官用于国内清除异教，古鲁是医疗兵。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel5"><label for="rel5" class="ml-2"><b>定点清除目标:</b> 集中力量，一次只针对一个文明进行传教，优先转换同样创立了宗教的文明。</label></div>
+                        </div></div>
+                        <!-- Diplomacy -->
+                        <div class="victory-card border border-cyan-200 bg-cyan-50 p-6 rounded-lg lg:col-span-2 flex flex-col"><h3 class="text-2xl font-bold text-cyan-800 mb-3">外交胜利 🕊️</h3><p class="text-cyan-700 mb-4">目标：成为第一个积累到20点外交胜利点的文明。</p><div class="w-full bg-cyan-200 rounded-full h-2.5 mb-4"><div id="diplomacy-progress" class="progress-bar-fill bg-cyan-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="diplomacy">
+                            <div class="task-list-item"><input type="checkbox" id="dip1"><label for="dip1" class="ml-2"><b>积累外交支持:</b> 通过成为城邦宗主、建立同盟和选择特定政体来获得。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip2"><label for="dip2" class="ml-2"><b>赢得世界议会投票:</b> 预测AI倾向，与大多数AI站在一起，每次投票正确+1胜利点。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip3"><label for="dip3" class="ml-2"><b>赢得援助请求:</b> 在紧急事件中赢得竞赛，可获得宝贵的2点胜利点。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip4"><label for="dip4" class="ml-2"><b>建造关键奇观:</b> 摩诃菩提寺(+2)、波特拉宫(+1)和自由女神像(+4)是胜利基石。</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip5"><label for="dip5" class="ml-2"><b>获取后期胜利点:</b> 研究特定后期科技和市政，或在世界议会中直接投票获得胜利点。</label></div>
+                        </div><div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-cyan-900">战略深潜：“投票反对自己”的策略</h5><p class="text-sm text-cyan-800">当您接近胜利时，AI会联合投票让您失分。此时，主动投票让自己-2点，因为您投票正确会+1点，净损失只有1点，还能省下大量外交支持用于其他议案，是最小化损失的精妙策略。</p></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advanced Strategy Section -->
+            <section id="advanced" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">第四章：进阶概念与综合战略</h2>
+                    <p class="mb-6 text-stone-600">当您掌握了通往各种胜利的基础流程后，便可以开始探索更高层次的战略思维，让您的帝国运作如同一台精密的机器。</p>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-2xl font-semibold text-teal-800 mb-2">任务6: 协同效应 - 混合胜利路径</h3>
+                            <p class="text-stone-700 mb-3"><b>目标:</b> 理解不同游戏系统之间的内在联系，从而发展出更具弹性、更难被对手预测的混合战略。</p>
+                            <ul class="list-disc list-inside space-y-2 text-stone-600">
+                                <li><b>信仰作为通用货币:</b> 强大的信仰产出不仅是为了宗教胜利。它是一种高度灵活的战略资源，可用于购买伟人（科技/文化）、军事单位（统治）或自然学家/摇滚乐队（文化）。因此，即使不追求宗教胜利，建设几座高产出的圣地也几乎总是一个明智的投资。</li>
+                                <li><b>早期征服服务于后期胜利:</b> 一种非常高效的高阶策略是，在游戏早期发动一场有限的战争，征服一到两个邻国。目标并非统治胜利，而是通过这次“投资”获得额外的土地、城市、人口和区域，为游戏中后期的科技或文化爆发奠定无与伦比的平台。</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-semibold text-teal-800 mb-2">任务7: 灵活应变 - 动态调整战略</h3>
+                            <p class="text-stone-700 mb-3"><b>目标:</b> 学会阅读游戏局势，并在必要时果断地调整您的核心战略。</p>
+                             <ul class="list-disc list-inside space-y-2 text-stone-600">
+                                <li><b>对手即将科技胜利?</b> 立即转向军事。派遣间谍执行“破坏火箭”任务，或直接发动闪电战摧毁其太空基地。失去太空基地将使其胜利进程戛然而止。</li>
+                                <li><b>错失创立宗教?</b> 不必惊慌。专注于世俗旅游业绩（巨作、奇观、国家公园），或征服一个拥有强大宗教的文明，为己所用。</li>
+                                <li><b>陷入黑暗时代?</b> 拥抱黑暗。启用强大的黑暗时代政策卡，并“储存”历史时刻，为下一个爆炸性的“英雄时代”做好准备，实现战略翻盘。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Database Section -->
+            <section id="database" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">战略数据库：关键奇观</h2>
+                    <p class="mb-6 text-stone-600">奇观是高投入、高回报的工程。下表为您整理了针对不同胜利路线最具战略价值的核心奇观。使用下方的按钮进行筛选。</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-8">
+                        <button class="wonder-filter-btn bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('all')">所有奇观</button>
+                        <button class="wonder-filter-btn bg-red-100 hover:bg-red-200 text-red-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('domination')">统治</button>
+                        <button class="wonder-filter-btn bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('science')">科技</button>
+                        <button class="wonder-filter-btn bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('culture')">文化</button>
+                        <button class="wonder-filter-btn bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('religion')">宗教</button>
+                        <button class="wonder-filter-btn bg-cyan-100 hover:bg-cyan-200 text-cyan-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('diplomacy')">外交</button>
+                        <button class="wonder-filter-btn bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('general')">通用</button>
+                    </div>
+                    <div id="wonder-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 text-stone-500 text-sm">
+            <h3 class="text-lg font-semibold text-stone-700 mb-2">结论：铸就永恒传奇</h3>
+            <p class="max-w-3xl mx-auto">《文明VI》的宏伟画卷，归根结底，是由一个核心工作流描绘而成的：<b>探索 (Explore) -> 扩张 (Expand) -> 专业化 (Specialize) -> 执行 (Execute)</b>。本指南为您提供了这个流程中每一个阶段的“必须完成”的任务清单。然而，这款游戏的真正艺术在于，您如何将这个框架灵活地应用于每一局独一无二的挑战与机遇之中。</p>
+            <p class="mt-2">将这些任务作为您成长的阶梯。很快，您将不再需要这份指南，而是能够凭借自己的智慧和远见，审时度势，运筹帷幄，建立起真正能够经受住时间考验的、不朽的文明。您的传奇，正等待着您去亲自铸就。</p>
+        </footer>
+    </div>
+
+    <script>
+        const wondersData = [
+            { name: '基尔瓦基斯瓦尼', era: '中世纪', value: '游戏中最强的奇观之一。能将您宗主城邦提供的产出类型加成提升高达30%，对任何胜利路线都有巨大帮助。', type: ['general', 'science', 'culture', 'domination'] },
+            { name: '金字塔', era: '远古', value: '所有建造者+1建造次数。这个加成贯穿整个游戏，能极大地提升您的建设效率。', type: ['general'] },
+            { name: '罗马斗兽场', era: '古典', value: '为6格范围内的所有城市提供大量宜居度和文化值，是维持庞大帝国稳定和发展的利器。', type: ['general', 'culture'] },
+            { name: '政策槽奇观', era: '各时代', value: '紫禁城、波特拉宫、大本钟、阿尔罕布拉宫。它们各自提供一个额外的政策卡槽，灵活性极高，万古长青。', type: ['general', 'domination', 'science', 'culture', 'diplomacy'] },
+            { name: '牛津大学', era: '工业', value: '提供巨额科技值，并奖励两项免费科技，是科技胜利的标志性奇观。', type: ['science'] },
+            { name: '鲁尔山谷', era: '工业', value: '所在城市所有矿山和采石场生产力+20%，并为城市总生产力提供+20%加成，是太空竞赛项目的强大引擎。', type: ['science', 'domination'] },
+            { name: '埃菲尔铁塔', era: '现代', value: '为您帝国的所有单元格+2魅力。这对依赖魅力的国家公园和海滨度假区至关重要。', type: ['culture'] },
+            { name: '基督像', era: '现代', value: '海滨度假区的旅游业绩翻倍，且宗教旅游在启蒙运动后不受影响。是文化胜利后期的关键冲刺工具。', type: ['culture'] },
+            { name: '摩诃菩提寺', era: '古典', value: '+4信仰，并免费赠送2个使徒，能让您在宗教战争中占得先机。', type: ['religion'] },
+            { name: '自由女神像', era: '工业', value: '直接提供4点外交胜利点，是通往外交胜利道路上最重要的一步。', type: ['diplomacy'] },
+        ];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function setupAccordions() {
+            document.querySelectorAll('.accordion-item').forEach(item => {
+                const header = item.querySelector('.accordion-header');
+                const content = item.querySelector('.accordion-content');
+                const icon = header.querySelector('span');
+                header.addEventListener('click', () => {
+                    const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(45deg)';
+                    }
+                });
+            });
+        }
+
+        function setupVictoryChecklists() {
+            document.querySelectorAll('.task-list').forEach(list => {
+                const checkboxes = list.querySelectorAll('input[type="checkbox"]');
+                const victoryType = list.dataset.victory;
+                const progressBar = document.getElementById(`${victoryType}-progress`);
+                const totalTasks = checkboxes.length;
+                if (totalTasks === 0 || !progressBar) return;
+                const updateProgress = () => {
+                    const checkedTasks = list.querySelectorAll('input[type="checkbox"]:checked').length;
+                    progressBar.style.width = `${(checkedTasks / totalTasks) * 100}%`;
+                };
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', updateProgress);
+                    // Add unique IDs to labels for proper association
+                    const label = checkbox.nextElementSibling;
+                    if (label) {
+                        label.setAttribute('for', checkbox.id);
+                    }
+                });
+                updateProgress();
+            });
+        }
+
+        function renderWonders(filter = 'all') {
+            const grid = document.getElementById('wonder-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const filteredWonders = filter === 'all'
+                ? wondersData
+                : wondersData.filter(wonder => wonder.type.includes(filter));
+
+            filteredWonders.forEach(wonder => {
+                const card = document.createElement('div');
+                card.className = 'wonder-card bg-stone-50 p-5 rounded-lg border border-stone-200 shadow-sm flex flex-col';
+                card.innerHTML = `
+                    <h4 class="font-bold text-xl text-teal-800">${wonder.name}</h4>
+                    <p class="text-sm font-semibold text-stone-500 mb-2">${wonder.era}</p>
+                    <p class="text-stone-700 flex-grow">${wonder.value}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterWonders(type) {
+            renderWonders(type);
+        }
+
+        function createGovernmentChart() {
+            const ctx = document.getElementById('governmentChart')?.getContext('2d');
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['军事槽', '经济槽', '外交槽', '通用槽'],
+                    datasets: [{
+                        label: '寡头政体 (+4战力)',
+                        data: [1, 1, 1, 1],
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                    }, {
+                        label: '古典共和 (+1宜居度)',
+                        data: [0, 2, 1, 1],
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                    }, {
+                        label: '独裁主义 (+10%奇观产能)',
+                        data: [2, 2, 0, 0],
+                        backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                        borderColor: 'rgba(168, 85, 247, 1)',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: { r: { angleLines: { color: 'rgba(0,0,0,0.1)' }, grid: { color: 'rgba(0,0,0,0.1)' }, pointLabels: { font: { size: 14 }, color: '#44403c' }, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupAccordions();
+            setupVictoryChecklists();
+            renderWonders();
+            createGovernmentChart();
+            document.querySelector('.tab-button').classList.add('active');
+            document.querySelector('.content-section').classList.add('active');
+        });
+    </script>
+</body>
+</html>

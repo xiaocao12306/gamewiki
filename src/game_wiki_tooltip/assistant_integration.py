@@ -4,6 +4,8 @@ Integration layer between the new unified UI and existing RAG/Wiki systems.
 
 import asyncio
 import logging
+import threading
+import time
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 import os # Added for os.getenv
@@ -16,18 +18,65 @@ from src.game_wiki_tooltip.unified_window import (
 from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
 from src.game_wiki_tooltip.utils import get_foreground_title
 
-# 添加缺失的导入
-try:
-    from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified
-    from src.game_wiki_tooltip.ai.rag_config import get_default_config
-    from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery
-    logger = logging.getLogger(__name__)
-except ImportError as e:
-    logger = logging.getLogger(__name__)
-    logger.error(f"Failed to import AI components: {e}")
-    process_query_unified = None
-    get_default_config = None
-    EnhancedRagQuery = None
+# 延迟加载AI模块 - 只在需要时导入，加快启动速度
+logger = logging.getLogger(__name__)
+process_query_unified = None
+get_default_config = None
+EnhancedRagQuery = None
+_ai_modules_loaded = False
+_ai_modules_loading = False  # 防止重复加载
+_ai_load_lock = threading.Lock()  # 线程锁保护加载状态
+
+class AIModuleLoader(QThread):
+    """后台线程用于加载AI模块"""
+    load_completed = pyqtSignal(bool)  # 加载完成信号，参数为是否成功
+    
+    def run(self):
+        """在后台线程中加载AI模块"""
+        success = _lazy_load_ai_modules()
+        self.load_completed.emit(success)
+
+def _lazy_load_ai_modules():
+    """延迟加载AI模块，只在第一次使用时导入"""
+    global process_query_unified, get_default_config, EnhancedRagQuery, _ai_modules_loaded, _ai_modules_loading
+    
+    with _ai_load_lock:
+        if _ai_modules_loaded:
+            return True
+            
+        if _ai_modules_loading:
+            # 另一个线程正在加载，等待完成
+            logger.info("⏳ AI模块正在被另一个线程加载，等待中...")
+            while _ai_modules_loading and not _ai_modules_loaded:
+                time.sleep(0.1)
+            return _ai_modules_loaded
+            
+        _ai_modules_loading = True
+        
+    try:
+        logger.info("🔄 开始加载AI模块...")
+        start_time = time.time()
+        
+        from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified as _process_query_unified
+        from src.game_wiki_tooltip.ai.rag_config import get_default_config as _get_default_config
+        from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery as _EnhancedRagQuery
+        
+        process_query_unified = _process_query_unified
+        get_default_config = _get_default_config
+        EnhancedRagQuery = _EnhancedRagQuery
+        
+        with _ai_load_lock:
+            _ai_modules_loaded = True
+            _ai_modules_loading = False
+            
+        elapsed = time.time() - start_time
+        logger.info(f"✅ AI模块加载完成，耗时: {elapsed:.2f}秒")
+        return True
+    except ImportError as e:
+        logger.error(f"Failed to import AI components: {e}")
+        with _ai_load_lock:
+            _ai_modules_loading = False
+        return False
 
 def get_selected_game_title():
     """Get current game title from active window"""
@@ -233,6 +282,35 @@ class RAGIntegration(QObject):
             logger.info("🚨 受限模式下跳过AI组件初始化")
             return
             
+        # 延迟到实际需要时才初始化AI组件
+        logger.info("📌 AI组件将在首次使用时初始化（延迟加载）")
+        
+    def _ensure_ai_components_loaded(self):
+        """确保AI组件已加载（在实际使用前调用）"""
+        if self.limited_mode:
+            return False
+            
+        # 如果AI模块正在加载中，等待加载完成
+        if _ai_modules_loading:
+            logger.info("⏳ AI模块正在后台加载中，等待完成...")
+            max_wait = 10  # 最多等待10秒
+            start_time = time.time()
+            while _ai_modules_loading and (time.time() - start_time) < max_wait:
+                time.sleep(0.1)
+            
+            if not _ai_modules_loaded:
+                logger.error("❌ AI模块加载超时")
+                return False
+        
+        # 尝试加载AI模块
+        if not _lazy_load_ai_modules():
+            logger.error("❌ AI模块加载失败")
+            return False
+            
+        # 只在第一次调用时初始化
+        if hasattr(self, '_ai_initialized') and self._ai_initialized:
+            return True
+            
         try:
             # 获取API设置
             settings = self.settings_manager.get()
@@ -289,9 +367,14 @@ class RAGIntegration(QObject):
                 
                 logger.warning(f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}")
                 logger.warning("无法初始化AI组件，需要同时配置Gemini API Key和Jina API Key")
+                return False
                     
         except Exception as e:
             logger.error(f"Failed to initialize AI components: {e}")
+            return False
+            
+        self._ai_initialized = True
+        return True
             
     def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, jina_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
@@ -382,6 +465,16 @@ class RAGIntegration(QObject):
         # 如果在受限模式下，始终返回wiki意图
         if self.limited_mode:
             logger.info("🚨 受限模式下，所有查询都将被视为wiki查询")
+            return QueryIntent(
+                intent_type='wiki',
+                confidence=0.9,
+                rewritten_query=query,
+                translated_query=query
+            )
+            
+        # 确保AI组件已加载（延迟加载）
+        if not self._ensure_ai_components_loaded():
+            logger.error("❌ AI组件加载失败，切换到wiki模式")
             return QueryIntent(
                 intent_type='wiki',
                 confidence=0.9,
@@ -983,6 +1076,8 @@ class IntegratedAssistantController(AssistantController):
         self._setup_connections()
         self._current_worker = None
         self._current_wiki_message = None  # 存储当前的wiki链接消息组件
+        self._rag_initializing = False  # 标记RAG是否正在初始化
+        self._target_vector_game = None  # 目标向量库游戏名
         
         # 注册为全局实例
         IntegratedAssistantController._global_instance = self
@@ -993,6 +1088,46 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🚨 运行在受限模式下：仅支持Wiki搜索功能")
         else:
             logger.info("✅ 运行在完整模式下：支持Wiki搜索和AI攻略功能")
+            # 在空闲时预加载AI模块
+            self._schedule_ai_preload()
+        
+    def _schedule_ai_preload(self):
+        """在程序空闲时预加载AI模块"""
+        # 存储加载器引用，防止被垃圾回收
+        self._ai_loader = None
+        
+        def start_background_loading():
+            """启动后台加载线程"""
+            logger.info("🚀 启动AI模块后台加载线程...")
+            
+            # 创建并启动加载器线程
+            self._ai_loader = AIModuleLoader()
+            self._ai_loader.load_completed.connect(self._on_ai_modules_loaded)
+            self._ai_loader.start()
+        
+        # 使用QTimer延迟3秒后启动后台加载（给UI完全初始化的时间）
+        QTimer.singleShot(3000, start_background_loading)
+        logger.info("📅 已安排AI模块在3秒后进行后台加载")
+        
+    def _on_ai_modules_loaded(self, success: bool):
+        """AI模块加载完成的回调"""
+        if success:
+            logger.info("✅ AI模块后台加载成功")
+            # 记录加载成功状态
+            self._ai_modules_ready = True
+            
+            # 尝试预初始化RAG组件
+            try:
+                self.rag_integration._ensure_ai_components_loaded()
+                logger.info("✅ RAG组件预初始化完成")
+            except Exception as e:
+                logger.warning(f"⚠️ RAG组件预初始化失败: {e}")
+        else:
+            logger.warning("⚠️ AI模块后台加载失败")
+            self._ai_modules_ready = False
+            
+        # 清理加载器引用
+        self._ai_loader = None
         
     def __del__(self):
         """析构函数，清理全局实例引用"""
@@ -1014,6 +1149,7 @@ class IntegratedAssistantController(AssistantController):
             if not hasattr(self, '_current_vector_game') or self._current_vector_game != vector_game_name:
                 logger.info(f"🔄 切换RAG引擎: {getattr(self, '_current_vector_game', 'None')} -> {vector_game_name}")
                 self._current_vector_game = vector_game_name
+                # 异步初始化RAG引擎，不阻塞UI
                 self._reinitialize_rag_for_game(vector_game_name)
             else:
                 logger.info(f"✓ 游戏未切换，继续使用当前RAG引擎: {vector_game_name}")

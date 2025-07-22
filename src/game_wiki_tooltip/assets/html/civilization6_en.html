@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civilization VI: Interactive Strategy Guide (Full Version)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthly Harmony (Warm neutrals: bg-stone-100, bg-stone-200; Main text: text-stone-800; Accent: accent-teal-600, bg-teal-500) -->
+    <!-- Application Structure Plan: The application structure has been refined. The "Core Concepts" are now a static, always-visible introduction, providing foundational context. The main content remains in a tabbed interface for non-linear access, but is now expanded into four richer sections: "Game Phases" (covering early/mid-game tasks from the source doc), "Victory Blueprints" (detailed victory checklists), "Advanced Strategy" (new section for advanced concepts), and "Strategy Database" (for filterable wonders). This hybrid static/tabbed structure allows users to grasp fundamentals first, then dive deep into specific areas of interest, perfectly aligning with the comprehensive nature of the source report. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Comprehensive task descriptions -> Goal: Organize dense text -> Viz/Method: Multi-level collapsible accordions with styled "Strategic Deep Dive" callout boxes -> Interaction: Click to expand/collapse -> Justification: Manages the vastly increased information density, allowing users to progressively disclose details without being overwhelmed.
+        - Report Info: Victory condition checklists -> Goal: Provide actionable steps -> Viz/Method: Interactive HTML checklists with progress bars, now with more detailed tasks from the source doc -> Interaction: Clicking updates progress -> Justification: Retains the satisfying interactive element while providing more granular, actionable guidance.
+        - Report Info: Detailed Wonders table -> Goal: Allow targeted search -> Viz/Method: Filterable card gallery, now populated with the detailed descriptions and strategic values from the source doc -> Interaction: Buttons filter wonders -> Justification: Enhances the utility of the wonder database with richer context.
+        - Report Info: Advanced Concepts (Synergy, Flexibility) -> Goal: Present high-level strategy -> Viz/Method: A new dedicated tab with well-structured text sections -> Interaction: None, informational -> Justification: Separates foundational/task-based knowledge from high-level strategic thinking, creating a clear learning path.
+        - Library/Method: All interactions powered by vanilla JS. Visualizations use Chart.js or structured HTML/Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans', sans-serif; background-color: #f5f5f4; scroll-behavior: smooth; }
+        .tab-button { transition: all 0.3s ease; }
+        .tab-button.active { border-color: #0d9488; color: #0f766e; background-color: #ccfbf1; }
+        .tab-button:not(.active):hover { border-color: #5eead4; background-color: #f0fdfa; }
+        .content-section { display: none; animation: fadeIn 0.5s; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .accordion-header { cursor: pointer; transition: background-color 0.3s; }
+        .accordion-header:hover { background-color: #e7e5e4; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+        .wonder-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .wonder-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        .task-list-item { transition: all 0.3s ease; }
+        .task-list-item input:checked + label { text-decoration: line-through; color: #78716c; }
+        .progress-bar-fill { transition: width 0.5s ease-in-out; }
+        .deep-dive { background-color: #f0fdfa; border-left: 4px solid #14b8a6; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-800">Civilization VI: The Ultimate Player Task Guide</h1>
+            <p class="text-stone-600 mt-2">From the Stone Age to the Stars</p>
+        </header>
+
+        <section id="core-concepts" class="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-3xl font-bold mb-4 text-teal-700">Blueprint for a Great Civilization</h2>
+            <p class="mb-4 text-stone-600">Welcome to Civilization VI, leader. You are about to embark on a journey spanning millennia, nurturing a primitive tribe into a great civilization that can stand the test of time. This guide will serve as your strategic blueprint, aiming not only to lead you to victory but also to reveal the game's deep, underlying rhythm—a core loop of exploration, expansion, development, and specialization that runs through every successful empire. We will break down this grand historical symphony into a series of clear, orderly, and executable tasks to ensure you make the wisest decisions in every era.</p>
+            <h3 class="text-2xl font-semibold mb-4 text-stone-700">Core Concepts: The Five Foundational Yields</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="p-4 bg-green-50 rounded-lg border border-green-200"><h4 class="font-bold text-xl text-green-800">Food 🌳</h4><p class="text-sm text-green-700">The cornerstone of city population growth. More population means more tiles can be worked and more district capacity is unlocked.</p></div>
+                <div class="p-4 bg-orange-50 rounded-lg border border-orange-200"><h4 class="font-bold text-xl text-orange-800">Production ⚙️</h4><p class="text-sm text-orange-700">The speed at which units, buildings, districts, and wonders are built. High production is the physical guarantee for achieving any strategic goal.</p></div>
+                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200"><h4 class="font-bold text-xl text-yellow-800">Gold 💰</h4><p class="text-sm text-yellow-700">The empire's universal currency. Used for maintenance, purchases, and diplomacy. A strong economy backs a flexible strategy.</p></div>
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200"><h4 class="font-bold text-xl text-blue-800">Science 🔬</h4><p class="text-sm text-blue-700">The engine that drives civilization forward on the technology tree. Unlocks more powerful units, buildings, and wonders.</p></div>
+                <div class="p-4 bg-purple-50 rounded-lg border border-purple-200"><h4 class="font-bold text-xl text-purple-800">Culture 🎭</h4><p class="text-sm text-purple-700">The force that advances civilization on the civics tree. Unlocks new policies, governments, and empire management abilities.</p></div>
+            </div>
+        </section>
+
+        <nav class="flex flex-wrap justify-center border-b-2 border-stone-300 mb-8 gap-2">
+            <button class="tab-button active text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('phases')">Game Phases</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('victories')">Victory Blueprints</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('advanced')">Advanced Strategy</button>
+            <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent" onclick="showTab('database')">Strategy Database</button>
+        </nav>
+
+        <main>
+            <!-- Game Phases Section -->
+            <section id="phases" class="content-section active">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">The Empire's Journey: Era-by-Era Missions</h2>
+                    <p class="mb-6 text-stone-600">The journey of a civilization is a grand epic spanning ages. This section breaks the game down into key developmental stages, providing core missions for each. Click on a title to expand or collapse its detailed tasks.</p>
+                    <div class="space-y-4">
+                        <!-- Chapter 1 -->
+                        <div class="accordion-item border border-stone-200 rounded-lg">
+                            <div class="accordion-header p-4 bg-stone-50 rounded-t-lg flex justify-between items-center"><h3 class="text-2xl font-semibold text-teal-800">Chapter 1: The Dawn of Civilization (Turns 1-100)</h3><span class="text-2xl font-light text-teal-600 transform transition-transform duration-300">+</span></div>
+                            <div class="accordion-content p-6 border-t border-stone-200">
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">Mission 1: Laying the Foundation - Capital Placement & Opening Sequence</h4>
+                                        <p class="mb-3 text-stone-600"><b>Objective:</b> Establish a capital with high potential and execute a proven opening strategy to maximize early momentum.</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>Capital Placement:</b> Always settle on Fresh Water (River/Lake) for housing. Look for a balance of Food (Grasslands) and Production (Hills). Ensure at least two Bonus or Luxury resources are within the city's range. It's worth moving your settler for 1-2 turns for a better spot.</li>
+                                            <li><b>Opening Production Queue:</b> A highly efficient order is <b>Scout -> Slinger/Monument -> Settler</b>. The Scout explores for rewards; the Slinger provides defense and a Eureka; the Monument speeds up culture; and an early Settler is key to expansion.</li>
+                                            <li><b>Opening Tech & Civics:</b> The standard tech path is <b>Animal Husbandry -> Pottery</b>. For civics, after getting Code of Laws, research <b>Foreign Trade</b>, then rush <b>Political Philosophy</b> to unlock your first advanced government.</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">Strategic Deep Dive: The First 25 Turns Are a Race</h5><p class="text-sm text-teal-800">The first 25 turns are not about peaceful development, but a fierce race for limited resources (good land, tribal villages, city-state first-meets). Every decision has a huge opportunity cost, and the first-mover gains a disproportionate advantage.</p></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">Mission 2: The Art of District Planning</h4>
+                                        <p class="mb-3 text-stone-600"><b>Objective:</b> Understand and master the district system, including adjacency bonuses and strategic layout, to create efficient, specialized cities.</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>Specialization is Key:</b> A city's power comes from its districts. Plan each city's function based on your victory goal (Science-Campus, Culture-Theater Square, Religion-Holy Site).</li>
+                                            <li><b>Adjacency Bonuses:</b> This is a core mechanic you must master. Placing districts next to specific terrain or other districts yields massive bonuses (e.g., Campus next to mountains, Commercial Hub next to a river). Aim for a +3 bonus or higher.</li>
+                                            <li><b>Choosing Your First District:</b> A <b>Holy Site</b> is mandatory for a Religion Victory. A <b>Campus</b> is preferred for a Science Victory. For a general strategy, a <b>Commercial Hub</b> or <b>Harbor</b> is an excellent choice, as the trade route they provide is the lifeblood of your economy.</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">Strategic Deep Dive: The "Lock-In" Trick</h5><p class="text-sm text-teal-800">A district's cost increases as you research more techs and civics. However, the cost is permanently locked in the moment you *place* the district. Place planned districts early to lock in their low cost, then build them later. This will save you immense amounts of production.</p></div>
+                                    </div>
+                                     <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">Mission 3: The Spark of Faith & The Rise of Government</h4>
+                                        <p class="mb-3 text-stone-600"><b>Objective:</b> Secure a Pantheon, establish a religious strategy, and choose your first advanced government for its powerful policy slots and bonuses.</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>Pantheon:</b> Get one as soon as possible. <b>Religious Settlements</b> (free Settler) and <b>Fertility Rites</b> (+10% growth and a free Builder) are widely considered the strongest early Pantheons.</li>
+                                            <li><b>Founding a Religion:</b> If you aim for a Religious or Culture victory, you must rush a Great Prophet. Otherwise, you can skip it, but having a religion always provides some benefits.</li>
+                                            <li><b>Choosing Your First Government:</b> Unlocking Political Philosophy is a major turning point. <b>Oligarchy</b> is for war; <b>Classical Republic</b> is for peaceful development; <b>Autocracy</b> is for wonder-rushing.</li>
+                                        </ul>
+                                        <div class="mt-6 p-4 bg-teal-50 border-l-4 border-teal-500 rounded-r-lg">
+                                            <h5 class="font-bold text-teal-900">Strategic Choice: Tier 1 Government Comparison</h5>
+                                            <p class="text-sm text-teal-800 mb-4">The radar chart below visually compares the policy slot distribution of the three governments, helping you make the most strategic decision.</p>
+                                            <div class="chart-container"><canvas id="governmentChart"></canvas></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Chapter 2 -->
+                        <div class="accordion-item border border-stone-200 rounded-lg">
+                            <div class="accordion-header p-4 bg-stone-50 rounded-t-lg flex justify-between items-center"><h3 class="text-2xl font-semibold text-teal-800">Chapter 2: The Growth of an Empire (Turns 100-200)</h3><span class="text-2xl font-light text-teal-600 transform transition-transform duration-300">+</span></div>
+                            <div class="accordion-content p-6 border-t border-stone-200">
+                               <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">Mission 4: Defining a Direction & City Specialization</h4>
+                                        <p class="mb-3 text-stone-600"><b>Objective:</b> Assess your empire's strengths and weaknesses, commit to a primary victory condition, and begin specializing your cities to pursue it with maximum efficiency.</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>Assess Your Empire:</b> Around turn 100, open the victory progress panel and decide on your primary victory path based on your current reality (tech lead, faith output, military strength).</li>
+                                            <li><b>City Specialization:</b> Avoid "jack-of-all-trades" cities. Create a network of specialized cities: <b>Production Hubs</b> (Industrial Zone), <b>Science Hubs</b> (Campus), <b>Commercial Hubs</b> (Commercial Hub/Harbor), and <b>Culture Hubs</b> (Theater Square).</li>
+                                            <li><b>Governor Assignment:</b> Use Governors to enhance specialization. <b>Magnus</b> for production centers, <b>Pingala</b> for science/culture centers, <b>Liang</b> for infrastructure, and <b>Victor</b> for border defense.</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">Strategic Deep Dive: The Power of "Wide" Empires</h5><p class="text-sm text-teal-800">In Civ VI, having more cities ("playing wide") is almost always better than having a few high-population cities ("playing tall"). The fundamental reason is that districts are the main source of yields, and the only way to increase the total number of districts is to increase the total number of cities. Your goal is to build as many "yield factories" as possible.</p></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-bold text-stone-800 mb-2">Mission 5: The Pulse of Ages - Mastering Era Transitions</h4>
+                                        <p class="mb-3 text-stone-600"><b>Objective:</b> Understand the Era Score system to consistently achieve Golden Ages, and learn to strategically leverage Dark Ages to set up powerful Heroic Ages.</p>
+                                        <ul class="list-disc list-inside space-y-3 text-stone-700">
+                                            <li><b>Earning Era Score:</b> Earned from "Historic Moments"—typically one-time achievements like circumnavigating the globe, building a unique unit, or clearing a barbarian outpost.</li>
+                                            <li><b>Golden & Heroic Ages:</b> Entering a Golden Age lets you choose a powerful "Dedication" bonus. Moving from a Dark Age directly into a Golden Age triggers a vastly more powerful <b>Heroic Age</b>, letting you pick <b>three</b> Dedications. This is a key comeback and snowball mechanic.</li>
+                                            <li><b>Dark Ages & Policies:</b> A Dark Age reduces city loyalty but unlocks unique and powerful Dark Age policy cards that can help you survive and prepare for the next era.</li>
+                                        </ul>
+                                        <div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-teal-900">Strategic Deep Dive: The "Slingshot" Strategy</h5><p class="text-sm text-teal-800">If you're struggling to get enough Era Score for a Golden Age, consider strategically giving up. Stop triggering Historic Moments and "save" them. Endure a Dark Age, then trigger all your saved moments in the next era to guarantee an explosive Heroic Age, turning a disadvantage into a massive advantage.</p></div>
+                                    </div>
+                               </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Victory Blueprints Section -->
+            <section id="victories" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">Victory Blueprints: The Final Mission Checklist</h2>
+                    <p class="mb-6 text-stone-600">As your empire enters the Industrial Era, the path to victory becomes clear. Now, you need a precise checklist to guide you through the final push.</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Domination -->
+                        <div class="victory-card border border-red-200 bg-red-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-red-800 mb-3">Domination Victory ⚔️</h3><p class="text-red-700 mb-4">Objective: Capture the original capital of every other civilization.</p><div class="w-full bg-red-200 rounded-full h-2.5 mb-4"><div id="domination-progress" class="progress-bar-fill bg-red-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="domination">
+                            <div class="task-list-item"><input type="checkbox" id="dom1"><label for="dom1" class="ml-2"><b>Establish Military Tech Advantage:</b> Prioritize techs like Ballistics (Crossbowmen), Flight (Planes), and Stealth (Stealth Bombers) to create a generational gap.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom2"><label for="dom2" class="ml-2"><b>Adopt Powerful War Governments:</b> Switch to Fascism in the late game for its unparalleled combat and production bonuses.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom3"><label for="dom3" class="ml-2"><b>Master Siege Warfare:</b> Use Battering Rams, Siege Towers, and later, Bombers and Artillery to take down city walls. Never attack a city blindly.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom4"><label for="dom4" class="ml-2"><b>Pillage Relentlessly:</b> Pillage enemy districts and improvements to cripple their economy and fuel your own war machine.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom5"><label for="dom5" class="ml-2"><b>Form Corps & Armies:</b> After unlocking the appropriate civics, combine units into more powerful Corps and Armies.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dom6"><label for="dom6" class="ml-2"><b>Use Casus Belli:</b> Never declare a "Surprise War" unless necessary. Use formal war justifications like "Holy War" to reduce grievances.</label></div>
+                        </div></div>
+                        <!-- Science -->
+                        <div class="victory-card border border-blue-200 bg-blue-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-blue-800 mb-3">Science Victory 🚀</h3><p class="text-blue-700 mb-4">Objective: Complete the space race and colonize an exoplanet.</p><div class="w-full bg-blue-200 rounded-full h-2.5 mb-4"><div id="science-progress" class="progress-bar-fill bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="science">
+                            <div class="task-list-item"><input type="checkbox" id="sci1"><label for="sci1" class="ml-2"><b>Phase 1: Launch Earth Satellite:</b> Research Rocketry, build a Spaceport, and complete the project.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci2"><label for="sci2" class="ml-2"><b>Phase 2: Land a Man on the Moon:</b> Research Satellites and complete the project.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci3"><label for="sci3" class="ml-2"><b>Phase 3: Establish a Mars Colony:</b> Complete three separate module projects, requiring Robotics, Nanotechnology, and Nuclear Fusion.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci4"><label for="sci4" class="ml-2"><b>Phase 4: Launch Exoplanet Expedition:</b> Research Smart Materials and launch the project.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci5"><label for="sci5" class="ml-2"><b>Phase 5: Accelerate Expedition:</b> Repeatedly run the Terrestrial and Lagrange Laser Station projects to increase the expedition's speed.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="sci6"><label for="sci6" class="ml-2"><b>Key Infrastructure:</b> Build many Campuses and Industrial Zones. Build multiple Spaceports to run projects simultaneously.</label></div>
+                        </div></div>
+                        <!-- Culture -->
+                        <div class="victory-card border border-purple-200 bg-purple-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-purple-800 mb-3">Culture Victory 🗿</h3><p class="text-purple-700 mb-4">Objective: Have more visiting international tourists than any other civ has domestic tourists.</p><div class="w-full bg-purple-200 rounded-full h-2.5 mb-4"><div id="culture-progress" class="progress-bar-fill bg-purple-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="culture">
+                            <div class="task-list-item"><input type="checkbox" id="cul1"><label for="cul1" class="ml-2"><b>Generate Massive Culture & Tourism:</b> Build Theater Squares and fill every slot with Great Works from Great People.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul2"><label for="cul2" class="ml-2"><b>Theme Your Museums:</b> Theming your Art and Archaeological Museums (e.g., three works of the same type from different artists) doubles their tourism output.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul3"><label for="cul3" class="ml-2"><b>Build Key Wonders:</b> The Eiffel Tower (adds Appeal) and Cristo Redentor (boosts seaside resort tourism) are game-changers.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul4"><label for="cul4" class="ml-2"><b>Establish National Parks:</b> Research Conservation, buy Naturalists with Faith, and create National Parks on diamonds of high-appeal tiles.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul5"><label for="cul5" class="ml-2"><b>Go on a World Tour:</b> Research the Cold War civic, buy Rock Bands with Faith, and send them to perform at foreign wonders and districts for huge tourism bursts.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="cul6"><label for="cul6" class="ml-2"><b>Maximize Modifiers:</b> Maintain Open Borders and Trade Routes with all civs. Research Computers and Social Media for powerful tourism-boosting policies.</label></div>
+                        </div></div>
+                        <!-- Religion -->
+                        <div class="victory-card border border-yellow-200 bg-yellow-50 p-6 rounded-lg flex flex-col"><h3 class="text-2xl font-bold text-yellow-800 mb-3">Religious Victory 🙏</h3><p class="text-yellow-700 mb-4">Objective: Make your religion the majority in every other civilization.</p><div class="w-full bg-yellow-200 rounded-full h-2.5 mb-4"><div id="religion-progress" class="progress-bar-fill bg-yellow-500 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="religion">
+                            <div class="task-list-item"><input type="checkbox" id="rel1"><label for="rel1" class="ml-2"><b>Found a Religion Early:</b> Build a Holy Site and run its projects to secure a Great Prophet before they are all claimed.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel2"><label for="rel2" class="ml-2"><b>Choose Powerful Beliefs:</b> Mosque (+1 spread for all religious units) and Pilgrimage (+2 Faith for every foreign city following your religion) are top-tier beliefs.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel3"><label for="rel3" class="ml-2"><b>Master Theological Combat:</b> Use your Apostles to actively attack and defeat enemy religious units, which drastically reduces their religion's influence.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel4"><label for="rel4" class="ml-2"><b>Build Your Religious Army:</b> Use Missionaries for spreading, Apostles as your core combat units, Inquisitors to cleanse your own lands, and Gurus as healers.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="rel5"><label for="rel5" class="ml-2"><b>Eliminate Targets Systematically:</b> Focus your religious pressure on one civilization at a time. Prioritize converting other religious civs to eliminate their threat.</label></div>
+                        </div></div>
+                        <!-- Diplomacy -->
+                        <div class="victory-card border border-cyan-200 bg-cyan-50 p-6 rounded-lg lg:col-span-2 flex flex-col"><h3 class="text-2xl font-bold text-cyan-800 mb-3">Diplomatic Victory 🕊️</h3><p class="text-cyan-700 mb-4">Objective: Be the first to accumulate 20 Diplomatic Victory Points.</p><div class="w-full bg-cyan-200 rounded-full h-2.5 mb-4"><div id="diplomacy-progress" class="progress-bar-fill bg-cyan-600 h-2.5 rounded-full" style="width: 0%"></div></div><div class="task-list space-y-2 flex-grow" data-victory="diplomacy">
+                            <div class="task-list-item"><input type="checkbox" id="dip1"><label for="dip1" class="ml-2"><b>Accumulate Diplomatic Favor:</b> Gain favor by being the suzerain of city-states, forming alliances, and choosing specific governments.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip2"><label for="dip2" class="ml-2"><b>Win World Congress Votes:</b> Predict how the AI will vote and vote with the majority to earn 1 victory point per correct vote.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip3"><label for="dip3" class="ml-2"><b>Win Aid Requests:</b> Win emergency aid requests by donating gold or completing projects to earn a valuable 2 victory points.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip4"><label for="dip4" class="ml-2"><b>Build Key Wonders:</b> The Mahabodhi Temple (+2), Potala Palace (+1), and Statue of Liberty (+4) are cornerstones of this victory.</label></div>
+                            <div class="task-list-item"><input type="checkbox" id="dip5"><label for="dip5" class="ml-2"><b>Gain Late-Game Points:</b> Research specific late-game techs and civics, and win the direct vote for victory points in the World Congress.</label></div>
+                        </div><div class="deep-dive p-4 mt-4 rounded-lg"><h5 class="font-bold text-cyan-900">Strategic Deep Dive: The "Vote Against Yourself" Gambit</h5><p class="text-sm text-cyan-800">When you are close to victory, the AI will unite to vote for you to lose points. The correct, counter-intuitive play is to vote for yourself to lose 2 points. You will lose 2 points, but gain 1 back for voting with the majority, for a net loss of only 1. This saves your diplomatic favor for other resolutions.</p></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advanced Strategy Section -->
+            <section id="advanced" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">Chapter 4: Advanced Concepts & Integrated Strategy</h2>
+                    <p class="mb-6 text-stone-600">Once you've mastered the basic flow for each victory type, you can begin to explore higher-level strategic thinking to make your empire run like a well-oiled machine.</p>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-2xl font-semibold text-teal-800 mb-2">Mission 6: Synergy - Hybrid Victory Paths</h3>
+                            <p class="text-stone-700 mb-3"><b>Objective:</b> Understand the intrinsic links between different game systems to develop more resilient and unpredictable hybrid strategies.</p>
+                            <ul class="list-disc list-inside space-y-2 text-stone-600">
+                                <li><b>Faith as a Universal Currency:</b> High Faith output isn't just for Religious Victory. It's a highly flexible resource that can be used to buy Great People (for Science/Culture), military units (for Domination), or Naturalists and Rock Bands (for Culture). A few high-yield Holy Sites are almost always a wise investment.</li>
+                                <li><b>Early Conquest for Late-Game Victory:</b> A highly effective advanced strategy is to wage a limited war early on to conquer one or two neighbors. The goal isn't a Domination victory, but to use this "investment" to gain the extra land, cities, and population needed for a massive Science or Culture boom in the mid- to late-game.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-semibold text-teal-800 mb-2">Mission 7: Flexibility - Dynamic Strategic Adjustments</h3>
+                            <p class="text-stone-700 mb-3"><b>Objective:</b> Learn to read the state of the game and decisively adjust your core strategy when necessary.</p>
+                             <ul class="list-disc list-inside space-y-2 text-stone-600">
+                                <li><b>"My science competitor is about to win!"</b> -> Pivot to military immediately. Send spies to sabotage their rocketry or launch a lightning war to capture or destroy their Spaceport, halting their progress.</li>
+                                <li><b>"I missed out on founding a religion."</b> -> Don't panic. You can still win a Culture victory by focusing on secular tourism (Great Works, wonders, National Parks), or you can conquer a civ with a strong religion and use it for yourself.</li>
+                                <li><b>"I've fallen into a Dark Age."</b> -> Embrace the darkness. Use the powerful Dark Age policy cards to mitigate the downsides, and "store" your historic moments to ensure a game-changing "Heroic Age" in the next era to turn the tables.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Database Section -->
+            <section id="database" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-700">Strategy Database: Key Wonders</h2>
+                    <p class="mb-6 text-stone-600">Wonders are high-investment, high-reward projects. This table highlights the most strategically valuable wonders for different victory paths to help you avoid wasting precious production.</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-8">
+                        <button class="wonder-filter-btn bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('all')">All Wonders</button>
+                        <button class="wonder-filter-btn bg-red-100 hover:bg-red-200 text-red-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('domination')">Domination</button>
+                        <button class="wonder-filter-btn bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('science')">Science</button>
+                        <button class="wonder-filter-btn bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('culture')">Culture</button>
+                        <button class="wonder-filter-btn bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('religion')">Religion</button>
+                        <button class="wonder-filter-btn bg-cyan-100 hover:bg-cyan-200 text-cyan-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('diplomacy')">Diplomacy</button>
+                        <button class="wonder-filter-btn bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-full" onclick="filterWonders('general')">General</button>
+                    </div>
+                    <div id="wonder-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 text-stone-500 text-sm">
+            <h3 class="text-lg font-semibold text-stone-700 mb-2">Conclusion: Forging an Eternal Legacy</h3>
+            <p class="max-w-3xl mx-auto">The grand tapestry of Civilization VI is ultimately woven from a core workflow: <b>Explore -> Expand -> Specialize -> Execute</b>. This guide has provided you with the "must-complete" checklist for each stage of this process. However, the true art of the game lies in how you flexibly apply this framework to the unique challenges and opportunities of each game.</p>
+            <p class="mt-2">Use these missions as rungs on a ladder. Soon, you will no longer need this guide. Instead, you will rely on your own wisdom and foresight to assess situations, strategize, and build a civilization that truly stands the test of time. Your legacy awaits.</p>
+        </footer>
+    </div>
+
+    <script>
+        const wondersData = [
+            { name: 'Kilwa Kisiwani', era: 'Medieval', value: 'One of the strongest wonders in the game. Increases the yield bonus from your suzerain city-states by up to 30%, immensely helpful for any victory condition.', type: ['general', 'science', 'culture', 'domination'] },
+            { name: 'Pyramids', era: 'Ancient', value: 'All Builders gain +1 charge. This bonus lasts the entire game and dramatically increases your construction efficiency.', type: ['general'] },
+            { name: 'Colosseum', era: 'Classical', value: 'Provides a large amount of Amenities and Culture to all cities within 6 tiles, a powerful tool for maintaining stability in a large empire.', type: ['general', 'culture'] },
+            { name: 'Policy Slot Wonders', era: 'Various', value: 'Forbidden City, Potala Palace, Big Ben, Alhambra. Each provides an extra policy slot, offering extreme flexibility that is always valuable.', type: ['general', 'domination', 'science', 'culture', 'diplomacy'] },
+            { name: 'Oxford University', era: 'Industrial', value: 'Provides a huge amount of Science and awards two free technologies, a landmark wonder for a Science Victory.', type: ['science'] },
+            { name: 'Ruhr Valley', era: 'Industrial', value: '+20% Production to all Mines and Quarries in this city, and +20% to the city\'s total production. A powerful engine for space race projects.', type: ['science', 'domination'] },
+            { name: 'Eiffel Tower', era: 'Modern', value: 'Grants +2 Appeal to all tiles in your empire. This is crucial for appeal-dependent National Parks and Seaside Resorts.', type: ['culture'] },
+            { name: 'Cristo Redentor', era: 'Modern', value: 'Doubles the tourism from Seaside Resorts and prevents religious tourism from fading after the Enlightenment. A key late-game tool for a Culture Victory.', type: ['culture'] },
+            { name: 'Mahabodhi Temple', era: 'Classical', value: 'Grants +4 Faith and 2 free Apostles, giving you a head start in theological combat.', type: ['religion'] },
+            { name: 'Statue of Liberty', era: 'Industrial', value: 'Directly provides 4 Diplomatic Victory Points, the most important single step on the path to a Diplomatic Victory.', type: ['diplomacy'] },
+        ];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function setupAccordions() {
+            document.querySelectorAll('.accordion-item').forEach(item => {
+                const header = item.querySelector('.accordion-header');
+                const content = item.querySelector('.accordion-content');
+                const icon = header.querySelector('span');
+                header.addEventListener('click', () => {
+                    const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(45deg)';
+                    }
+                });
+            });
+        }
+
+        function setupVictoryChecklists() {
+            document.querySelectorAll('.task-list').forEach(list => {
+                const checkboxes = list.querySelectorAll('input[type="checkbox"]');
+                const victoryType = list.dataset.victory;
+                const progressBar = document.getElementById(`${victoryType}-progress`);
+                const totalTasks = checkboxes.length;
+                if (totalTasks === 0 || !progressBar) return;
+                const updateProgress = () => {
+                    const checkedTasks = list.querySelectorAll('input[type="checkbox"]:checked').length;
+                    progressBar.style.width = `${(checkedTasks / totalTasks) * 100}%`;
+                };
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', updateProgress);
+                    const label = checkbox.nextElementSibling;
+                    if (label) {
+                        label.setAttribute('for', checkbox.id);
+                    }
+                });
+                updateProgress();
+            });
+        }
+
+        function renderWonders(filter = 'all') {
+            const grid = document.getElementById('wonder-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const filteredWonders = filter === 'all'
+                ? wondersData
+                : wondersData.filter(wonder => wonder.type.includes(filter));
+
+            filteredWonders.forEach(wonder => {
+                const card = document.createElement('div');
+                card.className = 'wonder-card bg-stone-50 p-5 rounded-lg border border-stone-200 shadow-sm flex flex-col';
+                card.innerHTML = `
+                    <h4 class="font-bold text-xl text-teal-800">${wonder.name}</h4>
+                    <p class="text-sm font-semibold text-stone-500 mb-2">${wonder.era}</p>
+                    <p class="text-stone-700 flex-grow">${wonder.value}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterWonders(type) {
+            renderWonders(type);
+        }
+
+        function createGovernmentChart() {
+            const ctx = document.getElementById('governmentChart')?.getContext('2d');
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Military Slots', 'Economic Slots', 'Diplomatic Slots', 'Wildcard Slots'],
+                    datasets: [{
+                        label: 'Oligarchy (+4 Combat Strength)',
+                        data: [1, 1, 1, 1],
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                    }, {
+                        label: 'Classical Republic (+1 Amenity)',
+                        data: [0, 2, 1, 1],
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                    }, {
+                        label: 'Autocracy (+10% Wonder Production)',
+                        data: [2, 2, 0, 0],
+                        backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                        borderColor: 'rgba(168, 85, 247, 1)',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: { r: { angleLines: { color: 'rgba(0,0,0,0.1)' }, grid: { color: 'rgba(0,0,0,0.1)' }, pointLabels: { font: { size: 14 }, color: '#44403c' }, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupAccordions();
+            setupVictoryChecklists();
+            renderWonders();
+            createGovernmentChart();
+            document.querySelector('.tab-button').classList.add('active');
+            document.querySelector('.content-section').classList.add('active');
+        });
+    </script>
+</body>
+</html>
