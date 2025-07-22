@@ -1162,6 +1162,16 @@ class IntegratedAssistantController(AssistantController):
             self._on_streaming_chunk  # 直接连接到处理方法，而不是worker的信号
         )
         
+        # 添加RAG状态更新的定时器，用于显示处理进度
+        if not hasattr(self, '_rag_status_timer'):
+            self._rag_status_timer = QTimer()
+            self._rag_status_timer.timeout.connect(self._update_rag_status)
+            
+        # 启动状态更新定时器
+        self._rag_status_step = 0
+        self._last_status_message = None  # 重置状态消息缓存
+        self._rag_status_timer.start(1500)  # 每1.5秒更新一次状态
+        
         self._current_worker.start()
         
     def _on_intent_detected(self, intent: QueryIntent):
@@ -1174,14 +1184,14 @@ class IntegratedAssistantController(AssistantController):
                     TransitionMessages.WIKI_SEARCHING
                 )
             else:
-                # Show guide search transition
-                self._current_transition_msg = self.main_window.chat_view.add_message(
-                    MessageType.TRANSITION,
-                    TransitionMessages.GUIDE_SEARCHING
+                # Show guide search transition - 显示状态消息而不是立即创建流式消息
+                self._current_status_widget = self.main_window.chat_view.show_status(
+                    TransitionMessages.DB_SEARCHING
                 )
                 
-                # Hide transition after delay and create streaming message
-                QTimer.singleShot(500, self._setup_streaming_message)
+                # 标记为正在等待RAG输出，不立即创建流式消息
+                self._waiting_for_rag_output = True
+                self._current_streaming_msg = None
                 
         except Exception as e:
             logger.error(f"Intent detection handling error: {e}")
@@ -1189,9 +1199,18 @@ class IntegratedAssistantController(AssistantController):
             
     def _setup_streaming_message(self):
         """Setup streaming message for guide responses"""
-        if hasattr(self, '_current_transition_msg'):
+        # 如果已经有流式消息组件，不重复创建
+        if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+            logger.info("🔄 流式消息组件已存在，跳过重复创建")
+            return
+            
+        # 隐藏可能存在的过渡消息
+        if hasattr(self, '_current_transition_msg') and self._current_transition_msg:
             self._current_transition_msg.hide()
+            
+        # 创建流式消息组件
         self._current_streaming_msg = self.main_window.chat_view.add_streaming_message()
+        logger.info("✅ 流式消息组件已创建")
         
         # 连接完成信号
         self._current_streaming_msg.streaming_finished.connect(self._on_streaming_finished)
@@ -1269,25 +1288,95 @@ class IntegratedAssistantController(AssistantController):
         except Exception as e:
             logger.error(f"❌ 更新wiki链接失败: {e}")
             
+    def _on_streaming_chunk(self, chunk: str):
+        """Handle streaming chunk from RAG"""
+        # 如果正在等待RAG输出且这是第一个内容块，创建流式消息组件
+        if getattr(self, '_waiting_for_rag_output', False) and chunk.strip():
+            logger.info("🔄 收到第一个RAG输出块，创建流式消息组件")
+            
+            # 隐藏状态消息
+            if hasattr(self, '_current_status_widget') and self._current_status_widget:
+                self.main_window.chat_view.hide_status()
+                self._current_status_widget = None
+            
+            # 创建流式消息组件
+            self._setup_streaming_message()
+            self._waiting_for_rag_output = False
+        
+        # 如果有流式消息组件，添加内容块
+        if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+            self._current_streaming_msg.append_chunk(chunk)
+    
+    def _update_rag_status(self):
+        """更新RAG处理状态消息"""
+        # 如果已经开始流式输出或不在等待状态，停止状态更新
+        if (not getattr(self, '_waiting_for_rag_output', False) or 
+            (hasattr(self, '_current_streaming_msg') and self._current_streaming_msg)):
+            if hasattr(self, '_rag_status_timer'):
+                self._rag_status_timer.stop()
+            return
+            
+        # 如果没有状态组件，不更新
+        if not (hasattr(self, '_current_status_widget') and self._current_status_widget):
+            return
+            
+        # 在检索阶段保持显示检索消息，不频繁切换
+        # 只有在长时间等待后才切换到AI处理消息
+        if self._rag_status_step < 2:  # 前4.5秒（3次 * 1.5秒）保持显示检索消息
+            current_message = TransitionMessages.DB_SEARCHING  # 📚 检索相关知识库...
+        else:
+            current_message = TransitionMessages.AI_SUMMARIZING  # 📝 智能总结生成中...
+            
+        # 只有在消息实际变化时才更新，避免重复设置相同消息
+        if not hasattr(self, '_last_status_message') or self._last_status_message != current_message:
+            self.main_window.chat_view.update_status(current_message)
+            self._last_status_message = current_message
+            logger.info(f"🔄 RAG状态更新: {current_message}")
+        
+        self._rag_status_step += 1
+    
     def _on_guide_chunk(self, chunk: str):
         """Handle guide chunk from worker"""
         if hasattr(self, '_current_streaming_msg'):
             self._current_streaming_msg.append_chunk(chunk)
             
-    def _on_streaming_chunk(self, chunk: str):
-        """Handle streaming chunk from RAG"""
-        if hasattr(self, '_current_streaming_msg'):
-            self._current_streaming_msg.append_chunk(chunk)
-    
     def _on_streaming_finished(self):
         """处理流式输出完成"""
         logger.info("✅ 流式输出已完成")
+        
+        # 停止状态更新定时器
+        if hasattr(self, '_rag_status_timer'):
+            self._rag_status_timer.stop()
+            
+        # 重置等待状态和状态缓存
+        self._waiting_for_rag_output = False
+        self._last_status_message = None
         
         # 重置UI状态
         if self.main_window:
             self.main_window.set_generating_state(False)
             logger.info("✅ UI状态已重置为非生成状态")
             
+    def _on_error(self, error_msg: str):
+        """Handle error"""
+        # 停止状态更新定时器
+        if hasattr(self, '_rag_status_timer'):
+            self._rag_status_timer.stop()
+            
+        # 重置等待状态和状态缓存
+        self._waiting_for_rag_output = False
+        self._last_status_message = None
+        
+        # 隐藏状态消息
+        if hasattr(self, '_current_status_widget') and self._current_status_widget:
+            self.main_window.chat_view.hide_status()
+            self._current_status_widget = None
+            
+        self.main_window.chat_view.add_message(
+            MessageType.AI_RESPONSE,
+            f"❌ {error_msg}"
+        )
+        
     def _on_wiki_result(self, url: str, title: str):
         """Handle wiki search result from RAG integration"""
         try:
@@ -1312,14 +1401,7 @@ class IntegratedAssistantController(AssistantController):
         except Exception as e:
             logger.error(f"Wiki result handling error: {e}")
             self._on_error(str(e))
-        
-    def _on_error(self, error_msg: str):
-        """Handle error"""
-        self.main_window.chat_view.add_message(
-            MessageType.AI_RESPONSE,
-            f"❌ {error_msg}"
-        )
-        
+            
     def _reinitialize_rag_for_game(self, vector_game_name: str):
         """重新初始化RAG引擎为特定向量库（异步，不阻塞UI）"""
         try:

@@ -349,6 +349,7 @@ def convert_markdown_to_html(text: str) -> str:
                 r'---\s*\n\s*<small>',  # 原有模式
                 r'📺\s*\*\*info source：\*\*',  # 视频源标题模式  
                 r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
+                r'\n\n---\n\s*<small>',  # 添加更灵活的分隔符模式
             ]
             
             video_source_start = -1
@@ -1722,14 +1723,21 @@ class ChatView(QScrollArea):
                         # 2. 强制内容标签重新计算尺寸
                         content_label = widget.content_label
                         
-                        # 获取当前文本并重新设置以强制重新渲染
-                        current_text = content_label.text()
-                        if current_text:
-                            content_label.setText("")
-                            content_label.updateGeometry()
-                            content_label.setText(current_text)
-                            content_label.updateGeometry()
-                            content_label.setWordWrap(True)
+                        # 确保内容不被截断
+                        content_label.setWordWrap(True)
+                        content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                        
+                        # 对于 StreamingMessageWidget，确保格式正确
+                        if isinstance(widget, StreamingMessageWidget):
+                            # 如果有完整文本，重新检测并渲染
+                            if hasattr(widget, 'full_text') and widget.full_text:
+                                if detect_markdown_content(widget.full_text):
+                                    html_content = convert_markdown_to_html(widget.full_text)
+                                    content_label.setText(html_content)
+                                    content_label.setTextFormat(Qt.TextFormat.RichText)
+                                else:
+                                    content_label.setText(widget.full_text)
+                                    content_label.setTextFormat(Qt.TextFormat.PlainText)
                             content_label.adjustSize()
                         
                         # 3. 对于流式消息的特别处理
@@ -1738,7 +1746,15 @@ class ChatView(QScrollArea):
                                 widget._update_bubble_width()
                                 widget.updateGeometry()
                         
-                        # 4. 强制更新整个消息widget
+                        # 4. 确保气泡容器正确扩展
+                        bubble = widget.findChild(QFrame, "messageBubble")
+                        if bubble:
+                            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                            # 确保气泡高度能容纳所有内容
+                            min_height = content_label.sizeHint().height() + 16  # 加上内边距
+                            bubble.setMinimumHeight(min_height)
+                        
+                        # 5. 强制更新整个消息widget
                         widget.updateGeometry()
                         widget.update()
                         
