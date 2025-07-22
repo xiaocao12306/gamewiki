@@ -142,13 +142,20 @@ class QueryWorker(QThread):
             
     def stop(self):
         """Request to stop the worker"""
-        self._stop_requested = True
-        logger.info("🛑 QueryWorker停止请求已发出")
-        
-        # 如果有当前任务，尝试取消
-        if self._current_task and not self._current_task.done():
-            self._current_task.cancel()
-            logger.info("🛑 当前异步任务已取消")
+        try:
+            self._stop_requested = True
+            logger.info("🛑 QueryWorker停止请求已发出")
+            
+            # 如果有当前任务，尝试取消
+            if self._current_task and not self._current_task.done():
+                try:
+                    self._current_task.cancel()
+                    logger.info("🛑 当前异步任务已取消")
+                except Exception as e:
+                    logger.error(f"取消异步任务时出错: {e}")
+                    
+        except Exception as e:
+            logger.error(f"QueryWorker停止过程中出错: {e}")
 
 
 class RAGIntegration(QObject):
@@ -1172,6 +1179,11 @@ class IntegratedAssistantController(AssistantController):
         self._last_status_message = None  # 重置状态消息缓存
         self._rag_status_timer.start(1500)  # 每1.5秒更新一次状态
         
+        # 在启动worker之前就设置生成状态，确保用户看到stop按钮
+        if self.main_window:
+            self.main_window.set_generating_state(True)
+            logger.info("🔄 UI已设置为生成状态（查询开始）")
+        
         self._current_worker.start()
         
     def _on_intent_detected(self, intent: QueryIntent):
@@ -1215,14 +1227,19 @@ class IntegratedAssistantController(AssistantController):
         # 连接完成信号
         self._current_streaming_msg.streaming_finished.connect(self._on_streaming_finished)
         
-        # 设置UI为生成状态
+        # 更新UI生成状态，关联流式消息组件
         if self.main_window:
             self.main_window.set_generating_state(True, self._current_streaming_msg)
-            logger.info("🔄 UI已设置为生成状态")
+            logger.info("🔄 UI生成状态已关联流式消息组件")
         
     def _on_wiki_result_from_worker(self, url: str, title: str):
         """Handle wiki result from worker"""
         try:
+            # Wiki查询完成，重置生成状态
+            if self.main_window:
+                self.main_window.set_generating_state(False)
+                logger.info("🔗 Wiki查询完成，UI状态已重置为非生成状态")
+            
             if url:
                 # Update transition message
                 if hasattr(self, '_current_transition_msg'):
@@ -1367,6 +1384,11 @@ class IntegratedAssistantController(AssistantController):
         self._waiting_for_rag_output = False
         self._last_status_message = None
         
+        # 重置UI生成状态
+        if self.main_window:
+            self.main_window.set_generating_state(False)
+            logger.info("❌ 出错时UI状态已重置为非生成状态")
+        
         # 隐藏状态消息
         if hasattr(self, '_current_status_widget') and self._current_status_widget:
             self.main_window.chat_view.hide_status()
@@ -1477,16 +1499,33 @@ class IntegratedAssistantController(AssistantController):
         """停止当前的生成过程"""
         logger.info("🛑 收到停止生成请求")
         
-        # 停止当前的worker
-        if self._current_worker and self._current_worker.isRunning():
-            logger.info("🛑 停止当前QueryWorker")
-            self._current_worker.stop()
-            # 不等待worker结束，让它异步结束
+        try:
+            # 首先恢复UI状态
+            if self.main_window:
+                try:
+                    self.main_window.set_generating_state(False)
+                    logger.info("🛑 UI状态已恢复为非生成状态")
+                except Exception as e:
+                    logger.error(f"恢复UI状态时出错: {e}")
             
-        # 恢复UI状态
-        if self.main_window:
-            self.main_window.set_generating_state(False)
-            logger.info("🛑 UI状态已恢复为非生成状态")
+            # 停止当前的worker
+            if self._current_worker and self._current_worker.isRunning():
+                logger.info("🛑 停止当前QueryWorker")
+                try:
+                    self._current_worker.stop()
+                    logger.info("🛑 QueryWorker停止请求已发出")
+                    # 不等待worker结束，让它异步结束
+                except Exception as e:
+                    logger.error(f"停止QueryWorker时出错: {e}")
+                    
+        except Exception as e:
+            logger.error(f"停止生成过程中出现异常: {e}")
+            # 即使出错也要尝试恢复UI状态
+            if self.main_window:
+                try:
+                    self.main_window.set_generating_state(False)
+                except:
+                    pass
     
     def switch_game(self, game_name: str):
         """Switch to a different game (game_name应该是窗口标题)"""

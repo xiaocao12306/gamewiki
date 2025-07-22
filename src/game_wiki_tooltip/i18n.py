@@ -248,6 +248,30 @@ class TranslationManager:
             "rag_bm25_error": "BM25 search function unavailable",
             
             # BM25 Index Error Messages
+            
+            # Status Messages (for chat transitions)
+            "status_query_received": "🔍 Analyzing your question...",
+            "status_db_searching": "📚 Searching knowledge base...",
+            "status_ai_summarizing": "📝 Generating intelligent summary...",
+            "status_completed": "✨ Response generation completed",
+            "status_wiki_searching": "Searching Wiki page...",
+            "status_wiki_found": "Found Wiki page:",
+            "status_guide_searching": "Searching for information...",
+            "status_guide_generating": "Generating guide content...",
+            "status_error_not_found": "Sorry, no relevant information found",
+            "status_error_timeout": "Request timeout, please try again later",
+            
+            # DST Task Flow Button and Content
+            "dst_task_button": "📋 DST Task Flow",
+            "dst_task_flow_title": "DST Task Flow",
+            "dst_survival_guide_title": "Don't Starve Together - Survival Guide",
+            "dst_technical_error": "Unable to display the complete task flow page due to technical issues.",
+            "dst_recommended_resources": "Recommended resources:",
+            "dst_official_wiki": "Official Don't Starve Wiki",
+            "dst_basic_survival": "Basic Survival: Collect twigs and flint to craft tools",
+            "dst_food_gathering": "Food Gathering: Pick berries and carrots", 
+            "dst_base_building": "Base Building: Choose a good location for your campfire",
+            "dst_winter_preparation": "Winter Preparation: Stock up on food and fuel",
             "bm25_load_failed": "Failed to load enhanced BM25 index: {error}",
             "bm25_index_missing": "BM25 index directory not found and cannot rebuild: {path}",
             "bm25_package_unavailable": "BM25 index loading failed: bm25s package unavailable - {error}",
@@ -353,6 +377,30 @@ class TranslationManager:
                 "error": "错误",
                 "info": "信息",
                 "success": "成功",
+                
+                # Status Messages (for chat transitions)
+                "status_query_received": "🔍 正在分析您的问题...",
+                "status_db_searching": "📚 检索相关知识库...",
+                "status_ai_summarizing": "📝 智能总结生成中...",
+                "status_completed": "✨ 回答生成完成",
+                "status_wiki_searching": "正在搜索Wiki页面...",
+                "status_wiki_found": "找到Wiki页面：",
+                "status_guide_searching": "正在搜索相关信息...",
+                "status_guide_generating": "正在生成攻略内容...",
+                "status_error_not_found": "抱歉，未找到相关信息",
+                "status_error_timeout": "请求超时，请稍后重试",
+                
+                # DST Task Flow Button and Content
+                "dst_task_button": "📋 DST任务流程",
+                "dst_task_flow_title": "DST 任务流程",
+                "dst_survival_guide_title": "饥荒联机版 - 生存指南",
+                "dst_technical_error": "由于技术问题，无法显示完整的任务流程页面。",
+                "dst_recommended_resources": "建议访问以下资源：",
+                "dst_official_wiki": "饥荒官方Wiki",
+                "dst_basic_survival": "基础生存：收集树枝、燧石制作工具",
+                "dst_food_gathering": "食物获取：采集浆果、胡萝卜",
+                "dst_base_building": "建造基地：选择好位置建立营火",
+                "dst_winter_preparation": "过冬准备：储备食物和燃料",
                 
                 # Video sources
                 "video_sources_label": "信息来源：",

@@ -386,7 +386,7 @@ class QtSettingsWindow(QMainWindow):
             url = 'https://' + url
             
         # Get icon path (for now, use a default)
-        icon_path = "assets/icons/youtube.png"  # 使用存在的图标文件，保持完整路径
+        icon_path = ""  # 使用存在的图标文件，保持完整路径
         
         # Create shortcut
         shortcut = {

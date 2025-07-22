@@ -48,7 +48,7 @@ try:
     )
     from PyQt6.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
-        QPalette, QIcon, QPixmap, QPainterPath
+        QPalette, QIcon, QPixmap, QPainterPath, QTextDocument
     )
     # Try to import WebEngine, but handle gracefully if it fails
     try:
@@ -256,20 +256,78 @@ class ChatMessage:
     timestamp: datetime = field(default_factory=datetime.now)
 
 
-class TransitionMessages:
-    """Predefined transition messages"""
-    WIKI_SEARCHING = "Searching Wiki page..."
-    WIKI_FOUND = "Found Wiki page:"
-    GUIDE_SEARCHING = "Searching for information..."
-    GUIDE_GENERATING = "Generating guide content..."
-    ERROR_NOT_FOUND = "Sorry, no relevant information found"
-    ERROR_TIMEOUT = "Request timeout, please try again later"
+# 为了让类属性能动态返回翻译，我们使用元类
+class TransitionMessagesMeta(type):
+    """元类，用于动态处理TransitionMessages的属性访问"""
     
-    # 简化的状态提示信息
-    QUERY_RECEIVED = "🔍 正在分析您的问题..."
-    DB_SEARCHING = "📚 检索相关知识库..."
-    AI_SUMMARIZING = "📝 智能总结生成中..."
-    COMPLETED = "✨ 回答生成完成"
+    def __getattribute__(cls, name):
+        # 映射旧的属性名到新的翻译key
+        attribute_mapping = {
+            'WIKI_SEARCHING': 'status_wiki_searching',
+            'WIKI_FOUND': 'status_wiki_found', 
+            'GUIDE_SEARCHING': 'status_guide_searching',
+            'GUIDE_GENERATING': 'status_guide_generating',
+            'ERROR_NOT_FOUND': 'status_error_not_found',
+            'ERROR_TIMEOUT': 'status_error_timeout',
+            'QUERY_RECEIVED': 'status_query_received',
+            'DB_SEARCHING': 'status_db_searching',
+            'AI_SUMMARIZING': 'status_ai_summarizing',
+            'COMPLETED': 'status_completed'
+        }
+        
+        if name in attribute_mapping:
+            return t(attribute_mapping[name])
+        
+        # 对于其他属性，使用默认行为
+        return super().__getattribute__(name)
+
+class TransitionMessages(metaclass=TransitionMessagesMeta):
+    """Predefined transition messages with i18n support"""
+    
+    def __new__(cls):
+        # 防止实例化，这个类应该只用作静态访问
+        raise TypeError(f"{cls.__name__} should not be instantiated")
+    
+    # 静态方法版本，供需要时使用
+    @staticmethod
+    def get_wiki_searching():
+        return t("status_wiki_searching")
+    
+    @staticmethod 
+    def get_wiki_found():
+        return t("status_wiki_found")
+    
+    @staticmethod
+    def get_guide_searching():
+        return t("status_guide_searching")
+    
+    @staticmethod
+    def get_guide_generating():
+        return t("status_guide_generating")
+    
+    @staticmethod
+    def get_error_not_found():
+        return t("status_error_not_found")
+    
+    @staticmethod
+    def get_error_timeout():
+        return t("status_error_timeout")
+    
+    @staticmethod
+    def get_query_received():
+        return t("status_query_received")
+    
+    @staticmethod
+    def get_db_searching():
+        return t("status_db_searching")
+    
+    @staticmethod
+    def get_ai_summarizing():
+        return t("status_ai_summarizing")
+    
+    @staticmethod
+    def get_completed():
+        return t("status_completed")
 
 
 def detect_markdown_content(text: str) -> bool:
@@ -964,15 +1022,15 @@ class StreamingMessageWidget(MessageWidget):
         self.display_index = 0
         self.is_stopped = False  # 标记是否被用户停止
         
-        # Markdown渲染控制
+        # Markdown渲染控制 - 确保每次都重新初始化
         self.last_render_index = 0  # 上次渲染时的字符位置
         self.render_interval = 50   # 每50个字符进行一次markdown渲染（减少频率，避免闪烁）
         self.last_render_time = 0   # 上次渲染时间
         self.render_time_interval = 1.0  # 最长1.0秒进行一次渲染
-        self.is_markdown_detected = False  # 缓存markdown检测结果
-        self.current_format = Qt.TextFormat.PlainText  # 当前文本格式
-        self.link_signal_connected = False  # 跟踪是否已连接linkActivated信号
-        self.has_video_source = False  # 跟踪是否已检测到视频源
+        self.is_markdown_detected = False  # 缓存markdown检测结果 - 强制重置
+        self.current_format = Qt.TextFormat.PlainText  # 当前文本格式 - 强制重置
+        self.link_signal_connected = False  # 跟踪是否已连接linkActivated信号 - 强制重置
+        self.has_video_source = False  # 跟踪是否已检测到视频源 - 强制重置
         self.force_render_count = 0  # 强制渲染计数器
         
         # 优化流式消息的布局，防止闪烁
@@ -984,12 +1042,17 @@ class StreamingMessageWidget(MessageWidget):
         # Typing animation timer
         self.typing_timer = QTimer()
         self.typing_timer.timeout.connect(self.show_next_char)
+        # 确保timer在初始化时是停止状态
+        self.typing_timer.stop()
         
         # Loading dots animation
         self.dots_timer = QTimer()
         self.dots_count = 0
         self.dots_timer.timeout.connect(self.update_dots)
         self.dots_timer.start(500)
+        
+        # 添加调试日志
+        print(f"🔧 [STREAMING] 新StreamingMessageWidget初始化完成，timer状态: {'激活' if self.typing_timer.isActive() else '未激活'}")
     
     def _optimize_for_streaming(self):
         """优化流式消息的布局，防止闪烁"""
@@ -1062,21 +1125,38 @@ class StreamingMessageWidget(MessageWidget):
         
     def append_chunk(self, chunk: str):
         """Append text chunk for streaming display"""
-        if not self.is_stopped:
+        # 更严格的停止检查，直接返回不处理
+        if self.is_stopped:
+            print(f"🛑 流式消息已停止，拒绝新内容块: '{chunk[:50]}...'")
+            return
+            # 记录timer状态用于调试
+            timer_was_active = self.typing_timer.isActive()
+            
             self.full_text += chunk
-            if not self.typing_timer.isActive():
+            
+            # 改进的初始检测逻辑：
+            # 1. 移除timer检查限制，确保每个新消息都能进行初始检测
+            # 2. 降低长度限制，尽早检测markdown
+            if not timer_was_active:
                 self.dots_timer.stop()
-                # 初始化渲染时间戳和markdown检测
+                # 初始化渲染时间戳
                 self.last_render_time = time.time()
-                # 提前检测是否可能包含markdown（基于首个chunk）
-                if len(self.full_text) > 10:  # 有一定长度时再检测
-                    self.is_markdown_detected = detect_markdown_content(self.full_text)
-                    # 如果检测到markdown，立即进行初始渲染
-                    if self.is_markdown_detected:
-                        print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
-                        # 立即设置正确的格式
-                        self.current_format = Qt.TextFormat.RichText
-                        self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                
+            # 对每个新chunk都进行markdown检测（不仅仅是第一个）
+            # 使用缓存避免重复检测相同内容
+            if not self.is_markdown_detected and len(self.full_text) > 5:  # 降低长度限制
+                self.is_markdown_detected = detect_markdown_content(self.full_text)
+                # 如果检测到markdown，立即进行初始渲染
+                if self.is_markdown_detected:
+                    print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
+                    print(f"📋 [STREAMING] Timer状态: {'激活' if timer_was_active else '未激活'}")
+                    print(f"📝 [STREAMING] 前50字符: {self.full_text[:50]}...")
+                    # 立即设置正确的格式
+                    self.current_format = Qt.TextFormat.RichText
+                    self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                    
+            # 确保timer启动
+            if not self.typing_timer.isActive():
                 self.typing_timer.start(20)  # 20ms per character
     
     def mark_as_stopped(self):
@@ -1102,10 +1182,24 @@ class StreamingMessageWidget(MessageWidget):
             
     def show_next_char(self):
         """Show next character in typing animation"""
+        # 首先检查是否已被停止
+        if self.is_stopped:
+            self.typing_timer.stop()
+            print(f"🛑 打字机效果检测到停止状态，立即终止")
+            return
+            
         if self.display_index < len(self.full_text):
             self.display_index += 1
             display_text = self.full_text[:self.display_index]
             current_time = time.time()
+            
+            # 早期markdown检测（在前20个字符时就开始检测）
+            if self.display_index <= 20 and not self.is_markdown_detected and len(self.full_text) > 5:
+                if detect_markdown_content(self.full_text):
+                    self.is_markdown_detected = True
+                    self.current_format = Qt.TextFormat.RichText
+                    self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                    print(f"🚀 [STREAMING] 早期检测到markdown格式（{self.display_index}字符），全文长度: {len(self.full_text)}")
             
             # 检查是否需要进行阶段性markdown渲染
             should_render = False
@@ -1127,10 +1221,14 @@ class StreamingMessageWidget(MessageWidget):
                 print(f"🎬 [STREAMING] 检测到视频源内容，触发渲染")
             
             # 条件4: 检测到markdown格式内容（新增条件，确保格式内容能被渲染）
-            elif not self.is_markdown_detected and detect_markdown_content(display_text):
+            elif not self.is_markdown_detected and len(display_text) > 5 and detect_markdown_content(display_text):
                 should_render = True
                 self.is_markdown_detected = True
                 print(f"🔄 [STREAMING] 检测到格式内容，触发渲染，当前长度: {len(display_text)}")
+                print(f"📝 [STREAMING] 前50字符: {display_text[:50]}...")
+                # 立即设置正确的格式
+                self.current_format = Qt.TextFormat.RichText
+                self.content_label.setTextFormat(Qt.TextFormat.RichText)
             
             # 条件5: 如果已检测到markdown，但当前文本没有格式，重新检测（处理格式变化）
             elif self.is_markdown_detected and not detect_markdown_content(display_text):
@@ -1237,18 +1335,25 @@ class StreamingMessageWidget(MessageWidget):
                 # 发出完成信号
                 self.streaming_finished.emit()
                 
-                # 进行最终的格式检测和转换
-                # 强制重新检测格式，确保最终渲染正确
+                # 进行最终的格式检测和转换 - 强制重新检测，忽略缓存状态
                 final_has_format = detect_markdown_content(self.full_text)
                 final_has_video_sources = has_video_sources
                 
-                # 确保最终渲染使用正确的格式
-                if final_has_format or final_has_video_sources or self.is_markdown_detected:
+                # 如果之前没有检测到markdown，但最终检测到了，立即更新
+                if not self.is_markdown_detected and final_has_format:
+                    self.is_markdown_detected = True
+                    self.current_format = Qt.TextFormat.RichText
+                    print(f"⚡ [STREAMING] 最终检测到markdown格式，强制更新渲染")
+                
+                print(f"🔄 [STREAMING] 最终格式检测: markdown={final_has_format}, video={final_has_video_sources}, 缓存状态={self.is_markdown_detected}")
+                
+                # 确保最终渲染使用正确的格式 - 基于实际检测结果而不是缓存状态
+                if final_has_format or final_has_video_sources:
                     html_content = convert_markdown_to_html(self.full_text)
                     self.content_label.setText(html_content)
                     self.content_label.setTextFormat(Qt.TextFormat.RichText)
                     self.current_format = Qt.TextFormat.RichText
-                    self.is_markdown_detected = True  # 确保状态一致
+                    self.is_markdown_detected = True  # 更新状态与检测结果一致
                     
                     # 流式输出完成后，确保linkActivated信号已连接（避免重复连接）
                     if not self.link_signal_connected:
@@ -1256,12 +1361,12 @@ class StreamingMessageWidget(MessageWidget):
                         self.link_signal_connected = True
                         print(f"🔗 [STREAMING] 最终渲染时连接linkActivated信号")
                     
-                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式，格式检测: {final_has_format}, 视频源: {final_has_video_sources}, 状态: {self.is_markdown_detected}")
+                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
                 else:
                     self.content_label.setText(self.full_text)
                     self.content_label.setTextFormat(Qt.TextFormat.PlainText)
                     self.current_format = Qt.TextFormat.PlainText
-                    self.is_markdown_detected = False  # 确保状态一致
+                    self.is_markdown_detected = False  # 更新状态与检测结果一致
                     print(f"✅ [STREAMING] 最终渲染完成，使用PlainText格式")
                 
                 # 更新几何而不是强制调整大小，避免内容被截断
@@ -1707,8 +1812,11 @@ class ChatView(QScrollArea):
         # 强制更新所有消息的高度，确保内容完整显示
         self._ensureContentComplete()
         
+        # 延迟一点时间再次检查，确保所有内容都已渲染
+        QTimer.singleShot(50, self._finalizeContentDisplay)
+        
         # 确保滚动到正确位置
-        QTimer.singleShot(50, self.smart_scroll_to_bottom)
+        QTimer.singleShot(100, self.smart_scroll_to_bottom)
         
     def _ensureContentComplete(self):
         """确保所有消息内容完整显示"""
@@ -1738,29 +1846,28 @@ class ChatView(QScrollArea):
                                 else:
                                     content_label.setText(widget.full_text)
                                     content_label.setTextFormat(Qt.TextFormat.PlainText)
-                            content_label.adjustSize()
                         
-                        # 3. 对于流式消息的特别处理
-                        if isinstance(widget, StreamingMessageWidget):
-                            if hasattr(widget, 'full_text') and widget.full_text:
-                                widget._update_bubble_width()
-                                widget.updateGeometry()
+                        # 3. 强制更新内容大小
+                        content_label.adjustSize()
                         
                         # 4. 确保气泡容器正确扩展
                         bubble = widget.findChild(QFrame, "messageBubble")
                         if bubble:
                             bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
-                            # 确保气泡高度能容纳所有内容
-                            min_height = content_label.sizeHint().height() + 16  # 加上内边距
-                            bubble.setMinimumHeight(min_height)
+                            
+                            # 改进：使用更可靠的方式计算所需高度
+                            # 等待一小段时间让内容渲染完成
+                            QTimer.singleShot(10, lambda w=widget, b=bubble, cl=content_label: self._updateBubbleHeight(w, b, cl))
                         
-                        # 5. 强制更新整个消息widget
-                        widget.updateGeometry()
-                        widget.update()
+                        # 5. 对于流式消息的特别处理
+                        if isinstance(widget, StreamingMessageWidget):
+                            if hasattr(widget, 'full_text') and widget.full_text:
+                                widget._update_bubble_width()
+                                widget.updateGeometry()
                         
-                    except Exception:
-                        # 静默处理单个消息的更新失败
-                        pass
+                    except Exception as e:
+                        # 记录错误而不是静默处理
+                        print(f"更新消息显示时出错: {e}")
             
             # 更新状态消息
             if self.current_status_widget:
@@ -1774,9 +1881,53 @@ class ChatView(QScrollArea):
             self.updateGeometry()
             self.verticalScrollBar().update()
             
-        except Exception:
-            # 静默处理全局失败
-            pass
+        except Exception as e:
+            # 记录全局错误
+            print(f"_ensureContentComplete 出错: {e}")
+    
+    def _updateBubbleHeight(self, widget, bubble, content_label):
+        """延迟更新气泡高度，确保内容渲染完成"""
+        try:
+            # 获取内容的实际高度
+            # 使用多种方法来获取最准确的高度
+            height1 = content_label.sizeHint().height()
+            height2 = content_label.heightForWidth(content_label.width())
+            
+            # 对于富文本内容，需要额外的高度计算
+            if content_label.textFormat() == Qt.TextFormat.RichText:
+                # 创建临时文档来准确计算HTML内容高度
+                doc = QTextDocument()
+                doc.setDefaultFont(content_label.font())
+                doc.setHtml(content_label.text())
+                doc.setTextWidth(content_label.width())
+                height3 = int(doc.size().height())
+            else:
+                height3 = height1
+            
+            # 取最大值确保内容完整显示
+            actual_height = max(height1, height2, height3)
+            
+            # 加上内边距
+            min_height = actual_height + 20  # 增加边距
+            
+            # 设置最小高度
+            bubble.setMinimumHeight(min_height)
+            
+            # 强制更新整个消息widget
+            widget.updateGeometry()
+            widget.update()
+            
+        except Exception as e:
+            print(f"更新气泡高度时出错: {e}")
+    
+    def _finalizeContentDisplay(self):
+        """最终确认内容显示完整"""
+        # 再次检查所有消息的高度
+        for widget in self.messages:
+            if hasattr(widget, 'content_label'):
+                bubble = widget.findChild(QFrame, "messageBubble")
+                if bubble and widget.content_label:
+                    self._updateBubbleHeight(widget, bubble, widget.content_label)
     
     def _force_content_refresh(self):
         """强制刷新所有内容显示（简化版本）"""
@@ -3444,7 +3595,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 self.dst_task_button = None
             
             # 创建DST任务流程按钮
-            self.dst_task_button = QPushButton("📋 DST任务流程")
+            self.dst_task_button = QPushButton(t("dst_task_button"))
             self.dst_task_button.setFixedHeight(27)
             self.dst_task_button.setStyleSheet("""
                 QPushButton {
@@ -3497,7 +3648,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 
                 # 直接在应用内显示，与wiki链接逻辑一致
                 try:
-                    title = "DST 任务流程" if current_language == 'zh' else "DST Task Flow"
+                    title = t("dst_task_flow_title")
                     
                     # 使用与其他wiki链接相同的显示逻辑
                     self._load_local_html_in_wiki_view(html_path, title)
@@ -3532,34 +3683,22 @@ class UnifiedAssistantWindow(QMainWindow):
     def _show_simple_dst_info(self, language: str):
         """显示简化的DST信息作为降级方案"""
         try:
-            if language == 'zh':
-                title = "DST 任务流程"
-                content = """
-                <h1>饥荒联机版 - 生存指南</h1>
-                <p>由于技术问题，无法显示完整的任务流程页面。</p>
-                <p>建议访问以下资源：</p>
-                <ul>
-                    <li><a href="https://dontstarve.fandom.com/zh/wiki/">饥荒官方Wiki</a></li>
-                    <li>基础生存：收集树枝、燧石制作工具</li>
-                    <li>食物获取：采集浆果、胡萝卜</li>
-                    <li>建造基地：选择好位置建立营火</li>
-                    <li>过冬准备：储备食物和燃料</li>
-                </ul>
-                """
-            else:
-                title = "DST Task Flow"
-                content = """
-                <h1>Don't Starve Together - Survival Guide</h1>
-                <p>Unable to display the complete task flow page due to technical issues.</p>
-                <p>Recommended resources:</p>
-                <ul>
-                    <li><a href="https://dontstarve.fandom.com/wiki/">Official Don't Starve Wiki</a></li>
-                    <li>Basic Survival: Collect twigs and flint to craft tools</li>
-                    <li>Food Gathering: Pick berries and carrots</li>
-                    <li>Base Building: Choose a good location for your campfire</li>
-                    <li>Winter Preparation: Stock up on food and fuel</li>
-                </ul>
-                """
+            title = t("dst_task_flow_title")
+            # 根据当前语言决定Wiki链接
+            wiki_url = "https://dontstarve.fandom.com/zh/wiki/" if language == 'zh' else "https://dontstarve.fandom.com/wiki/"
+            
+            content = f"""
+            <h1>{t("dst_survival_guide_title")}</h1>
+            <p>{t("dst_technical_error")}</p>
+            <p>{t("dst_recommended_resources")}</p>
+            <ul>
+                <li><a href="{wiki_url}">{t("dst_official_wiki")}</a></li>
+                <li>{t("dst_basic_survival")}</li>
+                <li>{t("dst_food_gathering")}</li>
+                <li>{t("dst_base_building")}</li>
+                <li>{t("dst_winter_preparation")}</li>
+            </ul>
+            """
             
             # 直接使用简单的HTML显示
             self._show_simple_content(content, title)
@@ -3816,19 +3955,47 @@ class UnifiedAssistantWindow(QMainWindow):
         """停止当前的生成"""
         print("🛑 用户请求停止生成")
         
-        # 发出停止信号
-        self.stop_generation_requested.emit()
-        
-        # 如果有当前的流式消息，标记为已停止
-        if self.streaming_widget:
-            self.streaming_widget.mark_as_stopped()
+        try:
+            # 首先恢复UI状态，避免用户看到卡死的状态
+            self.set_generating_state(False)
+            print("✅ UI状态已恢复")
             
-        # 恢复UI状态
-        self.set_generating_state(False)
-        
-        # 隐藏状态信息
-        self.chat_view.hide_status()
+            # 隐藏状态信息
+            try:
+                self.chat_view.hide_status()
+                print("✅ 状态信息已隐藏")
+            except Exception as e:
+                print(f"⚠️ 隐藏状态信息时出错: {e}")
             
+            # 如果有当前的流式消息，标记为已停止
+            if self.streaming_widget:
+                try:
+                    self.streaming_widget.mark_as_stopped()
+                    print("✅ 流式消息已标记为停止")
+                except Exception as e:
+                    print(f"⚠️ 标记流式消息停止时出错: {e}")
+            
+            # 最后发出停止信号，使用QTimer.singleShot来避免直接信号可能的死锁
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self._emit_stop_signal_safe())
+            print("✅ 停止信号已安排发送")
+            
+        except Exception as e:
+            print(f"❌ 停止生成过程中出错: {e}")
+            # 即使出错也要尝试恢复UI状态
+            try:
+                self.set_generating_state(False)
+            except:
+                pass
+                
+    def _emit_stop_signal_safe(self):
+        """安全地发出停止信号"""
+        try:
+            self.stop_generation_requested.emit()
+            print("✅ 停止信号已发送")
+        except Exception as e:
+            print(f"⚠️ 发送停止信号时出错: {e}")
+    
     def contextMenuEvent(self, event):
         """处理右键菜单事件"""
         menu = QMenu(self)

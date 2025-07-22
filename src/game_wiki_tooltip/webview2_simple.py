@@ -155,12 +155,20 @@ class SimpleWebView2Widget(QWidget):
                 self.webview2.NavigationCompleted += self._on_nav_completed
             if hasattr(self.webview2, 'SourceChanged'):
                 self.webview2.SourceChanged += self._on_source_changed
+            
+            # 添加新窗口请求处理
+            if hasattr(self.webview2, 'CoreWebView2'):
+                # 延迟一点时间等待CoreWebView2初始化
+                QTimer.singleShot(1000, self._connect_new_window_handler)
+                
         except Exception as e:
             logger.warning(f"Could not connect events: {e}")
     
     def _on_nav_completed(self, sender, args):
         """Navigation completed"""
         self.loadFinished.emit(True)
+        # 在页面加载完成后注入JavaScript
+        QTimer.singleShot(100, self._inject_link_interceptor)
     
     def _on_source_changed(self, sender, args):
         """URL changed"""
@@ -171,6 +179,60 @@ class SimpleWebView2Widget(QWidget):
                 self.urlChanged.emit(QUrl(url))
         except:
             pass
+    
+    def _connect_new_window_handler(self):
+        """连接新窗口请求处理器"""
+        try:
+            if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
+                self.webview2.CoreWebView2.NewWindowRequested += self._on_new_window_requested
+                logger.info("Successfully connected NewWindowRequested handler")
+                
+                # 同时注入JavaScript来拦截所有链接点击
+                self._inject_link_interceptor()
+        except Exception as e:
+            logger.warning(f"Could not connect new window handler: {e}")
+    
+    def _on_new_window_requested(self, sender, args):
+        """处理新窗口请求，在当前窗口中打开"""
+        try:
+            # 获取请求的URL
+            uri = args.Uri
+            
+            # 在当前窗口中导航到该URL
+            from System import Uri
+            self.webview2.Source = Uri(uri)
+            
+            # 标记事件已处理，阻止打开新窗口
+            args.Handled = True
+            
+            logger.info(f"Intercepted new window request, navigating to: {uri}")
+        except Exception as e:
+            logger.error(f"Error handling new window request: {e}")
+    
+    def _inject_link_interceptor(self):
+        """注入JavaScript来拦截所有链接点击"""
+        script = """
+        (function() {
+            // 拦截所有链接点击
+            document.addEventListener('click', function(e) {
+                var target = e.target;
+                while (target && target.tagName !== 'A') {
+                    target = target.parentElement;
+                }
+                if (target && target.tagName === 'A' && target.href) {
+                    e.preventDefault();
+                    window.location.href = target.href;
+                }
+            }, true);
+            
+            // 处理动态添加的内容
+            var observer = new MutationObserver(function() {
+                // 重新绑定事件（如果需要）
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        })();
+        """
+        self.runJavaScript(script)
     
     def _resize_webview2(self):
         """Start the resize debounce timer"""
