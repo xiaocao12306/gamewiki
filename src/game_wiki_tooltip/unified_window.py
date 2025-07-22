@@ -67,6 +67,28 @@ except ImportError:
     print("Error: PyQt6 is required. PyQt5 is no longer supported.")
     sys.exit(1)
 
+# Configuration option to use WebView2 instead of WebEngine
+USE_WEBVIEW2 = True  # Set to True to use lightweight WebView2
+
+# Import WebView2Widget if enabled
+if USE_WEBVIEW2:
+    try:
+        # Try the simple implementation first
+        from src.game_wiki_tooltip.webview2_simple import SimpleWebView2Widget as WebView2Widget
+        from src.game_wiki_tooltip.webview_widget import check_webview2_runtime
+        WEBVIEW2_AVAILABLE = True
+        print("Using simplified WebView2 implementation")
+        # Check if WebView2 Runtime is installed
+        if not check_webview2_runtime():
+            print("Warning: WebView2 Runtime not installed. Video playback may be limited.")
+            print("Visit https://go.microsoft.com/fwlink/p/?LinkId=2124703 to install WebView2 Runtime.")
+    except ImportError as e:
+        print(f"Warning: WebView2Widget not available: {e}")
+        WEBVIEW2_AVAILABLE = False
+        USE_WEBVIEW2 = False  # Fall back to WebEngine
+else:
+    WEBVIEW2_AVAILABLE = False
+
 
 def _get_scale() -> float:
     """获取显示器缩放因子（仅 Windows）"""
@@ -1950,8 +1972,28 @@ class WikiView(QWidget):
         self.web_view = None
         self.content_widget = None
         
-        # 尝试创建WebView，如果失败则使用文本视图
-        if WEBENGINE_AVAILABLE and QWebEngineView:
+        # 尝试创建WebView，优先使用WebView2
+        webview_created = False
+        
+        # Try WebView2 first if enabled and available
+        if USE_WEBVIEW2 and WEBVIEW2_AVAILABLE:
+            try:
+                print("🔧 尝试创建WebView2...")
+                self.web_view = WebView2Widget()
+                self.content_widget = self.web_view
+                self._webview_ready = True
+                webview_created = True
+                print("✅ WebView2创建成功 - 支持完整视频播放")
+                
+                # 连接导航信号
+                self._connect_navigation_signals()
+                
+            except Exception as e:
+                print(f"❌ WebView2创建失败: {e}")
+                webview_created = False
+        
+        # Fall back to WebEngine if WebView2 failed or not available
+        if not webview_created and WEBENGINE_AVAILABLE and QWebEngineView:
             try:
                 print("🔧 尝试创建WebEngine...")
                 self.web_view = QWebEngineView()
@@ -1983,13 +2025,16 @@ class WikiView(QWidget):
                 
                 self.content_widget = self.web_view
                 self._webview_ready = True
+                webview_created = True
                 print("✅ WebEngine创建成功")
             except Exception as e:
                 print(f"❌ WebEngine创建失败: {e}")
-                self.web_view = None
-                self.content_widget = self._create_fallback_text_view()
-        else:
-            print("⚠️ WebEngine不可用，使用文本视图")
+                webview_created = False
+        
+        # Final fallback to text view
+        if not webview_created:
+            print("⚠️ WebView不可用，使用文本视图")
+            self.web_view = None
             self.content_widget = self._create_fallback_text_view()
         
         layout.addWidget(toolbar)
@@ -2021,7 +2066,16 @@ class WikiView(QWidget):
         # Connect web view signals
         self.web_view.urlChanged.connect(self._on_url_changed)
         self.web_view.loadFinished.connect(self._update_navigation_state)
-        self.web_view.page().loadStarted.connect(self._on_load_started)
+        
+        # For WebEngine, connect page signals
+        if hasattr(self.web_view, 'page') and callable(self.web_view.page):
+            page = self.web_view.page()
+            if page:
+                page.loadStarted.connect(self._on_load_started)
+        else:
+            # For WebView2Widget, connect loadStarted directly
+            if hasattr(self.web_view, 'loadStarted'):
+                self.web_view.loadStarted.connect(self._on_load_started)
         
     def navigate_to_url(self):
         """Navigate to the URL entered in the URL bar"""

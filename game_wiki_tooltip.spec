@@ -16,10 +16,12 @@ hiddenimports = [
     'PyQt6.QtCore',
     'PyQt6.QtGui', 
     'PyQt6.QtWidgets',
-    'PyQt6.QtWebEngineWidgets',
-    'PyQt6.QtWebEngineCore',
-    'PyQt6.QtWebChannel',
     'PyQt6.sip',
+    
+    # WebView2 related imports
+    'pythonnet',
+    'clr',
+    'pywebview',
     
     # AI related libraries
     'google.generativeai',
@@ -62,6 +64,8 @@ datas = [
     (str(src_path / "game_wiki_tooltip" / "ai" / "vectorstore"), "ai/vectorstore"),
     # Knowledge data
     ("data", "data"),
+    # WebView2 SDK files
+    ("src/game_wiki_tooltip/webview2/lib", "webview2/lib"),
 ]
 
 # Collect binary files
