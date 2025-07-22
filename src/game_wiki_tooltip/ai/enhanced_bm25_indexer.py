@@ -356,13 +356,36 @@ class EnhancedBM25Indexer:
         print(f"🔍 [BM25-DEBUG] 简化BM25搜索 - 原始查询: {query}")
         print(f"   📝 [BM25-DEBUG] 标准化查询: {normalized_query}")
         print(f"   🔤 [BM25-DEBUG] 分词结果: {tokenized_query}")
+        print(f"   🔤 [BM25-DEBUG] 分词类型: {type(tokenized_query)}")
         logger.info(f"简化BM25搜索 - 原始查询: {query}")
         logger.info(f"标准化查询: {normalized_query}")
         logger.info(f"分词结果: {tokenized_query}")
+        logger.info(f"分词类型: {type(tokenized_query)}")
         
         try:
+            # 确保tokenized_query是正确的格式
+            if isinstance(tokenized_query, str):
+                # 如果还是字符串，需要再次分词
+                tokenized_query = tokenized_query.split()
+            elif not isinstance(tokenized_query, list):
+                # 如果不是列表，转换为列表
+                tokenized_query = list(tokenized_query) if hasattr(tokenized_query, '__iter__') else [str(tokenized_query)]
+            
             # 使用bm25s的retrieve方法
-            results_ids, scores = self.bm25.retrieve(tokenized_query, k=top_k)
+            # bm25s.retrieve期望的输入格式是: List[List[str]] 或 List[str]
+            # 如果是单个查询，需要包装成列表
+            if tokenized_query and isinstance(tokenized_query[0], str):
+                # 单个查询的情况，需要包装成 [query]
+                query_batch = [tokenized_query]
+            else:
+                query_batch = tokenized_query
+            
+            print(f"   🔤 [BM25-DEBUG] query_batch: {query_batch}")
+            print(f"   🔤 [BM25-DEBUG] query_batch类型: {type(query_batch)}")
+            logger.info(f"query_batch: {query_batch}")
+            logger.info(f"query_batch类型: {type(query_batch)}")
+                
+            results_ids, scores = self.bm25.retrieve(query_batch, k=top_k)
             # results_ids shape: (1, top_k), scores shape: (1, top_k)
             top_indices = results_ids[0]  # 获取第一个查询的结果
             top_scores = scores[0]  # 获取第一个查询的分数
@@ -414,6 +437,10 @@ class EnhancedBM25Indexer:
         except Exception as e:
             error_msg = t("bm25_search_execution_failed", error=str(e))
             logger.error(error_msg)
+            logger.error(f"查询详情 - tokenized_query: {tokenized_query}, 类型: {type(tokenized_query)}")
+            logger.error(f"查询详情 - query_batch: {query_batch if 'query_batch' in locals() else 'N/A'}")
+            logger.error(f"BM25对象状态: {self.bm25 is not None}")
+            logger.error(f"文档数量: {len(self.documents) if self.documents else 0}")
             raise BM25UnavailableError(error_msg)
     
     def _extract_enemy_from_chunk(self, chunk: Dict[str, Any]) -> str:

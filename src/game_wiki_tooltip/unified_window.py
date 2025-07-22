@@ -53,7 +53,7 @@ try:
     # Try to import WebEngine, but handle gracefully if it fails
     try:
         from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage
         WEBENGINE_AVAILABLE = True
     except ImportError as e:
         print(f"Warning: PyQt6 WebEngine not available: {e}")
@@ -62,34 +62,10 @@ try:
         QWebEngineView = None
         QWebEngineProfile = None
         QWebEngineSettings = None
+        QWebEnginePage = None
 except ImportError:
-    from PyQt5.QtCore import (
-        Qt, QTimer, QPropertyAnimation, QRect, QSize, QPoint,
-        QEasingCurve, QParallelAnimationGroup, pyqtSignal, QUrl,
-        QThread, pyqtSlot
-    )
-    from PyQt5.QtWidgets import (
-        QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
-        QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
-        QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit,
-        QToolButton, QMenu
-    )
-    from PyQt5.QtGui import (
-        QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
-        QPalette, QIcon, QPixmap, QPainterPath
-    )
-    # Try to import WebEngine for PyQt5, but handle gracefully if it fails
-    try:
-        from PyQt5.QtWebEngineWidgets import QWebEngineView
-        from PyQt5.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
-        WEBENGINE_AVAILABLE = True
-    except ImportError as e:
-        print(f"Warning: PyQt5 WebEngine not available: {e}")
-        print("Wiki view functionality will be disabled. Using fallback text view.")
-        WEBENGINE_AVAILABLE = False
-        QWebEngineView = None
-        QWebEngineProfile = None
-        QWebEngineSettings = None
+    print("Error: PyQt6 is required. PyQt5 is no longer supported.")
+    sys.exit(1)
 
 
 def _get_scale() -> float:
@@ -307,6 +283,11 @@ def detect_markdown_content(text: str) -> bool:
         r'📺\s*\*\*info source：\*\*',  # 视频源标题
         r'---\s*\n\s*<small>',  # markdown分隔符 + HTML
         r'\n\n<small>.*?来源.*?</small>',  # 通用来源模式
+        r'<br\s*/?>',  # <br>标签
+        r'<strong>.*?</strong>',  # <strong>标签
+        r'<em>.*?</em>',  # <em>标签
+        r'<code>.*?</code>',  # <code>标签
+        r'<pre>.*?</pre>',  # <pre>标签
     ]
     
     # 检查markdown模式
@@ -962,16 +943,20 @@ class StreamingMessageWidget(MessageWidget):
         
         # Markdown渲染控制
         self.last_render_index = 0  # 上次渲染时的字符位置
-        self.render_interval = 80   # 每80个字符进行一次markdown渲染（减少频率，避免闪烁）
+        self.render_interval = 50   # 每50个字符进行一次markdown渲染（减少频率，避免闪烁）
         self.last_render_time = 0   # 上次渲染时间
-        self.render_time_interval = 1.5  # 最长1.5秒进行一次渲染
+        self.render_time_interval = 1.0  # 最长1.0秒进行一次渲染
         self.is_markdown_detected = False  # 缓存markdown检测结果
         self.current_format = Qt.TextFormat.PlainText  # 当前文本格式
         self.link_signal_connected = False  # 跟踪是否已连接linkActivated信号
         self.has_video_source = False  # 跟踪是否已检测到视频源
+        self.force_render_count = 0  # 强制渲染计数器
         
         # 优化流式消息的布局，防止闪烁
         self._optimize_for_streaming()
+        
+        # 设置默认的渲染参数（更敏感的检测）
+        self.set_render_params(char_interval=50, time_interval=1.0)
         
         # Typing animation timer
         self.typing_timer = QTimer()
@@ -1041,7 +1026,7 @@ class StreamingMessageWidget(MessageWidget):
             if original_viewport_width < 400:
                 print(f"⚠️ 流式消息视图宽度异常: viewport={original_viewport_width}px")
     
-    def set_render_params(self, char_interval: int = 80, time_interval: float = 1.5):
+    def set_render_params(self, char_interval: int = 50, time_interval: float = 1.0):
         """
         设置markdown渲染参数
         
@@ -1063,6 +1048,12 @@ class StreamingMessageWidget(MessageWidget):
                 # 提前检测是否可能包含markdown（基于首个chunk）
                 if len(self.full_text) > 10:  # 有一定长度时再检测
                     self.is_markdown_detected = detect_markdown_content(self.full_text)
+                    # 如果检测到markdown，立即进行初始渲染
+                    if self.is_markdown_detected:
+                        print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
+                        # 立即设置正确的格式
+                        self.current_format = Qt.TextFormat.RichText
+                        self.content_label.setTextFormat(Qt.TextFormat.RichText)
                 self.typing_timer.start(20)  # 20ms per character
     
     def mark_as_stopped(self):
@@ -1112,14 +1103,40 @@ class StreamingMessageWidget(MessageWidget):
                 self.has_video_source = True  # 标记已检测到视频源，避免重复打印
                 print(f"🎬 [STREAMING] 检测到视频源内容，触发渲染")
             
+            # 条件4: 检测到markdown格式内容（新增条件，确保格式内容能被渲染）
+            elif not self.is_markdown_detected and detect_markdown_content(display_text):
+                should_render = True
+                self.is_markdown_detected = True
+                print(f"🔄 [STREAMING] 检测到格式内容，触发渲染，当前长度: {len(display_text)}")
+            
+            # 条件5: 如果已检测到markdown，但当前文本没有格式，重新检测（处理格式变化）
+            elif self.is_markdown_detected and not detect_markdown_content(display_text):
+                # 重新检测整个文本，避免误判
+                if detect_markdown_content(self.full_text):
+                    should_render = True
+                    print(f"🔄 [STREAMING] 重新检测到格式内容，触发渲染")
+                else:
+                    # 如果确实没有格式，重置状态
+                    self.is_markdown_detected = False
+                    self.current_format = Qt.TextFormat.PlainText
+                    print(f"🔄 [STREAMING] 重置为纯文本格式")
+            
+            # 条件6: 每100个字符强制检测一次格式（新增，确保不会遗漏格式内容）
+            elif self.display_index % 100 == 0 and self.display_index > 0:
+                if detect_markdown_content(display_text) and not self.is_markdown_detected:
+                    should_render = True
+                    self.is_markdown_detected = True
+                    print(f"🔄 [STREAMING] 强制检测到格式内容，触发渲染，位置: {self.display_index}")
+            
+            # 条件7: 如果已经检测到markdown但还没有渲染过，强制渲染（新增）
+            elif self.is_markdown_detected and self.current_format == Qt.TextFormat.PlainText:
+                should_render = True
+                print(f"🔄 [STREAMING] 强制渲染已检测的markdown内容，位置: {self.display_index}")
+            
+            # 进行渲染处理
             if should_render and self.message.type == MessageType.AI_STREAMING:
                 # 重新检测内容格式（支持动态变化，如添加HTML视频源）
                 current_has_format = detect_markdown_content(display_text)
-                
-                # 如果检测到格式变化，更新检测状态
-                if current_has_format and not self.is_markdown_detected:
-                    self.is_markdown_detected = True
-                    print(f"🔄 [STREAMING] 检测到格式内容，切换到HTML渲染模式，当前长度: {len(display_text)}")
                 
                 # 进行阶段性渲染
                 if self.is_markdown_detected or current_has_format:
@@ -1136,6 +1153,9 @@ class StreamingMessageWidget(MessageWidget):
                         self.content_label.linkActivated.connect(self.on_link_clicked)
                         self.link_signal_connected = True
                         print(f"🔗 [STREAMING] 已连接linkActivated信号")
+                    
+                    # 确保状态一致
+                    self.is_markdown_detected = True
                 else:
                     # 只在格式实际变化时才设置格式，避免闪烁
                     if self.current_format != Qt.TextFormat.PlainText:
@@ -1143,6 +1163,9 @@ class StreamingMessageWidget(MessageWidget):
                         self.current_format = Qt.TextFormat.PlainText
                         print(f"📝 [STREAMING] 切换到PlainText格式，内容长度: {len(display_text)}")
                     self.content_label.setText(display_text)
+                    
+                    # 确保状态一致
+                    self.is_markdown_detected = False
                 
                 # 更新渲染状态
                 self.last_render_index = self.display_index
@@ -1153,9 +1176,17 @@ class StreamingMessageWidget(MessageWidget):
                     # 如果已检测到markdown/HTML，继续使用HTML格式
                     html_content = convert_markdown_to_html(display_text)
                     self.content_label.setText(html_content)
+                    # 确保格式设置正确
+                    if self.current_format != Qt.TextFormat.RichText:
+                        self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                        self.current_format = Qt.TextFormat.RichText
                 else:
                     # 否则使用纯文本
                     self.content_label.setText(display_text)
+                    # 确保格式设置正确
+                    if self.current_format != Qt.TextFormat.PlainText:
+                        self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+                        self.current_format = Qt.TextFormat.PlainText
                 
             # 不要频繁调用adjustSize，这是闪烁的主要原因
             # self.content_label.adjustSize()
@@ -1184,11 +1215,17 @@ class StreamingMessageWidget(MessageWidget):
                 self.streaming_finished.emit()
                 
                 # 进行最终的格式检测和转换
-                # 如果包含视频源，强制使用RichText格式
-                if detect_markdown_content(self.full_text) or has_video_sources:
+                # 强制重新检测格式，确保最终渲染正确
+                final_has_format = detect_markdown_content(self.full_text)
+                final_has_video_sources = has_video_sources
+                
+                # 确保最终渲染使用正确的格式
+                if final_has_format or final_has_video_sources or self.is_markdown_detected:
                     html_content = convert_markdown_to_html(self.full_text)
                     self.content_label.setText(html_content)
                     self.content_label.setTextFormat(Qt.TextFormat.RichText)
+                    self.current_format = Qt.TextFormat.RichText
+                    self.is_markdown_detected = True  # 确保状态一致
                     
                     # 流式输出完成后，确保linkActivated信号已连接（避免重复连接）
                     if not self.link_signal_connected:
@@ -1196,10 +1233,12 @@ class StreamingMessageWidget(MessageWidget):
                         self.link_signal_connected = True
                         print(f"🔗 [STREAMING] 最终渲染时连接linkActivated信号")
                     
-                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
+                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式，格式检测: {final_has_format}, 视频源: {final_has_video_sources}, 状态: {self.is_markdown_detected}")
                 else:
                     self.content_label.setText(self.full_text)
                     self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+                    self.current_format = Qt.TextFormat.PlainText
+                    self.is_markdown_detected = False  # 确保状态一致
                     print(f"✅ [STREAMING] 最终渲染完成，使用PlainText格式")
                 
                 # 更新几何而不是强制调整大小，避免内容被截断
@@ -1209,8 +1248,6 @@ class StreamingMessageWidget(MessageWidget):
                 # 确保父容器也更新布局
                 if self.parent() and hasattr(self.parent(), 'container'):
                     self.parent().container.updateGeometry()
-                
-                # 移除不必要的调试输出
                 
                 # 延迟滚动到底部，确保布局完成后内容可见
                 if hasattr(self.parent(), 'scroll_to_bottom'):
@@ -1726,6 +1763,49 @@ class ChatView(QScrollArea):
         QTimer.singleShot(100, self.update_all_message_widths)
 
 
+# Only define CustomWebEnginePage if WebEngine is available
+if WEBENGINE_AVAILABLE and QWebEnginePage:
+    class CustomWebEnginePage(QWebEnginePage):
+        """Custom page to handle all navigation in current window"""
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Connect the newWindowRequested signal to handle new window requests
+            self.newWindowRequested.connect(self._handle_new_window_request)
+        
+        def createWindow(self, window_type):
+            """Override to prevent new windows/tabs from opening
+            Return None to trigger newWindowRequested signal"""
+            # Don't create a new window, let the signal handler deal with it
+            return None
+        
+        def _handle_new_window_request(self, request):
+            """Handle new window request by navigating in current window"""
+            # Get the requested URL from the request
+            url = request.requestedUrl()
+            print(f"🔗 新窗口请求被拦截，在当前窗口打开: {url.toString()}")
+            # Navigate to the URL in the current page
+            self.setUrl(url)
+            # The browser history will automatically be updated
+        
+        def acceptNavigationRequest(self, url, nav_type, is_main_frame):
+            """Handle navigation requests"""
+            # Always accept navigation in the main frame
+            if is_main_frame:
+                return True
+            
+            # For subframes (iframes), check the navigation type
+            if nav_type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
+                # If a link in an iframe tries to navigate, load it in the main frame
+                self.setUrl(url)
+                return False
+                
+            # Allow other types of navigation in subframes
+            return super().acceptNavigationRequest(url, nav_type, is_main_frame)
+else:
+    CustomWebEnginePage = None
+
+
 class WikiView(QWidget):
     """Wiki page viewer - 简化版本以避免崩溃"""
     
@@ -1736,6 +1816,11 @@ class WikiView(QWidget):
         super().__init__(parent)
         self.current_search_url = ""  # 存储搜索URL
         self.current_search_title = ""  # 存储搜索标题
+        self.web_view = None
+        self.content_widget = None
+        self._webview_ready = False
+        self._is_paused = False  # 添加暂停状态标记
+        self._pause_lock = False  # 添加暂停锁，防止重复调用
         self.init_ui()
         
     def init_ui(self):
@@ -1757,7 +1842,7 @@ class WikiView(QWidget):
         toolbar_layout = QHBoxLayout(toolbar)
         toolbar_layout.setContentsMargins(10, 0, 10, 0)
         
-        # Back button
+        # Back to chat button
         self.back_button = QPushButton("< Back to Chat")
         self.back_button.setStyleSheet("""
             QPushButton {
@@ -1775,11 +1860,65 @@ class WikiView(QWidget):
         """)
         self.back_button.clicked.connect(self.back_requested.emit)
         
-        # URL/Title label
-        self.title_label = QLabel()
-        self.title_label.setStyleSheet("color: #5f6368; margin-left: 10px;")
+        # Navigation button style
+        nav_button_style = """
+            QPushButton {
+                background-color: transparent;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                color: #5f6368;
+                font-size: 16px;
+                padding: 4px 4px;
+                min-width: 28px;
+                max-width: 28px;
+            }
+            QPushButton:hover {
+                background-color: #f0f0f0;
+                border-color: #d0d0d0;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+            QPushButton:disabled {
+                color: #c0c0c0;
+                border-color: #f0f0f0;
+            }
+        """
         
-        # Open in browser button (when WebEngine not available)
+        # Browser navigation buttons
+        self.nav_back_button = QPushButton("◀")
+        self.nav_back_button.setStyleSheet(nav_button_style)
+        self.nav_back_button.setToolTip("返回上一页")
+        self.nav_back_button.setEnabled(False)
+        
+        self.nav_forward_button = QPushButton("▶")
+        self.nav_forward_button.setStyleSheet(nav_button_style)
+        self.nav_forward_button.setToolTip("前进到下一页")
+        self.nav_forward_button.setEnabled(False)
+        
+        self.refresh_button = QPushButton("🔄")
+        self.refresh_button.setStyleSheet(nav_button_style)
+        self.refresh_button.setToolTip("刷新页面")
+        
+        # URL bar
+        self.url_bar = QLineEdit()
+        self.url_bar.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                padding: 6px 10px;
+                font-size: 13px;
+                background: white;
+                color: #202124;
+            }
+            QLineEdit:focus {
+                border-color: #4096ff;
+                outline: none;
+            }
+        """)
+        self.url_bar.setPlaceholderText("输入URL并按Enter键导航...")
+        
+        # Open in browser button
         self.open_browser_button = QPushButton("Open in Browser")
         self.open_browser_button.setStyleSheet("""
             QPushButton {
@@ -1796,9 +1935,15 @@ class WikiView(QWidget):
         """)
         self.open_browser_button.clicked.connect(self.open_in_browser)
         
+        # Add all widgets to toolbar
         toolbar_layout.addWidget(self.back_button)
-        toolbar_layout.addWidget(self.title_label)
-        toolbar_layout.addStretch()
+        toolbar_layout.addSpacing(10)
+        toolbar_layout.addWidget(self.nav_back_button)
+        toolbar_layout.addWidget(self.nav_forward_button)
+        toolbar_layout.addWidget(self.refresh_button)
+        toolbar_layout.addSpacing(10)
+        toolbar_layout.addWidget(self.url_bar, 1)  # URL bar takes remaining space
+        toolbar_layout.addSpacing(10)
         toolbar_layout.addWidget(self.open_browser_button)
         
         # Content area - 简化WebView创建逻辑
@@ -1811,6 +1956,11 @@ class WikiView(QWidget):
                 print("🔧 尝试创建WebEngine...")
                 self.web_view = QWebEngineView()
                 
+                # 使用自定义页面来处理导航
+                if CustomWebEnginePage:
+                    custom_page = CustomWebEnginePage(self.web_view)
+                    self.web_view.setPage(custom_page)
+                
                 # 配置WebEngine设置以允许加载外部内容
                 try:
                     if hasattr(self.web_view, 'settings'):
@@ -1822,9 +1972,14 @@ class WikiView(QWidget):
                             settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
                             # 允许本地内容访问文件
                             settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+                            # 允许JavaScript打开窗口（重要！这样createWindow才会被调用）
+                            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
                             print("✅ WebEngine设置已配置")
                 except Exception as settings_error:
                     print(f"⚠️ WebEngine设置配置失败: {settings_error}")
+                
+                # 连接导航信号
+                self._connect_navigation_signals()
                 
                 self.content_widget = self.web_view
                 self._webview_ready = True
@@ -1844,10 +1999,73 @@ class WikiView(QWidget):
         self.current_url = ""
         self.current_title = ""
         
+    def load_url(self, url: str):
+        """Load a URL in the web view"""
+        if self.web_view:
+            self.web_view.setUrl(QUrl(url))
+            self.current_url = url
+    
+    def _connect_navigation_signals(self):
+        """Connect navigation-related signals"""
+        if not self.web_view:
+            return
+            
+        # Connect navigation buttons
+        self.nav_back_button.clicked.connect(self.web_view.back)
+        self.nav_forward_button.clicked.connect(self.web_view.forward)
+        self.refresh_button.clicked.connect(self.web_view.reload)
+        
+        # Connect URL bar
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
+        
+        # Connect web view signals
+        self.web_view.urlChanged.connect(self._on_url_changed)
+        self.web_view.loadFinished.connect(self._update_navigation_state)
+        self.web_view.page().loadStarted.connect(self._on_load_started)
+        
+    def navigate_to_url(self):
+        """Navigate to the URL entered in the URL bar"""
+        url = self.url_bar.text().strip()
+        if not url:
+            return
+            
+        # Add protocol if missing
+        if not url.startswith(('http://', 'https://', 'file://')):
+            url = 'https://' + url
+            
+        self.load_url(url)
+        
+    def _on_url_changed(self, url):
+        """Update URL bar when URL changes"""
+        url_str = url.toString()
+        self.url_bar.setText(url_str)
+        self.current_url = url_str
+        
+    def _on_load_started(self):
+        """Called when page loading starts"""
+        # You could add a loading indicator here if desired
+        pass
+        
+    def _update_navigation_state(self, ok=True):
+        """Update navigation button states based on history"""
+        if not self.web_view:
+            return
+            
+        # Update back/forward button states
+        try:
+            history = self.web_view.history()
+            self.nav_back_button.setEnabled(history.canGoBack())
+            self.nav_forward_button.setEnabled(history.canGoForward())
+        except:
+            pass
+        
     def _on_page_load_finished(self, ok):
         """页面加载完成时的回调"""
         if not ok or not self.web_view:
             return
+            
+        # Update navigation state
+        self._update_navigation_state()
             
         try:
             # 获取当前页面的URL和标题
@@ -1930,7 +2148,6 @@ class WikiView(QWidget):
             # 更新显示的标题
             self.current_url = current_url
             self.current_title = title
-            self.title_label.setText(title)
             
             # 发出信号，通知找到了真实的wiki页面
             print(f"📄 WikiView找到真实wiki页面: {title} -> {current_url}")
@@ -2019,8 +2236,12 @@ class WikiView(QWidget):
                     except ImportError:
                         from PyQt5.QtWebEngineCore import QWebEnginePage
                     
-                    page = QWebEnginePage(profile, web_view)
-                    web_view.setPage(page)
+                    if CustomWebEnginePage:
+                        page = CustomWebEnginePage(profile, web_view)
+                        web_view.setPage(page)
+                    else:
+                        page = QWebEnginePage(profile, web_view)
+                        web_view.setPage(page)
                     print("✅ Profile与WebView关联成功")
                     
                     # 验证Profile状态
@@ -2202,7 +2423,7 @@ class WikiView(QWidget):
         self.current_search_title = title  # 保存搜索标题
         self.current_url = url
         self.current_title = title
-        self.title_label.setText(title)
+        self.url_bar.setText(url)  # Update URL bar instead of title label
         
         if self.web_view:
             try:
@@ -2248,51 +2469,96 @@ class WikiView(QWidget):
         """停止页面中所有正在播放的媒体内容"""
         if self.web_view:
             try:
-                # 执行JavaScript来暂停所有视频和音频元素
+                # 执行更全面的JavaScript停止所有媒体播放
                 javascript_code = """
-                // 暂停所有视频元素
-                var videos = document.querySelectorAll('video');
-                for (var i = 0; i < videos.length; i++) {
-                    videos[i].pause();
-                }
-                
-                // 暂停所有音频元素
-                var audios = document.querySelectorAll('audio');
-                for (var i = 0; i < audios.length; i++) {
-                    audios[i].pause();
-                }
-                
-                // 尝试停止iframe中的媒体（如YouTube嵌入）
-                var iframes = document.querySelectorAll('iframe');
-                for (var i = 0; i < iframes.length; i++) {
-                    try {
-                        // 重新设置src可以停止iframe中的媒体播放
-                        var src = iframes[i].src;
-                        iframes[i].src = '';
-                        // 延迟恢复src，但这会停止当前播放
-                        setTimeout(function(iframe, originalSrc) {
-                            return function() {
-                                iframe.src = originalSrc;
-                            };
-                        }(iframes[i], src), 100);
-                    } catch(e) {
-                        // 跨域iframe可能无法访问，忽略错误
+                (function() {
+                    // 停止所有视频和音频
+                    var videos = document.querySelectorAll('video');
+                    var audios = document.querySelectorAll('audio');
+                    
+                    videos.forEach(function(video) {
+                        video.pause();
+                        video.currentTime = 0;
+                        video.muted = true;
+                        video.volume = 0;
+                        // 移除所有事件监听器
+                        video.onplay = null;
+                        video.onloadeddata = null;
+                        video.oncanplay = null;
+                    });
+                    
+                    audios.forEach(function(audio) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        audio.muted = true;
+                        audio.volume = 0;
+                        // 移除所有事件监听器
+                        audio.onplay = null;
+                        audio.onloadeddata = null;
+                        audio.oncanplay = null;
+                    });
+                    
+                    // 停止所有iframe中的媒体
+                    var iframes = document.querySelectorAll('iframe');
+                    iframes.forEach(function(iframe) {
+                        try {
+                            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            var iframeVideos = iframeDoc.querySelectorAll('video');
+                            var iframeAudios = iframeDoc.querySelectorAll('audio');
+                            
+                            iframeVideos.forEach(function(video) {
+                                video.pause();
+                                video.currentTime = 0;
+                                video.muted = true;
+                                video.volume = 0;
+                                video.onplay = null;
+                                video.onloadeddata = null;
+                                video.oncanplay = null;
+                            });
+                            
+                            iframeAudios.forEach(function(audio) {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.muted = true;
+                                audio.volume = 0;
+                                audio.onplay = null;
+                                audio.onloadeddata = null;
+                                audio.oncanplay = null;
+                            });
+                        } catch(e) {
+                            // 跨域iframe无法访问，忽略错误
+                        }
+                    });
+                    
+                    // 阻止新的媒体播放
+                    if (!window._originalPlay) {
+                        window._originalPlay = HTMLMediaElement.prototype.play;
                     }
-                }
-                
-                console.log('媒体播放已停止');
+                    HTMLMediaElement.prototype.play = function() {
+                        console.log('🚫 阻止媒体播放:', this);
+                        return Promise.reject(new Error('Media playback blocked'));
+                    };
+                    
+                    console.log('🔇 媒体播放已停止并阻止新的播放');
+                })();
                 """
                 
                 self.web_view.page().runJavaScript(javascript_code)
-                print("🔇 WikiView: 已执行媒体停止脚本")
+                print("🔇 WikiView: 已执行增强媒体停止脚本")
                 
             except Exception as e:
                 print(f"⚠️ WikiView: 停止媒体播放失败: {e}")
                 
     def pause_page(self):
         """暂停页面活动（包括媒体播放）"""
-        if self.web_view:
+        # 防止重复调用
+        if self._pause_lock:
+            print("🔄 WikiView: 暂停操作正在进行中，跳过重复调用")
+            return
+            
+        if self.web_view and not self._is_paused:
             try:
+                self._pause_lock = True
                 print("🔄 正在暂停WikiView页面...")
                 
                 # 1. 停止当前网络请求
@@ -2312,25 +2578,39 @@ class WikiView(QWidget):
                 # 3. 设置页面为不可见状态，某些网站会自动暂停媒体
                 try:
                     self.web_view.page().runJavaScript("""
-                    // 触发页面可见性变化事件，某些网站会响应此事件暂停媒体
-                    Object.defineProperty(document, 'hidden', {value: true, writable: false});
-                    Object.defineProperty(document, 'visibilityState', {value: 'hidden', writable: false});
-                    
-                    var event = new Event('visibilitychange');
-                    document.dispatchEvent(event);
+                    (function() {
+                        // 设置页面为不可见状态
+                        Object.defineProperty(document, 'hidden', {value: true, writable: false});
+                        Object.defineProperty(document, 'visibilityState', {value: 'hidden', writable: false});
+                        
+                        // 触发可见性变化事件
+                        var event = new Event('visibilitychange');
+                        document.dispatchEvent(event);
+                        
+                        // 阻止页面焦点
+                        if (document.hasFocus) {
+                            document.hasFocus = function() { return false; };
+                        }
+                        
+                        // 设置页面为不可交互状态
+                        document.body.style.pointerEvents = 'none';
+                        
+                        console.log('🔇 页面已设置为不可见状态');
+                    })();
                     """)
                     print("✅ 页面可见性状态已设置")
                 except Exception as js_error:
                     print(f"⚠️ JavaScript执行失败: {js_error}")
                 
-                # 4. 不在这里断开信号连接，避免崩溃
-                # 信号断开在safe_cleanup中单独处理
-                print("✅ 页面状态设置完成")
-                
+                self._is_paused = True
                 print("✅ WikiView页面暂停完成")
                 
             except Exception as e:
                 print(f"⚠️ WikiView: 暂停页面失败: {e}")
+            finally:
+                self._pause_lock = False
+        else:
+            print("🔄 WikiView: 页面已经暂停或WebView不可用，跳过暂停操作")
     
     def safe_cleanup(self):
         """安全清理WikiView资源，用于窗口关闭时"""
@@ -2357,25 +2637,49 @@ class WikiView(QWidget):
                 
     def resume_page(self):
         """恢复页面活动"""
-        if self.web_view:
+        if self.web_view and self._is_paused:
             try:
-                # 恢复页面可见性状态
+                # 恢复页面可见性状态和交互性
                 self.web_view.page().runJavaScript("""
-                Object.defineProperty(document, 'hidden', {value: false, writable: false});
-                Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: false});
-                
-                var event = new Event('visibilitychange');
-                document.dispatchEvent(event);
+                (function() {
+                    // 恢复页面可见性状态
+                    Object.defineProperty(document, 'hidden', {value: false, writable: false});
+                    Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: false});
+                    
+                    // 触发可见性变化事件
+                    var event = new Event('visibilitychange');
+                    document.dispatchEvent(event);
+                    
+                    // 恢复页面交互性
+                    document.body.style.pointerEvents = '';
+                    
+                    // 恢复媒体播放功能
+                    if (window._originalPlay) {
+                        HTMLMediaElement.prototype.play = window._originalPlay;
+                        delete window._originalPlay;
+                    }
+                    
+                    console.log('▶️ 页面已恢复可见和交互状态');
+                })();
                 """)
                 
+                self._is_paused = False
                 print("▶️ WikiView: 页面已恢复")
                 
             except Exception as e:
                  print(f"⚠️ WikiView: 恢复页面失败: {e}")
+        else:
+            print("▶️ WikiView: 页面未处于暂停状态，跳过恢复操作")
                  
     def hideEvent(self, event):
         """当WikiView被隐藏时自动暂停媒体播放"""
-        self.pause_page()
+        # 只有在当前显示Wiki视图时才暂停
+        if hasattr(self, 'parent') and self.parent():
+            parent = self.parent()
+            if hasattr(parent, 'content_stack'):
+                current_widget = parent.content_stack.currentWidget()
+                if current_widget == self:
+                    self.pause_page()
         super().hideEvent(event)
         
     def showEvent(self, event):
@@ -2863,9 +3167,11 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def show_chat_view(self):
         """Switch to chat view"""
-        # 首先停止WikiView中的媒体播放
+        # 首先停止WikiView中的媒体播放（只有在当前显示Wiki视图时才暂停）
         if hasattr(self, 'wiki_view') and self.wiki_view:
-            self.wiki_view.pause_page()
+            current_widget = self.content_stack.currentWidget()
+            if current_widget == self.wiki_view:
+                self.wiki_view.pause_page()
             
         self.content_stack.setCurrentWidget(self.chat_view)
         # Show input area and shortcuts in chat mode
