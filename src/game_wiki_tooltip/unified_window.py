@@ -871,6 +871,7 @@ class MessageWidget(QFrame):
                 self.content_label.setText(html_content)
                 self.content_label.setTextFormat(Qt.TextFormat.RichText)
                 # AI回复中可能包含链接，需要连接linkActivated信号
+                self.content_label.setOpenExternalLinks(False)  # 确保使用信号处理
                 self.content_label.linkActivated.connect(self.on_link_clicked)
             else:
                 # 普通文本
@@ -957,6 +958,12 @@ class MessageWidget(QFrame):
     def on_link_clicked(self, url):
         """Handle wiki link clicks"""
         logger = logging.getLogger(__name__)
+        print(f"🔗 [LINK-DEBUG] 链接被点击: {url}")
+        print(f"🔗 [LINK-DEBUG] 消息类型: {self.message.type}")
+        print(f"🔗 [LINK-DEBUG] 是否为流式消息: {isinstance(self, StreamingMessageWidget)}")
+        print(f"🔗 [LINK-DEBUG] content_label格式: {self.content_label.textFormat()}")
+        print(f"🔗 [LINK-DEBUG] openExternalLinks: {self.content_label.openExternalLinks()}")
+        
         logger.info(f"🔗 Wiki链接被点击: {url}")
         logger.info(f"消息内容: {self.message.content}")
         logger.info(f"消息元数据: {self.message.metadata}")
@@ -972,14 +979,17 @@ class MessageWidget(QFrame):
                 title = "Wiki页面"
         
         logger.info(f"使用标题: {title}")
+        print(f"🔗 [LINK-DEBUG] 使用标题: {title}")
         
         # 向上查找ChatView实例
         chat_view = self._find_chat_view()
         if chat_view:
             logger.info(f"找到ChatView实例，调用显示Wiki页面")
+            print(f"🔗 [LINK-DEBUG] 找到ChatView实例，调用显示Wiki页面")
             chat_view.show_wiki(url, title)
         else:
             logger.warning(f"未找到ChatView实例")
+            print(f"🔗 [LINK-DEBUG] ❌ 未找到ChatView实例")
             
     def _find_chat_view(self):
         """向上查找ChatView实例"""
@@ -1053,6 +1063,18 @@ class StreamingMessageWidget(MessageWidget):
         
         # 添加调试日志
         print(f"🔧 [STREAMING] 新StreamingMessageWidget初始化完成，timer状态: {'激活' if self.typing_timer.isActive() else '未激活'}")
+        
+        # 初始化时就配置链接处理
+        if hasattr(self, 'content_label'):
+            self.content_label.setOpenExternalLinks(False)  # 确保使用信号处理而不是直接打开
+            # 预先连接linkActivated信号，避免在流式过程中的连接问题
+            try:
+                self.content_label.linkActivated.connect(self.on_link_clicked)
+                self.link_signal_connected = True
+                print(f"🔗 [STREAMING] 初始化时已连接linkActivated信号")
+            except Exception as e:
+                print(f"⚠️ [STREAMING] 初始化连接linkActivated信号失败: {e}")
+                self.link_signal_connected = False
     
     def _optimize_for_streaming(self):
         """优化流式消息的布局，防止闪烁"""
@@ -1072,20 +1094,30 @@ class StreamingMessageWidget(MessageWidget):
             
         # 初始设置宽度（基于父容器）
         self._update_bubble_width()
+        
+        # 为流式消息固定初始宽度，避免排版跳动
+        self._fix_width_for_streaming()
     
     def _update_bubble_width(self):
         """根据聊天窗口宽度动态设置对话框宽度"""
         # 获取聊天视图的宽度，考虑滚动条宽度
-        chat_view = self.parent()
+        parent_widget = self.parent()
+        
+        # 尝试使用get_chat_view，但在初始化时可能还不可用
+        if hasattr(self, 'get_chat_view'):
+            chat_view = self.get_chat_view()
+        else:
+            chat_view = parent_widget if parent_widget and hasattr(parent_widget, 'viewport') else None
+            
         if chat_view and hasattr(chat_view, 'viewport'):
             viewport_width = chat_view.viewport().width()
             # 减去滚动条可能占用的宽度（通常约20px）
-            scrollbar = chat_view.verticalScrollBar()
-            if scrollbar and scrollbar.isVisible():
-                viewport_width -= scrollbar.width()
+            if hasattr(chat_view, 'verticalScrollBar'):
+                scrollbar = chat_view.verticalScrollBar()
+                if scrollbar and scrollbar.isVisible():
+                    viewport_width -= scrollbar.width()
         else:
             # 如果无法获取聊天视图宽度，尝试从父容器获取
-            parent_widget = self.parent()
             viewport_width = parent_widget.width() if parent_widget else 500
         
         # 确保有效宽度
@@ -1094,6 +1126,10 @@ class StreamingMessageWidget(MessageWidget):
         # 计算对话框宽度（聊天视图宽度的75%，减少比例避免过宽，但不超过600px，不少于300px）
         bubble_width = max(300, min(600, int(viewport_width * 0.75)))
         content_width = bubble_width - 24  # 减去边距
+        
+        # 保存计算的宽度供后续使用
+        self._calculated_bubble_width = bubble_width
+        self._calculated_content_width = content_width
         
         # 更新气泡和内容宽度 - 使用最大宽度而不是固定宽度
         bubble = self.findChild(QFrame, "messageBubble")
@@ -1112,6 +1148,61 @@ class StreamingMessageWidget(MessageWidget):
             if original_viewport_width < 400:
                 print(f"⚠️ 流式消息视图宽度异常: viewport={original_viewport_width}px")
     
+    def _fix_width_for_streaming(self):
+        """为流式消息固定宽度，避免排版跳动"""
+        if not hasattr(self, '_calculated_bubble_width'):
+            return
+            
+        bubble = self.findChild(QFrame, "messageBubble")
+        if bubble:
+            # 使用固定宽度而不是最大宽度
+            bubble.setFixedWidth(self._calculated_bubble_width)
+            print(f"🔒 [STREAMING] 固定bubble宽度: {self._calculated_bubble_width}px")
+            
+        if hasattr(self, 'content_label'):
+            # 内容标签也使用固定宽度
+            self.content_label.setFixedWidth(self._calculated_content_width)
+            # 设置最小高度，避免垂直跳动
+            self.content_label.setMinimumHeight(30)
+            print(f"🔒 [STREAMING] 固定content宽度: {self._calculated_content_width}px")
+            
+        # 标记已固定宽度
+        self._width_fixed = True
+    
+    def _restore_flexible_width(self):
+        """恢复灵活宽度设置（流式结束后调用）"""
+        if not hasattr(self, '_width_fixed') or not self._width_fixed:
+            return
+            
+        bubble = self.findChild(QFrame, "messageBubble")
+        if bubble and hasattr(self, '_calculated_bubble_width'):
+            # 移除固定宽度，恢复最大宽度限制
+            bubble.setMinimumWidth(0)
+            bubble.setMaximumWidth(self._calculated_bubble_width)
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            print(f"🔓 [STREAMING] 恢复bubble灵活宽度，最大: {self._calculated_bubble_width}px")
+            
+        if hasattr(self, 'content_label') and hasattr(self, '_calculated_content_width'):
+            # 移除固定宽度，恢复最大宽度限制
+            self.content_label.setMinimumWidth(0)
+            self.content_label.setMaximumWidth(self._calculated_content_width)
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            print(f"🔓 [STREAMING] 恢复content灵活宽度，最大: {self._calculated_content_width}px")
+            
+        # 标记已恢复灵活宽度
+        self._width_fixed = False
+        
+    def get_chat_view(self):
+        """获取父级ChatView（如果存在）"""
+        try:
+            parent = self.parent()
+            # 检查parent是否是ChatView（通过检查特有方法）
+            if parent and hasattr(parent, 'request_auto_scroll') and hasattr(parent, 'verticalScrollBar'):
+                return parent
+        except:
+            pass
+        return None
+    
     def set_render_params(self, char_interval: int = 50, time_interval: float = 1.0):
         """
         设置markdown渲染参数
@@ -1129,35 +1220,66 @@ class StreamingMessageWidget(MessageWidget):
         if self.is_stopped:
             print(f"🛑 流式消息已停止，拒绝新内容块: '{chunk[:50]}...'")
             return
-            # 记录timer状态用于调试
-            timer_was_active = self.typing_timer.isActive()
+        
+        # 记录timer状态用于调试
+        timer_was_active = self.typing_timer.isActive()
+        
+        self.full_text += chunk
+        print(f"✅ [STREAMING-WIDGET] 全文已更新，新长度: {len(self.full_text)}")
+        
+        # 改进的初始检测逻辑：
+        # 1. 移除timer检查限制，确保每个新消息都能进行初始检测
+        # 2. 降低长度限制，尽早检测markdown
+        if not timer_was_active:
+            self.dots_timer.stop()
+            # 初始化渲染时间戳
+            self.last_render_time = time.time()
             
-            self.full_text += chunk
-            
-            # 改进的初始检测逻辑：
-            # 1. 移除timer检查限制，确保每个新消息都能进行初始检测
-            # 2. 降低长度限制，尽早检测markdown
-            if not timer_was_active:
-                self.dots_timer.stop()
-                # 初始化渲染时间戳
-                self.last_render_time = time.time()
+        # 对每个新chunk都进行markdown检测（不仅仅是第一个）
+        # 使用缓存避免重复检测相同内容
+        if not self.is_markdown_detected and len(self.full_text) > 5:  # 降低长度限制
+            self.is_markdown_detected = detect_markdown_content(self.full_text)
+            # 如果检测到markdown，立即进行初始渲染
+            if self.is_markdown_detected:
+                print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
+                print(f"📋 [STREAMING] Timer状态: {'激活' if timer_was_active else '未激活'}")
+                print(f"📝 [STREAMING] 前50字符: {self.full_text[:50]}...")
+                # 立即设置正确的格式
+                self.current_format = Qt.TextFormat.RichText
+                self.content_label.setTextFormat(Qt.TextFormat.RichText)
                 
-            # 对每个新chunk都进行markdown检测（不仅仅是第一个）
-            # 使用缓存避免重复检测相同内容
-            if not self.is_markdown_detected and len(self.full_text) > 5:  # 降低长度限制
-                self.is_markdown_detected = detect_markdown_content(self.full_text)
-                # 如果检测到markdown，立即进行初始渲染
-                if self.is_markdown_detected:
-                    print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
-                    print(f"📋 [STREAMING] Timer状态: {'激活' if timer_was_active else '未激活'}")
-                    print(f"📝 [STREAMING] 前50字符: {self.full_text[:50]}...")
-                    # 立即设置正确的格式
-                    self.current_format = Qt.TextFormat.RichText
-                    self.content_label.setTextFormat(Qt.TextFormat.RichText)
-                    
-            # 确保timer启动
-            if not self.typing_timer.isActive():
-                self.typing_timer.start(20)  # 20ms per character
+        # 确保timer启动
+        if not self.typing_timer.isActive():
+            print(f"⏰ [STREAMING-WIDGET] 启动打字机定时器")
+            # 更快的打字机效果：5ms per character（之前是20ms）
+            self.typing_timer.start(5)
+        else:
+            print(f"⏰ [STREAMING-WIDGET] 打字机定时器已在运行")
+    
+    def _adjust_typing_speed(self):
+        """动态调整打字机速度"""
+        remaining_chars = len(self.full_text) - self.display_index
+        
+        # 如果剩余字符很多，加速显示
+        if remaining_chars > 500:
+            # 大量剩余内容，极快速度
+            new_interval = 1
+        elif remaining_chars > 200:
+            # 中等剩余内容，快速度
+            new_interval = 2
+        elif remaining_chars > 50:
+            # 少量剩余内容，正常速度
+            new_interval = 3
+        else:
+            # 很少剩余内容，慢速度保持打字效果
+            new_interval = 5
+            
+        # 检查是否需要调整定时器间隔
+        if self.typing_timer.isActive():
+            current_interval = self.typing_timer.interval()
+            if current_interval != new_interval:
+                print(f"🚀 [TYPING] 调整打字速度: {current_interval}ms -> {new_interval}ms, 剩余: {remaining_chars}字符")
+                self.typing_timer.setInterval(new_interval)
     
     def mark_as_stopped(self):
         """标记为已停止"""
@@ -1182,11 +1304,15 @@ class StreamingMessageWidget(MessageWidget):
             
     def show_next_char(self):
         """Show next character in typing animation"""
+        
         # 首先检查是否已被停止
         if self.is_stopped:
             self.typing_timer.stop()
             print(f"🛑 打字机效果检测到停止状态，立即终止")
             return
+            
+        # 动态调整打字速度（根据剩余字符数量）
+        self._adjust_typing_speed()
             
         if self.display_index < len(self.full_text):
             self.display_index += 1
@@ -1204,25 +1330,41 @@ class StreamingMessageWidget(MessageWidget):
             # 检查是否需要进行阶段性markdown渲染
             should_render = False
             
-            # 条件1: 达到字符间隔
+            # 添加更新缓冲检查 - 减少频繁的DOM操作
+            should_update_display = False
+            
+            # 缓冲条件1: 每5个字符更新一次显示（减少更新频率）
+            # 但前10个字符立即显示，确保用户看到内容开始
+            if self.display_index <= 10 or self.display_index % 5 == 0:
+                should_update_display = True
+            
+            # 缓冲条件2: 遇到换行符或段落结束
+            elif display_text and display_text[-1] in ['\n', '.', '。', '!', '！', '?', '？']:
+                should_update_display = True
+            
+            # 缓冲条件3: 达到字符间隔时必须更新
             if self.display_index - self.last_render_index >= self.render_interval:
                 should_render = True
+                should_update_display = True
             
             # 条件2: 达到时间间隔
             elif current_time - self.last_render_time >= self.render_time_interval:
                 should_render = True
+                should_update_display = True
             
             # 条件3: 检测到关键内容边界（如video sources开始）
             elif not self.has_video_source and ('📺' in display_text[-10:] or 
                   '---\n<small>' in display_text[-20:] or
                   '<small>' in display_text[-10:]):
                 should_render = True
+                should_update_display = True
                 self.has_video_source = True  # 标记已检测到视频源，避免重复打印
                 print(f"🎬 [STREAMING] 检测到视频源内容，触发渲染")
             
             # 条件4: 检测到markdown格式内容（新增条件，确保格式内容能被渲染）
             elif not self.is_markdown_detected and len(display_text) > 5 and detect_markdown_content(display_text):
                 should_render = True
+                should_update_display = True
                 self.is_markdown_detected = True
                 print(f"🔄 [STREAMING] 检测到格式内容，触发渲染，当前长度: {len(display_text)}")
                 print(f"📝 [STREAMING] 前50字符: {display_text[:50]}...")
@@ -1274,6 +1416,12 @@ class StreamingMessageWidget(MessageWidget):
                         self.content_label.linkActivated.connect(self.on_link_clicked)
                         self.link_signal_connected = True
                         print(f"🔗 [STREAMING] 已连接linkActivated信号")
+                        print(f"🔗 [STREAMING] 当前内容包含链接: {'<a href' in html_content}")
+                        
+                    # 确保内容标签启用了链接打开
+                    self.content_label.setOpenExternalLinks(False)  # 确保信号处理而不是直接打开
+                    print(f"🔗 [STREAMING] 内容标签配置 - OpenExternalLinks: {self.content_label.openExternalLinks()}")
+                    print(f"🔗 [STREAMING] 内容标签格式: {self.content_label.textFormat()}")
                     
                     # 确保状态一致
                     self.is_markdown_detected = True
@@ -1291,8 +1439,11 @@ class StreamingMessageWidget(MessageWidget):
                 # 更新渲染状态
                 self.last_render_index = self.display_index
                 self.last_render_time = current_time
-            else:
-                # 不需要渲染时，保持当前格式但更新文本
+            elif should_update_display:
+                # 只更新显示，不进行完整渲染
+                # 使用setUpdatesEnabled减少闪烁
+                self.content_label.setUpdatesEnabled(False)
+                
                 if self.is_markdown_detected:
                     # 如果已检测到markdown/HTML，继续使用HTML格式
                     html_content = convert_markdown_to_html(display_text)
@@ -1309,13 +1460,24 @@ class StreamingMessageWidget(MessageWidget):
                         self.content_label.setTextFormat(Qt.TextFormat.PlainText)
                         self.current_format = Qt.TextFormat.PlainText
                 
-            # 不要频繁调用adjustSize，这是闪烁的主要原因
-            # self.content_label.adjustSize()
-            # self.adjustSize()
-            
-            # Auto-scroll to bottom
-            if hasattr(self.parent(), 'smart_scroll_to_bottom'):
-                self.parent().smart_scroll_to_bottom()
+                # 恢复更新
+                self.content_label.setUpdatesEnabled(True)
+            # 如果既不需要渲染也不需要更新显示，但这是前5个字符，强制至少显示一次
+            elif self.display_index <= 5:
+                print(f"🚀 [DISPLAY] 强制显示前5个字符: display_index={self.display_index}")
+                should_update_display = True
+                if self.is_markdown_detected:
+                    html_content = convert_markdown_to_html(display_text)
+                    self.content_label.setText(html_content)
+                else:
+                    self.content_label.setText(display_text)
+                
+            # 只在需要滚动时才滚动（减少滚动调用）
+            if should_update_display:
+                chat_view = self.get_chat_view()
+                if chat_view:
+                    # 使用统一的滚动请求机制
+                    chat_view.request_auto_scroll()
         else:
             self.typing_timer.stop()
             
@@ -1360,6 +1522,12 @@ class StreamingMessageWidget(MessageWidget):
                         self.content_label.linkActivated.connect(self.on_link_clicked)
                         self.link_signal_connected = True
                         print(f"🔗 [STREAMING] 最终渲染时连接linkActivated信号")
+                        
+                    # 确保内容标签配置正确
+                    self.content_label.setOpenExternalLinks(False)  # 确保信号处理而不是直接打开
+                    print(f"🔗 [STREAMING] 最终渲染 - 内容包含链接: {'<a href' in html_content}")
+                    print(f"🔗 [STREAMING] 最终渲染 - OpenExternalLinks: {self.content_label.openExternalLinks()}")
+                    print(f"🔗 [STREAMING] 最终渲染 - 文本格式: {self.content_label.textFormat()}")
                     
                     print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
                 else:
@@ -1369,23 +1537,44 @@ class StreamingMessageWidget(MessageWidget):
                     self.is_markdown_detected = False  # 更新状态与检测结果一致
                     print(f"✅ [STREAMING] 最终渲染完成，使用PlainText格式")
                 
-                # 更新几何而不是强制调整大小，避免内容被截断
+                # 流式结束后恢复灵活宽度
+                self._restore_flexible_width()
+                
+                # 只在流式结束后进行一次完整的布局更新
                 self.content_label.updateGeometry()
                 self.updateGeometry()
                 
-                # 确保父容器也更新布局
-                if self.parent() and hasattr(self.parent(), 'container'):
-                    self.parent().container.updateGeometry()
+                # 确保父容器也更新布局（延迟执行，避免阻塞）
+                chat_view = self.get_chat_view()
+                if chat_view and hasattr(chat_view, 'container'):
+                    QTimer.singleShot(50, chat_view.container.updateGeometry)
                 
-                # 延迟滚动到底部，确保布局完成后内容可见
-                if hasattr(self.parent(), 'scroll_to_bottom'):
-                    QTimer.singleShot(200, self.parent().scroll_to_bottom)
+                # 请求滚动到底部，使用统一的滚动管理
+                if chat_view:
+                    # 稍微延迟，确保布局完成
+                    QTimer.singleShot(100, chat_view.request_auto_scroll)
             
     def update_dots(self):
         """Update loading dots animation"""
         self.dots_count = (self.dots_count + 1) % 4
         dots = "." * self.dots_count
         self.content_label.setText(f"{self.message.content}{dots}")
+    
+    def mark_as_completed(self):
+        """标记流式输出已完成，快速显示剩余内容"""
+        print(f"🏁 [STREAMING] 流式输出完成，快速显示剩余内容")
+        print(f"🏁 [STREAMING] 当前显示: {self.display_index}/{len(self.full_text)} 字符")
+        
+        # 如果还有很多未显示的内容，直接快速显示
+        remaining_chars = len(self.full_text) - self.display_index
+        if remaining_chars > 50:
+            print(f"⚡ [STREAMING] 剩余 {remaining_chars} 字符，切换到极速显示模式")
+            # 停止当前定时器
+            self.typing_timer.stop()
+            # 使用极快的定时器快速显示剩余内容
+            self.typing_timer.start(1)  # 1ms per character，极快速度
+        else:
+            print(f"✅ [STREAMING] 剩余 {remaining_chars} 字符不多，保持当前速度")
 
 
 class ChatView(QScrollArea):
@@ -1407,6 +1596,18 @@ class ChatView(QScrollArea):
         self.resize_timer = QTimer()
         self.resize_timer.setSingleShot(True)
         self.resize_timer.timeout.connect(self._performDelayedResize)
+        
+        # 统一的滚动管理器
+        self._scroll_request_timer = QTimer()
+        self._scroll_request_timer.setSingleShot(True)
+        self._scroll_request_timer.timeout.connect(self._perform_auto_scroll)
+        self._scroll_request_pending = False
+        
+        # 内容稳定检测
+        self._last_content_height = 0
+        self._content_stable_timer = QTimer()
+        self._content_stable_timer.setSingleShot(True)
+        self._content_stable_timer.timeout.connect(self._check_content_stability)
         
         self.init_ui()
         
@@ -1550,16 +1751,23 @@ class ChatView(QScrollArea):
         widget.updateGeometry()
         self.container.updateGeometry()
         
-        # 稍微延长滚动延迟，确保布局完成
-        QTimer.singleShot(150, self.smart_scroll_to_bottom)
+        # 使用统一的滚动请求机制
+        self.request_auto_scroll()
         
         return widget
         
     def add_streaming_message(self) -> StreamingMessageWidget:
         """Add a new streaming message"""
-        # 创建流式消息，完成后会转换为AI_RESPONSE类型
-        streaming_widget = self.add_message(MessageType.AI_STREAMING, "")
-        return streaming_widget
+        print(f"🎬 [UI-DEBUG] 开始创建流式消息组件")
+        try:
+            # 创建流式消息，完成后会转换为AI_RESPONSE类型
+            streaming_widget = self.add_message(MessageType.AI_STREAMING, "")
+            print(f"✅ [UI-DEBUG] 流式消息组件创建成功: {streaming_widget}")
+            print(f"✅ [UI-DEBUG] 流式消息组件类型: {type(streaming_widget)}")
+            return streaming_widget
+        except Exception as e:
+            print(f"❌ [UI-DEBUG] 创建流式消息组件失败: {e}")
+            raise
         
     def show_status(self, message: str) -> StatusMessageWidget:
         """显示状态信息"""
@@ -1580,7 +1788,8 @@ class ChatView(QScrollArea):
         # 温和的布局更新
         self.current_status_widget.updateGeometry()
         self.container.updateGeometry()
-        QTimer.singleShot(150, self.smart_scroll_to_bottom)
+        # 使用统一的滚动请求机制
+        self.request_auto_scroll()
         
         return self.current_status_widget
         
@@ -1589,7 +1798,7 @@ class ChatView(QScrollArea):
         if self.current_status_widget:
             self.current_status_widget.update_status(message)
             # 确保滚动到底部显示新状态
-            QTimer.singleShot(50, self.smart_scroll_to_bottom)
+            self.request_auto_scroll()
         else:
             self.show_status(message)
             
@@ -1633,6 +1842,65 @@ class ChatView(QScrollArea):
         """智能滚动到底部 - 只在启用自动滚动时执行"""
         if self.auto_scroll_enabled and not self.user_scrolled_manually:
             self.scroll_to_bottom()
+            
+    def request_auto_scroll(self):
+        """请求自动滚动（防抖动）"""
+        if not self.auto_scroll_enabled or self.user_scrolled_manually:
+            print(f"🚫 [SCROLL] 滚动请求被拒绝 - auto_enabled: {self.auto_scroll_enabled}, manual: {self.user_scrolled_manually}")
+            return
+            
+        # 标记有滚动请求
+        self._scroll_request_pending = True
+        print(f"📋 [SCROLL] 收到滚动请求，启动防抖定时器")
+        
+        # 使用防抖动定时器，避免频繁滚动
+        self._scroll_request_timer.stop()
+        self._scroll_request_timer.start(100)  # 100ms防抖
+        
+    def _perform_auto_scroll(self):
+        """实际执行自动滚动"""
+        print(f"🔄 [SCROLL] _perform_auto_scroll 被调用，pending: {self._scroll_request_pending}")
+        if not self._scroll_request_pending:
+            return
+            
+        # 检查内容高度是否变化
+        current_height = self.container.sizeHint().height()
+        if current_height != self._last_content_height:
+            # 内容还在变化，等待稳定
+            print(f"📏 [SCROLL] 内容高度变化: {self._last_content_height} -> {current_height}，等待稳定")
+            self._last_content_height = current_height
+            self._content_stable_timer.stop()
+            self._content_stable_timer.start(50)  # 50ms后再次检查
+            return
+            
+        # 内容稳定，执行滚动
+        if self.auto_scroll_enabled and not self.user_scrolled_manually:
+            # 检查是否在底部附近（容差50px）
+            scrollbar = self.verticalScrollBar()
+            at_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
+            
+            print(f"📊 [SCROLL] 滚动检查 - max: {scrollbar.maximum()}, value: {scrollbar.value()}, at_bottom: {at_bottom}")
+            
+            if at_bottom or self._scroll_request_pending:
+                # 平滑滚动到底部
+                self.scroll_to_bottom()
+                print(f"📍 [SCROLL] 执行自动滚动，高度: {current_height}px")
+        else:
+            print(f"🚫 [SCROLL] 滚动被禁用或用户手动滚动")
+                
+        self._scroll_request_pending = False
+        
+    def _check_content_stability(self):
+        """检查内容是否稳定"""
+        current_height = self.container.sizeHint().height()
+        if current_height == self._last_content_height:
+            # 内容稳定，执行挂起的滚动
+            if self._scroll_request_pending:
+                self._perform_auto_scroll()
+        else:
+            # 内容仍在变化，继续等待
+            self._last_content_height = current_height
+            self._content_stable_timer.start(50)
             
     def _on_scroll_changed(self, value):
         """滚动位置改变时的回调"""
@@ -1687,7 +1955,6 @@ class ChatView(QScrollArea):
             # 如果接近底部，重新启用自动滚动
             self.auto_scroll_enabled = True
             self.user_scrolled_manually = False
-            print("📍 滚轮操作后接近底部，重新启用自动滚动")
         else:
             # 否则禁用自动滚动
             self.auto_scroll_enabled = False
@@ -3017,7 +3284,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Mode selection button
         self.mode_button = QToolButton()
-        self.mode_button.setText("Search guidance")
+        self.mode_button.setText("Search info")
         self.mode_button.setFixedSize(160, 45)
         self.mode_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.mode_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
@@ -3070,7 +3337,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.mode_button.setMenu(mode_menu)
         
         # Update button text to include arrow
-        self.mode_button.setText("Search guidance ▼")
+        self.mode_button.setText("Search info ▼")
         
         # Input field - use QLineEdit for single line input
         self.input_field = QLineEdit()
@@ -3446,7 +3713,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 pass
             self.send_button.clicked.connect(self.on_open_url_clicked)
         else:
-            self.mode_button.setText("Search guidance ▼")
+            self.mode_button.setText("Search info ▼")
             self.input_field.setPlaceholderText("Enter message...")
             self.send_button.setText("Send")
             # Disconnect and reconnect send button

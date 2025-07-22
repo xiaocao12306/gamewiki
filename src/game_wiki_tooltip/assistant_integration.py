@@ -1144,7 +1144,9 @@ class IntegratedAssistantController(AssistantController):
         # 断开RAG integration的所有信号连接，防止重复
         try:
             self.rag_integration.streaming_chunk_ready.disconnect()
+            print(f"🔌 [SIGNAL-DEBUG] 已断开之前的 streaming_chunk_ready 信号连接")
         except:
+            print(f"🔌 [SIGNAL-DEBUG] 没有之前的 streaming_chunk_ready 信号连接需要断开")
             pass  # 如果没有连接，忽略错误
             
         # 使用已记录的游戏窗口标题（在热键触发时记录）
@@ -1168,6 +1170,7 @@ class IntegratedAssistantController(AssistantController):
         self.rag_integration.streaming_chunk_ready.connect(
             self._on_streaming_chunk  # 直接连接到处理方法，而不是worker的信号
         )
+        print(f"🔌 [SIGNAL-DEBUG] 已重新连接 streaming_chunk_ready 信号到 _on_streaming_chunk")
         
         # 添加RAG状态更新的定时器，用于显示处理进度
         if not hasattr(self, '_rag_status_timer'):
@@ -1211,26 +1214,42 @@ class IntegratedAssistantController(AssistantController):
             
     def _setup_streaming_message(self):
         """Setup streaming message for guide responses"""
+        print(f"🎯 [STREAMING-DEBUG] 开始设置流式消息组件")
+        
         # 如果已经有流式消息组件，不重复创建
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
             logger.info("🔄 流式消息组件已存在，跳过重复创建")
+            print(f"🔄 [STREAMING-DEBUG] 流式消息组件已存在，跳过重复创建")
             return
             
         # 隐藏可能存在的过渡消息
         if hasattr(self, '_current_transition_msg') and self._current_transition_msg:
             self._current_transition_msg.hide()
+            print(f"🫥 [STREAMING-DEBUG] 过渡消息已隐藏")
             
         # 创建流式消息组件
-        self._current_streaming_msg = self.main_window.chat_view.add_streaming_message()
-        logger.info("✅ 流式消息组件已创建")
-        
-        # 连接完成信号
-        self._current_streaming_msg.streaming_finished.connect(self._on_streaming_finished)
-        
-        # 更新UI生成状态，关联流式消息组件
-        if self.main_window:
-            self.main_window.set_generating_state(True, self._current_streaming_msg)
-            logger.info("🔄 UI生成状态已关联流式消息组件")
+        print(f"🏗️ [STREAMING-DEBUG] 调用 add_streaming_message()")
+        try:
+            self._current_streaming_msg = self.main_window.chat_view.add_streaming_message()
+            logger.info("✅ 流式消息组件已创建")
+            print(f"✅ [STREAMING-DEBUG] 流式消息组件已创建: {self._current_streaming_msg}")
+            print(f"✅ [STREAMING-DEBUG] 流式消息组件类型: {type(self._current_streaming_msg)}")
+            
+            # 连接完成信号
+            self._current_streaming_msg.streaming_finished.connect(self._on_streaming_finished)
+            print(f"🔗 [STREAMING-DEBUG] 流式完成信号已连接")
+            
+            # 更新UI生成状态，关联流式消息组件
+            if self.main_window:
+                self.main_window.set_generating_state(True, self._current_streaming_msg)
+                logger.info("🔄 UI生成状态已关联流式消息组件")
+                print(f"🔄 [STREAMING-DEBUG] UI生成状态已关联流式消息组件")
+                
+        except Exception as e:
+            print(f"❌ [STREAMING-DEBUG] 创建流式消息组件失败: {e}")
+            logger.error(f"创建流式消息组件失败: {e}")
+            # 确保组件为None，避免后续操作异常
+            self._current_streaming_msg = None
         
     def _on_wiki_result_from_worker(self, url: str, title: str):
         """Handle wiki result from worker"""
@@ -1307,22 +1326,38 @@ class IntegratedAssistantController(AssistantController):
             
     def _on_streaming_chunk(self, chunk: str):
         """Handle streaming chunk from RAG"""
+        print(f"🌊 [STREAMING-DEBUG] 收到内容块: '{chunk[:100]}...' (长度: {len(chunk)})")
+        print(f"🌊 [STREAMING-DEBUG] 等待RAG输出状态: {getattr(self, '_waiting_for_rag_output', 'undefined')}")
+        print(f"🌊 [STREAMING-DEBUG] 当前流式消息组件: {hasattr(self, '_current_streaming_msg') and self._current_streaming_msg is not None}")
+        
         # 如果正在等待RAG输出且这是第一个内容块，创建流式消息组件
         if getattr(self, '_waiting_for_rag_output', False) and chunk.strip():
             logger.info("🔄 收到第一个RAG输出块，创建流式消息组件")
+            print(f"🔄 [STREAMING-DEBUG] 创建流式消息组件，内容块: '{chunk.strip()[:50]}...'")
             
             # 隐藏状态消息
             if hasattr(self, '_current_status_widget') and self._current_status_widget:
                 self.main_window.chat_view.hide_status()
                 self._current_status_widget = None
+                print(f"✅ [STREAMING-DEBUG] 状态消息已隐藏")
             
             # 创建流式消息组件
             self._setup_streaming_message()
             self._waiting_for_rag_output = False
+            print(f"✅ [STREAMING-DEBUG] _waiting_for_rag_output 设置为 False")
         
         # 如果有流式消息组件，添加内容块
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+            print(f"📝 [STREAMING-DEBUG] 向流式消息组件添加内容块")
             self._current_streaming_msg.append_chunk(chunk)
+        else:
+            print(f"⚠️ [STREAMING-DEBUG] 没有流式消息组件，无法添加内容块")
+            # 尝试立即创建流式消息组件（兜底机制）
+            if not getattr(self, '_waiting_for_rag_output', False):
+                print(f"🚨 [STREAMING-DEBUG] 尝试立即创建流式消息组件（兜底机制）")
+                self._setup_streaming_message()
+                if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+                    self._current_streaming_msg.append_chunk(chunk)
     
     def _update_rag_status(self):
         """更新RAG处理状态消息"""
@@ -1369,11 +1404,15 @@ class IntegratedAssistantController(AssistantController):
         self._waiting_for_rag_output = False
         self._last_status_message = None
         
+        # 通知流式消息组件快速显示剩余内容
+        if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+            self._current_streaming_msg.mark_as_completed()
+        
         # 重置UI状态
         if self.main_window:
             self.main_window.set_generating_state(False)
             logger.info("✅ UI状态已重置为非生成状态")
-            
+        
     def _on_error(self, error_msg: str):
         """Handle error"""
         # 停止状态更新定时器
