@@ -156,6 +156,7 @@ class TranslationManager:
             "hotkey_tab": "Hotkey Settings",
             "api_tab": "API Configuration",
             "language_tab": "Language Settings",
+            "wiki_tab": "Wiki",
             "apply_button": "Save & Apply",
             "cancel_button": "Cancel",
             
@@ -188,6 +189,31 @@ class TranslationManager:
                            "• Changing language will affect the entire application interface\n"
                            "• Wiki sources will be adjusted according to the selected language\n"
                            "• Requires restart to fully apply language changes",
+            
+            # Wiki settings
+            "wiki_title": "Wiki URL Configuration",
+            "wiki_description": "When searching for wiki content, we restrict the search to these wiki sites to prevent interference from other content.",
+            "wiki_search_label": "Search:",
+            "wiki_search_placeholder": "e.g., civ",
+            "wiki_edit_button": "Edit",
+            "wiki_reset_button": "Reset to Default",
+            "wiki_tips": "Tip: Edit the base URL for each game to use your preferred wiki source.",
+            "wiki_tips_with_warning": "Tip: Edit the base URL for each game to use your preferred wiki source.<br><br><b>Important: The game name must exactly match the game window title for wiki search to work!</b>",
+            "wiki_select_game": "Please select a game to edit",
+            "wiki_select_game_remove": "Please select a game to remove",
+            "wiki_edit_title": "Edit Wiki URL",
+            "wiki_edit_prompt": "Enter the new wiki URL for {game}:",
+            "wiki_add_title": "Add Wiki Entry",
+            "wiki_add_game_prompt": "Enter the exact game window title:",
+            "wiki_add_url_prompt": "Enter the wiki URL for {game}:",
+            "wiki_game_exists": "This game already exists in the list",
+            "wiki_remove_confirm_title": "Confirm Remove",
+            "wiki_remove_confirm_message": "Are you sure you want to remove the wiki entry for {game}?",
+            "wiki_reset_confirm_title": "Confirm Reset",
+            "wiki_reset_confirm_message": "Are you sure you want to reset all wiki URLs to their default values?",
+            "wiki_reset_success": "Wiki URLs have been reset to default values",
+            "wiki_reset_failed": "Failed to reset wiki URLs",
+            "wiki_save_failed": "Failed to save wiki URL changes",
             
             # Tray icon
             "tray_settings": "Settings",
@@ -261,13 +287,14 @@ class TranslationManager:
             "status_error_not_found": "Sorry, no relevant information found",
             "status_error_timeout": "Request timeout, please try again later",
             
-            # DST Task Flow Button and Content
+            # Game Task Flow Buttons and Content
             "dst_task_button": "📋 DST Task Flow",
             "dst_task_flow_title": "DST Task Flow",
             "dst_survival_guide_title": "Don't Starve Together - Survival Guide",
             "dst_technical_error": "Unable to display the complete task flow page due to technical issues.",
             "dst_recommended_resources": "Recommended resources:",
             "dst_official_wiki": "Official Don't Starve Wiki",
+            "civ6_task_button": "📋 Civ VI Guide",
             "dst_basic_survival": "Basic Survival: Collect twigs and flint to craft tools",
             "dst_food_gathering": "Food Gathering: Pick berries and carrots", 
             "dst_base_building": "Base Building: Choose a good location for your campfire",
@@ -297,6 +324,7 @@ class TranslationManager:
                 "hotkey_tab": "热键设置",
                 "api_tab": "API配置",
                 "language_tab": "语言设置",
+                "wiki_tab": "Wiki",
                 "apply_button": "保存并应用",
                 "cancel_button": "取消",
                 
@@ -329,6 +357,31 @@ class TranslationManager:
                                "• 更改语言将影响整个应用程序界面\n"
                                "• Wiki源将根据所选语言进行调整\n"
                                "• 需要重启程序以完全应用语言更改",
+                
+                # Wiki settings
+                "wiki_title": "Wiki网址配置",
+                "wiki_description": "在搜索wiki内容时，我们会将搜索的网站限制在这个wiki站点中，防止其他内容的影响。",
+                "wiki_search_label": "搜索：",
+                "wiki_search_placeholder": "例如：civ",
+                "wiki_edit_button": "编辑",
+                "wiki_reset_button": "重置为默认",
+                "wiki_tips": "提示：编辑每个游戏的基础网址以使用您偏好的wiki源。",
+                "wiki_tips_with_warning": "提示：编辑每个游戏的基础网址以使用您偏好的wiki源。<br><br><b>重要提示：游戏名称必须与游戏窗口标题完全一致，wiki搜索才能正常工作！</b>",
+                "wiki_select_game": "请选择要编辑的游戏",
+                "wiki_select_game_remove": "请选择要删除的游戏",
+                "wiki_edit_title": "编辑Wiki网址",
+                "wiki_edit_prompt": "输入{game}的新wiki网址：",
+                "wiki_add_title": "添加Wiki条目",
+                "wiki_add_game_prompt": "输入准确的游戏窗口标题：",
+                "wiki_add_url_prompt": "输入{game}的wiki网址：",
+                "wiki_game_exists": "该游戏已存在于列表中",
+                "wiki_remove_confirm_title": "确认删除",
+                "wiki_remove_confirm_message": "您确定要删除{game}的wiki条目吗？",
+                "wiki_reset_confirm_title": "确认重置",
+                "wiki_reset_confirm_message": "您确定要将所有wiki网址重置为默认值吗？",
+                "wiki_reset_success": "Wiki网址已重置为默认值",
+                "wiki_reset_failed": "重置wiki网址失败",
+                "wiki_save_failed": "保存wiki网址更改失败",
                 
                 # Tray icon
                 "tray_settings": "设置",
@@ -390,13 +443,14 @@ class TranslationManager:
                 "status_error_not_found": "抱歉，未找到相关信息",
                 "status_error_timeout": "请求超时，请稍后重试",
                 
-                # DST Task Flow Button and Content
+                # Game Task Flow Buttons and Content
                 "dst_task_button": "📋 DST任务流程",
                 "dst_task_flow_title": "DST 任务流程",
                 "dst_survival_guide_title": "饥荒联机版 - 生存指南",
                 "dst_technical_error": "由于技术问题，无法显示完整的任务流程页面。",
                 "dst_recommended_resources": "建议访问以下资源：",
                 "dst_official_wiki": "饥荒官方Wiki",
+                "civ6_task_button": "📋 文明6攻略",
                 "dst_basic_survival": "基础生存：收集树枝、燧石制作工具",
                 "dst_food_gathering": "食物获取：采集浆果、胡萝卜",
                 "dst_base_building": "建造基地：选择好位置建立营火",

@@ -1,7 +1,7 @@
 {
     "language": "en",
     "hotkey": {
-        "key": "X",
+        "key": "Q",
         "modifiers": ["Ctrl"]
     },
     "popup": {

@@ -3204,7 +3204,11 @@ class UnifiedAssistantWindow(QMainWindow):
         self.is_generating = False
         self.streaming_widget = None
         self.current_game_window = None  # 记录当前游戏窗口标题
-        self.dst_task_button = None  # DST任务流程按钮
+        self.game_task_buttons = {}  # 存储所有游戏的任务流程按钮
+        
+        # 初始化历史记录管理器
+        from src.game_wiki_tooltip.history_manager import WebHistoryManager
+        self.history_manager = WebHistoryManager()
         
         self.init_ui()
         self.restore_geometry()
@@ -3402,10 +3406,34 @@ class UnifiedAssistantWindow(QMainWindow):
         """)
         self.send_button.clicked.connect(self.on_send_clicked)
         
+        # History button
+        self.history_button = QToolButton()
+        self.history_button.setFixedSize(45, 45)
+        self.history_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.history_button.setToolTip("View browsing history")
+        self.history_button.setStyleSheet("""
+            QToolButton {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 22px;
+                font-size: 20px;
+            }
+            QToolButton:hover {
+                background-color: #f0f0f0;
+                border-color: #4096ff;
+            }
+            QToolButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """)
+        self.history_button.setText("📜")  # History icon
+        self.history_button.clicked.connect(self.show_history_menu)
+        
         # Current mode
         self.current_mode = "wiki"
         
         input_layout.addWidget(self.mode_button)
+        input_layout.addWidget(self.history_button)
         input_layout.addWidget(self.input_field)
         input_layout.addWidget(self.send_button)
         
@@ -3689,6 +3717,16 @@ class UnifiedAssistantWindow(QMainWindow):
         """Switch to wiki view and load page"""
         logger = logging.getLogger(__name__)
         logger.info(f"🌐 UnifiedAssistantWindow.show_wiki_page 被调用: URL={url}, Title={title}")
+        
+        # Add to history (skip local files and if already added from open_url)
+        if hasattr(self, 'history_manager') and not url.startswith('file://'):
+            # Determine source type
+            if "wiki" in url.lower() or "wiki" in title.lower():
+                source = "wiki"
+            else:
+                source = "web"
+            self.history_manager.add_entry(url, title, source=source)
+        
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
         
@@ -3760,6 +3798,10 @@ class UnifiedAssistantWindow(QMainWindow):
             title = parsed.netloc or url
         except:
             title = url
+            
+        # Add to history
+        if hasattr(self, 'history_manager'):
+            self.history_manager.add_entry(url, title, source="web")
             
         # Switch to wiki view and load URL
         self.show_wiki_page(url, title)
@@ -3864,48 +3906,89 @@ class UnifiedAssistantWindow(QMainWindow):
             self.shortcut_container.hide()
     
     def _create_dst_task_button(self):
-        """创建DST任务流程按钮"""
-        try:
-            if self.dst_task_button:
-                # 如果按钮已存在，先移除
-                self.shortcut_layout.removeWidget(self.dst_task_button)
-                self.dst_task_button.deleteLater()
-                self.dst_task_button = None
-            
-            # 创建DST任务流程按钮
-            self.dst_task_button = QPushButton(t("dst_task_button"))
-            self.dst_task_button.setFixedHeight(27)
-            self.dst_task_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 13px;
-                    padding: 4px 12px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
-                QPushButton:pressed {
-                    background-color: #3d8b40;
-                }
-            """)
-            self.dst_task_button.clicked.connect(self._open_dst_task_flow)
-            
-            # 添加到布局
-            self.shortcut_layout.addWidget(self.dst_task_button)
-            
-            # 初始时隐藏按钮
-            self.dst_task_button.hide()
-            
-        except Exception as e:
-            print(f"Failed to create DST task button: {e}")
+        """创建游戏任务流程按钮（兼容旧代码）"""
+        self._create_game_task_buttons()
     
-    def _open_dst_task_flow(self):
-        """打开DST任务流程HTML文件"""
+    def _create_game_task_buttons(self):
+        """创建所有游戏的任务流程按钮"""
+        # 定义支持任务流程的游戏
+        game_configs = [
+            {
+                'game_name': 'dst',
+                'display_name': t('dst_task_button'),
+                'window_titles': ["don't starve together", "dst"],
+                'html_files': {'en': 'dst_en.html', 'zh': 'dst_zh.html'},
+                'button_color': '#4CAF50'
+            },
+            {
+                'game_name': 'civilization6',
+                'display_name': t('civ6_task_button') if hasattr(self, '_t') and callable(getattr(self, '_t', None)) else 'Civilization VI Guide',
+                'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"],
+                'html_files': {'en': 'civilization6_en.html', 'zh': 'civilization6_zh.html'},
+                'button_color': '#FFB300'
+            }
+        ]
+        
+        # 清除现有按钮
+        for btn in self.game_task_buttons.values():
+            if btn:
+                self.shortcut_layout.removeWidget(btn)
+                btn.deleteLater()
+        self.game_task_buttons.clear()
+        
+        # 创建新按钮
+        for config in game_configs:
+            try:
+                button = self._create_single_game_button(config)
+                if button:
+                    self.game_task_buttons[config['game_name']] = button
+                    self.shortcut_layout.addWidget(button)
+                    button.hide()  # 初始时隐藏
+            except Exception as e:
+                print(f"Failed to create task button for {config['game_name']}: {e}")
+    
+    def _create_single_game_button(self, config):
+        """创建单个游戏的任务流程按钮"""
+        button = QPushButton(config['display_name'])
+        button.setFixedHeight(27)
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {config['button_color']};
+                color: white;
+                border: none;
+                border-radius: 13px;
+                padding: 4px 12px;
+                font-size: 12px;
+                font-weight: bold;
+                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+            }}
+            QPushButton:hover {{
+                background-color: {self._darken_color(config['button_color'], 0.1)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self._darken_color(config['button_color'], 0.2)};
+            }}
+        """)
+        
+        # 连接点击事件
+        button.clicked.connect(lambda: self._open_game_task_flow(config))
+        return button
+    
+    def _darken_color(self, hex_color, factor):
+        """使颜色变暗的辅助函数"""
+        # 移除 # 号
+        hex_color = hex_color.lstrip('#')
+        # 转换为 RGB
+        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+        # 变暗
+        r = int(r * (1 - factor))
+        g = int(g * (1 - factor))
+        b = int(b * (1 - factor))
+        # 转换回十六进制
+        return f'#{r:02x}{g:02x}{b:02x}'
+    
+    def _open_game_task_flow(self, config):
+        """打开游戏任务流程HTML文件"""
         try:
             # 获取当前语言设置
             current_language = 'en'
@@ -3914,7 +3997,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 current_language = settings.get('language', 'en')
             
             # 根据语言选择对应的HTML文件
-            html_filename = "dst_zh.html" if current_language == 'zh' else "dst_en.html"
+            html_filename = config['html_files'].get(current_language, config['html_files']['en'])
             
             # 获取HTML文件路径
             import pathlib
@@ -4159,6 +4242,92 @@ class UnifiedAssistantWindow(QMainWindow):
             except:
                 pass
     
+    def show_history_menu(self):
+        """Show history menu"""
+        if not hasattr(self, 'history_manager'):
+            return
+            
+        history_menu = QMenu(self)
+        history_menu.setStyleSheet("""
+            QMenu {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 4px;
+                min-width: 350px;
+            }
+            QMenu::item {
+                padding: 8px 12px;
+                border-radius: 4px;
+            }
+            QMenu::item:hover {
+                background-color: #f0f0f0;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #e0e0e0;
+                margin: 4px 0;
+            }
+        """)
+        
+        # Get history
+        history_items = self.history_manager.get_history(limit=20)
+        
+        if not history_items:
+            no_history_action = history_menu.addAction("No browsing history")
+            no_history_action.setEnabled(False)
+        else:
+            # Add header
+            header_action = history_menu.addAction("Recent Pages")
+            header_action.setEnabled(False)
+            header_font = header_action.font()
+            header_font.setBold(True)
+            header_action.setFont(header_font)
+            history_menu.addSeparator()
+            
+            # Add history items
+            for item in history_items[:10]:  # Show top 10
+                title = item.get('title', 'Untitled')
+                url = item.get('url', '')
+                visit_count = item.get('visit_count', 1)
+                
+                # Truncate long titles
+                if len(title) > 40:
+                    title = title[:37] + "..."
+                
+                # Create action text with visit count if > 1
+                if visit_count > 1:
+                    action_text = f"{title} ({visit_count}x)"
+                else:
+                    action_text = title
+                
+                action = history_menu.addAction(action_text)
+                action.setToolTip(url)
+                
+                # Connect to open the URL
+                action.triggered.connect(lambda checked, u=url, t=item.get('title', 'Untitled'): self.show_wiki_page(u, t))
+            
+            if len(history_items) > 10:
+                history_menu.addSeparator()
+                more_action = history_menu.addAction(f"... and {len(history_items) - 10} more")
+                more_action.setEnabled(False)
+            
+            # Add clear history option
+            history_menu.addSeparator()
+            clear_action = history_menu.addAction("Clear History")
+            clear_action.triggered.connect(self.clear_history)
+        
+        # Show menu below the button
+        history_menu.exec(self.history_button.mapToGlobal(QPoint(0, self.history_button.height())))
+    
+    def clear_history(self):
+        """Clear browsing history"""
+        if hasattr(self, 'history_manager'):
+            self.history_manager.clear_history()
+            # Show notification
+            QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
+            QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
+    
     def set_current_game_window(self, game_window_title: str):
         """设置当前游戏窗口标题并更新DST按钮可见性"""
         self.current_game_window = game_window_title
@@ -4169,23 +4338,48 @@ class UnifiedAssistantWindow(QMainWindow):
         logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
     
     def _update_dst_button_visibility(self):
-        """根据当前游戏窗口更新DST按钮的可见性"""
+        """更新游戏任务按钮的可见性"""
+        self._update_game_task_buttons_visibility()
+    
+    def _update_game_task_buttons_visibility(self):
+        """根据当前游戏窗口更新所有游戏任务按钮的可见性"""
         try:
-            if self.dst_task_button:
-                # 检查当前游戏是否为Don't Starve Together
-                is_dst_game = False
-                if self.current_game_window:
-                    game_title_lower = self.current_game_window.lower()
-                    is_dst_game = "don't starve together" in game_title_lower or "dst" in game_title_lower
-                
-                if is_dst_game:
-                    self.dst_task_button.show()
-                    print(f"DST task button shown for game: {self.current_game_window}")
-                else:
-                    self.dst_task_button.hide()
+            if not self.current_game_window:
+                # 隐藏所有按钮
+                for button in self.game_task_buttons.values():
+                    if button:
+                        button.hide()
+                return
+            
+            game_title_lower = self.current_game_window.lower()
+            
+            # 定义游戏配置（与创建按钮时一致）
+            game_configs = [
+                {
+                    'game_name': 'dst',
+                    'window_titles': ["don't starve together", "dst"]
+                },
+                {
+                    'game_name': 'civilization6',
+                    'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"]
+                }
+            ]
+            
+            # 检查每个游戏
+            for config in game_configs:
+                button = self.game_task_buttons.get(config['game_name'])
+                if button:
+                    # 检查当前窗口是否匹配该游戏
+                    is_matched = any(title in game_title_lower for title in config['window_titles'])
+                    
+                    if is_matched:
+                        button.show()
+                        print(f"{config['game_name']} task button shown for game: {self.current_game_window}")
+                    else:
+                        button.hide()
                     
         except Exception as e:
-            print(f"Failed to update DST button visibility: {e}")
+            print(f"Failed to update game task buttons visibility: {e}")
 
     def on_send_clicked(self):
         """Handle send button click"""

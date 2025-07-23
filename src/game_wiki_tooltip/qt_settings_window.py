@@ -4,6 +4,8 @@ PyQt6-based settings window with hotkey and API configuration.
 
 import logging
 import os
+import json
+import shutil
 from typing import Dict, Optional, Callable, List
 
 from PyQt6.QtWidgets import (
@@ -16,7 +18,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 
 from src.game_wiki_tooltip.config import SettingsManager
-from src.game_wiki_tooltip.utils import package_file
+from src.game_wiki_tooltip.utils import package_file, APPDATA_DIR
 from src.game_wiki_tooltip.i18n import init_translations, get_translation_manager, t
 
 logger = logging.getLogger(__name__)
@@ -132,6 +134,8 @@ class QtSettingsWindow(QMainWindow):
     def __init__(self, settings_manager: SettingsManager, parent=None):
         super().__init__(parent)
         self.settings_manager = settings_manager
+        self.wiki_urls_modified = False  # Track if wiki URLs have been modified
+        self.games_config = {}  # Initialize games config
         
         # Initialize translation manager based on current settings
         settings = self.settings_manager.get()
@@ -169,6 +173,7 @@ class QtSettingsWindow(QMainWindow):
         # Create tabs - hotkey first, language last
         self._create_hotkey_tab()
         self._create_shortcuts_tab()  # Add shortcuts tab as second
+        self._create_wiki_tab()  # Add wiki tab as third
         self._create_api_tab()
         self._create_language_tab()
         
@@ -271,8 +276,8 @@ class QtSettingsWindow(QMainWindow):
         
     def switch_to_api_tab(self):
         """切换到API配置标签页"""
-        # API配置标签页是第三个，索引为2
-        self.tab_widget.setCurrentIndex(2)
+        # API配置标签页是第四个，索引为3（因为Wiki tab插入在第三个位置）
+        self.tab_widget.setCurrentIndex(3)
         
     def _create_shortcuts_tab(self):
         """Create shortcuts management tab"""
@@ -544,6 +549,106 @@ class QtSettingsWindow(QMainWindow):
         
         self.tab_widget.addTab(tab, t("hotkey_tab"))
         
+    def _create_wiki_tab(self):
+        """Create wiki URL configuration tab"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        # Title
+        title = QLabel(t("wiki_title"))
+        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        layout.addWidget(title)
+        
+        # Description with search box
+        desc_search_layout = QHBoxLayout()
+        
+        # Description
+        desc_label = QLabel(t("wiki_description"))
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet("color: #666;")
+        desc_search_layout.addWidget(desc_label, 1)
+        
+        # Search box
+        search_label = QLabel(t("wiki_search_label"))
+        desc_search_layout.addWidget(search_label)
+        
+        self.wiki_search_input = QLineEdit()
+        self.wiki_search_input.setPlaceholderText(t("wiki_search_placeholder"))
+        self.wiki_search_input.setFixedWidth(200)
+        self.wiki_search_input.textChanged.connect(self._filter_wiki_list)
+        desc_search_layout.addWidget(self.wiki_search_input)
+        
+        layout.addLayout(desc_search_layout)
+        
+        # Wiki URL list widget
+        self.wiki_list = QListWidget()
+        self.wiki_list.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+            }
+            QListWidget::item:hover {
+                background-color: #f5f5f5;
+            }
+            QListWidget::item:selected {
+                background-color: #e3f2fd;
+                color: #1976d2;
+            }
+        """)
+        layout.addWidget(self.wiki_list)
+        
+        # Buttons layout
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
+        
+        # Add button
+        self.add_wiki_button = QPushButton("Add")
+        self.add_wiki_button.clicked.connect(self._add_wiki_entry)
+        button_layout.addWidget(self.add_wiki_button)
+        
+        # Edit button
+        self.edit_wiki_button = QPushButton("Edit")
+        self.edit_wiki_button.clicked.connect(self._edit_wiki_url)
+        button_layout.addWidget(self.edit_wiki_button)
+        
+        # Remove button
+        self.remove_wiki_button = QPushButton("Remove")
+        self.remove_wiki_button.clicked.connect(self._remove_wiki_entry)
+        button_layout.addWidget(self.remove_wiki_button)
+        
+        # Reset button
+        self.reset_wiki_button = QPushButton(t("wiki_reset_button"))
+        self.reset_wiki_button.clicked.connect(self._reset_wiki_urls)
+        button_layout.addWidget(self.reset_wiki_button)
+        
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        # Tips with bold warning
+        tips_html = t("wiki_tips_with_warning")
+        tips_label = QLabel(tips_html)
+        tips_label.setWordWrap(True)
+        tips_label.setStyleSheet("color: #666; font-size: 11px;")
+        tips_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(tips_label)
+        
+        layout.addStretch()
+        
+        # Initialize search filter state
+        self.wiki_search_filter = ""
+        
+        # Load wiki URLs for current language
+        self._load_wiki_urls()
+        
+        self.tab_widget.addTab(tab, t("wiki_tab"))
+        
     def _create_api_tab(self):
         """Create API configuration tab"""
         tab = QWidget()
@@ -634,24 +739,16 @@ class QtSettingsWindow(QMainWindow):
         # Tab titles
         self.tab_widget.setTabText(0, t("hotkey_tab"))
         self.tab_widget.setTabText(1, "Quick Access")  # Shortcuts tab
-        self.tab_widget.setTabText(2, t("api_tab"))
-        self.tab_widget.setTabText(3, t("language_tab"))
+        self.tab_widget.setTabText(2, t("wiki_tab"))
+        self.tab_widget.setTabText(3, t("api_tab"))
+        self.tab_widget.setTabText(4, t("language_tab"))
         
         # Buttons
         self.apply_button.setText(t("apply_button"))
         self.cancel_button.setText(t("cancel_button"))
         
-        # Language tab
-        # We need to access the widgets in the language tab
-        language_tab = self.tab_widget.widget(0)
-        language_widgets = language_tab.findChildren(QLabel)
-        if len(language_widgets) >= 2:
-            language_widgets[0].setText(t("language_title"))  # Title
-            language_widgets[1].setText(t("language_label"))  # Language label
-            language_widgets[2].setText(t("language_tips"))   # Tips
-        
-        # Hotkey tab
-        hotkey_tab = self.tab_widget.widget(1)
+        # Hotkey tab (index 0)
+        hotkey_tab = self.tab_widget.widget(0)
         hotkey_widgets = hotkey_tab.findChildren(QLabel)
         if len(hotkey_widgets) >= 3:
             hotkey_widgets[0].setText(t("hotkey_title"))      # Title
@@ -659,8 +756,8 @@ class QtSettingsWindow(QMainWindow):
             hotkey_widgets[2].setText(t("main_key_label"))    # Main key
             hotkey_widgets[3].setText(t("hotkey_tips"))       # Tips
         
-        # API tab
-        api_tab = self.tab_widget.widget(2)
+        # API tab (index 3)
+        api_tab = self.tab_widget.widget(3)
         api_widgets = api_tab.findChildren(QLabel)
         if len(api_widgets) >= 5:
             api_widgets[0].setText(t("api_title"))            # Title
@@ -669,6 +766,14 @@ class QtSettingsWindow(QMainWindow):
             api_widgets[3].setText(t("jina_api_label"))       # Jina API
             api_widgets[4].setText(f'<a href="https://jina.ai/">{t("jina_api_help")}</a>')
             api_widgets[5].setText(t("api_tips"))             # Tips
+        
+        # Language tab (index 4)
+        language_tab = self.tab_widget.widget(4)
+        language_widgets = language_tab.findChildren(QLabel)
+        if len(language_widgets) >= 2:
+            language_widgets[0].setText(t("language_title"))  # Title
+            language_widgets[1].setText(t("language_label"))  # Language label
+            language_widgets[2].setText(t("language_tips"))   # Tips
         
         # Update placeholders
         self.google_api_input.setPlaceholderText(t("google_api_placeholder"))
@@ -797,6 +902,23 @@ class QtSettingsWindow(QMainWindow):
             'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
         })
         
+        # Save wiki URLs if modified
+        if hasattr(self, 'wiki_urls_modified') and self.wiki_urls_modified:
+            try:
+                # Get current language
+                current_language = self.settings_manager.settings.language
+                
+                # Save to language-specific file
+                games_file = APPDATA_DIR / f"games_{current_language}.json"
+                with open(games_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.games_config, f, indent=4, ensure_ascii=False)
+                
+                logger.info(f"Saved wiki URLs to {games_file}")
+                self.wiki_urls_modified = False
+            except Exception as e:
+                logger.error(f"Failed to save wiki URLs: {e}")
+                QMessageBox.warning(self, t("warning"), t("wiki_save_failed"))
+        
         # Emit signal
         self.settings_applied.emit()
         
@@ -865,4 +987,182 @@ class QtSettingsWindow(QMainWindow):
         else:
             # API keys are configured, close normally
             logger.info("API keys are configured, closing settings normally")
-            self.close() 
+            self.close()
+    
+    # Wiki URL management methods
+    def _load_wiki_urls(self):
+        """Load wiki URLs for the current language"""
+        try:
+            # Get current language
+            current_language = self.settings_manager.settings.language
+            
+            # Get the games config file path for current language
+            games_file = APPDATA_DIR / f"games_{current_language}.json"
+            if not games_file.exists():
+                games_file = APPDATA_DIR / "games.json"
+            
+            # Load the games config
+            if games_file.exists():
+                with open(games_file, 'r', encoding='utf-8') as f:
+                    self.games_config = json.load(f)
+                
+                # Clear and populate the list
+                self.wiki_list.clear()
+                self._populate_wiki_list()
+            else:
+                logger.warning(f"Games config file not found: {games_file}")
+                self.games_config = {}
+        except Exception as e:
+            logger.error(f"Failed to load wiki URLs: {e}")
+            self.games_config = {}
+    
+    def _populate_wiki_list(self):
+        """Populate the wiki list with filtered items"""
+        self.wiki_list.clear()
+        filter_text = self.wiki_search_filter.lower() if hasattr(self, 'wiki_search_filter') else ""
+        
+        for game_name, config in sorted(self.games_config.items()):
+            # Apply search filter
+            if filter_text and filter_text not in game_name.lower():
+                continue
+                
+            if isinstance(config, dict) and 'BaseUrl' in config:
+                # Format: "Game Name - baseurl"
+                item = QListWidgetItem(f"{game_name} - {config['BaseUrl']}")
+                item.setData(Qt.ItemDataRole.UserRole, game_name)
+                self.wiki_list.addItem(item)
+    
+    def _edit_wiki_url(self):
+        """Edit the selected wiki URL"""
+        current_item = self.wiki_list.currentItem()
+        if not current_item:
+            QMessageBox.information(self, t("info"), t("wiki_select_game"))
+            return
+        
+        game_name = current_item.data(Qt.ItemDataRole.UserRole)
+        current_config = self.games_config.get(game_name, {})
+        current_url = current_config.get('BaseUrl', '')
+        
+        # Show input dialog
+        new_url, ok = QInputDialog.getText(
+            self, 
+            t("wiki_edit_title"),
+            t("wiki_edit_prompt").format(game=game_name),
+            text=current_url
+        )
+        
+        if ok and new_url and new_url != current_url:
+            # Update the config
+            if game_name not in self.games_config:
+                self.games_config[game_name] = {}
+            self.games_config[game_name]['BaseUrl'] = new_url
+            
+            # Update the list item display
+            current_item.setText(f"{game_name} - {new_url}")
+            
+            # Mark as modified (will be saved when Apply is clicked)
+            self.wiki_urls_modified = True
+    
+    def _reset_wiki_urls(self):
+        """Reset wiki URLs to default values"""
+        reply = QMessageBox.question(
+            self,
+            t("wiki_reset_confirm_title"),
+            t("wiki_reset_confirm_message"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                # Get current language
+                current_language = self.settings_manager.settings.language
+                
+                # Get the source file from assets
+                source_file = package_file(f"games_{current_language}.json")
+                if not source_file.exists():
+                    source_file = package_file("games.json")
+                
+                # Copy the default file to appdata
+                target_file = APPDATA_DIR / f"games_{current_language}.json"
+                shutil.copyfile(source_file, target_file)
+                
+                # Reload the list
+                self._load_wiki_urls()
+                
+                # Mark as modified
+                self.wiki_urls_modified = True
+                
+                QMessageBox.information(self, t("success"), t("wiki_reset_success"))
+            except Exception as e:
+                logger.error(f"Failed to reset wiki URLs: {e}")
+                QMessageBox.critical(self, t("error"), t("wiki_reset_failed"))
+    
+    def _add_wiki_entry(self):
+        """Add a new wiki entry"""
+        # Get game name
+        game_name, ok = QInputDialog.getText(
+            self,
+            t("wiki_add_title"),
+            t("wiki_add_game_prompt")
+        )
+        
+        if not ok or not game_name:
+            return
+        
+        # Check if game already exists
+        if game_name in self.games_config:
+            QMessageBox.warning(self, t("warning"), t("wiki_game_exists"))
+            return
+        
+        # Get wiki URL
+        wiki_url, ok = QInputDialog.getText(
+            self,
+            t("wiki_add_title"),
+            t("wiki_add_url_prompt").format(game=game_name)
+        )
+        
+        if ok and wiki_url:
+            # Add to config
+            self.games_config[game_name] = {
+                "BaseUrl": wiki_url,
+                "NeedsSearch": True
+            }
+            
+            # Refresh the list
+            self._populate_wiki_list()
+            
+            # Mark as modified
+            self.wiki_urls_modified = True
+    
+    def _remove_wiki_entry(self):
+        """Remove selected wiki entry"""
+        current_item = self.wiki_list.currentItem()
+        if not current_item:
+            QMessageBox.information(self, t("info"), t("wiki_select_game_remove"))
+            return
+        
+        game_name = current_item.data(Qt.ItemDataRole.UserRole)
+        
+        # Confirm removal
+        reply = QMessageBox.question(
+            self,
+            t("wiki_remove_confirm_title"),
+            t("wiki_remove_confirm_message").format(game=game_name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Remove from config
+            if game_name in self.games_config:
+                del self.games_config[game_name]
+                
+                # Refresh the list
+                self._populate_wiki_list()
+                
+                # Mark as modified
+                self.wiki_urls_modified = True
+    
+    def _filter_wiki_list(self, text):
+        """Filter the wiki list based on search text"""
+        self.wiki_search_filter = text
+        self._populate_wiki_list() 

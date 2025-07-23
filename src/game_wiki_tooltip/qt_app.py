@@ -640,22 +640,16 @@ class GameWikiApp(QObject):
             from src.game_wiki_tooltip.i18n import set_language
             set_language(current_language)
             
-            # Reload games configuration for the new language
+            # Reload games configuration (for language change or wiki URL updates)
             if self.game_cfg_mgr:
                 logger.info(f"Reloading games configuration for language: {current_language}")
                 self.game_cfg_mgr.reload_for_language(current_language)
                 
-            # 检测语言变化并重新加载RAG integration的游戏配置
+            # 重新加载RAG integration的游戏配置（语言变化或wiki URL更新时）
             if self.assistant_ctrl and hasattr(self.assistant_ctrl, 'rag_integration'):
-                if hasattr(self.assistant_ctrl.rag_integration, '_current_language'):
-                    old_language = self.assistant_ctrl.rag_integration._current_language
-                    if old_language != current_language:
-                        logger.info(f"Language changed from {old_language} to {current_language}, reloading RAG game config")
-                        self.assistant_ctrl.rag_integration.reload_for_language_change()
-                else:
-                    # 如果没有记录之前的语言，直接重新加载
-                    logger.info(f"Reloading RAG game config for language: {current_language}")
-                    self.assistant_ctrl.rag_integration.reload_for_language_change()
+                # Always reload game config to pick up any wiki URL changes
+                logger.info(f"Reloading RAG game config (language: {current_language})")
+                self.assistant_ctrl.rag_integration.reload_for_language_change()
             
             # Update tray icon text
             if self.tray_icon:
@@ -718,20 +712,41 @@ class GameWikiApp(QObject):
             logger.error(f"Error in _check_windows_messages: {e}")
     
     def _handle_hotkey_message_direct(self, wParam, lParam, source="未知"):
-        """直接处理热键消息 - 使用test_hotkey_only.py的成功逻辑"""
+        """直接处理热键消息 - 动态匹配配置的热键"""
         logger.info(f"🎯 处理热键消息[{source}]: wParam={wParam}, lParam={lParam}")
         
-        # 与test_hotkey_only.py完全相同的处理逻辑
         if wParam == HOTKEY_ID:
-            # 解析lParam - 与test_hotkey_only.py完全一致
+            # 解析lParam
             modifiers = lParam & 0xFFFF
             vk = (lParam >> 16) & 0xFFFF
             
-            logger.info(f"   修饰键: {modifiers:#x} (期望: {MOD_CONTROL:#x})")
-            logger.info(f"   虚拟键: {vk:#x} (期望: {VK_X:#x})")
+            # 从设置中获取期望的热键配置
+            settings = self.settings_mgr.get()
+            hotkey_settings = settings.get('hotkey', {})
+            expected_modifiers_list = hotkey_settings.get('modifiers', ['Ctrl'])
+            expected_key = hotkey_settings.get('key', 'X')
             
-            # 检查是否匹配 Ctrl+X - 与test_hotkey_only.py完全一致
-            if modifiers == MOD_CONTROL and vk == VK_X:
+            # 计算期望的修饰键值
+            expected_modifiers = 0
+            mod_map = {
+                "Alt": 0x0001,    # MOD_ALT
+                "Ctrl": 0x0002,   # MOD_CONTROL
+                "Shift": 0x0004,  # MOD_SHIFT
+                "Win": 0x0008     # MOD_WIN
+            }
+            for mod in expected_modifiers_list:
+                if mod in mod_map:
+                    expected_modifiers |= mod_map[mod]
+            
+            # 计算期望的虚拟键值
+            expected_vk = ord(expected_key.upper()) if len(expected_key) == 1 and expected_key.isalpha() else VK_X
+            
+            logger.info(f"   修饰键: {modifiers:#x} (期望: {expected_modifiers:#x})")
+            logger.info(f"   虚拟键: {vk:#x} (期望: {expected_vk:#x})")
+            logger.info(f"   配置的热键: {'+'.join(expected_modifiers_list + [expected_key])}")
+            
+            # 检查是否匹配配置的热键
+            if modifiers == expected_modifiers and vk == expected_vk:
                 self.hotkey_triggered_count += 1
                 logger.info(f"✅ 热键匹配正确! 第{self.hotkey_triggered_count}次触发，触发热键事件...")
                 self._on_hotkey_triggered()
@@ -754,7 +769,19 @@ class GameWikiApp(QObject):
         logger.info(f"🎮 热键触发时的前台窗口: '{game_window_title}'")
         
         if self.assistant_ctrl:
-            logger.info("assistant_ctrl存在，调用expand_to_chat()...")
+            logger.info("assistant_ctrl存在，检查窗口状态...")
+            
+            # 检查聊天窗口是否已经显示
+            if (self.assistant_ctrl.main_window and 
+                self.assistant_ctrl.main_window.isVisible()):
+                logger.info("聊天窗口已经显示，隐藏窗口")
+                # 窗口已显示，隐藏它
+                self.assistant_ctrl.main_window.hide()
+                self.assistant_ctrl.show_mini()
+                # 更新托盘图标菜单文本
+                self.tray_icon.update_toggle_text(False)
+                return
+            
             try:
                 # 优化流程：先快速显示窗口，再异步初始化RAG引擎
                 # 1. 先记录游戏窗口但不立即初始化RAG
