@@ -2235,6 +2235,12 @@ class WikiView(QWidget):
         self._webview_ready = False
         self._is_paused = False  # Add pause state flag
         self._pause_lock = False  # Add pause lock to prevent duplicate calls
+        
+        # URL monitoring for wiki detection
+        self._url_monitor_timer = QTimer()
+        self._url_monitor_timer.timeout.connect(self._monitor_wiki_navigation)
+        self._monitoring_start_url = None
+        
         self.init_ui()
         
     def init_ui(self):
@@ -2524,11 +2530,8 @@ class WikiView(QWidget):
             
             # Check if it is a real wiki page (not a search page)
             if self._is_real_wiki_page(current_url):
-                # Get page title
-                self.web_view.page().runJavaScript(
-                    "document.title",
-                    self._on_title_received
-                )
+                # Delay to ensure page is fully rendered
+                QTimer.singleShot(500, self._extract_page_info)
             else:
                 # If it is still a search page, check again after a while
                 QTimer.singleShot(2000, self._check_for_redirect)
@@ -2544,12 +2547,112 @@ class WikiView(QWidget):
         try:
             current_url = self.web_view.url().toString()
             if self._is_real_wiki_page(current_url):
-                self.web_view.page().runJavaScript(
-                    "document.title",
-                    self._on_title_received
-                )
+                # Delay to ensure page is fully rendered
+                QTimer.singleShot(500, self._extract_page_info)
+            else:
+                # Still on search page, check one more time
+                QTimer.singleShot(2000, self._final_check_for_redirect)
         except Exception as e:
             print(f"Redirect check failed: {e}")
+            
+    def _final_check_for_redirect(self):
+        """Final check for redirect after additional delay"""
+        if not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            if self._is_real_wiki_page(current_url):
+                self._extract_page_info()
+        except Exception as e:
+            print(f"Final redirect check failed: {e}")
+            
+    def _extract_page_info(self):
+        """Extract page title and URL"""
+        if not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            self._try_get_page_title(current_url)
+        except Exception as e:
+            print(f"Failed to extract page info: {e}")
+            
+    def _process_page_info(self, url, title):
+        """Process extracted page information"""
+        if not title or not url:
+            return
+            
+        # Clean up the title
+        title = title.strip()
+        
+        # Skip if title looks like a search or redirect page
+        if any(x in title.lower() for x in ['search', 'redirect', 'loading', '...', 'duckduckgo']):
+            return
+            
+        # Save current info
+        self.current_url = url
+        self.current_title = title
+            
+        # Emit signal with real wiki page info
+        self._emit_wiki_found(url, title)
+        
+    def _emit_wiki_found(self, url, title):
+        """Emit wiki page found signal"""
+        print(f"📄 WikiView found real wiki page: {title} -> {url}")
+        self.wiki_page_loaded.emit(url, title)
+        
+    def _extract_page_info_for_url(self, expected_url):
+        """Extract page info and verify it's for the expected URL"""
+        if not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            
+            # Verify we're still on the same page
+            if current_url == expected_url:
+                # Try multiple methods to get title
+                self._try_get_page_title(current_url)
+        except Exception as e:
+            print(f"Failed to extract page info for URL: {e}")
+            
+    def _try_get_page_title(self, url):
+        """Try to get page title using multiple methods"""
+        print(f"🔍 Attempting to extract title for: {url}")
+        
+        # Method 1: Try JavaScript
+        if hasattr(self.web_view, 'page') and callable(self.web_view.page):
+            try:
+                self.web_view.page().runJavaScript(
+                    "document.title || document.querySelector('h1')?.innerText || ''",
+                    lambda title: self._on_title_extracted(url, title)
+                )
+                return
+            except Exception as e:
+                print(f"❌ JavaScript title extraction failed: {e}")
+        
+        # Method 2: Use URL as fallback
+        try:
+            from urllib.parse import unquote, urlparse
+            path = urlparse(url).path
+            if path:
+                # Extract last part of path
+                title = path.rstrip('/').split('/')[-1]
+                title = unquote(title).replace('_', ' ')
+                if title:
+                    print(f"📋 Using URL-based title: {title}")
+                    self._emit_wiki_found(url, title)
+        except Exception as e:
+            print(f"❌ URL-based title extraction failed: {e}")
+            
+    def _on_title_extracted(self, url, title):
+        """Handle extracted title"""
+        if title and title.strip():
+            print(f"✅ Successfully extracted title: {title}")
+            self._emit_wiki_found(url, title)
+        else:
+            print(f"⚠️ Empty or invalid title extracted")
             
     def _is_real_wiki_page(self, url: str) -> bool:
         """Determine if it is a real wiki page (not a search page)"""
@@ -2589,24 +2692,48 @@ class WikiView(QWidget):
         return url != self.current_search_url
         
     def _on_title_received(self, title):
-        """Callback when page title is received"""
+        """Callback when page title is received (kept for compatibility)"""
         if not title or not self.web_view:
             return
             
         try:
             current_url = self.web_view.url().toString()
-            
-            # Update displayed title
-            self.current_url = current_url
-            self.current_title = title
-            
-            # Emit signal to notify that real wiki page is found
-            print(f"📄 WikiView found real wiki page: {title} -> {current_url}")
-            self.wiki_page_loaded.emit(current_url, title)
-            
+            self._process_page_info(current_url, title)
         except Exception as e:
             print(f"Failed to process page title: {e}")
     
+    def _start_wiki_monitoring(self, search_url: str):
+        """Start monitoring for wiki page navigation"""
+        self._monitoring_start_url = search_url
+        self._url_monitor_timer.start(1000)  # Check every second
+        print(f"🔍 Started monitoring for wiki navigation from: {search_url}")
+        
+    def _stop_wiki_monitoring(self):
+        """Stop monitoring for wiki page navigation"""
+        self._url_monitor_timer.stop()
+        self._monitoring_start_url = None
+        print("🚫 Stopped wiki navigation monitoring")
+        
+    def _monitor_wiki_navigation(self):
+        """Monitor WebView for navigation to actual wiki page"""
+        if not self.web_view:
+            return
+            
+        try:
+            current_url = self.web_view.url().toString()
+            
+            # Check if we've navigated away from search engine
+            if current_url != self._monitoring_start_url and self._is_real_wiki_page(current_url):
+                print(f"🎆 Detected navigation to wiki page: {current_url}")
+                self._stop_wiki_monitoring()
+                
+                # First emit with URL only (use URL as temporary title)
+                self._emit_wiki_found(current_url, current_url)
+                
+                # Then try to extract proper title
+                QTimer.singleShot(500, lambda: self._extract_page_info_for_url(current_url))
+        except Exception as e:
+            print(f"Error in wiki navigation monitoring: {e}")
     
     def _create_fallback_text_view(self):
         """Create fallback text view"""
@@ -2696,6 +2823,10 @@ class WikiView(QWidget):
         self.current_url = url
         self.current_title = title
         self.url_bar.setText(url)  # Update URL bar instead of title label
+        
+        # Start monitoring for wiki page navigation if loading from search engine
+        if any(engine in url.lower() for engine in ['duckduckgo.com', 'google.com', 'bing.com']):
+            self._start_wiki_monitoring(url)
         
         if self.web_view:
             try:
@@ -3489,6 +3620,23 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(50, self.chat_view.update_all_message_widths)
         # Delay executing full layout update, ensure content is fully displayed
         QTimer.singleShot(100, self.chat_view._performDelayedResize)
+        # Set focus to input field when returning to chat view
+        QTimer.singleShot(150, self._set_chat_input_focus)
+        
+    def _set_chat_input_focus(self):
+        """Set focus to input field in chat view"""
+        if hasattr(self, 'input_field') and self.input_field:
+            try:
+                # Ensure the chat view is visible and active
+                self.activateWindow()
+                self.raise_()
+                # Set focus to input field
+                self.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
+                logger = logging.getLogger(__name__)
+                logger.info("Chat input focus set successfully")
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to set chat input focus: {e}")
         
     def show_wiki_page(self, url: str, title: str):
         """Switch to wiki view and load page"""
@@ -4439,6 +4587,12 @@ class AssistantController:
         self.main_window.raise_()
         self.main_window.activateWindow()
         
+        # Debug: Check if input field exists
+        if hasattr(self.main_window, 'input_field'):
+            logger.info(f"Input field found: {self.main_window.input_field}")
+        else:
+            logger.warning("Input field not found in main window!")
+        
         # Create fade-in animation
         self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
         self._fade_in_animation.setDuration(200)  # 200ms fade-in animation
@@ -4452,9 +4606,15 @@ class AssistantController:
             # Update all message width
             if hasattr(self.main_window, 'chat_view'):
                 self.main_window.chat_view.update_all_message_widths()
-            # Focus on input field
-            if hasattr(self.main_window, 'query_input'):
-                self.main_window.query_input.setFocus()
+            # Focus on input field with simple focus setting
+            if hasattr(self.main_window, 'input_field'):
+                logger.info("Setting focus to input field after animation")
+                try:
+                    # Simple focus setting
+                    self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
+                    logger.info("Input field focus set successfully after animation")
+                except Exception as e:
+                    logger.warning(f"Failed to set input focus after animation: {e}")
                 
         self._fade_in_animation.finished.connect(on_fade_in_finished)
         self._fade_in_animation.start()
@@ -4494,6 +4654,32 @@ class AssistantController:
         # After animation, input field will be automatically focused, no additional processing needed
         
         logger.info("expand_to_chat() completed")
+        
+    def _try_set_immediate_focus(self):
+        """Try to set input focus immediately (backup method)"""
+        if self.main_window and hasattr(self.main_window, 'input_field'):
+            try:
+                # Ensure window is active
+                self.main_window.activateWindow()
+                self.main_window.raise_()
+                # Set focus to input field
+                self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
+                logger.info("Immediate input focus set successfully")
+            except Exception as e:
+                logger.warning(f"Failed to set immediate input focus: {e}")
+                
+    def _set_input_focus_after_animation(self):
+        """Set input focus after fade-in animation completes"""
+        if self.main_window and hasattr(self.main_window, 'input_field'):
+            try:
+                # Force focus with Qt.FocusReason.ShortcutFocusReason
+                self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
+                # Also ensure cursor is visible
+                self.main_window.input_field.selectAll()  # Select all text (if any)
+                self.main_window.input_field.deselect()  # Then deselect to place cursor at end
+                logger.info("Input field focus set successfully after animation")
+            except Exception as e:
+                logger.warning(f"Failed to set input focus after animation: {e}")
         
     def handle_wiki_page_found(self, url: str, title: str):
         """Handle signal when real wiki page is found (basic implementation, subclasses can override)"""

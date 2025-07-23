@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-GameWiki Assistant 兼容性检查工具
-================================
+GameWiki Assistant Compatibility Check Tool
+===========================================
 
-用于诊断Win10/Win11系统兼容性问题，特别是PyQt6相关的依赖。
+Used to diagnose compatibility issues on Win10/Win11 systems, especially dependencies related to PyQt6.
 """
 
 import sys
@@ -14,54 +14,54 @@ from pathlib import Path
 import platform
 
 def print_header(title):
-    """打印标题"""
+    """Print title"""
     print(f"\n{'=' * 50}")
     print(f"🔍 {title}")
     print(f"{'=' * 50}")
 
 def print_check(name, result, details=""):
-    """打印检查结果"""
+    """Print check result"""
     status = "✅" if result else "❌"
     print(f"{status} {name}")
     if details:
         print(f"   {details}")
 
 def check_python_version():
-    """检查Python版本"""
+    """Check Python version"""
     version = sys.version_info
     is_compatible = version >= (3, 8)
-    details = f"当前版本: {version.major}.{version.minor}.{version.micro}"
+    details = f"Current version: {version.major}.{version.minor}.{version.micro}"
     if not is_compatible:
-        details += " (需要Python 3.8+)"
+        details += " (Python 3.8+ is required)"
     return is_compatible, details
 
 def check_windows_version():
-    """检查Windows版本"""
+    """Check Windows version"""
     try:
         version = sys.getwindowsversion()
         is_win10_plus = version.major >= 10
         details = f"Windows {version.major}.{version.minor} Build {version.build}"
         
         if not is_win10_plus:
-            details += " (需要Windows 10+)"
+            details += " (Windows 10+ is required)"
         elif version.build < 17763:  # Windows 10 1809
-            details += " (建议更新到1809或更高版本)"
+            details += " (It is recommended to update to 1809 or higher)"
             
         return is_win10_plus, details
     except:
-        return False, "无法检测Windows版本"
+        return False, "Failed to detect Windows version"
 
 def check_architecture():
-    """检查系统架构"""
+    """Check system architecture"""
     arch = platform.machine().lower()
     is_x64 = arch in ['amd64', 'x86_64']
-    details = f"系统架构: {arch}"
+    details = f"System architecture: {arch}"
     if not is_x64:
-        details += " (需要64位系统)"
+        details += " (64-bit system is required)"
     return is_x64, details
 
 def check_vcredist():
-    """检查VC++ Redistributables"""
+    """Check VC++ Redistributables"""
     system32 = Path(os.environ.get('SYSTEMROOT', 'C:\\Windows')) / 'System32'
     
     required_dlls = {
@@ -77,7 +77,7 @@ def check_vcredist():
         dll_path = system32 / dll
         if dll_path.exists():
             try:
-                # 尝试获取文件版本信息
+                # Try to get file version information
                 size = dll_path.stat().st_size
                 found.append(f"{dll} ({size} bytes)")
             except:
@@ -88,19 +88,19 @@ def check_vcredist():
     is_complete = len(missing) == 0
     
     if is_complete:
-        details = f"已安装: {', '.join(found)}"
+        details = f"Installed: {', '.join(found)}"
     else:
-        details = f"缺失: {', '.join(missing)}"
+        details = f"Missing: {', '.join(missing)}"
         if found:
-            details += f"; 已安装: {', '.join(found)}"
+            details += f"; Installed: {', '.join(found)}"
     
     return is_complete, details
 
 def check_pyqt6_dependencies():
-    """检查PyQt6相关的系统依赖"""
+    """Check PyQt6 related system dependencies"""
     system32 = Path(os.environ.get('SYSTEMROOT', 'C:\\Windows')) / 'System32'
     
-    # PyQt6常用的系统DLL
+    # Common system DLLs for PyQt6
     pyqt_dlls = {
         'shcore.dll': 'Shell Core (DPI支持)',
         'dwmapi.dll': 'Desktop Window Manager',
@@ -124,23 +124,23 @@ def check_pyqt6_dependencies():
     is_complete = len(missing) == 0
     
     if is_complete:
-        details = f"系统DLL完整 ({len(found)}/{len(pyqt_dlls)})"
+        details = f"System DLLs complete ({len(found)}/{len(pyqt_dlls)})"
     else:
-        details = f"缺失系统DLL: {', '.join(missing)}"
+        details = f"Missing system DLLs: {', '.join(missing)}"
     
     return is_complete, details
 
 def check_installed_vcredist_packages():
-    """检查已安装的VC++ Redistributable包"""
+    """Check installed VC++ Redistributable packages"""
     try:
-        # 使用wmic查询已安装的VC++包
+        # Use wmic to query installed VC++ packages
         cmd = ['wmic', 'product', 'where', "name like '%Visual C++%'", 'get', 'name,version', '/format:csv']
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')
             packages = []
-            for line in lines[1:]:  # 跳过标题行
+            for line in lines[1:]:  # Skip header line
                 if line.strip() and ',' in line:
                     parts = line.split(',')
                     if len(parts) >= 3:
@@ -150,24 +150,24 @@ def check_installed_vcredist_packages():
                             packages.append(f"{name} v{version}")
             
             if packages:
-                return True, f"已安装: {'; '.join(packages)}"
+                return True, f"Installed: {'; '.join(packages)}"
             else:
-                return False, "未找到已安装的VC++ Redistributable包"
+                return False, "No installed VC++ Redistributable packages found"
         else:
-            return False, "无法查询已安装的VC++包"
+            return False, "Failed to query installed VC++ packages"
     except:
-        return False, "查询VC++包时出错"
+        return False, "Error querying VC++ packages"
 
 def check_pyinstaller_environment():
-    """检查PyInstaller打包环境"""
+    """Check PyInstaller packaging environment"""
     checks = []
     
-    # 检查是否在PyInstaller环境中
+    # Check if in PyInstaller environment
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        checks.append("✅ 运行在PyInstaller打包环境中")
-        checks.append(f"   临时目录: {sys._MEIPASS}")
+        checks.append("✅ Running in PyInstaller packaging environment")
+        checks.append(f"   Temporary directory: {sys._MEIPASS}")
         
-        # 检查关键DLL是否存在
+        # Check if key DLLs exist
         temp_dir = Path(sys._MEIPASS)
         key_dlls = ['msvcp140.dll', 'vcruntime140.dll', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll']
         
@@ -181,26 +181,26 @@ def check_pyinstaller_environment():
                 missing_dlls.append(dll)
         
         if found_dlls:
-            checks.append(f"   打包的DLL: {', '.join(found_dlls)}")
+            checks.append(f"   Packaged DLLs: {', '.join(found_dlls)}")
         if missing_dlls:
-            checks.append(f"   缺失的DLL: {', '.join(missing_dlls)}")
+            checks.append(f"   Missing DLLs: {', '.join(missing_dlls)}")
             
         return len(missing_dlls) == 0, '\n'.join(checks)
     else:
-        return True, "运行在开发环境中 (非打包版本)"
+        return True, "Running in development environment (non-packaged version)"
 
 def run_comprehensive_check():
-    """运行综合兼容性检查"""
-    print_header("GameWiki Assistant 兼容性检查")
-    print("此工具将检查系统是否满足运行要求")
+    """Run comprehensive compatibility check"""
+    print_header("GameWiki Assistant compatibility check")
+    print("This tool will check if the system meets the running requirements")
     
-    # 基础系统检查
-    print_header("基础系统检查")
+    # Basic system check
+    print_header("Basic system check")
     
     checks = [
-        ("Python版本", check_python_version),
-        ("Windows版本", check_windows_version),
-        ("系统架构", check_architecture),
+        ("Python version", check_python_version),
+        ("Windows version", check_windows_version),
+        ("System architecture", check_architecture),
     ]
     
     basic_passed = 0
@@ -211,15 +211,15 @@ def run_comprehensive_check():
             if result:
                 basic_passed += 1
         except Exception as e:
-            print_check(name, False, f"检查失败: {e}")
+            print_check(name, False, f"Check failed: {e}")
     
-    # 运行时依赖检查
-    print_header("运行时依赖检查")
+    # Runtime dependency check
+    print_header("Runtime dependency check")
     
     runtime_checks = [
         ("Visual C++ Runtime DLL", check_vcredist),
-        ("PyQt6系统依赖", check_pyqt6_dependencies),
-        ("已安装VC++包", check_installed_vcredist_packages),
+        ("PyQt6 system dependencies", check_pyqt6_dependencies),
+        ("Installed VC++ packages", check_installed_vcredist_packages),
     ]
     
     runtime_passed = 0
@@ -230,72 +230,72 @@ def run_comprehensive_check():
             if result:
                 runtime_passed += 1
         except Exception as e:
-            print_check(name, False, f"检查失败: {e}")
+            print_check(name, False, f"Check failed: {e}")
     
-    # 打包环境检查
-    print_header("应用程序环境检查")
+    # Packaging environment check
+    print_header("Application environment check")
     
     try:
         result, details = check_pyinstaller_environment()
-        print_check("PyInstaller环境", result, details)
+        print_check("PyInstaller environment", result, details)
     except Exception as e:
-        print_check("PyInstaller环境", False, f"检查失败: {e}")
+        print_check("PyInstaller environment", False, f"Check failed: {e}")
     
-    # 总结
-    print_header("检查总结")
+    # Summary
+    print_header("Check summary")
     
     total_basic = len(checks)
     total_runtime = len(runtime_checks)
     
-    print(f"基础系统检查: {basic_passed}/{total_basic} 通过")
-    print(f"运行时依赖检查: {runtime_passed}/{total_runtime} 通过")
+    print(f"Basic system check: {basic_passed}/{total_basic} passed")
+    print(f"Runtime dependency check: {runtime_passed}/{total_runtime} passed")
     
     if basic_passed == total_basic and runtime_passed == total_runtime:
-        print("\n🎉 系统兼容性检查全部通过！")
-        print("应用程序应该能够正常运行。")
+        print("\n🎉 All system compatibility checks passed!")
+        print("The application should be able to run normally.")
     else:
-        print("\n⚠️  发现兼容性问题，建议解决方案：")
+        print("\n⚠️  Compatibility issues found, recommended solutions:")
         
         if basic_passed < total_basic:
-            print("\n📋 基础系统问题：")
-            print("  - 升级到Windows 10 1809或更高版本")
-            print("  - 确保使用64位系统")
-            print("  - 升级Python到3.8或更高版本")
+            print("\n📋 Basic system issues:")
+            print("  - Upgrade to Windows 10 1809 or higher")
+            print("  - Ensure 64-bit system")
+            print("  - Upgrade Python to 3.8 or higher")
         
         if runtime_passed < total_runtime:
-            print("\n📋 运行时依赖问题：")
-            print("  - 下载并安装: https://aka.ms/vs/17/release/vc_redist.x64.exe")
-            print("  - 运行 deploy_with_vcredist.py 创建兼容性部署包")
-            print("  - 使用改进的PyInstaller配置重新打包")
+            print("\n📋 Runtime dependency issues:")
+            print("  - Download and install: https://aka.ms/vs/17/release/vc_redist.x64.exe")
+            print("  - Run deploy_with_vcredist.py to create a compatibility deployment package")
+            print("  - Re-package using improved PyInstaller configuration")
     
     return basic_passed == total_basic and runtime_passed == total_runtime
 
 def main():
-    """主函数"""
+    """Main function"""
     try:
         success = run_comprehensive_check()
         
-        print_header("建议操作")
+        print_header("Recommended actions")
         if success:
-            print("✅ 无需额外操作，系统兼容性良好")
+            print("✅ No additional actions are required, system compatibility is good")
         else:
-            print("📝 建议按以下顺序解决问题：")
-            print("  1. 运行兼容性部署脚本: python deploy_with_vcredist.py")
-            print("  2. 或重新打包应用: pyinstaller game_wiki_tooltip.spec --clean")
-            print("  3. 或手动安装VC++ Redistributable")
-            print("  4. 查看详细指南: deploy_instructions.md")
+            print("📝 Recommended to solve the problem in the following order:")
+            print("  1. Run the compatibility deployment script: python deploy_with_vcredist.py")
+            print("  2. Or re-package the application: pyinstaller game_wiki_tooltip.spec --clean")
+            print("  3. Or manually install VC++ Redistributable")
+            print("  4. View detailed guide: deploy_instructions.md")
         
-        print(f"\n检查完成 - 退出代码: {0 if success else 1}")
+        print(f"\nCheck completed - exit code: {0 if success else 1}")
         return 0 if success else 1
         
     except KeyboardInterrupt:
-        print("\n用户中断了检查过程")
+        print("\nUser interrupted the check process")
         return 1
     except Exception as e:
-        print(f"\n检查过程中发生错误: {e}")
+        print(f"\nError occurred during check: {e}")
         return 1
 
 if __name__ == "__main__":
     exit_code = main()
-    input("\n按Enter键退出...")
+    input("\nPress Enter to exit...")
     sys.exit(exit_code) 

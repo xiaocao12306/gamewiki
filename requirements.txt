@@ -23,7 +23,6 @@ openai>=1.3.0
 google-generativeai>=0.3.0
 bm25s>=0.2.13  # 新的BM25实现，更快更稳定
 scikit-learn>=1.5.0
-jina-embeddings-v4>=0.1.0  # Jina嵌入模型
 
 # 向量存储
 faiss-cpu>=1.7.4

@@ -1,13 +1,13 @@
 """
-增强的RAG查询接口 - 集成批量嵌入和向量库检索
+Enhanced RAG query interface - integrated batch embedding and vector store retrieval
 ============================================
 
-功能：
-1. 加载预构建的向量库
-2. 执行语义检索
-3. 支持LLM查询重写
-4. 混合搜索（向量+BM25）
-5. 返回相关游戏攻略信息
+Features:
+1. Load pre-built vector store
+2. Perform semantic retrieval
+3. Support LLM query rewriting
+4. Hybrid search (vector + BM25)
+5. Return relevant game strategy information
 """
 
 import logging
@@ -21,35 +21,33 @@ import sys
 import os
 
 class VectorStoreUnavailableError(Exception):
-    """向量库不可用错误"""
+    """Vector store unavailable error"""
     pass
 
 def get_resource_path(relative_path: str) -> Path:
     """
-    获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境
+    Get absolute path for resource files, compatible with development and PyInstaller packaging
     
     Args:
-        relative_path: 相对于项目根目录或临时目录的路径
+        relative_path: Path relative to project root or temporary directory
         
     Returns:
-        资源文件的绝对路径
+        Absolute path for resource files
     """
     try:
         # PyInstaller packaged temporary directory
         base_path = Path(sys._MEIPASS)
-        resource_path = base_path / relative_path
+        # 在PyInstaller环境中，assets被打包到src/game_wiki_tooltip/路径下
+        resource_path = base_path / "src" / "game_wiki_tooltip" / relative_path
         print(f"🔧 [RAG-DEBUG] Using PyInstaller temp directory: {base_path}")
         print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
     except AttributeError:
         # Development environment: find project root from current file location
         current_file = Path(__file__).parent  # .../ai/
-        base_path = current_file  # For files in ai directory, use current directory directly
-        # If relative_path starts with "ai/", need to remove this prefix
-        if relative_path.startswith("ai/"):
-            relative_path = relative_path[3:]  # Remove "ai/" prefix
-        resource_path = base_path / relative_path
-        print(f"🔧 [RAG-DEBUG] Using development environment path: {base_path}")
-        print(f"🔧 [RAG-DEBUG] Adjusted relative path: {relative_path}")
+        project_root = current_file.parent.parent.parent  # Go up to project root
+        resource_path = project_root / "src" / "game_wiki_tooltip" / relative_path
+        print(f"🔧 [RAG-DEBUG] Using development environment")
+        print(f"🔧 [RAG-DEBUG] Project root: {project_root}")
         print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
     
     return resource_path
@@ -131,15 +129,13 @@ def load_vector_mappings() -> Dict[str, str]:
     global _vector_mappings_cache, _vector_mappings_last_modified
     
     try:
-        # Get configuration file path - find assets directory from ai directory
-        current_dir = Path(__file__).parent  # .../ai/
-        assets_dir = current_dir.parent / "assets"  # .../game_wiki_tooltip/assets/
-        mapping_file = assets_dir / "vector_mappings.json"
+        # Use get_resource_path to handle packaged environment correctly
+        mapping_file = get_resource_path("assets/vector_mappings.json")
         
         # Check if file exists
         if not mapping_file.exists():
             logger.warning(f"Vector store mapping configuration file does not exist: {mapping_file}")
-            return
+            return {}  # Return empty dict instead of None
         
         # Check file modification time, implement cache mechanism
         current_modified = mapping_file.stat().st_mtime
@@ -167,7 +163,8 @@ def load_vector_mappings() -> Dict[str, str]:
         logger.info(f"Successfully loaded vector store mapping configuration, containing {len(mappings)} mappings")
         return mappings
     except Exception as e:
-        return
+        logger.error(f"Failed to load vector store mapping configuration: {e}")
+        return {}  # Return empty dict instead of None
 
 def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     """
@@ -184,6 +181,11 @@ def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     
     # Load vector store mapping configuration
     title_to_vectordb_mapping = load_vector_mappings()
+    
+    # Additional safety check - though load_vector_mappings() should never return None now
+    if not title_to_vectordb_mapping:
+        logger.warning(f"Vector mapping configuration is empty or invalid")
+        return None
     
     # Try exact match
     for title_key, vectordb_name in title_to_vectordb_mapping.items():
@@ -1233,7 +1235,7 @@ class EnhancedRagQuery:
                         answer = self._format_answer(search_response, question)
                     
                     confidence = max([r["score"] for r in results]) if results else 0.0
-                    sources = [r["chunk"].get("topic", "未知") for r in results]
+                    sources = [r["chunk"].get("topic", "Unknown") for r in results]
                     search_metadata = search_response.get("metadata", {})
                 
             else:
@@ -1436,7 +1438,7 @@ class EnhancedRagQuery:
 
 
 
-# 全局实例
+# Global instance
 _enhanced_rag_query = None
 
 def get_enhanced_rag_query(vector_store_path: Optional[str] = None,

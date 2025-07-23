@@ -169,6 +169,8 @@ class SimpleWebView2Widget(QWidget):
         self.loadFinished.emit(True)
         # Inject JavaScript after page load completion
         QTimer.singleShot(100, self._inject_link_interceptor)
+        # Extract title after navigation
+        QTimer.singleShot(500, self._extract_title)
     
     def _on_source_changed(self, sender, args):
         """URL changed"""
@@ -177,8 +179,50 @@ class SimpleWebView2Widget(QWidget):
                 url = str(self.webview2.Source)
                 self.current_url = url
                 self.urlChanged.emit(QUrl(url))
+                # Extract title when URL changes
+                QTimer.singleShot(1000, self._extract_title)
         except:
             pass
+            
+    def _extract_title(self):
+        """Extract page title using JavaScript"""
+        try:
+            if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
+                script = "document.title"
+                # Use ExecuteScriptAsync if available
+                if hasattr(self.webview2.CoreWebView2, 'ExecuteScriptAsync'):
+                    self.webview2.CoreWebView2.ExecuteScriptAsync(script)
+                    # Since we can't easily get async result, use a different approach
+                    QTimer.singleShot(200, self._check_title_via_script)
+                elif hasattr(self.webview2, 'ExecuteScriptAsync'):
+                    self.webview2.ExecuteScriptAsync(script)
+                    QTimer.singleShot(200, self._check_title_via_script)
+        except Exception as e:
+            logger.warning(f"Failed to extract title: {e}")
+            
+    def _check_title_via_script(self):
+        """Check title by injecting and reading JavaScript"""
+        try:
+            # Inject script to set title in a known location
+            script = """
+            (function() {
+                var title = document.title;
+                if (window.__webview2_title !== title) {
+                    window.__webview2_title = title;
+                    // Try to trigger a detectable event
+                    if (title && title !== '') {
+                        console.log('TITLE:' + title);
+                    }
+                }
+                return title;
+            })();
+            """
+            self.runJavaScript(script)
+            
+            # For now, we'll rely on the page's title tag being updated
+            # and detected through other means
+        except Exception as e:
+            logger.warning(f"Failed to check title via script: {e}")
     
     def _connect_new_window_handler(self):
         """Connect new window request handler"""

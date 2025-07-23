@@ -58,14 +58,14 @@ hiddenimports = [
 
 # Collect data files
 datas = [
-    # Asset files
-    (str(src_path / "game_wiki_tooltip" / "assets"), "assets"),
-    # Vector database files
-    (str(src_path / "game_wiki_tooltip" / "ai" / "vectorstore"), "ai/vectorstore"),
+    # Asset files - 保持原有路径配置，匹配get_resource_path函数
+    (str(src_path / "game_wiki_tooltip" / "assets"), "src/game_wiki_tooltip/assets"),
+    # Vector database files - 保持与rag_query.py get_resource_path一致的路径
+    (str(src_path / "game_wiki_tooltip" / "ai" / "vectorstore"), "src/game_wiki_tooltip/ai/vectorstore"),
     # Knowledge data
     ("data", "data"),
     # WebView2 SDK files
-    ("src/game_wiki_tooltip/webview2/lib", "webview2/lib"),
+    ("src/game_wiki_tooltip/webview2/lib", "src/game_wiki_tooltip/webview2/lib"),
 ]
 
 # Collect binary files
@@ -166,7 +166,7 @@ except Exception as e:
 # Exclude modules - only exclude modules that are truly not needed
 excludes = [
     'tkinter',  # GUI toolkit (we use PyQt6)
-    'unittest',  # Testing framework
+    # Remove 'unittest' - some dependencies need it
     'pydoc',    # Documentation generation tool
     'doctest',  # Documentation testing tool
     'test',     # Python test modules
@@ -205,7 +205,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Set to False to hide console window
+    console=True,  # Set to False to hide console window
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

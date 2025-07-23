@@ -1,22 +1,53 @@
 # GameWiki Assistant 便携版
 
-## 使用说明
+## Instructions
 
-1. 双击 GameWikiAssistant.exe 启动程序
-2. 首次运行时需要配置API密钥（可选）
-3. 使用快捷键 Ctrl+X 激活游戏助手功能
+1. **Read Before First Use**: This application uses WebView2 technology and requires Microsoft Edge WebView2 Runtime.
+2. Double-click GameWikiAssistant.exe to start the program.
+3. Opening this exe can take a few seconds (normally in 10 seconds).
+4. If the program fails to start or displays a white screen, please install the WebView2 Runtime.
+5. API keys need to be configured on first run (optional).
+6. Use the shortcut Ctrl+X or set a new shortcut to activate the game assistant feature.
 
-## 系统要求
+## System Requirements
 
-- Windows 10 或更高版本
-- 64位系统
+- Windows 10 or higher (recommended Windows 11)
+- 64-bit system (64-bit system is recommended)
+- Microsoft Edge WebView2 Runtime
 
-## 注意事项
+## WebView2 Runtime Installation
 
-- 本程序是独立的便携版，无需安装
-- 配置文件会保存在系统的AppData目录中
-- 如需完整的AI功能，请配置Gemini和Jina API密钥
+### Windows 11 Users
+✅ Your system is pre-installed with WebView2 Runtime, you can use it directly.
 
-## 技术支持
+### Windows 10 Users  
+⚠️ Need to install WebView2 Runtime:
 
-如有问题，请访问项目页面获取帮助。
+**Method 1 (recommended)**: Run the automatic installation script
+1. Enter the runtime folder
+2. Double-click to run install_webview2.bat
+3. Follow the prompts to complete the installation
+
+**Method 2**: Manually download and install
+1. Visit: https://go.microsoft.com/fwlink/p/?LinkId=2124703
+2. Download and install WebView2 Runtime
+3. Restart the application
+
+## Notes
+
+- This program is a standalone portable version, no installation required (except for WebView2 Runtime)
+- Configuration files will be saved in the system's AppData directory
+- For full AI functionality, please configure Gemini and Jina API keys
+- The first installation of WebView2 Runtime requires downloading about 100MB, but only needs to be installed once
+
+## Troubleshooting
+
+### Problem: The program fails to start or displays a white screen
+**Solution**: Install WebView2 Runtime (see installation instructions above)
+
+### Problem: Video playback fails
+**Solution**: Confirm that WebView2 Runtime is correctly installed and restart the program
+
+## Support
+
+If you have any problems, please visit the project page for help.
