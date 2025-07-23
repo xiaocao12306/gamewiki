@@ -64,16 +64,16 @@ class GeminiSummarizer:
         Returns:
             Dictionary with summary and metadata
         """
-        print(f"📝 [SUMMARY-DEBUG] 开始通用Gemini摘要生成")
-        print(f"   - 检索查询: '{query}'")
+        print(f"📝 [SUMMARY-DEBUG] Start general Gemini summarization generation")
+        print(f"   - Retrieval query: '{query}'")
         if original_query and original_query != query:
-            print(f"   - 原始查询: '{original_query}'")
-            print(f"   - 双查询模式: 启用")
+            print(f"   - Original query: '{original_query}'")
+            print(f"   - Dual query mode: Enabled")
         else:
-            print(f"   - 双查询模式: 未启用 (原始查询与检索查询相同或未提供)")
-        print(f"   - 知识块数量: {len(chunks)}")
-        print(f"   - 上下文: {context or 'None'}")
-        print(f"   - 模型: {self.config.model_name}")
+            print(f"   - Dual query mode: Disabled (original query is the same as retrieval query or not provided)")
+        print(f"   - Knowledge chunk count: {len(chunks)}")
+        print(f"   - Context: {context or 'None'}")
+        print(f"   - Model: {self.config.model_name}")
         
         # Store game context for video source extraction
         if context:
@@ -83,7 +83,7 @@ class GeminiSummarizer:
             print(f"⚠️ [SUMMARY-DEBUG] No context provided, game name not stored")
         
         if not chunks:
-            print(f"⚠️ [SUMMARY-DEBUG] 没有知识块可用于摘要")
+            print(f"⚠️ [SUMMARY-DEBUG] No knowledge chunks available for summarization")
             return {
                 "summary": "No relevant information found.",
                 "chunks_used": 0,
@@ -153,23 +153,23 @@ class GeminiSummarizer:
         context: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
         """
-        流式生成摘要，使用真正的Gemini流式API
+        Streaming summary generation, using real Gemini streaming API
         
         Args:
-            chunks: 检索到的知识块
-            query: 处理后的查询
-            original_query: 原始查询
-            context: 游戏上下文
+            chunks: Retrieved knowledge chunks
+            query: Processed query
+            original_query: Original query
+            context: Game context
             
         Yields:
-            摘要内容的流式片段
+            Streaming fragments of summary content
         """
-        print(f"🌊 [STREAM-DEBUG] 开始流式摘要生成")
-        print(f"   - 知识块数量: {len(chunks)}")
-        print(f"   - 查询: {query}")
+        print(f"🌊 [STREAM-DEBUG] Start streaming summary generation")
+        print(f"   - Knowledge chunk count: {len(chunks)}")
+        print(f"   - Query: {query}")
         if original_query and original_query != query:
-            print(f"   - 原始查询: {original_query}")
-        print(f"   - 游戏上下文: {context}")
+            print(f"   - Original query: {original_query}")
+        print(f"   - Game context: {context}")
         
         # Store game context for video source extraction
         if context:
@@ -279,8 +279,8 @@ class GeminiSummarizer:
                 result = self.summarize_chunks(chunks, query, original_query, context)
                 yield result.get('summary', str(result))
             except Exception as sync_error:
-                print(f"❌ [STREAM-DEBUG] 同步方法也失败: {sync_error}")
-                yield "抱歉，AI摘要服务暂时不可用，请稍后重试。"
+                print(f"❌ [STREAM-DEBUG] Sync method also failed: {sync_error}")
+                yield "Sorry, the AI summary service is temporarily unavailable, please try again later."
     
     def _build_summarization_prompt(
         self, 

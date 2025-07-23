@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LLMConfig:
-    """LLM配置类"""
+    """LLM configuration class"""
     model: str = "gemini-2.5-flash-lite-preview-06-17"
     api_key: Optional[str] = None
     base_url: Optional[str] = None
@@ -30,21 +30,21 @@ class LLMConfig:
     temperature: float = 0.7
     timeout: int = 30
     enable_cache: bool = True
-    cache_ttl: int = 3600  # 缓存TTL，秒
+    cache_ttl: int = 3600  # Cache TTL, seconds
     max_retries: int = 3
     retry_delay: float = 1.0
     
     def is_valid(self) -> bool:
-        """检查配置是否有效"""
+        """Check if configuration is valid"""
         api_key = self.get_api_key()
         return bool(api_key and self.model)
     
     def get_api_key(self) -> Optional[str]:
-        """获取API密钥，优先从环境变量获取"""
+        """Get API key, prioritize environment variable"""
         if self.api_key:
             return self.api_key
         
-        # 根据模型类型从环境变量获取
+        # Get API key from environment variable based on model type
         if "gemini" in self.model.lower():
             return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         elif "gpt" in self.model.lower() or "openai" in self.model.lower():
@@ -67,23 +67,23 @@ class PopupConfig:
     height: int = 500
     left: int = 100
     top: int = 50
-    # 统一使用相对坐标作为默认配置
+    # Use relative coordinates as default configuration
     use_relative_position: bool = True
-    left_percent: float = 0.55  # 屏幕宽度的55%位置（右侧偏中）
-    top_percent: float = 0.1    # 屏幕高度的10%位置（顶部留白）
-    width_percent: float = 0.35 # 屏幕宽度的35%（适中大小）
-    height_percent: float = 0.65 # 屏幕高度的65%（足够内容显示）
+    left_percent: float = 0.55  # 55% of screen width (right-center)
+    top_percent: float = 0.1    # 10% of screen height (top margin)
+    width_percent: float = 0.35 # 35% of screen width (medium size)
+    height_percent: float = 0.65 # 65% of screen height (enough content display)
     use_relative_size: bool = True
     
     def get_absolute_geometry(self, screen_geometry=None):
         """
-        获取绝对坐标几何信息
-        
+        Get absolute geometry information
+
         Args:
-            screen_geometry: 屏幕几何信息，如果为None则自动获取
-            
+            screen_geometry: Screen geometry info. If None, will be auto-detected.
+
         Returns:
-            tuple: (x, y, width, height) 绝对像素坐标
+            tuple: (x, y, width, height) in absolute pixel coordinates
         """
         if screen_geometry is None:
             try:
@@ -94,21 +94,21 @@ class PopupConfig:
                     from PyQt5.QtWidgets import QApplication
                     screen_geometry = QApplication.primaryScreen().availableGeometry()
                 except ImportError:
-                    # 如果PyQt不可用，使用默认值
+                    # If PyQt is not available, use default values
                     return self.left, self.top, self.width, self.height
         
-        # 兼容不同类型的screen_geometry对象
+        # Compatible with different types of screen_geometry objects
         def get_screen_value(obj, attr_name):
-            """获取屏幕几何属性值，兼容方法调用和属性访问"""
+            """Get screen geometry attribute value, compatible with method calls and attribute access"""
             try:
-                # 首先尝试方法调用（PyQt对象）
+                # First try method call (PyQt object)
                 attr = getattr(obj, attr_name)
                 if callable(attr):
                     return attr()
                 else:
                     return attr
             except (AttributeError, TypeError):
-                # 如果失败，尝试直接属性访问（测试对象）
+                # If failed, try direct attribute access (test object)
                 return getattr(obj, attr_name, 0)
         
         screen_x = get_screen_value(screen_geometry, 'x')
@@ -116,18 +116,18 @@ class PopupConfig:
         screen_width = get_screen_value(screen_geometry, 'width')
         screen_height = get_screen_value(screen_geometry, 'height')
         
-        # 计算尺寸
+        # Calculate size (relative size)
         if self.use_relative_size:
             calc_width = int(screen_width * self.width_percent)
             calc_height = int(screen_height * self.height_percent)
-            # 确保最小尺寸
+            # Ensure minimum size (minimum width: 300px, maximum width: 1200px)
             calc_width = max(300, min(calc_width, 1200))
             calc_height = max(200, min(calc_height, 900))
         else:
             calc_width = self.width
             calc_height = self.height
         
-        # 计算位置
+        # Calculate position (relative position)    
         if self.use_relative_position:
             calc_x = int(screen_x + screen_width * self.left_percent)
             calc_y = int(screen_y + screen_height * self.top_percent)
@@ -135,7 +135,7 @@ class PopupConfig:
             calc_x = self.left
             calc_y = self.top
         
-        # 确保窗口在屏幕可见区域内
+        # Ensure window is visible on screen
         return self._ensure_window_visible(
             calc_x, calc_y, calc_width, calc_height, 
             screen_x, screen_y, screen_width, screen_height
@@ -143,38 +143,38 @@ class PopupConfig:
     
     def _ensure_window_visible(self, x, y, width, height, screen_x, screen_y, screen_width, screen_height):
         """
-        确保窗口在屏幕可见区域内
+        Ensure window is visible on screen
         
         Args:
-            x, y, width, height: 窗口几何参数
-            screen_x, screen_y, screen_width, screen_height: 屏幕几何参数
+            x, y, width, height: Window geometry parameters
+            screen_x, screen_y, screen_width, screen_height: Screen geometry parameters
             
         Returns:
-            tuple: 调整后的(x, y, width, height)
+            tuple: Adjusted (x, y, width, height)
         """
-        # 最小可见区域（确保用户能看到并操作窗口）
+        # Minimum visible area (ensure user can see and operate window)
         min_visible_width = min(200, width // 2)
         min_visible_height = min(100, height // 4)
         
-        # 右边界检查
+        # Right boundary check
         if x > screen_x + screen_width - min_visible_width:
             x = screen_x + screen_width - width - 10
         
-        # 下边界检查  
+        # Bottom boundary check  
         if y > screen_y + screen_height - min_visible_height:
             y = screen_y + screen_height - height - 10
         
-        # 左边界检查
+        # Left boundary check
         if x < screen_x - width + min_visible_width:
             x = screen_x + 10
         
-        # 上边界检查
+        # Top boundary check
         if y < screen_y:
             y = screen_y + 10
         
-        # 尺寸检查 - 如果窗口比屏幕大，调整尺寸
+        # Size check - if window is larger than screen, adjust size
         max_width = screen_width - 20
-        max_height = screen_height - 40  # 留出任务栏空间
+        max_height = screen_height - 40  # Leave space for taskbar
         
         if width > max_width:
             width = max_width
@@ -189,14 +189,14 @@ class PopupConfig:
     @classmethod
     def create_smart_default(cls, screen_geometry=None):
         """
-        创建智能默认配置
-        统一使用相对坐标系统，根据屏幕尺寸优化百分比参数
+        Create smart default configuration
+        Use relative coordinate system, optimize percentage parameters based on screen size
         
         Args:
-            screen_geometry: 屏幕几何信息
+            screen_geometry: Screen geometry info
             
         Returns:
-            PopupConfig: 智能默认配置实例
+            PopupConfig: Smart default configuration instance
         """
         if screen_geometry is None:
             try:
@@ -207,56 +207,56 @@ class PopupConfig:
                     from PyQt5.QtWidgets import QApplication  
                     screen_geometry = QApplication.primaryScreen().availableGeometry()
                 except ImportError:
-                    # 回退到传统固定值
+                    # Fall back to traditional fixed values
                     return cls()
         
-        # 兼容不同类型的screen_geometry对象
+        # Compatible with different types of screen_geometry objects
         def get_screen_value(obj, attr_name):
-            """获取屏幕几何属性值，兼容方法调用和属性访问"""
+            """Get screen geometry attribute value, compatible with method calls and attribute access"""
             try:
-                # 首先尝试方法调用（PyQt对象）
+                # First try method call (PyQt object)
                 attr = getattr(obj, attr_name)
                 if callable(attr):
                     return attr()
                 else:
                     return attr
             except (AttributeError, TypeError):
-                # 如果失败，尝试直接属性访问（测试对象）
+                # If failed, try direct attribute access (test object)
                 return getattr(obj, attr_name, 0)
         
-        # 根据屏幕尺寸智能选择配置策略
+        # Select configuration strategy based on screen size
         screen_width = get_screen_value(screen_geometry, 'width')
         screen_height = get_screen_value(screen_geometry, 'height')
         
         if screen_width >= 1920 and screen_height >= 1080:
-            # 大屏幕：可以使用更大的窗口和更靠右的位置
+            # Large screen: can use larger window and more right position
             return cls(
                 use_relative_position=True,
                 use_relative_size=True,
-                left_percent=0.58,    # 更靠右侧，充分利用大屏幕
-                top_percent=0.08,     # 稍微靠上
-                width_percent=0.38,   # 稍大一些的宽度
-                height_percent=0.75,  # 更高的窗口
+                left_percent=0.58,    # More to the right,充分利用大屏幕
+                top_percent=0.08,     # Slightly up
+                width_percent=0.38,   # Slightly larger width
+                height_percent=0.75,  # Higher window
             )
         elif screen_width >= 1366 and screen_height >= 768:
-            # 中等屏幕：平衡的配置
+            # Medium screen: balanced configuration
             return cls(
                 use_relative_position=True,
                 use_relative_size=True,
-                left_percent=0.55,    # 标准右侧位置
-                top_percent=0.1,      # 标准顶部位置
-                width_percent=0.35,   # 标准宽度
-                height_percent=0.65,  # 标准高度
+                left_percent=0.55,    # Standard right position
+                top_percent=0.1,      # Standard top position
+                width_percent=0.35,   # Standard width
+                height_percent=0.65,  # Standard height
             )
         else:
-            # 小屏幕：更紧凑的配置，确保内容可见
+            # Small screen: more compact configuration, ensure content visible
             return cls(
                 use_relative_position=True,
                 use_relative_size=True,
-                left_percent=0.52,    # 稍微居中一些，避免过于靠边
-                top_percent=0.05,     # 更靠上，节省垂直空间
-                width_percent=0.42,   # 相对更宽，确保内容可读
-                height_percent=0.7,   # 相对更高，充分利用屏幕
+                left_percent=0.52,    # Slightly centered, avoid too close to edge
+                top_percent=0.05,     # More up, save vertical space
+                width_percent=0.42,   # More wide, ensure content readable
+                height_percent=0.7,   # More high,充分利用屏幕
             )
 
 
@@ -268,12 +268,12 @@ class ApiConfig:
 
 @dataclass
 class AppSettings:
-    """应用程序设置"""
+    """Application settings"""
     language: str = "en"
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
     popup: PopupConfig = field(default_factory=PopupConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
-    dont_remind_api_missing: bool = False  # 用户是否选择了"不再提醒"API缺失
+    dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
 
 
@@ -288,91 +288,91 @@ class SettingsManager:
         return self._settings
 
     def save(self) -> None:
-        """保存设置到文件"""
+        """Save settings to file"""
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("w", encoding="utf-8") as f:
                 json.dump(asdict(self._settings), f, indent=4, ensure_ascii=False)
         except Exception as e:
-            print(f"保存设置文件失败: {e}")
+            print(f"Failed to save settings file: {e}")
 
     def get(self, key: Optional[str] = None, default: Any = None) -> Any:
-        """获取当前设置或指定键的值"""
+        """Get current settings or value of specified key"""
         settings_dict = asdict(self._settings)
         if key is None:
             return settings_dict
         return settings_dict.get(key, default)
 
     def update(self, new_settings: Dict[str, Any]):
-        """更新设置"""
-        # 更新语言设置
+        """Update settings"""
+        # Update language settings
         if 'language' in new_settings:
             self._settings.language = new_settings['language']
-        # 更新热键设置
+        # Update hotkey settings
         if 'hotkey' in new_settings:
             self._settings.hotkey = HotkeyConfig(**new_settings['hotkey'])
-        # 更新弹窗设置
+        # Update popup settings
         if 'popup' in new_settings:
             self._settings.popup = PopupConfig(**new_settings['popup'])
-        # 更新API设置
+        # Update API settings
         if 'api' in new_settings:
             self._settings.api = ApiConfig(**new_settings['api'])
-        # 更新"不再提醒"设置
+        # Update "Don't remind me again" settings
         if 'dont_remind_api_missing' in new_settings:
             self._settings.dont_remind_api_missing = new_settings['dont_remind_api_missing']
-        # 更新快捷网站设置
+        # Update shortcuts settings
         if 'shortcuts' in new_settings:
             self._settings.shortcuts = new_settings['shortcuts']
         self.save()
 
     # ---- internal ----
     def _merge_settings(self, default_data: dict, existing_data: dict) -> dict:
-        """合并默认设置和现有设置，保留用户的修改"""
+        """Merge default settings with existing settings, preserving user modifications"""
         merged = existing_data.copy()
         
-        # 递归合并字典
+        # Recursively merge dictionaries
         for key, default_value in default_data.items():
             if key not in merged:
-                # 如果键不存在，使用默认值
+                # If key does not exist, use default value
                 merged[key] = default_value
             elif isinstance(default_value, dict) and isinstance(merged.get(key), dict):
-                # 如果都是字典，递归合并
+                # If both are dictionaries, recursively merge
                 merged[key] = self._merge_settings(default_value, merged[key])
-            # 否则保留现有值（用户的修改）
+            # Otherwise, keep existing value (user's modifications)
             
         return merged
     def _load(self) -> AppSettings:
-        """加载设置文件"""
-        # 获取默认设置文件路径
+        """Load settings file"""
+        # Get default settings file path
         default_settings_path = package_file("settings.json")
         
-        # 如果目标文件不存在，或者默认文件比目标文件新，则复制默认文件
+        # If target file does not exist, or default file is newer than target file, copy default file
         if not self.path.exists() or default_settings_path.stat().st_mtime > self.path.stat().st_mtime:
-            # 先创建目标目录
+            # First create target directory
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            # 复制默认设置文件
+            # Copy default settings file
             shutil.copyfile(default_settings_path, self.path)
-            print(f"已更新设置文件: {self.path}")
+            print(f"Settings file updated: {self.path}")
             
-        # 同步确保roaming中的settings包含所有必要字段
+        # Ensure roaming settings contains all necessary fields
         try:
-            # 读取项目中的默认settings
+            # Read default settings from project
             default_data = json.loads(default_settings_path.read_text(encoding="utf-8"))
-            # 读取roaming中的现有settings
+            # Read existing settings from roaming
             existing_data = json.loads(self.path.read_text(encoding="utf-8"))
             
-            # 合并设置，保留用户的修改但确保所有字段都存在
+            # Merge settings, preserve user modifications but ensure all fields exist
             merged_data = self._merge_settings(default_data, existing_data)
             
-            # 特殊处理：升级旧的popup配置到新格式
+            # Special handling: upgrade old popup configuration to new format
             merged_data = self._upgrade_popup_config(merged_data)
             
-            # 如果合并后的数据与现有数据不同，保存更新
+            # If merged data is different from existing data, save update
             if merged_data != existing_data:
                 self.path.write_text(json.dumps(merged_data, indent=4, ensure_ascii=False), encoding="utf-8")
-                print(f"已同步设置文件字段: {self.path}")
+                print(f"Settings file fields synchronized: {self.path}")
             
-            # 从合并后的数据创建AppSettings实例
+            # Create AppSettings instance from merged data
             return AppSettings(
                 language=merged_data.get('language', 'en'),
                 hotkey=HotkeyConfig(**merged_data.get('hotkey', {})),
@@ -382,8 +382,8 @@ class SettingsManager:
                 shortcuts=merged_data.get('shortcuts', [])
             )
         except Exception as e:
-            print(f"处理设置文件时出错: {e}")
-            # 出错时使用默认设置
+            print(f"Error processing settings file: {e}")
+            # Use default settings on error
             default_data = json.loads(default_settings_path.read_text(encoding="utf-8"))
             return AppSettings(
                 language=default_data.get('language', 'en'),
@@ -395,44 +395,44 @@ class SettingsManager:
     
     def _upgrade_popup_config(self, data: dict) -> dict:
         """
-        升级旧的popup配置到新格式
-        统一使用智能相对坐标系统
+        Upgrade old popup configuration to new format
+        Use smart relative coordinate system
         
         Args:
-            data: 设置数据字典
+            data: settings data dictionary
             
         Returns:
-            dict: 升级后的设置数据
+            dict: upgraded settings data
         """
         popup = data.get('popup', {})
         
-        # 检查是否需要升级（缺少新字段）
+        # Check if upgrade is needed (missing new fields)
         new_fields = ['use_relative_position', 'left_percent', 'top_percent', 
                      'width_percent', 'height_percent', 'use_relative_size']
         needs_upgrade = not all(field in popup for field in new_fields)
         
         if needs_upgrade:
-            print("🔄 检测到旧版popup配置，升级为智能相对坐标系统...")
+            print("🔄 Detected old popup configuration, upgrading to smart relative coordinate system...")
             
-            # 检查是否有基本的坐标信息
+            # Check if there are basic coordinate information
             has_basic_coords = all(field in popup for field in ['left', 'top', 'width', 'height'])
             
             if has_basic_coords:
-                # 保留原有坐标作为兜底，但统一使用相对坐标
+                # Keep original coordinates as fallback, but use relative coordinates
                 left = popup.get('left', 100)
                 top = popup.get('top', 50)
                 width = popup.get('width', 600)
                 height = popup.get('height', 500)
                 
-                # 检查是否是极端不合理的坐标（例如超大值或负值）
+                # Check if the coordinates are extreme (e.g. too large or negative)
                 is_extreme_coords = (left > 3000 or top > 2000 or 
                                    left < 0 or top < 0 or 
                                    width > 2000 or height > 1500 or
                                    width < 100 or height < 100)
                 
                 if is_extreme_coords:
-                    print(f"⚠️  检测到极端坐标值，使用标准智能配置")
-                    # 使用标准智能相对坐标
+                    print(f"⚠️  Detected extreme coordinate values, using standard smart configuration")
+                    # Use standard smart relative coordinates
                     popup.update({
                         'left': 100,
                         'top': 50,
@@ -446,7 +446,7 @@ class SettingsManager:
                         'use_relative_size': True
                     })
                 else:
-                    # 普通坐标，统一升级为智能相对坐标
+                    # Normal coordinates, upgrade to smart relative coordinates
                     popup.update({
                         'use_relative_position': True,
                         'left_percent': 0.55,
@@ -456,9 +456,9 @@ class SettingsManager:
                         'use_relative_size': True
                     })
                     
-                print(f"✅ 已升级为智能相对坐标配置（原坐标: {left},{top},{width}x{height}）")
+                print(f"✅ Upgraded to smart relative coordinate configuration (original coordinates: {left},{top},{width}x{height})")
             else:
-                # 没有基本坐标，创建标准智能配置
+                # No basic coordinates, create standard smart configuration
                 popup.update({
                     'left': 100,
                     'top': 50,
@@ -471,20 +471,20 @@ class SettingsManager:
                     'height_percent': 0.65,
                     'use_relative_size': True
                 })
-                print(f"✅ 已创建标准智能相对坐标配置")
+                print(f"✅ Created standard smart relative coordinate configuration")
             
             data['popup'] = popup
         else:
-            # 已有新字段，检查是否需要从固定坐标迁移到相对坐标
+            # New fields exist, check if fixed coordinates need to be migrated to relative coordinates
             if not popup.get('use_relative_position', True):
-                print("🔄 检测到固定坐标配置，建议升级为相对坐标...")
+                print("🔄 Detected fixed coordinate configuration, suggesting upgrade to relative coordinates...")
                 popup['use_relative_position'] = True
                 popup['use_relative_size'] = True
                 popup['left_percent'] = 0.55
                 popup['top_percent'] = 0.1
                 popup['width_percent'] = 0.35
                 popup['height_percent'] = 0.65
-                print(f"✅ 已从固定坐标升级为智能相对坐标")
+                print(f"✅ Upgraded from fixed coordinates to smart relative coordinates")
                 data['popup'] = popup
         
         return data
@@ -553,37 +553,37 @@ class GameConfigManager:
             self._games = self._create_default_config()
             
     def _ensure_language_configs_copied(self):
-        """确保语言特定的配置文件被复制到appdata目录"""
+        """Ensure language-specific configuration files are copied to appdata directory"""
         try:
-            # 需要复制的语言配置文件
+            # Language configuration files to copy
             language_files = ['games_en.json', 'games_zh.json', 'games.json']
             
             for filename in language_files:
                 try:
-                    # 获取源文件路径（assets目录）
+                    # Get source file path (assets directory)
                     source_path = package_file(filename)
                     if not source_path.exists():
                         logger.warning(f"Language config file not found in assets: {filename}")
                         continue
                     
-                    # 目标文件路径（appdata目录）
+                    # Target file path (appdata directory)
                     target_path = self.path.parent / filename
                     
-                    # 如果目标文件不存在，或源文件更新，则复制
+                    # If target file does not exist, or source file is updated, copy
                     if not target_path.exists() or source_path.stat().st_mtime > target_path.stat().st_mtime:
-                        # 确保目标目录存在
+                        # Ensure target directory exists
                         target_path.parent.mkdir(parents=True, exist_ok=True)
-                        # 复制文件
+                        # Copy file
                         shutil.copyfile(source_path, target_path)
-                        logger.info(f"已复制语言配置文件: {filename} -> {target_path}")
+                        logger.info(f"Language configuration file copied: {filename} -> {target_path}")
                     else:
-                        logger.debug(f"语言配置文件已是最新: {filename}")
+                        logger.debug(f"Language configuration file already up to date: {filename}")
                         
                 except Exception as e:
-                    logger.error(f"复制语言配置文件失败 {filename}: {e}")
+                    logger.error(f"Failed to copy language configuration file {filename}: {e}")
                     
         except Exception as e:
-            logger.error(f"确保语言配置文件复制失败: {e}")
+            logger.error(f"Failed to ensure language configuration file copy: {e}")
     
     def _create_default_config(self) -> dict:
         """Create default games configuration"""
@@ -662,7 +662,7 @@ class GameConfigManager:
             self._games = self._create_default_config()
     
     def for_title(self, window_title: str) -> Optional[GameConfig]:
-        """根据窗口标题获取游戏配置 (向后兼容)"""
+        """Get game configuration based on window title (backward compatibility)"""
         lower = window_title.lower()
         for name, cfg in self._games.items():
             if name.lower() in lower:

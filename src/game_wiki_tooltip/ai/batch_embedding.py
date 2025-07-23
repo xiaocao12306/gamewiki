@@ -1,12 +1,12 @@
 """
-批量嵌入处理器 - 集成Jina API和向量库存储
+Batch Embedding Processor - Integrates Jina API and Vector Store
 ===========================================
 
-功能：
-1. 读取knowledge_chunks JSON文件
-2. 批量调用Jina API进行嵌入
-3. 存储到FAISS/Qdrant向量库
-4. 优化存储和检索性能
+Features:
+1. Read knowledge_chunks JSON file
+2. Batch call Jina API for embeddings
+3. Store to FAISS/Qdrant vector store
+4. Optimize storage and retrieval performance
 """
 
 import os
@@ -34,13 +34,13 @@ try:
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
-    logging.warning("qdrant-client未安装，将使用FAISS作为备选")
+    logging.warning("qdrant-client not installed, will use FAISS as fallback")
 
 # 延迟导入faiss - 只在需要时导入以避免启动时崩溃
 FAISS_AVAILABLE = None
 
 def _check_faiss_available():
-    """检查并延迟导入faiss"""
+    """Check and lazily import faiss"""
     global FAISS_AVAILABLE
     if FAISS_AVAILABLE is None:
         try:
@@ -48,32 +48,32 @@ def _check_faiss_available():
             FAISS_AVAILABLE = True
         except ImportError:
             FAISS_AVAILABLE = False
-            logging.warning("faiss-cpu未安装，向量库功能不可用")
+            logging.warning("faiss-cpu not installed, vector store functionality unavailable")
     return FAISS_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
 def get_resource_path(relative_path: str) -> Path:
     """
-    获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境
+    Get the absolute path of a resource file, compatible with both development and PyInstaller environments
     
     Args:
-        relative_path: 相对于项目根目录或临时目录的路径
+        relative_path: Path relative to the project root or temp directory
         
     Returns:
-        资源文件的绝对路径
+        Absolute path to the resource file
     """
     try:
-        # PyInstaller打包后的临时目录
+        # PyInstaller temp directory after packaging
         base_path = Path(sys._MEIPASS)
         resource_path = base_path / relative_path
     except AttributeError:
-        # 开发环境：从当前文件位置向上找到项目根目录
+        # Development environment: find project root upwards from current file
         current_file = Path(__file__).parent  # .../ai/
-        base_path = current_file  # 对于ai目录下的文件，直接使用当前目录
-        # 如果relative_path以"ai/"开头，需要去掉这个前缀
+        base_path = current_file  # For files under ai directory, use current dir
+        # If relative_path starts with "ai/", remove this prefix
         if relative_path.startswith("ai/"):
-            relative_path = relative_path[3:]  # 去掉"ai/"前缀
+            relative_path = relative_path[3:]  # Remove "ai/" prefix
         resource_path = base_path / relative_path
     
     return resource_path
@@ -82,7 +82,7 @@ def get_resource_path(relative_path: str) -> Path:
 from src.game_wiki_tooltip.i18n import t
 
 class BatchEmbeddingProcessor:
-    """批量嵌入处理器"""
+    """Batch Embedding Processor"""
     
     def __init__(self, 
                  api_key: Optional[str] = None,
@@ -91,41 +91,41 @@ class BatchEmbeddingProcessor:
                  output_dim: int = 768,
                  vector_store_type: str = "faiss"):
         """
-        初始化批量嵌入处理器
+        Initialize the batch embedding processor
         
         Args:
-            api_key: Jina API密钥，如果为None则从环境变量获取
-            model: 使用的嵌入模型
-            adapter: 适配器类型
-            output_dim: 输出向量维度
-            vector_store_type: 向量库类型 ("faiss" 或 "qdrant")
+            api_key: Jina API key, if None will get from environment variable
+            model: Embedding model to use
+            adapter: Adapter type
+            output_dim: Output vector dimension
+            vector_store_type: Vector store type ("faiss" or "qdrant")
         """
         self.api_key = api_key or os.environ.get("JINA_API_KEY")
         if not self.api_key:
-            raise ValueError("需要提供JINA_API_KEY环境变量或参数")
+            raise ValueError("JINA_API_KEY environment variable or parameter is required")
             
         self.model = model
         self.adapter = adapter
         self.output_dim = output_dim
         self.vector_store_type = vector_store_type.lower()
         
-        # 验证向量库支持
+        # Validate vector store support
         if self.vector_store_type == "qdrant" and not QDRANT_AVAILABLE:
-            logger.warning("Qdrant不可用，切换到FAISS")
+            logger.warning("Qdrant not available, switching to FAISS")
             self.vector_store_type = "faiss"
             
         if not _check_faiss_available():
-            raise ImportError("需要安装faiss-cpu或qdrant-client")
+            raise ImportError("faiss-cpu or qdrant-client must be installed")
     
     def build_text(self, chunk: Dict[str, Any]) -> str:
         """
-        构建用于嵌入的文本
+        Build text for embedding
         
         Args:
-            chunk: knowledge_chunk字典
+            chunk: knowledge_chunk dictionary
             
         Returns:
-            格式化的文本字符串
+            Formatted text string
         """
         text_parts = [
             f"Topic: {chunk.get('topic', 'Unknown')}",
@@ -133,7 +133,7 @@ class BatchEmbeddingProcessor:
             f"Keywords: {', '.join(chunk.get('keywords', []))}"
         ]
         
-        # 可选：添加rationale信息
+        # Optional: add rationale information
         if 'build' in chunk and 'focus' in chunk['build']:
             text_parts.append(f"Focus: {chunk['build']['focus']}")
             
@@ -141,23 +141,23 @@ class BatchEmbeddingProcessor:
     
     def embed_batch(self, texts: List[str]) -> List[List[float]]:
         """
-        批量调用Jina API进行嵌入
+        Batch call Jina API for embeddings
         
         Args:
-            texts: 文本列表
+            texts: List of text
             
         Returns:
-            嵌入向量列表
+            List of embedding vectors
         """
         url = "https://api.jina.ai/v1/embeddings"
         
-        # 按照Jina官方示例格式构建输入
+        # Build input according to Jina official example format
         input_data = [{"text": text} for text in texts]
         
         payload = {
             "model": self.model,
             "task": self.adapter,
-            "dimensions": self.output_dim,  # 使用dimensions而不是output_dim
+            "dimensions": self.output_dim,  # Use dimensions instead of output_dim
             "input": input_data
         }
         
@@ -175,18 +175,18 @@ class BatchEmbeddingProcessor:
             
             result = response.json()
             
-            # 添加调试信息
+            # Add debug info
             if result.get("data") and len(result["data"]) > 0:
                 first_embedding = result["data"][0].get("embedding", [])
-                logger.info(f"Jina返回的第一个向量长度: {len(first_embedding)}")
-                logger.info(f"期望的向量维度: {self.output_dim}")
+                logger.info(f"First vector length returned by Jina: {len(first_embedding)}")
+                logger.info(f"Expected vector dimension: {self.output_dim}")
             
             return [e["embedding"] for e in result["data"]]
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Jina API调用失败: {e}")
+            logger.error(f"Jina API call failed: {e}")
             if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"API响应: {e.response.text}")
+                logger.error(f"API response: {e.response.text}")
             raise
     
     def process_json_file(self, 
@@ -195,44 +195,44 @@ class BatchEmbeddingProcessor:
                          batch_size: int = 64,
                          collection_name: str = "gamefloaty") -> str:
         """
-        处理JSON文件并构建向量库
+        Process JSON file and build vector store
         
         Args:
-            json_path: JSON文件路径
-            output_dir: 输出目录
-            batch_size: 批处理大小
-            collection_name: 集合名称
+            json_path: Path to JSON file
+            output_dir: Output directory
+            batch_size: Batch size
+            collection_name: Collection name
             
         Returns:
-            向量库路径
+            Vector store path
         """
-        # 读取JSON文件
-        logger.info(f"读取JSON文件: {json_path}")
+        # Read JSON file
+        logger.info(f"Reading JSON file: {json_path}")
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        # 提取knowledge_chunks
+        # Extract knowledge_chunks
         if isinstance(data, list):
             chunks = []
             for item in data:
                 if isinstance(item, dict):
                     if "knowledge_chunks" in item:
-                        # 直接包含knowledge_chunks的对象
+                        # Object directly containing knowledge_chunks
                         chunks.extend(item["knowledge_chunks"])
                     elif "videos" in item:
-                        # 包含videos数组的对象，跳过（这些是视频列表，不是知识块）
+                        # Object containing videos array, skip (these are video lists, not knowledge chunks)
                         continue
             if not chunks:
-                # 如果没有找到knowledge_chunks，可能是直接的chunks数组
+                # If no knowledge_chunks found, maybe it's a direct chunks array
                 chunks = data
         elif isinstance(data, dict) and "knowledge_chunks" in data:
             chunks = data["knowledge_chunks"]
         else:
-            raise ValueError("JSON文件格式不正确，需要包含knowledge_chunks数组")
+            raise ValueError("Incorrect JSON file format, must contain knowledge_chunks array")
         
-        logger.info(f"找到 {len(chunks)} 个知识块")
+        logger.info(f"Found {len(chunks)} knowledge chunks")
         
-        # 创建输出目录
+        # Create output directory
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
         
@@ -246,30 +246,30 @@ class BatchEmbeddingProcessor:
                            output_path: Path,
                            batch_size: int,
                            collection_name: str) -> str:
-        """构建Qdrant索引"""
-        # 初始化Qdrant客户端
-        client = qdrant_client.QdrantClient(":memory:")  # 内存模式，生产环境可改为文件路径
+        """Build Qdrant index"""
+        # Initialize Qdrant client
+        client = qdrant_client.QdrantClient(":memory:")  # In-memory mode, use file path in production
         client.recreate_collection(
             collection_name, 
             vector_size=self.output_dim, 
             distance="Cosine"
         )
         
-        # 批量处理
-        for i in tqdm(range(0, len(chunks), batch_size), desc="构建Qdrant索引"):
+        # Batch processing
+        for i in tqdm(range(0, len(chunks), batch_size), desc="Building Qdrant index"):
             batch = chunks[i:i + batch_size]
             texts = [self.build_text(c) for c in batch]
             vectors = self.embed_batch(texts)
             
-            # 上传到Qdrant
+            # Upload to Qdrant
             client.upload_collection(
                 collection_name=collection_name,
                 vectors=vectors,
-                payload=batch,  # 原始JSON作为payload
+                payload=batch,  # Original JSON as payload
                 ids=[c.get("chunk_id", f"chunk_{i+j}") for j, c in enumerate(batch)]
             )
         
-        # 保存配置
+        # Save config
         config = {
             "vector_store_type": "qdrant",
             "collection_name": collection_name,
@@ -282,7 +282,7 @@ class BatchEmbeddingProcessor:
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"Qdrant索引构建完成，配置保存到: {config_path}")
+        logger.info(f"Qdrant index built, config saved to: {config_path}")
         return str(config_path)
     
     def _build_faiss_index(self, 
@@ -290,12 +290,12 @@ class BatchEmbeddingProcessor:
                           output_path: Path,
                           batch_size: int,
                           collection_name: str) -> str:
-        """构建FAISS索引和BM25索引"""
+        """Build FAISS index and BM25 index"""
         all_vectors = []
         all_metadatas = []
         
-        # 批量处理
-        for i in tqdm(range(0, len(chunks), batch_size), desc="构建FAISS索引"):
+        # Batch processing
+        for i in tqdm(range(0, len(chunks), batch_size), desc="Building FAISS index"):
             batch = chunks[i:i + batch_size]
             texts = [self.build_text(c) for c in batch]
             vectors = self.embed_batch(texts)
@@ -303,52 +303,52 @@ class BatchEmbeddingProcessor:
             all_vectors.extend(vectors)
             all_metadatas.extend(batch)
         
-        # 转换为numpy数组
+        # Convert to numpy array
         vectors_array = np.array(all_vectors, dtype=np.float32)
         
-        # 添加调试信息
+        # Add debug info
         logger.info(f"vectors_array.shape={vectors_array.shape}, self.output_dim={self.output_dim}")
         
-        # 检查向量维度
+        # Check vector dimension
         if vectors_array.shape[1] != self.output_dim:
-            logger.error(f"向量维度不匹配: 实际={vectors_array.shape[1]}, 期望={self.output_dim}")
-            raise ValueError(f"向量维度不匹配: 实际={vectors_array.shape[1]}, 期望={self.output_dim}")
+            logger.error(f"Vector dimension mismatch: actual={vectors_array.shape[1]}, expected={self.output_dim}")
+            raise ValueError(f"Vector dimension mismatch: actual={vectors_array.shape[1]}, expected={self.output_dim}")
         
-        # 创建FAISS索引
+        # Create FAISS index
         index_path = output_path / collection_name
         index_path.mkdir(exist_ok=True)
         
-        # 创建并保存FAISS索引
+        # Create and save FAISS index
         try:
             import faiss
         except ImportError:
-            raise ImportError("无法导入faiss库，请确保已安装faiss-cpu")
+            raise ImportError("Cannot import faiss library, please ensure faiss-cpu is installed")
         
-        index = faiss.IndexFlatIP(vectors_array.shape[1])  # 使用实际维度
+        index = faiss.IndexFlatIP(vectors_array.shape[1])  # Use actual dimension
         index.add(vectors_array)
         faiss.write_index(index, str(index_path / "index.faiss"))
         
-        # 保存元数据
+        # Save metadata
         metadata_path = index_path / "metadata.json"
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(all_metadatas, f, ensure_ascii=False, indent=2)
         
-        # 构建增强BM25索引
-        logger.info("开始构建增强BM25索引...")
+        # Build enhanced BM25 index
+        logger.info("Building enhanced BM25 index...")
         try:
             from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
             
-            # 从collection_name中提取游戏名称
+            # Extract game name from collection_name
             game_name = collection_name.replace("_vectors", "") if "_vectors" in collection_name else collection_name
             
             enhanced_bm25_indexer = EnhancedBM25Indexer(game_name=game_name)
             enhanced_bm25_indexer.build_index(chunks)
             
-            # 保存增强BM25索引
+            # Save enhanced BM25 index
             bm25_path = index_path / "enhanced_bm25_index.pkl"
             enhanced_bm25_indexer.save_index(str(bm25_path))
             
-            logger.info(f"增强BM25索引构建完成（游戏: {game_name}），保存到: {bm25_path}")
+            logger.info(f"Enhanced BM25 index built (game: {game_name}), saved to: {bm25_path}")
             bm25_path_str = f"{collection_name}/enhanced_bm25_index.pkl"
             
         except BM25UnavailableError as e:
@@ -360,37 +360,37 @@ class BatchEmbeddingProcessor:
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         
-        # 保存配置 - 修复：使用相对路径而不是绝对路径
+        # Save config - fix: use relative path instead of absolute path
         config = {
             "vector_store_type": "faiss",
             "collection_name": collection_name,
-            "game_name": game_name,  # 添加游戏名称
+            "game_name": game_name,  # Add game name
             "model": self.model,
             "output_dim": self.output_dim,
             "chunk_count": len(chunks),
-            "index_path": collection_name,  # 使用相对路径，不再使用绝对路径
-            "bm25_index_path": bm25_path_str,  # 使用相对路径
-            "hybrid_search_enabled": True  # BM25索引构建成功
+            "index_path": collection_name,  # Use relative path, not absolute
+            "bm25_index_path": bm25_path_str,  # Use relative path
+            "hybrid_search_enabled": True  # BM25 index built successfully
         }
         
         config_path = output_path / f"{collection_name}_config.json"
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"FAISS索引构建完成，保存到: {index_path}")
+        logger.info(f"FAISS index built, saved to: {index_path}")
         return str(config_path)
     
     def load_vector_store(self, config_path: str):
         """
-        加载向量库
+        Load vector store
         
         Args:
-            config_path: 配置文件路径
+            config_path: Path to config file
             
         Returns:
-            向量库实例
+            Vector store instance
         """
-        # 保存配置文件路径供其他方法使用
+        # Save config file path for other methods to use
         self._config_file_path = config_path
         
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -402,27 +402,27 @@ class BatchEmbeddingProcessor:
             return self._load_faiss_store(config)
     
     def _load_qdrant_store(self, config: Dict) -> Any:
-        """加载Qdrant存储"""
+        """Load Qdrant store"""
         if not QDRANT_AVAILABLE:
-            raise ImportError("qdrant-client未安装")
+            raise ImportError("qdrant-client not installed")
         
         client = qdrant_client.QdrantClient(":memory:")
         return client
     
     def _load_faiss_store(self, config: Dict) -> Any:
-        """加载FAISS存储"""
+        """Load FAISS store"""
         if not _check_faiss_available():
-            raise ImportError("faiss-cpu未安装")
+            raise ImportError("faiss-cpu not installed")
         
-        # 获取配置文件所在的目录
+        # Get directory of config file
         if hasattr(self, '_config_file_path') and self._config_file_path:
             config_dir = Path(self._config_file_path).parent
             index_path = config_dir / Path(config["index_path"]).name
         else:
-            # 如果没有配置文件路径，使用资源路径函数
+            # If no config file path, use resource path function
             index_path_str = config["index_path"]
             if not Path(index_path_str).is_absolute():
-                # 使用资源路径函数来构建绝对路径
+                # Use resource path function to build absolute path
                 vectorstore_dir = get_resource_path("ai/vectorstore")
                 index_path = vectorstore_dir / Path(index_path_str).name
             else:
@@ -430,12 +430,12 @@ class BatchEmbeddingProcessor:
         
         metadata_path = index_path / "metadata.json"
         
-        logger.info(f"尝试加载FAISS存储，索引路径: {index_path}")
-        logger.info(f"元数据路径: {metadata_path}")
+        logger.info(f"Attempting to load FAISS store, index path: {index_path}")
+        logger.info(f"Metadata path: {metadata_path}")
         
         if not metadata_path.exists():
-            logger.error(f"元数据文件不存在: {metadata_path}")
-            raise FileNotFoundError(f"元数据文件不存在: {metadata_path}")
+            logger.error(f"Metadata file not found: {metadata_path}")
+            raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
         
         with open(metadata_path, 'r', encoding='utf-8') as f:
             metadata = json.load(f)
@@ -451,20 +451,20 @@ def process_game_knowledge(game_name: str,
                           knowledge_dir: str = "data/knowledge_chunk",
                           output_dir: str = "src/game_wiki_tooltip/ai/vectorstore") -> str:
     """
-    处理指定游戏的知识库
+    Process the knowledge base for the specified game
     
     Args:
-        game_name: 游戏名称 (如 "helldiver2")
-        knowledge_dir: 知识库目录
-        output_dir: 输出目录
+        game_name: Game name (e.g. "helldiver2")
+        knowledge_dir: Knowledge base directory
+        output_dir: Output directory
         
     Returns:
-        向量库配置路径
+        Vector store config path
     """
     json_path = Path(knowledge_dir) / f"{game_name}.json"
     
     if not json_path.exists():
-        raise FileNotFoundError(f"找不到知识库文件: {json_path}")
+        raise FileNotFoundError(f"Knowledge base file not found: {json_path}")
     
     processor = BatchEmbeddingProcessor()
     return processor.process_json_file(
@@ -475,13 +475,13 @@ def process_game_knowledge(game_name: str,
 
 
 if __name__ == "__main__":
-    # 示例用法
+    # Example usage
     import logging
     logging.basicConfig(level=logging.INFO)
     
-    # 处理Helldivers 2知识库
+    # Process Helldivers 2 knowledge base
     try:
         config_path = process_game_knowledge("helldiver2")
-        print(f"向量库构建完成: {config_path}")
+        print(f"Vector store built: {config_path}")
     except Exception as e:
-        print(f"处理失败: {e}") 
+        print(f"Processing failed: {e}") 

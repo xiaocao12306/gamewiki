@@ -1,8 +1,8 @@
 """
-RAG配置管理模块 - 统一管理RAG系统的配置
+RAG configuration management module - unified management of RAG system configurations
 =========================================
 
-提供高质量RAG系统的统一配置管理，确保evaluator和searchbar使用相同的配置。
+Provide unified configuration management for high-quality RAG systems, ensuring that evaluator and searchbar use the same configuration.
 """
 
 from typing import Dict, Any, Optional
@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HybridSearchConfig:
-    """混合搜索配置"""
+    """Hybrid search configuration"""
     enabled: bool = True
     fusion_method: str = "rrf"  # rrf, weighted, normalized
-    vector_weight: float = 0.5  # 与evaluator保持一致
-    bm25_weight: float = 0.5    # 与evaluator保持一致
-    rrf_k: int = 60            # RRF算法参数
+    vector_weight: float = 0.5  # Same as evaluator
+    bm25_weight: float = 0.5    # Same as evaluator
+    rrf_k: int = 60            # RRF algorithm parameters
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -34,7 +34,7 @@ class HybridSearchConfig:
 
 @dataclass
 class SummarizationConfig:
-    """摘要生成配置"""
+    """Summary generation configuration"""
     enabled: bool = True
     model_name: str = "gemini-2.0-flash-exp"
     max_summary_length: int = 300
@@ -54,7 +54,7 @@ class SummarizationConfig:
 
 @dataclass
 class IntentRerankingConfig:
-    """意图感知重排序配置"""
+    """Intent-aware reranking configuration"""
     enabled: bool = True
     intent_weight: float = 0.4
     semantic_weight: float = 0.6
@@ -69,10 +69,10 @@ class IntentRerankingConfig:
 
 @dataclass
 class QueryProcessingConfig:
-    """查询处理配置"""
+    """Query processing configuration"""
     enable_query_rewrite: bool = True
     enable_intent_classification: bool = True
-    unified_processing: bool = True  # 使用统一处理提高性能
+    unified_processing: bool = True  # Use unified processing to improve performance
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -85,33 +85,33 @@ class QueryProcessingConfig:
 @dataclass
 class RAGConfig:
     """
-    RAG系统完整配置
+    Full RAG system configuration
     
-    这是evaluator使用的高质量RAG配置，现在统一提供给所有组件使用。
+    This is the high-quality RAG configuration used by evaluator, now provided to all components for use.
     """
-    # 混合搜索配置
+    # Hybrid search configuration
     hybrid_search: HybridSearchConfig = field(default_factory=HybridSearchConfig)
     
-    # 摘要生成配置
+    # Summary generation configuration
     summarization: SummarizationConfig = field(default_factory=SummarizationConfig)
     
-    # 意图重排序配置
+    # Intent reranking configuration
     intent_reranking: IntentRerankingConfig = field(default_factory=IntentRerankingConfig)
     
-    # 查询处理配置
+    # Query processing configuration
     query_processing: QueryProcessingConfig = field(default_factory=QueryProcessingConfig)
     
-    # 基础配置
+    # Basic configuration
     top_k: int = 5
     enable_cache: bool = True
-    cache_ttl: int = 3600  # 缓存时间（秒）
+    cache_ttl: int = 3600  # Cache time (seconds)
     
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "RAGConfig":
-        """从字典创建配置"""
+        """Create configuration from dictionary"""
         config = cls()
         
-        # 混合搜索配置
+        # Hybrid search configuration
         if "hybrid_search" in config_dict:
             hs_dict = config_dict["hybrid_search"]
             config.hybrid_search = HybridSearchConfig(
@@ -122,7 +122,7 @@ class RAGConfig:
                 rrf_k=hs_dict.get("rrf_k", 60)
             )
         
-        # 摘要生成配置
+        # Summary generation configuration
         if "summarization" in config_dict:
             sum_dict = config_dict["summarization"]
             config.summarization = SummarizationConfig(
@@ -134,7 +134,7 @@ class RAGConfig:
                 language=sum_dict.get("language", "auto")
             )
         
-        # 意图重排序配置
+        # Intent reranking configuration
         if "intent_reranking" in config_dict:
             ir_dict = config_dict["intent_reranking"]
             config.intent_reranking = IntentRerankingConfig(
@@ -144,7 +144,7 @@ class RAGConfig:
                 confidence_threshold=ir_dict.get("confidence_threshold", 0.7)
             )
         
-        # 查询处理配置
+        # Query processing configuration
         if "query_processing" in config_dict:
             qp_dict = config_dict["query_processing"]
             config.query_processing = QueryProcessingConfig(
@@ -153,7 +153,7 @@ class RAGConfig:
                 unified_processing=qp_dict.get("unified_processing", True)
             )
         
-        # 基础配置
+        # Basic configuration
         config.top_k = config_dict.get("top_k", 5)
         config.enable_cache = config_dict.get("enable_cache", True)
         config.cache_ttl = config_dict.get("cache_ttl", 3600)
@@ -161,7 +161,7 @@ class RAGConfig:
         return config
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "hybrid_search": {
                 "enabled": self.hybrid_search.enabled,
@@ -183,9 +183,9 @@ class RAGConfig:
     
     @classmethod
     def load_from_file(cls, config_path: Optional[Path] = None) -> "RAGConfig":
-        """从文件加载配置"""
+        """Load configuration from file"""
         if config_path is None:
-            # 默认从settings.json加载
+            # Default from settings.json
             config_path = Path(__file__).parent.parent / "assets" / "settings.json"
         
         if config_path.exists():
@@ -195,45 +195,45 @@ class RAGConfig:
                     rag_settings = settings.get("rag", {})
                     return cls.from_dict(rag_settings)
             except Exception as e:
-                logger.warning(f"加载RAG配置失败: {e}，使用默认配置")
+                logger.warning(f"Failed to load RAG configuration: {e}, using default configuration")
         
-        # 返回默认配置
+        # Return default configuration
         return cls()
     
     def save_to_file(self, config_path: Optional[Path] = None):
-        """保存配置到文件"""
+        """Save configuration to file"""
         if config_path is None:
             config_path = Path(__file__).parent.parent / "assets" / "settings.json"
         
-        # 读取现有设置
+        # Read existing settings
         settings = {}
         if config_path.exists():
             try:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     settings = json.load(f)
             except Exception as e:
-                logger.warning(f"读取设置文件失败: {e}")
+                logger.warning(f"Failed to read settings file: {e}")
         
-        # 更新RAG设置
+        # Update RAG settings
         settings["rag"] = self.to_dict()
         
-        # 保存
+        # Save
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, ensure_ascii=False, indent=2)
-            logger.info(f"RAG配置已保存到: {config_path}")
+            logger.info(f"RAG configuration saved to: {config_path}")
         except Exception as e:
-            logger.error(f"保存RAG配置失败: {e}")
+            logger.error(f"Failed to save RAG configuration: {e}")
 
 
 def get_default_config() -> RAGConfig:
-    """获取默认的高质量RAG配置（与evaluator使用的相同）"""
+    """Get default high-quality RAG configuration (same as evaluator)"""
     return RAGConfig(
         hybrid_search=HybridSearchConfig(
             enabled=True,
             fusion_method="rrf",
-            vector_weight=0.5,  # evaluator使用的权重
-            bm25_weight=0.5,    # evaluator使用的权重
+            vector_weight=0.5,  # Same as evaluator
+            bm25_weight=0.5,    # Same as evaluator
             rrf_k=60
         ),
         summarization=SummarizationConfig(
@@ -262,8 +262,8 @@ def get_default_config() -> RAGConfig:
 
 
 def get_evaluation_config() -> RAGConfig:
-    """获取用于评估的RAG配置（确保与evaluator完全一致）"""
+    """Get RAG configuration for evaluation (ensure it's exactly the same as evaluator)"""
     config = get_default_config()
-    # 评估时可能需要的特殊配置
-    config.enable_cache = False  # 评估时禁用缓存
+    # Special configuration needed for evaluation
+    config.enable_cache = False  # Disable cache for evaluation
     return config

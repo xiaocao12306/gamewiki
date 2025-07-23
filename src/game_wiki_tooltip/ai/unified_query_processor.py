@@ -1,8 +1,8 @@
 """
-统一查询处理器 - 一次LLM调用完成多项任务
+Unified Query Processor - Complete Multiple Tasks in One LLM Call
 ===================================================
 
-将查询翻译、重写、意图分析合并到单次LLM调用中，提高响应速度
+Combine query translation, rewriting, and intent analysis into a single LLM call to improve response speed
 """
 
 import json
@@ -58,28 +58,28 @@ class UnifiedQueryProcessor:
             logger.warning("LLM configuration invalid, will use basic processing mode")
     
     def _initialize_llm_client(self):
-        """初始化LLM客户端"""
+        """Initialize LLM client"""
         try:
             if "gemini" in self.llm_config.model.lower():
                 self._initialize_gemini_client()
             elif "gpt" in self.llm_config.model.lower():
                 self._initialize_openai_client()
             else:
-                logger.error(f"不支持的模型类型: {self.llm_config.model}")
+                logger.error(f"Unsupported model type: {self.llm_config.model}")
                 return
                 
-            logger.info(f"统一查询处理器初始化成功，模型: {self.llm_config.model}")
+            logger.info(f"Unified query processor initialized successfully, model: {self.llm_config.model}")
         except Exception as e:
-            logger.error(f"LLM客户端初始化失败: {e}")
+            logger.error(f"LLM client initialization failed: {e}")
             
     def _initialize_gemini_client(self):
-        """初始化Gemini客户端"""
+        """Initialize Gemini client"""
         try:
             import google.generativeai as genai
             
             api_key = self.llm_config.get_api_key()
             if not api_key:
-                raise ValueError("未找到Gemini API密钥")
+                raise ValueError("Gemini API key not found")
                 
             genai.configure(api_key=api_key)
             
@@ -94,17 +94,17 @@ class UnifiedQueryProcessor:
             )
             
         except Exception as e:
-            logger.error(f"Gemini客户端初始化失败: {e}")
+            logger.error(f"Gemini client initialization failed: {e}")
             raise
     
     def _initialize_openai_client(self):
-        """初始化OpenAI客户端"""
+        """Initialize OpenAI client"""
         try:
             import openai
             
             api_key = self.llm_config.get_api_key()
             if not api_key:
-                raise ValueError("未找到OpenAI API密钥")
+                raise ValueError("OpenAI API key not found")
                 
             self.llm_client = openai.OpenAI(
                 api_key=api_key,
@@ -113,15 +113,15 @@ class UnifiedQueryProcessor:
             )
             
         except Exception as e:
-            logger.error(f"OpenAI客户端初始化失败: {e}")
+            logger.error(f"OpenAI client initialization failed: {e}")
             raise
     
     def _generate_cache_key(self, query: str) -> str:
-        """生成缓存键"""
+        """Generate cache key"""
         return hashlib.md5(f"{query}_{self.llm_config.model}".encode()).hexdigest()
     
     def _get_cached_result(self, query: str) -> Optional[UnifiedQueryResult]:
-        """获取缓存的结果"""
+        """Get cached result"""
         if not self.llm_config.enable_cache:
             return None
             
@@ -136,7 +136,7 @@ class UnifiedQueryProcessor:
         return None
     
     def _cache_result(self, query: str, result: UnifiedQueryResult):
-        """缓存结果"""
+        """Cache result"""
         if not self.llm_config.enable_cache:
             return
             
@@ -144,7 +144,7 @@ class UnifiedQueryProcessor:
         self.query_cache[cache_key] = (result, time.time())
     
     def _create_unified_prompt(self, query: str) -> str:
-        """创建统一处理的提示词"""
+        """Create unified processing prompt"""
         prompt = f"""You are an AI assistant that processes search queries for a universal game wiki and guide system.
 
 Your task is to analyze the user's query and perform the following tasks in ONE response:
@@ -247,7 +247,7 @@ This is a specialized query designed to enhance important game terms while prese
         return prompt
     
     def _call_llm_with_retry(self, prompt: str) -> Optional[Dict]:
-        """带重试的LLM调用"""
+        """LLM call with retry"""
         for attempt in range(self.llm_config.max_retries):
             try:
                 if "gemini" in self.llm_config.model.lower():
@@ -264,7 +264,7 @@ This is a specialized query designed to enhance important game terms while prese
                 else:
                     return None
                 
-                # 解析JSON响应
+                # Parse JSON response
                 if response_text.startswith('```json'):
                     response_text = response_text[7:-3]
                 elif response_text.startswith('```'):
@@ -273,34 +273,34 @@ This is a specialized query designed to enhance important game terms while prese
                 return json.loads(response_text)
                 
             except Exception as e:
-                logger.warning(f"统一处理LLM调用失败 (尝试 {attempt + 1}/{self.llm_config.max_retries}): {e}")
+                logger.warning(f"Unified processing LLM call failed (attempt {attempt + 1}/{self.llm_config.max_retries}): {e}")
                 if attempt < self.llm_config.max_retries - 1:
                     time.sleep(self.llm_config.retry_delay * (2 ** attempt))
                 
         return None
     
     def _basic_processing(self, query: str) -> UnifiedQueryResult:
-        """基础处理模式（LLM不可用时的降级方案）"""
-        # 简单的语言检测
+        """Basic processing mode (fallback when LLM is unavailable)"""
+        # Simple language detection
         chinese_chars = sum(1 for char in query if '\u4e00' <= char <= '\u9fff')
         detected_language = "zh" if chinese_chars / len(query) > 0.3 else "en"
         
-        # 基础意图分类
+        # Basic intent classification
         intent = "guide"
         confidence = 0.6
         
-        # 判断是否是询问定义的wiki查询
+        # Check if it's a wiki query asking for definitions
         wiki_patterns = ["what is", "什么是", "是什么", "info", "stats", "数据", "属性"]
         if any(pattern in query.lower() for pattern in wiki_patterns):
             intent = "wiki"
             confidence = 0.8
-        # 判断是否是guide查询
+        # Check if it's a guide query
         elif any(word in query.lower() for word in ["how", "如何", "怎么", "best", "recommend", "推荐", "next", "下一个", "选择", "该"]):
             intent = "guide"
             confidence = 0.8
-        # 特殊处理"什么"的情况
+        # Special handling for "什么" cases
         elif "什么" in query:
-            # 如果是"该xxx什么"或"选什么"等推荐类查询
+            # If it's recommendation queries like "该xxx什么" or "选什么"
             if any(pattern in query for pattern in ["该", "选", "下一个", "推荐"]):
                 intent = "guide"
                 confidence = 0.7
@@ -308,233 +308,233 @@ This is a specialized query designed to enhance important game terms while prese
                 intent = "wiki"
                 confidence = 0.6
         
-        # 基础重写 - 保持通用性，不特定于任何游戏
+        # Basic rewriting - keep generic, not specific to any game
         rewritten_query = query
         
-        # 通用的推荐查询处理
+        # Generic recommendation query processing
         if any(word in query.lower() for word in ["推荐", "选择", "recommend", "choice", "next", "下一个"]):
-            # 检测是否为推荐类查询
+            # Check if it's a recommendation query
             if not any(word in rewritten_query.lower() for word in ["guide", "recommendation", "攻略"]):
                 rewritten_query += " guide recommendation"
             intent = "guide"
             confidence = 0.8
         
-        # 通用的策略查询处理
+        # Generic strategy query processing
         elif any(word in query.lower() for word in ["怎么", "如何", "how to", "strategy", "攻略"]):
             if not any(word in rewritten_query.lower() for word in ["guide", "strategy", "攻略"]):
                 rewritten_query += " strategy guide"
             intent = "guide"
             confidence = 0.8
         
-        # 基础BM25优化：移除通用词汇，保留核心词汇
+        # Basic BM25 optimization: remove generic words, keep core words
         bm25_optimized_query = self._basic_bm25_optimization(query)
         
         return UnifiedQueryResult(
             original_query=query,
             detected_language=detected_language,
-            translated_query=query,  # 基础模式不翻译
+            translated_query=query,  # No translation in basic mode
             rewritten_query=rewritten_query,
-            bm25_optimized_query=bm25_optimized_query,  # 基础模式BM25优化
+            bm25_optimized_query=bm25_optimized_query,  # BM25 optimization in basic mode
             intent=intent,
             confidence=confidence,
             search_type="hybrid",
-            reasoning="基础处理模式 - LLM不可用",
+            reasoning="Basic processing mode - LLM unavailable",
             translation_applied=False,
             rewrite_applied=rewritten_query != query,
             processing_time=0.001
         )
     
     def _basic_bm25_optimization(self, query: str) -> str:
-        """基础BM25优化（LLM不可用时的简单版本）- 使用权重增强"""
+        """Basic BM25 optimization (simple version when LLM is unavailable) - using weight enhancement"""
         
         words = query.lower().split()
         optimized_words = []
         
-        # 游戏专有名词指标（可能的游戏术语）
+        # Game-specific noun indicators (possible game terms)
         game_terms = [
-            # 通用游戏术语
+            # Common game terms
             'build', 'weapon', 'character', 'boss', 'enemy', 'skill', 'spell', 'item', 'gear',
             'armor', 'shield', 'sword', 'bow', 'staff', 'magic', 'fire', 'ice', 'poison',
-            # Helldivers 2 相关
+            # Helldivers 2 related
             'warbond', 'stratagem', 'helldiver', 'terminid', 'automaton', 'bile', 'charger',
-            # 中文游戏术语
+            # Chinese game terms
             '配装', '武器', '角色', '技能', '装备', '护甲', '法术', '魔法', '敌人', '首领'
         ]
         
-        # 主题词汇（核心概念）
+        # Topic words (core concepts)
         topic_words = [
             'build', 'weapon', 'character', 'boss', 'strategy', 'guide', 'tip',
             '配装', '武器', '角色', '策略', '攻略', '技巧'
         ]
         
-        # 通用词汇（降低权重，但不删除）
+        # Generic words (reduce weight but don't delete)
         generic_words = [
             'best', 'good', 'great', 'top', 'recommendation', 'guide', 'tutorial', 'help',
             '最好', '最佳', '推荐', '攻略', '教程', '帮助'
         ]
         
         for word in words:
-            # 保留原始词汇
+            # Keep original words
             optimized_words.append(word)
             
-            # 如果是游戏专有名词，重复2-3次增强权重
+            # If it's a game-specific noun, repeat 2-3 times to enhance weight
             if word in game_terms:
-                optimized_words.extend([word] * 2)  # 额外重复2次
+                optimized_words.extend([word] * 2)  # Additional 2 repetitions
                 
-            # 如果是主题词汇，重复1次增强权重
+            # If it's a topic word, repeat once to enhance weight
             elif word in topic_words:
-                optimized_words.append(word)  # 额外重复1次
+                optimized_words.append(word)  # Additional 1 repetition
                 
-            # 通用词汇保持原样，不增强也不删除
+            # Generic words remain unchanged, neither enhanced nor deleted
         
-        # 根据查询类型添加相关术语
+        # Add related terms based on query type
         query_lower = query.lower()
         
-        # 如果是build相关查询，添加相关术语
+        # If it's a build-related query, add related terms
         if any(term in query_lower for term in ['build', 'setup', 'loadout', '配装', '搭配']):
             optimized_words.extend(['loadout', 'setup', 'configuration'])
             
-        # 如果是weapon相关查询，添加相关术语  
+        # If it's a weapon-related query, add related terms  
         elif any(term in query_lower for term in ['weapon', 'sword', 'gun', '武器', '剑', '枪']):
             optimized_words.extend(['gear', 'equipment'])
             
-        # 如果是character相关查询，添加相关术语
+        # If it's a character-related query, add related terms
         elif any(term in query_lower for term in ['character', 'class', 'hero', '角色', '职业', '英雄']):
             optimized_words.extend(['class', 'hero'])
         
-        # 清理多余空格并返回
+        # Clean up extra spaces and return
         optimized = " ".join(optimized_words)
         return optimized if optimized.strip() else query
     
     def process_query(self, query: str) -> UnifiedQueryResult:
         """
-        统一处理查询：翻译+重写+意图分析
+        Unified query processing: translation + rewriting + intent analysis
         
         Args:
-            query: 原始查询
+            query: Original query
             
         Returns:
-            UnifiedQueryResult: 统一处理结果
+            UnifiedQueryResult: Unified processing result
         """
-        print(f"🔄 [QUERY-DEBUG] 开始统一查询处理: '{query}'")
+        print(f"🔄 [QUERY-DEBUG] Starting unified query processing: '{query}'")
         
         start_time = time.time()
         self.stats["total_queries"] += 1
         
-        # 检查缓存
+        # Check cache
         cached_result = self._get_cached_result(query)
         if cached_result:
-            print(f"💾 [QUERY-DEBUG] 使用缓存结果")
-            print(f"   - 原始查询: '{cached_result.original_query}'")
-            print(f"   - 翻译结果: '{cached_result.translated_query}'")
-            print(f"   - 重写结果: '{cached_result.rewritten_query}'")
-            print(f"   - BM25优化: '{cached_result.bm25_optimized_query}'")
-            print(f"   - 意图: {cached_result.intent} (置信度: {cached_result.confidence:.3f})")
-            logger.info(f"使用缓存结果: {query}")
+            print(f"💾 [QUERY-DEBUG] Using cached result")
+            print(f"   - Original query: '{cached_result.original_query}'")
+            print(f"   - Translation result: '{cached_result.translated_query}'")
+            print(f"   - Rewrite result: '{cached_result.rewritten_query}'")
+            print(f"   - BM25 optimization: '{cached_result.bm25_optimized_query}'")
+            print(f"   - Intent: {cached_result.intent} (confidence: {cached_result.confidence:.3f})")
+            logger.info(f"Using cached result: {query}")
             return cached_result
         
-        # 如果LLM不可用，使用基础处理
+        # If LLM is unavailable, use basic processing
         if not self.llm_client:
-            print(f"⚠️ [QUERY-DEBUG] LLM不可用，使用基础处理")
+            print(f"⚠️ [QUERY-DEBUG] LLM unavailable, using basic processing")
             result = self._basic_processing(query)
-            print(f"   - 检测语言: {result.detected_language}")
-            print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
-            print(f"   - 重写查询: '{result.rewritten_query}'")
-            print(f"   - BM25优化: '{result.bm25_optimized_query}'")
-            print(f"   - 重写应用: {result.rewrite_applied}")
+            print(f"   - Detected language: {result.detected_language}")
+            print(f"   - Intent: {result.intent} (confidence: {result.confidence:.3f})")
+            print(f"   - Rewritten query: '{result.rewritten_query}'")
+            print(f"   - BM25 optimization: '{result.bm25_optimized_query}'")
+            print(f"   - Rewrite applied: {result.rewrite_applied}")
             self._cache_result(query, result)
             return result
         
         try:
-            # 使用LLM进行统一处理
-            print(f"🤖 [QUERY-DEBUG] 调用LLM进行统一处理")
+            # Use LLM for unified processing
+            print(f"🤖 [QUERY-DEBUG] Calling LLM for unified processing")
             prompt = self._create_unified_prompt(query)
-            print(f"   - 使用模型: {self.llm_config.model}")
-            print(f"   - 提示词长度: {len(prompt)} 字符")
+            print(f"   - Using model: {self.llm_config.model}")
+            print(f"   - Prompt length: {len(prompt)} characters")
             
             llm_response = self._call_llm_with_retry(prompt)
             
             if llm_response:
-                # 解析LLM响应
+                # Parse LLM response
                 detected_language = llm_response.get("detected_language", "en")
                 translated_query = llm_response.get("translated_query", query)
                 rewritten_query = llm_response.get("rewritten_query", translated_query)
                 
                 processing_time = time.time() - start_time
                 
-                print(f"✅ [QUERY-DEBUG] LLM处理成功:")
-                print(f"   - 检测语言: {detected_language}")
-                print(f"   - 翻译结果: '{translated_query}'")
-                print(f"   - 重写结果: '{rewritten_query}'")
-                print(f"   - BM25优化: '{llm_response.get('bm25_optimized_query', rewritten_query)}'")
-                print(f"   - 意图: {llm_response.get('intent', 'guide')} (置信度: {llm_response.get('confidence', 0.7):.3f})")
-                print(f"   - 搜索类型: {llm_response.get('search_type', 'hybrid')}")
-                print(f"   - 处理时间: {processing_time:.3f}秒")
-                print(f"   - 推理过程: {llm_response.get('reasoning', 'LLM统一处理')}")
+                print(f"✅ [QUERY-DEBUG] LLM processing successful:")
+                print(f"   - Detected language: {detected_language}")
+                print(f"   - Translation result: '{translated_query}'")
+                print(f"   - Rewrite result: '{rewritten_query}'")
+                print(f"   - BM25 optimization: '{llm_response.get('bm25_optimized_query', rewritten_query)}'")
+                print(f"   - Intent: {llm_response.get('intent', 'guide')} (confidence: {llm_response.get('confidence', 0.7):.3f})")
+                print(f"   - Search type: {llm_response.get('search_type', 'hybrid')}")
+                print(f"   - Processing time: {processing_time:.3f} seconds")
+                print(f"   - Reasoning: {llm_response.get('reasoning', 'LLM unified processing')}")
                 
                 result = UnifiedQueryResult(
                     original_query=query,
                     detected_language=detected_language,
                     translated_query=translated_query,
                     rewritten_query=rewritten_query,
-                    bm25_optimized_query=llm_response.get("bm25_optimized_query", rewritten_query), # LLM处理不优化
+                    bm25_optimized_query=llm_response.get("bm25_optimized_query", rewritten_query), # LLM processing not optimized
                     intent=llm_response.get("intent", "guide"),
                     confidence=llm_response.get("confidence", 0.7),
                     search_type=llm_response.get("search_type", "hybrid"),
-                    reasoning=llm_response.get("reasoning", "LLM统一处理"),
+                    reasoning=llm_response.get("reasoning", "LLM unified processing"),
                     translation_applied=translated_query != query,
                     rewrite_applied=rewritten_query != translated_query,
                     processing_time=processing_time
                 )
                 
                 self.stats["successful_processing"] += 1
-                logger.info(f"统一处理成功: '{query}' -> 翻译: '{translated_query}' -> 重写: '{rewritten_query}'")
+                logger.info(f"Unified processing successful: '{query}' -> translation: '{translated_query}' -> rewrite: '{rewritten_query}'")
                 
             else:
-                # LLM调用失败，使用基础处理
-                print(f"❌ [QUERY-DEBUG] LLM调用失败，使用基础处理")
+                # LLM call failed, use basic processing
+                print(f"❌ [QUERY-DEBUG] LLM call failed, using basic processing")
                 result = self._basic_processing(query)
-                print(f"   - 检测语言: {result.detected_language}")
-                print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
-                print(f"   - 重写查询: '{result.rewritten_query}'")
-                print(f"   - BM25优化: '{result.bm25_optimized_query}'")
-                print(f"   - 重写应用: {result.rewrite_applied}")
+                print(f"   - Detected language: {result.detected_language}")
+                print(f"   - Intent: {result.intent} (confidence: {result.confidence:.3f})")
+                print(f"   - Rewritten query: '{result.rewritten_query}'")
+                print(f"   - BM25 optimization: '{result.bm25_optimized_query}'")
+                print(f"   - Rewrite applied: {result.rewrite_applied}")
                 self.stats["failed_processing"] += 1
-                logger.warning(f"LLM统一处理失败，使用基础处理: {query}")
+                logger.warning(f"LLM unified processing failed, using basic processing: {query}")
                 
         except Exception as e:
-            print(f"❌ [QUERY-DEBUG] 统一处理异常: {e}")
-            logger.error(f"统一处理异常: {e}")
+            print(f"❌ [QUERY-DEBUG] Unified processing exception: {e}")
+            logger.error(f"Unified processing exception: {e}")
             result = self._basic_processing(query)
-            print(f"   - 降级到基础处理")
-            print(f"   - 检测语言: {result.detected_language}")
-            print(f"   - 意图: {result.intent} (置信度: {result.confidence:.3f})")
-            print(f"   - 重写查询: '{result.rewritten_query}'")
-            print(f"   - BM25优化: '{result.bm25_optimized_query}'")
+            print(f"   - Fallback to basic processing")
+            print(f"   - Detected language: {result.detected_language}")
+            print(f"   - Intent: {result.intent} (confidence: {result.confidence:.3f})")
+            print(f"   - Rewritten query: '{result.rewritten_query}'")
+            print(f"   - BM25 optimization: '{result.bm25_optimized_query}'")
             self.stats["failed_processing"] += 1
         
-        # 更新平均处理时间
+        # Update average processing time
         self.stats["average_processing_time"] = (
             (self.stats["average_processing_time"] * (self.stats["total_queries"] - 1) + 
              result.processing_time) / self.stats["total_queries"]
         )
         
-        print(f"📊 [QUERY-DEBUG] 查询处理完成，缓存结果")
-        print(f"   - 总查询数: {self.stats['total_queries']}")
-        print(f"   - 缓存命中数: {self.stats['cache_hits']}")
-        print(f"   - 成功处理数: {self.stats['successful_processing']}")
-        print(f"   - 失败处理数: {self.stats['failed_processing']}")
+        print(f"📊 [QUERY-DEBUG] Query processing completed, caching result")
+        print(f"   - Total queries: {self.stats['total_queries']}")
+        print(f"   - Cache hits: {self.stats['cache_hits']}")
+        print(f"   - Successful processing: {self.stats['successful_processing']}")
+        print(f"   - Failed processing: {self.stats['failed_processing']}")
         
-        # 缓存结果
+        # Cache result
         self._cache_result(query, result)
         return result
     
     def get_stats(self) -> Dict[str, Any]:
-        """获取统计信息"""
+        """Get statistics"""
         return self.stats.copy()
     
     def reset_stats(self):
-        """重置统计信息"""
+        """Reset statistics"""
         self.stats = {
             "total_queries": 0,
             "cache_hits": 0,
@@ -543,11 +543,11 @@ This is a specialized query designed to enhance important game terms while prese
             "average_processing_time": 0.0
         }
 
-# 全局实例
+# Global instance
 _unified_processor = None
 
 def get_unified_processor(llm_config: Optional[LLMConfig] = None) -> UnifiedQueryProcessor:
-    """获取统一查询处理器的单例实例"""
+    """Get singleton instance of unified query processor"""
     global _unified_processor
     if _unified_processor is None:
         _unified_processor = UnifiedQueryProcessor(llm_config=llm_config)
@@ -555,14 +555,14 @@ def get_unified_processor(llm_config: Optional[LLMConfig] = None) -> UnifiedQuer
 
 def process_query_unified(query: str, llm_config: Optional[LLMConfig] = None) -> UnifiedQueryResult:
     """
-    统一处理查询的便捷函数
+    Convenience function for unified query processing
     
     Args:
-        query: 用户查询
-        llm_config: LLM配置
+        query: User query
+        llm_config: LLM configuration
         
     Returns:
-        UnifiedQueryResult: 处理结果
+        UnifiedQueryResult: Processing result
     """
     processor = get_unified_processor(llm_config)
     return processor.process_query(query) 

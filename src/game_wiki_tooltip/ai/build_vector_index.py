@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-向量索引构建工具
-===============
+Vector Index Building Tool
+==========================
 
-命令行工具，用于批量处理知识库文件并构建向量索引
+Command-line tool for batch processing knowledge base files and building vector indexes.
 
-用法:
+Usage:
     python build_vector_index.py --game helldiver2
     python build_vector_index.py --game all
     python build_vector_index.py --file data/knowledge_chunk/helldiver2.json
@@ -17,14 +17,14 @@ import sys
 from pathlib import Path
 from typing import List
 
-# 添加项目根目录到Python路径
+# Add project root directory to Python path
 project_root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(project_root))
 
 from src.game_wiki_tooltip.ai.batch_embedding import BatchEmbeddingProcessor, process_game_knowledge
 
 def setup_logging(verbose: bool = False):
-    """设置日志配置"""
+    """Set up logging configuration"""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,
@@ -36,7 +36,7 @@ def setup_logging(verbose: bool = False):
     )
 
 def get_available_games(knowledge_dir: str = "data/knowledge_chunk") -> List[str]:
-    """获取可用的游戏列表"""
+    """Get available game list"""
     knowledge_path = Path(knowledge_dir)
     if not knowledge_path.exists():
         return []
@@ -50,25 +50,25 @@ def process_single_game(game_name: str,
                        vector_store_type: str = "faiss",
                        batch_size: int = 64) -> bool:
     """
-    处理单个游戏的知识库
+    Process a single game's knowledge base
     
     Args:
-        game_name: 游戏名称
-        knowledge_dir: 知识库目录
-        output_dir: 输出目录
-        vector_store_type: 向量库类型
-        batch_size: 批处理大小
+        game_name: Game name
+        knowledge_dir: Knowledge base directory
+        output_dir: Output directory
+        vector_store_type: Vector store type
+        batch_size: Batch size
         
     Returns:
-        是否成功
+        Success or failure
     """
     try:
-        print(f"\n开始处理游戏: {game_name}")
+        print(f"\nProcessing game: {game_name}")
         
         # 检查API密钥
         import os
         if not os.environ.get("JINA_API_KEY"):
-            print("错误: 需要设置JINA_API_KEY环境变量")
+            print("Error: JINA_API_KEY environment variable is required")
             return False
         
         # 处理知识库
@@ -78,14 +78,14 @@ def process_single_game(game_name: str,
             output_dir=output_dir
         )
         
-        print(f"✓ 游戏 {game_name} 处理完成: {config_path}")
+        print(f"✓ Game {game_name} processed: {config_path}")
         return True
         
     except FileNotFoundError as e:
-        print(f"✗ 游戏 {game_name} 处理失败: {e}")
+        print(f"✗ Game {game_name} processing failed: {e}")
         return False
     except Exception as e:
-        print(f"✗ 游戏 {game_name} 处理失败: {e}")
+        print(f"✗ Game {game_name} processing failed: {e}")
         return False
 
 def process_all_games(knowledge_dir: str = "data/knowledge_chunk",
@@ -93,28 +93,28 @@ def process_all_games(knowledge_dir: str = "data/knowledge_chunk",
                      vector_store_type: str = "faiss",
                      batch_size: int = 64) -> None:
     """
-    处理所有游戏的知识库
+    Process all games' knowledge bases
     
     Args:
-        knowledge_dir: 知识库目录
-        output_dir: 输出目录
-        vector_store_type: 向量库类型
-        batch_size: 批处理大小
+        knowledge_dir: Knowledge base directory
+        output_dir: Output directory
+        vector_store_type: Vector store type
+        batch_size: Batch size
     """
     games = get_available_games(knowledge_dir)
     
     if not games:
-        print("未找到任何游戏知识库文件")
+        print("No game knowledge base files found")
         return
     
-    print(f"找到 {len(games)} 个游戏: {', '.join(games)}")
+    print(f"Found {len(games)} games: {', '.join(games)}")
     
     success_count = 0
     for game in games:
         if process_single_game(game, knowledge_dir, output_dir, vector_store_type, batch_size):
             success_count += 1
     
-    print(f"\n处理完成: {success_count}/{len(games)} 个游戏成功")
+    print(f"\nProcessing completed: {success_count}/{len(games)} games successfully")
 
 def process_custom_file(file_path: str,
                        output_dir: str = "src/game_wiki_tooltip/ai/vectorstore",
@@ -122,25 +122,25 @@ def process_custom_file(file_path: str,
                        vector_store_type: str = "faiss",
                        batch_size: int = 64) -> bool:
     """
-    处理自定义文件
+    Process custom file
     
     Args:
-        file_path: 文件路径
-        output_dir: 输出目录
-        collection_name: 集合名称
-        vector_store_type: 向量库类型
-        batch_size: 批处理大小
+        file_path: File path
+        output_dir: Output directory
+        collection_name: Collection name
+        vector_store_type: Vector store type
+        batch_size: Batch size
         
     Returns:
-        是否成功
+        Success or failure
     """
     try:
-        print(f"开始处理文件: {file_path}")
+        print(f"Processing file: {file_path}")
         
         # 检查API密钥
         import os
         if not os.environ.get("JINA_API_KEY"):
-            print("错误: 需要设置JINA_API_KEY环境变量")
+            print("Error: JINA_API_KEY environment variable is required")
             return False
         
         # 创建处理器
@@ -154,33 +154,33 @@ def process_custom_file(file_path: str,
             collection_name=collection_name
         )
         
-        print(f"✓ 文件处理完成: {config_path}")
+        print(f"✓ File processed: {config_path}")
         return True
         
     except Exception as e:
-        print(f"✗ 文件处理失败: {e}")
+        print(f"✗ File processing failed: {e}")
         return False
 
 def main():
-    """主函数"""
+    """Main function"""
     parser = argparse.ArgumentParser(
-        description="批量处理知识库文件并构建向量索引",
+        description="Batch process knowledge base files and build vector indexes",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  # 处理特定游戏
+Examples:
+  # Process specific game
   python build_vector_index.py --game helldiver2
   
-  # 处理所有游戏
+  # Process all games
   python build_vector_index.py --game all
   
-  # 处理自定义文件
+  # Process custom file
   python build_vector_index.py --file data/knowledge_chunk/helldiver2.json
   
-  # 使用Qdrant向量库
+  # Use Qdrant vector store
   python build_vector_index.py --game helldiver2 --vector-store qdrant
   
-  # 设置批处理大小
+  # Set batch size
   python build_vector_index.py --game helldiver2 --batch-size 32
         """
     )
@@ -189,27 +189,27 @@ def main():
     parser.add_argument(
         "--game", 
         type=str,
-        help="游戏名称 (使用 'all' 处理所有游戏)"
+        help="Game name (use 'all' to process all games)"
     )
     
     parser.add_argument(
         "--file",
         type=str,
-        help="自定义JSON文件路径"
+        help="Custom JSON file path"
     )
     
     parser.add_argument(
         "--knowledge-dir",
         type=str,
         default="data/knowledge_chunk",
-        help="知识库目录 (默认: data/knowledge_chunk)"
+        help="Knowledge base directory (default: data/knowledge_chunk)"
     )
     
     parser.add_argument(
         "--output-dir",
         type=str,
         default="src/game_wiki_tooltip/ai/vectorstore",
-        help="输出目录 (默认: src/game_wiki_tooltip/ai/vectorstore)"
+        help="Output directory (default: src/game_wiki_tooltip/ai/vectorstore)"
     )
     
     parser.add_argument(
@@ -217,33 +217,33 @@ def main():
         type=str,
         choices=["faiss", "qdrant"],
         default="faiss",
-        help="向量库类型 (默认: faiss)"
+        help="Vector store type (default: faiss)"
     )
     
     parser.add_argument(
         "--batch-size",
         type=int,
         default=64,
-        help="批处理大小 (默认: 64)"
+        help="Batch size (default: 64)"
     )
     
     parser.add_argument(
         "--collection-name",
         type=str,
         default="custom_vectors",
-        help="集合名称 (仅用于自定义文件)"
+        help="Collection name (only used for custom files)"
     )
     
     parser.add_argument(
         "--verbose", "-v",
         action="store_true",
-        help="详细输出"
+        help="Verbose output"
     )
     
     parser.add_argument(
         "--list-games",
         action="store_true",
-        help="列出可用的游戏"
+        help="List available games"
     )
     
     args = parser.parse_args()
@@ -255,19 +255,19 @@ def main():
     if args.list_games:
         games = get_available_games(args.knowledge_dir)
         if games:
-            print("可用的游戏:")
+            print("Available games:")
             for game in games:
                 print(f"  - {game}")
         else:
-            print("未找到任何游戏知识库文件")
+            print("No game knowledge base files found")
         return
     
     # 检查参数
     if not args.game and not args.file:
-        parser.error("需要指定 --game 或 --file 参数")
+        parser.error("Need to specify --game or --file parameter")
     
     if args.game and args.file:
-        parser.error("不能同时指定 --game 和 --file 参数")
+        parser.error("Cannot specify both --game and --file parameters")
     
     # 处理请求
     if args.game:

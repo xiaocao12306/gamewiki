@@ -324,43 +324,43 @@ class GameWikiApp(QObject):
     def _initialize_components(self, limited_mode=False):
         """Initialize all components"""
         try:
-            # 确保在初始化新的assistant controller之前，清理可能存在的旧实例
+            # Ensure cleanup of existing assistant controller before initializing new one
             if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
-                logger.info("检测到已存在的assistant controller，先进行清理...")
+                logger.info("Detected existing assistant controller, cleaning up first...")
                 
-                # 清理悬浮窗
+                # Clean up mini window
                 if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
                     try:
-                        logger.info("清理已存在的悬浮窗...")
+                        logger.info("Cleaning up existing mini window...")
                         self.assistant_ctrl.mini_window.hide()
                         self.assistant_ctrl.mini_window.close()
                         self.assistant_ctrl.mini_window.deleteLater()
                         self.assistant_ctrl.mini_window = None
                     except Exception as e:
-                        logger.warning(f"清理已存在悬浮窗时出错: {e}")
+                        logger.warning(f"Error cleaning up existing mini window: {e}")
                         self.assistant_ctrl.mini_window = None
                 
-                # 清理主窗口
+                # Clean up main window
                 if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
                     try:
-                        logger.info("清理已存在的主窗口...")
+                        logger.info("Cleaning up existing main window...")
                         self.assistant_ctrl.main_window.hide()
                         self.assistant_ctrl.main_window.close()
                         self.assistant_ctrl.main_window.deleteLater()
                         self.assistant_ctrl.main_window = None
                     except Exception as e:
-                        logger.warning(f"清理已存在主窗口时出错: {e}")
+                        logger.warning(f"Error cleaning up existing main window: {e}")
                         self.assistant_ctrl.main_window = None
                 
-                # 断开信号连接
+                # Disconnect signal connections
                 try:
                     if hasattr(self.assistant_ctrl, 'rag_integration'):
                         self.assistant_ctrl.rag_integration.disconnect()
                 except Exception as e:
-                    logger.warning(f"断开旧的RAG integration信号连接时出错: {e}")
+                    logger.warning(f"Error disconnecting old RAG integration signals: {e}")
                 
                 self.assistant_ctrl = None
-                logger.info("已存在的assistant controller清理完成")
+                logger.info("Existing assistant controller cleanup completed")
             
             # Initialize assistant controller with limited mode flag
             self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
@@ -389,7 +389,7 @@ class GameWikiApp(QObject):
                     hotkey_string = self.hotkey_mgr.get_hotkey_string()
                     registration_info = self.hotkey_mgr.get_registration_info()
                     
-                    mode_text = "超级兼容模式"
+                    mode_text = "Ultra Compatible Mode"
                     
                     if limited_mode:
                         # 合并启动通知：热键信息 + 受限模式信息
@@ -408,14 +408,14 @@ class GameWikiApp(QObject):
                         "GameWiki Assistant",
                         notification_msg
                     )
-                    logger.info(f"热键注册成功: {hotkey_string} (mode=ultra_compatible, limited_mode={limited_mode})")
+                    logger.info(f"Hotkey registration successful: {hotkey_string} (mode=ultra_compatible, limited_mode={limited_mode})")
                 else:
                     # Show warning but continue
                     self.tray_icon.show_notification(
                         "GameWiki Assistant",
                         t("hotkey_failed")
                     )
-                    logger.warning("热键注册失败，但程序继续运行")
+                    logger.warning("Hotkey registration failed, but application continues running")
                     
             except Exception as e:
                 logger.error(f"Failed to register hotkey: {e}")
@@ -425,20 +425,20 @@ class GameWikiApp(QObject):
                     t("hotkey_failed")
                 )
                 
-            # 安装Windows原生事件过滤器（主要方案）
-            logger.info("安装Windows原生事件过滤器...")
+            # Install Windows native event filter (primary solution)
+            logger.info("Installing Windows native event filter...")
             self.native_filter = WindowsHotkeyFilter(self._handle_hotkey_message_direct)
             self.app.installNativeEventFilter(self.native_filter)
-            logger.info("Windows原生事件过滤器安装完成")
+            logger.info("Windows native event filter installation completed")
             
             # Start Windows message listener as backup
-            logger.info("启动Windows消息监听器（备用方案）...")
+            logger.info("Starting Windows message listener (backup solution)...")
             self.message_timer = QTimer()
             self.message_timer.timeout.connect(self._check_windows_messages)
             self.message_timer.start(50)  # Check every 50ms as backup
-            logger.info("Windows消息监听器启动完成（备用）")
+            logger.info("Windows message listener started (backup)")
             
-            # Show mini assistant (延迟显示，确保之前的清理操作完成)
+            # Show mini assistant (delayed display to ensure cleanup operations complete)
             logger.info("Showing mini assistant...")
             QTimer.singleShot(50, self.assistant_ctrl.show_mini)
             logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
@@ -521,10 +521,10 @@ class GameWikiApp(QObject):
             current_limited_mode = getattr(self.assistant_ctrl, 'limited_mode', True)
             new_limited_mode = not has_both_keys
             
-            logger.info(f"模式检查: 当前受限模式={current_limited_mode}, 新受限模式={new_limited_mode}")
-            logger.info(f"API key状态: Gemini={'✓' if gemini_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
+            logger.info(f"Mode check: current limited mode={current_limited_mode}, new limited mode={new_limited_mode}")
+            logger.info(f"API key status: Gemini={'✓' if gemini_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
             
-            # 检查是否需要显示API key缺失对话框（只在从完整模式切换到受限模式时显示）
+            # Check if API key missing dialog should be shown (only when switching from full to limited mode)
             show_api_dialog = (new_limited_mode and not current_limited_mode and not dont_remind)
             
             if show_api_dialog:
@@ -550,55 +550,55 @@ class GameWikiApp(QObject):
                     logger.info("User chose to continue without API keys")
                     
             if current_limited_mode != new_limited_mode:
-                # 需要切换模式，重新初始化组件
-                logger.info(f"模式切换: {current_limited_mode} -> {new_limited_mode}")
+                # Mode switch required, reinitialize components
+                logger.info(f"Mode switch: {current_limited_mode} -> {new_limited_mode}")
                 
-                # 清理现有组件（添加正确的清理逻辑）
+                # Clean up existing components (add proper cleanup logic)
                 if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
-                    logger.info("正在清理旧的assistant controller...")
+                    logger.info("Cleaning up old assistant controller...")
                     
-                    # 清理悬浮窗
+                    # Clean up mini window
                     if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
                         try:
-                            logger.info("清理旧的悬浮窗...")
+                            logger.info("Cleaning up old mini window...")
                             self.assistant_ctrl.mini_window.hide()
                             self.assistant_ctrl.mini_window.close()
                             self.assistant_ctrl.mini_window.deleteLater()
                             self.assistant_ctrl.mini_window = None
-                            logger.info("旧的悬浮窗已清理")
+                            logger.info("Old mini window cleaned up")
                         except Exception as e:
-                            logger.warning(f"清理旧悬浮窗时出错: {e}")
+                            logger.warning(f"Error cleaning up old mini window: {e}")
                             self.assistant_ctrl.mini_window = None
                     
-                    # 清理主窗口
+                    # Clean up main window
                     if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
                         try:
-                            logger.info("清理旧的主窗口...")
+                            logger.info("Cleaning up old main window...")
                             self.assistant_ctrl.main_window.hide()
                             self.assistant_ctrl.main_window.close()
                             self.assistant_ctrl.main_window.deleteLater()
                             self.assistant_ctrl.main_window = None
-                            logger.info("旧的主窗口已清理")
+                            logger.info("Old main window cleaned up")
                         except Exception as e:
-                            logger.warning(f"清理旧主窗口时出错: {e}")
+                            logger.warning(f"Error cleaning up old main window: {e}")
                             self.assistant_ctrl.main_window = None
                     
-                    # 断开信号连接，避免内存泄漏
+                    # Disconnect signal connections to avoid memory leaks
                     try:
                         if hasattr(self.assistant_ctrl, 'rag_integration'):
                             self.assistant_ctrl.rag_integration.disconnect()
                     except Exception as e:
-                        logger.warning(f"断开RAG integration信号连接时出错: {e}")
+                        logger.warning(f"Error disconnecting RAG integration signals: {e}")
                     
-                    # 清理assistant_ctrl引用
+                    # Clean up assistant_ctrl reference
                     self.assistant_ctrl = None
-                    logger.info("旧的assistant controller已清理")
+                    logger.info("Old assistant controller cleaned up")
                 
-                # 重新初始化组件（稍微延迟，确保旧窗口完全清理）
+                # Reinitialize components (slight delay to ensure old windows are fully cleaned)
                 QTimer.singleShot(100, lambda: self._initialize_components(limited_mode=new_limited_mode))
                 
-                # 显示模式切换通知（但不重复显示热键通知）
-                mode_switched = True  # 标记已进行模式切换
+                # Show mode switch notification (but don't repeat hotkey notification)
+                mode_switched = True  # Mark that mode switch has occurred
                 if self.tray_icon:
                     if new_limited_mode:
                         missing_keys = []
@@ -617,11 +617,11 @@ class GameWikiApp(QObject):
                             "Switched to full functionality mode\n\nWiki search and AI guide features are now available\n\nComplete API key configuration detected"
                         )
                 
-                logger.info("模式切换完成")
+                logger.info("Mode switch completed")
                 return
             
-            # 如果不需要切换模式，继续原有的设置更新逻辑
-            mode_switched = False  # 未进行模式切换
+            # If no mode switch needed, continue with original settings update logic
+            mode_switched = False  # No mode switch occurred
             
             # Update translation manager with new language
             current_language = settings.get('language', 'en')
@@ -633,7 +633,7 @@ class GameWikiApp(QObject):
                 logger.info(f"Reloading games configuration for language: {current_language}")
                 self.game_cfg_mgr.reload_for_language(current_language)
                 
-            # 重新加载RAG integration的游戏配置（语言变化或wiki URL更新时）
+            # Reload RAG integration game config (when language changes or wiki URL updates)
             if self.assistant_ctrl and hasattr(self.assistant_ctrl, 'rag_integration'):
                 # Always reload game config to pick up any wiki URL changes
                 logger.info(f"Reloading RAG game config (language: {current_language})")
@@ -649,7 +649,7 @@ class GameWikiApp(QObject):
                 self.hotkey_mgr.unregister()
                 self.hotkey_mgr.register()
                 
-                # 只在没有进行模式切换时显示热键更新通知，避免重复通知
+                # Only show hotkey update notification if no mode switch occurred, to avoid duplicate notifications
                 if self.tray_icon and not mode_switched:
                     self.tray_icon.show_notification(
                         t("settings_applied"),
@@ -676,45 +676,45 @@ class GameWikiApp(QObject):
             )
             
     def _check_windows_messages(self):
-        """Check for Windows messages in the main thread - 备用方案（使用test_hotkey_only.py的成功逻辑）"""
+        """Check for Windows messages in the main thread - backup solution (using test_hotkey_only.py's successful logic)"""
         try:
-            # 使用与test_hotkey_only.py相同的消息检查逻辑
+            # Use the same message checking logic as test_hotkey_only.py
             msg = win32gui.PeekMessage(None, 0, 0, win32con.PM_REMOVE)
             
             if msg and msg[0]:
-                # 检查是否是热键消息 - 与test_hotkey_only.py完全一致
+                # Check if it's a hotkey message - exactly the same as test_hotkey_only.py
                 if msg[1][1] == win32con.WM_HOTKEY:
                     wParam = msg[1][2]
                     lParam = msg[1][3]
                     
-                    logger.info(f"📨 [备用方案] 收到热键消息: wParam={wParam}, lParam={lParam}")
-                    logger.info(f"   消息详情: {msg[1]}")
+                    logger.info(f"📨 [Backup] Received hotkey message: wParam={wParam}, lParam={lParam}")
+                    logger.info(f"   Message details: {msg[1]}")
                     
-                    # 使用test_hotkey_only.py的热键处理逻辑
-                    self._handle_hotkey_message_direct(wParam, lParam, "备用方案")
+                    # Use test_hotkey_only.py's hotkey handling logic
+                    self._handle_hotkey_message_direct(wParam, lParam, "Backup")
                 
-                # 处理消息
+                # Process message
                 win32gui.TranslateMessage(msg[1])
                 win32gui.DispatchMessage(msg[1])
         except Exception as e:
             logger.error(f"Error in _check_windows_messages: {e}")
     
-    def _handle_hotkey_message_direct(self, wParam, lParam, source="未知"):
-        """直接处理热键消息 - 动态匹配配置的热键"""
-        logger.info(f"🎯 处理热键消息[{source}]: wParam={wParam}, lParam={lParam}")
+    def _handle_hotkey_message_direct(self, wParam, lParam, source="Unknown"):
+        """Directly handle hotkey messages - dynamically match configured hotkey"""
+        logger.info(f"🎯 Processing hotkey message [{source}]: wParam={wParam}, lParam={lParam}")
         
         if wParam == HOTKEY_ID:
-            # 解析lParam
+            # Parse lParam
             modifiers = lParam & 0xFFFF
             vk = (lParam >> 16) & 0xFFFF
             
-            # 从设置中获取期望的热键配置
+            # Get expected hotkey configuration from settings
             settings = self.settings_mgr.get()
             hotkey_settings = settings.get('hotkey', {})
             expected_modifiers_list = hotkey_settings.get('modifiers', ['Ctrl'])
             expected_key = hotkey_settings.get('key', 'X')
             
-            # 计算期望的修饰键值
+            # Calculate expected modifier values
             expected_modifiers = 0
             mod_map = {
                 "Alt": 0x0001,    # MOD_ALT
@@ -726,75 +726,75 @@ class GameWikiApp(QObject):
                 if mod in mod_map:
                     expected_modifiers |= mod_map[mod]
             
-            # 计算期望的虚拟键值
+            # Calculate expected virtual key value
             expected_vk = ord(expected_key.upper()) if len(expected_key) == 1 and expected_key.isalpha() else VK_X
             
-            logger.info(f"   修饰键: {modifiers:#x} (期望: {expected_modifiers:#x})")
-            logger.info(f"   虚拟键: {vk:#x} (期望: {expected_vk:#x})")
-            logger.info(f"   配置的热键: {'+'.join(expected_modifiers_list + [expected_key])}")
+            logger.info(f"   Modifiers: {modifiers:#x} (expected: {expected_modifiers:#x})")
+            logger.info(f"   Virtual key: {vk:#x} (expected: {expected_vk:#x})")
+            logger.info(f"   Configured hotkey: {'+'.join(expected_modifiers_list + [expected_key])}")
             
-            # 检查是否匹配配置的热键
+            # Check if it matches the configured hotkey
             if modifiers == expected_modifiers and vk == expected_vk:
                 self.hotkey_triggered_count += 1
-                logger.info(f"✅ 热键匹配正确! 第{self.hotkey_triggered_count}次触发，触发热键事件...")
+                logger.info(f"✅ Hotkey match correct! {self.hotkey_triggered_count}th trigger, triggering hotkey event...")
                 self._on_hotkey_triggered()
                 return True
             else:
-                logger.warning("⚠️ 热键匹配不正确")
+                logger.warning("⚠️ Hotkey match incorrect")
                 return False
         else:
-            logger.warning(f"⚠️ 热键ID不匹配: 收到={wParam}, 期望={HOTKEY_ID}")
+            logger.warning(f"⚠️ Hotkey ID mismatch: received={wParam}, expected={HOTKEY_ID}")
             return False
             
     def _on_hotkey_triggered(self):
         """Handle hotkey trigger"""
         logger.info("=== HOTKEY TRIGGERED ===")
-        logger.info(f"热键触发! 第{self.hotkey_triggered_count}次，准备展开聊天窗口...")
+        logger.info(f"Hotkey triggered! {self.hotkey_triggered_count}th time, preparing to expand chat window...")
         
-        # 在显示聊天窗口前，立即获取当前前台窗口（游戏窗口）
+        # Get current foreground window (game window) before showing chat window
         from src.game_wiki_tooltip.utils import get_foreground_title
         game_window_title = get_foreground_title()
-        logger.info(f"🎮 热键触发时的前台窗口: '{game_window_title}'")
+        logger.info(f"🎮 Foreground window when hotkey triggered: '{game_window_title}'")
         
         if self.assistant_ctrl:
-            logger.info("assistant_ctrl存在，检查窗口状态...")
+            logger.info("assistant_ctrl exists, checking window status...")
             
-            # 检查聊天窗口是否已经显示
+            # Check if chat window is already visible
             if (self.assistant_ctrl.main_window and 
                 self.assistant_ctrl.main_window.isVisible()):
-                logger.info("聊天窗口已经显示，隐藏窗口")
-                # 窗口已显示，隐藏它
+                logger.info("Chat window already visible, hiding window")
+                # Window is visible, hide it
                 self.assistant_ctrl.main_window.hide()
                 self.assistant_ctrl.show_mini()
-                # 更新托盘图标菜单文本
+                # Update tray icon menu text
                 self.tray_icon.update_toggle_text(False)
                 return
             
             try:
-                # 优化流程：先快速显示窗口，再异步初始化RAG引擎
-                # 1. 先记录游戏窗口但不立即初始化RAG
+                # Optimized flow: show window quickly first, then initialize RAG engine asynchronously
+                # 1. Record game window first but don't initialize RAG immediately
                 self.assistant_ctrl.current_game_window = game_window_title
-                logger.info(f"🎮 记录游戏窗口: '{game_window_title}'")
+                logger.info(f"🎮 Recording game window: '{game_window_title}'")
                 
-                # 2. 立即显示聊天窗口（无需等待RAG初始化）
+                # 2. Show chat window immediately (no need to wait for RAG initialization)
                 self.assistant_ctrl.expand_to_chat()
-                logger.info("expand_to_chat()执行成功")
+                logger.info("expand_to_chat() executed successfully")
                 
-                # 更新托盘图标菜单文本
+                # Update tray icon menu text
                 self.tray_icon.update_toggle_text(True)
                 
-                # 3. 窗口显示后，异步初始化RAG引擎
+                # 3. After window is shown, initialize RAG engine asynchronously
                 QTimer.singleShot(100, lambda: self.assistant_ctrl.set_current_game_window(game_window_title))
-                logger.info("RAG引擎初始化已安排为异步任务")
+                logger.info("RAG engine initialization scheduled as async task")
                 
             except Exception as e:
-                logger.error(f"expand_to_chat()执行失败: {e}")
+                logger.error(f"expand_to_chat() execution failed: {e}")
                 import traceback
                 traceback.print_exc()
         else:
-            logger.warning("assistant_ctrl为None，无法展开聊天窗口")
+            logger.warning("assistant_ctrl is None, cannot expand chat window")
             
-        logger.info("=== 热键处理完成 ===")
+        logger.info("=== Hotkey processing completed ===")
             
     def _quit_application(self):
         """Quit application"""
@@ -802,81 +802,81 @@ class GameWikiApp(QObject):
         
         # Clean up assistant controller and its windows first
         if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
-            logger.info("正在清理assistant controller和相关窗口...")
+            logger.info("Cleaning up assistant controller and related windows...")
             
-            # Clean up mini window (悬浮窗)
+            # Clean up mini window
             if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
                 try:
-                    logger.info("关闭悬浮窗...")
+                    logger.info("Closing mini window...")
                     self.assistant_ctrl.mini_window.hide()
                     self.assistant_ctrl.mini_window.close()
                     self.assistant_ctrl.mini_window.deleteLater()
                     self.assistant_ctrl.mini_window = None
-                    logger.info("悬浮窗已关闭")
+                    logger.info("Mini window closed")
                 except Exception as e:
-                    logger.warning(f"关闭悬浮窗时出错: {e}")
+                    logger.warning(f"Error closing mini window: {e}")
                     self.assistant_ctrl.mini_window = None
             
-            # Clean up main window (主窗口)
+            # Clean up main window
             if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
                 try:
-                    logger.info("关闭主窗口...")
+                    logger.info("Closing main window...")
                     self.assistant_ctrl.main_window.hide()
                     self.assistant_ctrl.main_window.close()
                     self.assistant_ctrl.main_window.deleteLater()
                     self.assistant_ctrl.main_window = None
-                    logger.info("主窗口已关闭")
+                    logger.info("Main window closed")
                 except Exception as e:
-                    logger.warning(f"关闭主窗口时出错: {e}")
+                    logger.warning(f"Error closing main window: {e}")
                     self.assistant_ctrl.main_window = None
             
             # Stop any running workers
             if hasattr(self.assistant_ctrl, '_current_worker') and self.assistant_ctrl._current_worker:
                 try:
-                    logger.info("停止当前工作线程...")
+                    logger.info("Stopping current worker thread...")
                     if self.assistant_ctrl._current_worker.isRunning():
                         self.assistant_ctrl._current_worker.stop()
                         self.assistant_ctrl._current_worker.wait()
-                    logger.info("工作线程已停止")
+                    logger.info("Worker thread stopped")
                 except Exception as e:
-                    logger.warning(f"停止工作线程时出错: {e}")
+                    logger.warning(f"Error stopping worker thread: {e}")
             
             # Disconnect RAG integration signals
             try:
                 if hasattr(self.assistant_ctrl, 'rag_integration') and self.assistant_ctrl.rag_integration:
-                    logger.info("断开RAG integration信号连接...")
+                    logger.info("Disconnecting RAG integration signals...")
                     self.assistant_ctrl.rag_integration.disconnect()
-                    logger.info("RAG integration信号连接已断开")
+                    logger.info("RAG integration signals disconnected")
             except Exception as e:
-                logger.warning(f"断开RAG integration信号连接时出错: {e}")
+                logger.warning(f"Error disconnecting RAG integration signals: {e}")
             
             self.assistant_ctrl = None
-            logger.info("assistant controller清理完成")
+            logger.info("Assistant controller cleanup completed")
         
         # Remove native event filter
         if self.native_filter:
-            logger.info("移除Windows原生事件过滤器...")
+            logger.info("Removing Windows native event filter...")
             self.app.removeNativeEventFilter(self.native_filter)
             self.native_filter = None
-            logger.info("Windows原生事件过滤器已移除")
+            logger.info("Windows native event filter removed")
         
         # Stop message listener
         if self.message_timer:
             self.message_timer.stop()
-            logger.info("Windows消息监听器已停止")
+            logger.info("Windows message listener stopped")
             
         # Unregister hotkey
         if self.hotkey_mgr:
             self.hotkey_mgr.unregister()
-            logger.info("热键注册已取消")
+            logger.info("Hotkey registration cancelled")
             
         # Clean up tray icon
         if self.tray_icon:
             self.tray_icon.cleanup()
-            logger.info("系统托盘图标已清理")
+            logger.info("System tray icon cleaned up")
             
         # Quit
-        logger.info("应用程序退出中...")
+        logger.info("Application exiting...")
         self.app.quit()
         
     def run(self):

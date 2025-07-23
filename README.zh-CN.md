@@ -171,11 +171,6 @@ python src/game_wiki_tooltip/ai/rebuild_bm25_only.py 游戏名称
    python src/game_wiki_tooltip/ai/rebuild_enhanced_indexes.py
    ```
 
-4. **运行质量评估**
-   ```bash
-   python src/game_wiki_tooltip/ai/run_quality_evaluation.py
-   ```
-
 5. **向量数据库诊断**
    ```bash
    python test_diagnose_vector.py

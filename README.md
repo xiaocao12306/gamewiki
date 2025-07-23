@@ -183,11 +183,6 @@ Each game configuration includes:
    python src/game_wiki_tooltip/ai/rebuild_enhanced_indexes.py
    ```
 
-4. **Run Quality Evaluation**
-   ```bash
-   python src/game_wiki_tooltip/ai/run_quality_evaluation.py
-   ```
-
 5. **Vector Database Diagnosis**
    ```bash
    python test_diagnose_vector.py

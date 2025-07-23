@@ -1,13 +1,13 @@
 """
-混合搜索检索器模块
-==================
+Hybrid Search Retriever Module
+=============================
 
-功能：
-1. 整合向量搜索和BM25搜索
-2. 实现多种分数融合算法
-3. 提供统一的搜索接口
-4. 支持统一查询处理（翻译+重写+意图分析）
-5. 性能优化：一次LLM调用完成多项任务
+Features:
+1. Integrates vector search and BM25 search
+2. Implements multiple score fusion algorithms
+3. Provides a unified search interface
+4. Supports unified query processing (translation + rewrite + intent analysis)
+5. Performance optimization: complete multiple tasks in one LLM call
 """
 
 import numpy as np
@@ -24,27 +24,27 @@ logger = logging.getLogger(__name__)
 
 
 class VectorRetrieverAdapter:
-    """向量检索器适配器，用于包装现有的向量搜索功能"""
+    """Vector retriever adapter for wrapping existing vector search functionality"""
     
     def __init__(self, rag_query_instance):
         """
-        初始化适配器
+        Initialize the adapter
         
         Args:
-            rag_query_instance: EnhancedRagQuery实例
+            rag_query_instance: EnhancedRagQuery instance
         """
         self.rag_query = rag_query_instance
-        
+    
     def search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
         """
-        执行向量搜索
+        Perform vector search
         
         Args:
-            query: 查询文本
-            top_k: 返回结果数量
+            query: Query text
+            top_k: Number of results to return
             
         Returns:
-            搜索结果列表
+            List of search results
         """
         if self.rag_query.config and self.rag_query.config["vector_store_type"] == "faiss":
             return self.rag_query._search_faiss(query, top_k)
@@ -53,7 +53,7 @@ class VectorRetrieverAdapter:
 
 
 class HybridSearchRetriever:
-    """混合搜索检索器"""
+    """Hybrid Search Retriever"""
     
     def __init__(self, 
                  vector_retriever: VectorRetrieverAdapter,
@@ -66,18 +66,18 @@ class HybridSearchRetriever:
                  enable_unified_processing: bool = True,
                  enable_query_rewrite: bool = True):
         """
-        初始化混合搜索检索器
+        Initialize the hybrid search retriever
         
         Args:
-            vector_retriever: 向量检索器适配器
-            bm25_index_path: BM25索引路径
-            fusion_method: 融合方法 ("rrf", "weighted", "normalized")
-            vector_weight: 向量搜索权重
-            bm25_weight: BM25搜索权重
-            rrf_k: RRF算法的k参数
-            llm_config: LLM配置
-            enable_unified_processing: 是否启用统一查询处理（推荐）
-            enable_query_rewrite: 是否启用查询重写（仅在统一处理禁用时生效）
+            vector_retriever: Vector retriever adapter
+            bm25_index_path: BM25 index path
+            fusion_method: Fusion method ("rrf", "weighted", "normalized")
+            vector_weight: Vector search weight
+            bm25_weight: BM25 search weight
+            rrf_k: k parameter for RRF algorithm
+            llm_config: LLM config
+            enable_unified_processing: Whether to enable unified query processing (recommended)
+            enable_query_rewrite: Whether to enable query rewrite (only effective when unified processing is disabled)
         """
         self.vector_retriever = vector_retriever
         self.fusion_method = fusion_method
@@ -86,33 +86,33 @@ class HybridSearchRetriever:
         self.rrf_k = rrf_k
         self.llm_config = llm_config or LLMConfig()
         
-        # 性能优化：统一处理vs分离处理
+        # Performance optimization: unified vs separate processing
         self.enable_unified_processing = enable_unified_processing
         self.enable_query_rewrite = enable_query_rewrite if not enable_unified_processing else False
         
-        # 初始化增强BM25索引器
+        # Initialize enhanced BM25 indexer
         self.bm25_indexer = None
         bm25_path = Path(bm25_index_path)
         
         if not bm25_path.exists():
-            error_msg = f"BM25索引文件不存在: {bm25_index_path}"
+            error_msg = f"BM25 index file does not exist: {bm25_index_path}"
             logger.error(error_msg)
             raise FileNotFoundError(error_msg)
         
         try:
             self.bm25_indexer = EnhancedBM25Indexer()
             self.bm25_indexer.load_index(str(bm25_path))
-            logger.info(f"增强BM25索引加载成功: {bm25_index_path}")
+            logger.info(f"Enhanced BM25 index loaded successfully: {bm25_index_path}")
         except BM25UnavailableError as e:
-            # 重新抛出BM25特定错误，保持错误信息完整
-            logger.error(f"混合搜索初始化失败: {e}")
+            # Re-raise BM25 specific error, keep error message intact
+            logger.error(f"Hybrid search initialization failed: {e}")
             raise e
         except Exception as e:
             error_msg = t("enhanced_bm25_load_failed", error=str(e))
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         
-        # 统计信息
+        # Statistics
         self.unified_processing_stats = {
             "total_queries": 0,
             "unified_successful": 0,
@@ -121,7 +121,7 @@ class HybridSearchRetriever:
             "average_processing_time": 0.0
         }
         
-        # 降级处理的统计（仅在统一处理禁用时使用）
+        # Fallback statistics (only used when unified processing is disabled)
         self.query_rewrite_stats = {
             "total_queries": 0,
             "rewritten_queries": 0,
@@ -135,41 +135,41 @@ class HybridSearchRetriever:
     
     def search(self, query: str, top_k: int = 5) -> Dict[str, Any]:
         """
-        执行混合搜索
+        Perform hybrid search
         
         Args:
-            query: 查询文本
-            top_k: 返回结果数量（保留参数兼容性，但内部逻辑固定为5）
+            query: Query text
+            top_k: Number of results to return (kept for compatibility, but internally fixed to 5)
             
         Returns:
-            搜索结果字典，包含结果列表和元数据
+            Search result dict, including result list and metadata
         """
-        logger.info(f"开始混合搜索: {query}")
+        logger.info(f"Starting hybrid search: {query}")
         
-        # 固定搜索参数：向量和BM25各返回10个，最终融合后返回5个
+        # Fixed search parameters: vector and BM25 each return 10, final fusion returns 5
         vector_search_count = 10
         bm25_search_count = 10
         final_result_count = 5
         
-        # 更新统计
+        # Update statistics
         if self.enable_unified_processing:
             self.unified_processing_stats["total_queries"] += 1
         else:
             self.query_rewrite_stats["total_queries"] += 1
             self.query_translation_stats["total_queries"] += 1
         
-        # 查询处理
+        # Query processing
         if self.enable_unified_processing:
-            # 使用统一处理器（推荐方式）
+            # Use unified processor (recommended)
             try:
                 unified_result = process_query_unified(query, self.llm_config)
                 
-                # 提取处理结果
+                # Extract processing results
                 final_query = unified_result.rewritten_query
                 translation_applied = unified_result.translation_applied
                 rewrite_applied = unified_result.rewrite_applied
                 
-                # 更新统计
+                # Update statistics
                 self.unified_processing_stats["unified_successful"] += 1
                 if hasattr(unified_result, 'processing_time'):
                     avg_time = self.unified_processing_stats["average_processing_time"]
@@ -178,11 +178,11 @@ class HybridSearchRetriever:
                         (avg_time * (total_queries - 1) + unified_result.processing_time) / total_queries
                     )
                 
-                # 构建查询元数据
+                # Build query metadata
                 query_metadata = {
                     "original_query": query,
                     "processed_query": final_query,
-                    "bm25_optimized_query": unified_result.bm25_optimized_query,  # 添加BM25优化查询
+                    "bm25_optimized_query": unified_result.bm25_optimized_query,  # Add BM25 optimized query
                     "translation_applied": translation_applied,
                     "rewrite_applied": rewrite_applied,
                     "intent": unified_result.intent,
@@ -192,34 +192,34 @@ class HybridSearchRetriever:
                     "reasoning": unified_result.reasoning
                 }
                 
-                logger.info(f"统一处理成功: '{query}' -> '{final_query}' (翻译: {translation_applied}, 重写: {rewrite_applied})")
+                logger.info(f"Unified processing succeeded: '{query}' -> '{final_query}' (translation: {translation_applied}, rewrite: {rewrite_applied})")
                 
             except Exception as e:
-                logger.error(f"统一处理失败: {e}")
+                logger.error(f"Unified processing failed: {e}")
                 self.unified_processing_stats["unified_failed"] += 1
                 
-                # 降级到原始查询
+                # Fallback to original query
                 final_query = query
                 translation_applied = False
                 rewrite_applied = False
                 query_metadata = {
                     "original_query": query,
                     "processed_query": final_query,
-                    "bm25_optimized_query": final_query,  # 降级时使用原始查询
+                    "bm25_optimized_query": final_query,  # Use original query on fallback
                     "translation_applied": False,
                     "rewrite_applied": False,
                     "processing_method": "fallback",
                     "error": str(e)
                 }
         else:
-            # 原有的分离处理方式（兼容性保留）
+            # Original separate processing (kept for compatibility)
             final_query = query
             translation_applied = False
             rewrite_applied = False
             
-            # 查询翻译功能已被统一查询处理器替代，此处删除
+            # Query translation feature has been replaced by unified query processor, removed here
             
-            # 查询重写（如果启用）
+            # Query rewrite (if enabled)
             if self.enable_query_rewrite:
                 try:
                     from .intent.intent_classifier import rewrite_query_for_search
@@ -229,81 +229,81 @@ class HybridSearchRetriever:
                         final_query = rewrite_result.rewritten_query
                         rewrite_applied = True
                         self.query_rewrite_stats["rewritten_queries"] += 1
-                        logger.info(f"查询重写: '{query}' -> '{final_query}'")
+                        logger.info(f"Query rewritten: '{query}' -> '{final_query}'")
                         
                 except Exception as e:
-                    logger.warning(f"查询重写失败: {e}")
+                    logger.warning(f"Query rewrite failed: {e}")
             
             query_metadata = {
                 "original_query": query,
                 "processed_query": final_query,
-                "bm25_optimized_query": final_query,  # 分离处理时使用处理后的查询
+                "bm25_optimized_query": final_query,  # Use processed query in separate processing
                 "translation_applied": translation_applied,
                 "rewrite_applied": rewrite_applied,
                 "processing_method": "separate"
             }
         
-        # 执行混合搜索
+        # Perform hybrid search
         try:
-            # 向量搜索 - 固定返回10个结果
-            print(f"🔍 [HYBRID-DEBUG] 开始向量搜索: query='{final_query}', top_k={vector_search_count}")
+            # Vector search - always return 10 results
+            print(f"🔍 [HYBRID-DEBUG] Starting vector search: query='{final_query}', top_k={vector_search_count}")
             vector_results = self.vector_retriever.search(final_query, vector_search_count)
-            print(f"📊 [HYBRID-DEBUG] 向量搜索结果数量: {len(vector_results)}")
+            print(f"📊 [HYBRID-DEBUG] Number of vector search results: {len(vector_results)}")
             
             if vector_results:
-                print(f"   📋 [HYBRID-DEBUG] 向量搜索Top3结果:")
+                print(f"   📋 [HYBRID-DEBUG] Top 3 vector search results:")
                 for i, result in enumerate(vector_results[:3]):
                     chunk = result.get("chunk", {})
-                    print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
-                    print(f"         分数: {result.get('score', 0):.4f}")
-                    print(f"         摘要: {chunk.get('summary', '')[:80]}...")
+                    print(f"      {i+1}. Topic: {chunk.get('topic', 'Unknown')}")
+                    print(f"         Score: {result.get('score', 0):.4f}")
+                    print(f"         Summary: {chunk.get('summary', '')[:80]}...")
             
-            # BM25搜索 - 固定返回10个结果，使用LLM优化的查询
+            # BM25 search - always return 10 results, use LLM-optimized query
             bm25_results = []
             if self.bm25_indexer:
-                # 使用LLM优化的BM25查询
+                # Use LLM-optimized BM25 query
                 bm25_query = query_metadata.get("bm25_optimized_query", final_query)
-                print(f"🔍 [HYBRID-DEBUG] 开始BM25搜索:")
-                print(f"   - 原始查询: '{query}'")
-                print(f"   - 语义查询: '{final_query}'")
-                print(f"   - BM25优化: '{bm25_query}'")
-                print(f"   - 检索数量: {bm25_search_count}")
+                print(f"🔍 [HYBRID-DEBUG] Starting BM25 search:")
+                print(f"   - Original query: '{query}'")
+                print(f"   - Semantic query: '{final_query}'")
+                print(f"   - BM25 optimized: '{bm25_query}'")
+                print(f"   - Number of results: {bm25_search_count}")
                 
                 bm25_results = self.bm25_indexer.search(bm25_query, bm25_search_count)
-                print(f"📊 [HYBRID-DEBUG] BM25搜索结果数量: {len(bm25_results)}")
+                print(f"📊 [HYBRID-DEBUG] Number of BM25 search results: {len(bm25_results)}")
                 
                 if bm25_results:
-                    print(f"   📋 [HYBRID-DEBUG] BM25搜索Top3结果:")
+                    print(f"   📋 [HYBRID-DEBUG] Top 3 BM25 search results:")
                     for i, result in enumerate(bm25_results[:3]):
                         chunk = result.get("chunk", {})
-                        print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
-                        print(f"         分数: {result.get('score', 0):.4f}")
-                        print(f"         摘要: {chunk.get('summary', '')[:80]}...")
+                        print(f"      {i+1}. Topic: {chunk.get('topic', 'Unknown')}")
+                        print(f"         Score: {result.get('score', 0):.4f}")
+                        print(f"         Summary: {chunk.get('summary', '')[:80]}...")
                         if "match_info" in result:
-                            print(f"         匹配信息: {result['match_info'].get('relevance_reason', 'N/A')}")
+                            print(f"         Match info: {result['match_info'].get('relevance_reason', 'N/A')}")
             else:
-                print(f"⚠️ [HYBRID-DEBUG] BM25索引器未初始化，跳过BM25搜索")
+                print(f"⚠️ [HYBRID-DEBUG] BM25 indexer not initialized, skipping BM25 search")
             
-            # 分数融合 - 固定返回5个结果
-            print(f"🔄 [HYBRID-DEBUG] 开始分数融合: 方法={self.fusion_method}")
-            print(f"   - 向量权重: {self.vector_weight}")
-            print(f"   - BM25权重: {self.bm25_weight}")
+            # Score fusion - always return 5 results
+            print(f"🔄 [HYBRID-DEBUG] Starting score fusion: method={self.fusion_method}")
+            print(f"   - Vector weight: {self.vector_weight}")
+            print(f"   - BM25 weight: {self.bm25_weight}")
             print(f"   - RRF_K: {self.rrf_k}")
-            print(f"   - 最终返回结果数: {final_result_count}")
+            print(f"   - Final number of results: {final_result_count}")
             
             final_results = self._fuse_results(vector_results, bm25_results, final_result_count)
             
-            print(f"✅ [HYBRID-DEBUG] 分数融合完成，最终结果数量: {len(final_results)}")
+            print(f"✅ [HYBRID-DEBUG] Score fusion complete, final number of results: {len(final_results)}")
             if final_results:
-                print(f"   📋 [HYBRID-DEBUG] 融合后Top5结果:")
+                print(f"   📋 [HYBRID-DEBUG] Top 5 fused results:")
                 for i, result in enumerate(final_results):
                     chunk = result.get("chunk", {})
-                    print(f"      {i+1}. 主题: {chunk.get('topic', 'Unknown')}")
-                    print(f"         融合分数: {result.get('fusion_score', 0):.4f}")
-                    print(f"         向量分数: {result.get('vector_score', 0):.4f}")
-                    print(f"         BM25分数: {result.get('bm25_score', 0):.4f}")
+                    print(f"      {i+1}. Topic: {chunk.get('topic', 'Unknown')}")
+                    print(f"         Fusion score: {result.get('fusion_score', 0):.4f}")
+                    print(f"         Vector score: {result.get('vector_score', 0):.4f}")
+                    print(f"         BM25 score: {result.get('bm25_score', 0):.4f}")
             
-            # 构建返回结果
+            # Build return result
             return {
                 "results": final_results,
                 "query": query_metadata,
@@ -320,8 +320,8 @@ class HybridSearchRetriever:
             }
             
         except Exception as e:
-            print(f"❌ [HYBRID-DEBUG] 混合搜索执行失败: {e}")
-            logger.error(f"混合搜索执行失败: {e}")
+            print(f"❌ [HYBRID-DEBUG] Hybrid search execution failed: {e}")
+            logger.error(f"Hybrid search execution failed: {e}")
             return {
                 "results": [],
                 "query": query_metadata,
@@ -336,15 +336,15 @@ class HybridSearchRetriever:
     
     def _fuse_results(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
         """
-        融合向量搜索和BM25搜索的结果
+        Fuse the results of vector search and BM25 search
         
         Args:
-            vector_results: 向量搜索结果
-            bm25_results: BM25搜索结果
-            top_k: 返回的结果数量
+            vector_results: Vector search results
+            bm25_results: BM25 search results
+            top_k: Number of results to return
             
         Returns:
-            融合后的搜索结果
+            Fused search results
         """
         if self.fusion_method == "rrf":
             return self._reciprocal_rank_fusion(vector_results, bm25_results, top_k)
@@ -353,29 +353,29 @@ class HybridSearchRetriever:
         elif self.fusion_method == "normalized":
             return self._normalized_fusion(vector_results, bm25_results, top_k)
         else:
-            logger.warning(f"未知的融合方法: {self.fusion_method}，使用RRF")
+            logger.warning(f"Unknown fusion method: {self.fusion_method}, using RRF")
             return self._reciprocal_rank_fusion(vector_results, bm25_results, top_k)
     
     def _reciprocal_rank_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
         """
-        使用倒数排名融合(RRF)算法融合结果
+        Fuse results using Reciprocal Rank Fusion (RRF) algorithm
         """
-        print(f"🔄 [FUSION-DEBUG] 开始RRF融合: 向量结果={len(vector_results)}, BM25结果={len(bm25_results)}, k={self.rrf_k}")
+        print(f"🔄 [FUSION-DEBUG] Starting RRF fusion: vector results={len(vector_results)}, BM25 results={len(bm25_results)}, k={self.rrf_k}")
         
-        # 创建文档ID到分数的映射
+        # Create mapping from document ID to score
         doc_scores = {}
         
-        # 处理向量搜索结果
-        print(f"   📊 [FUSION-DEBUG] 处理向量搜索结果:")
+        # Process vector search results
+        print(f"   📊 [FUSION-DEBUG] Processing vector search results:")
         for rank, result in enumerate(vector_results, 1):
             chunk = result.get("chunk", {})
             doc_id = chunk.get("chunk_id", f"vector_{rank}")
             rrf_score = 1.0 / (self.rrf_k + rank)
             
             print(f"      {rank}. ID: {doc_id}")
-            print(f"         原始分数: {result.get('score', 0):.4f}")
-            print(f"         RRF分数: {rrf_score:.4f}")
-            print(f"         主题: {chunk.get('topic', 'Unknown')}")
+            print(f"         Original score: {result.get('score', 0):.4f}")
+            print(f"         RRF score: {rrf_score:.4f}")
+            print(f"         Topic: {chunk.get('topic', 'Unknown')}")
             
             if doc_id not in doc_scores:
                 doc_scores[doc_id] = {
@@ -386,17 +386,17 @@ class HybridSearchRetriever:
                 }
             doc_scores[doc_id]["rrf_score"] += rrf_score
         
-        # 处理BM25搜索结果
-        print(f"   📊 [FUSION-DEBUG] 处理BM25搜索结果:")
+        # Process BM25 search results
+        print(f"   📊 [FUSION-DEBUG] Processing BM25 search results:")
         for rank, result in enumerate(bm25_results, 1):
             chunk = result.get("chunk", {})
             doc_id = chunk.get("chunk_id", f"bm25_{rank}")
             rrf_score = 1.0 / (self.rrf_k + rank)
             
             print(f"      {rank}. ID: {doc_id}")
-            print(f"         原始分数: {result.get('score', 0):.4f}")
-            print(f"         RRF分数: {rrf_score:.4f}")
-            print(f"         主题: {chunk.get('topic', 'Unknown')}")
+            print(f"         Original score: {result.get('score', 0):.4f}")
+            print(f"         RRF score: {rrf_score:.4f}")
+            print(f"         Topic: {chunk.get('topic', 'Unknown')}")
             
             if doc_id not in doc_scores:
                 doc_scores[doc_id] = {
@@ -410,47 +410,47 @@ class HybridSearchRetriever:
             
             doc_scores[doc_id]["rrf_score"] += rrf_score
         
-        # 按RRF分数排序并返回top_k结果
+        # Sort by RRF score and return top_k results
         sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
         
-        print(f"   📊 [FUSION-DEBUG] 融合后排序结果:")
+        print(f"   📊 [FUSION-DEBUG] Sorted fusion results:")
         for i, (doc_id, scores) in enumerate(sorted_docs[:min(5, len(sorted_docs))]):
             print(f"      {i+1}. ID: {doc_id}")
-            print(f"         最终RRF分数: {scores['rrf_score']:.4f}")
-            print(f"         向量分数: {scores['vector_score']:.4f}")
-            print(f"         BM25分数: {scores['bm25_score']:.4f}")
-            print(f"         主题: {scores['result'].get('chunk', {}).get('topic', 'Unknown')}")
+            print(f"         Final RRF score: {scores['rrf_score']:.4f}")
+            print(f"         Vector score: {scores['vector_score']:.4f}")
+            print(f"         BM25 score: {scores['bm25_score']:.4f}")
+            print(f"         Topic: {scores['result'].get('chunk', {}).get('topic', 'Unknown')}")
         
         final_results = []
         for doc_id, scores in sorted_docs[:top_k]:
-            # 深拷贝结果对象以避免引用问题
+            # Deep copy result object to avoid reference issues
             result = scores["result"].copy()
             
-            # 确保正确设置分数字段
-            result["score"] = scores["rrf_score"]  # 主要分数是RRF分数
+            # Ensure correct score fields are set
+            result["score"] = scores["rrf_score"]  # Main score is RRF score
             result["fusion_score"] = scores["rrf_score"]
             result["vector_score"] = scores["vector_score"] 
             result["bm25_score"] = scores["bm25_score"]
             result["fusion_method"] = "rrf"
-            result["original_vector_score"] = scores["vector_score"]  # 保留原始向量分数
-            result["original_bm25_score"] = scores["bm25_score"]     # 保留原始BM25分数
+            result["original_vector_score"] = scores["vector_score"]  # Keep original vector score
+            result["original_bm25_score"] = scores["bm25_score"]     # Keep original BM25 score
             
-            # 添加调试验证
-            print(f"   🔧 [FUSION-DEBUG] 最终结果 {len(final_results)+1}:")
-            print(f"      主题: {result.get('chunk', {}).get('topic', 'Unknown')}")
-            print(f"      设置的score字段: {result['score']:.4f}")
-            print(f"      RRF分数: {result['fusion_score']:.4f}")
+            # Add debug validation
+            print(f"   🔧 [FUSION-DEBUG] Final result {len(final_results)+1}:")
+            print(f"      Topic: {result.get('chunk', {}).get('topic', 'Unknown')}")
+            print(f"      Set score field: {result['score']:.4f}")
+            print(f"      RRF score: {result['fusion_score']:.4f}")
             
             final_results.append(result)
         
-        print(f"✅ [FUSION-DEBUG] RRF融合完成，返回 {len(final_results)} 个结果")
+        print(f"✅ [FUSION-DEBUG] RRF fusion complete, returning {len(final_results)} results")
         return final_results
     
     def _weighted_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
         """
-        使用加权平均融合结果
+        Fuse results using weighted average
         """
-        # 归一化分数
+        # Normalize scores
         vector_scores = [r.get("score", 0) for r in vector_results]
         bm25_scores = [r.get("score", 0) for r in bm25_results]
         
@@ -466,10 +466,10 @@ class HybridSearchRetriever:
         else:
             bm25_scores_norm = []
         
-        # 创建文档分数映射
+        # Create document score mapping
         doc_scores = {}
         
-        # 处理向量结果
+        # Process vector results
         for i, result in enumerate(vector_results):
             doc_id = result.get("chunk_id", f"vector_{i}")
             normalized_score = vector_scores_norm[i] if i < len(vector_scores_norm) else 0
@@ -483,7 +483,7 @@ class HybridSearchRetriever:
             else:
                 doc_scores[doc_id]["vector_score"] = normalized_score
         
-        # 处理BM25结果
+        # Process BM25 results
         for i, result in enumerate(bm25_results):
             doc_id = result.get("chunk_id", f"bm25_{i}")
             normalized_score = bm25_scores_norm[i] if i < len(bm25_scores_norm) else 0
@@ -497,7 +497,7 @@ class HybridSearchRetriever:
             else:
                 doc_scores[doc_id]["bm25_score"] = normalized_score
         
-        # 计算加权分数
+        # Calculate weighted score
         for doc_id, scores in doc_scores.items():
             weighted_score = (
                 scores["vector_score"] * self.vector_weight +
@@ -505,7 +505,7 @@ class HybridSearchRetriever:
             )
             scores["fusion_score"] = weighted_score
         
-        # 排序并返回结果
+        # Sort and return results
         sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["fusion_score"], reverse=True)
         
         final_results = []
@@ -521,30 +521,30 @@ class HybridSearchRetriever:
     
     def _normalized_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
         """
-        使用归一化融合结果
+        Fuse results using normalization
         """
-        # 归一化处理逻辑类似加权融合，但权重相等
+        # Normalization logic is similar to weighted fusion, but with equal weights
         temp_vector_weight = self.vector_weight
         temp_bm25_weight = self.bm25_weight
         
-        # 临时设置相等权重
+        # Temporarily set equal weights
         self.vector_weight = 0.5
         self.bm25_weight = 0.5
         
         result = self._weighted_fusion(vector_results, bm25_results, top_k)
         
-        # 恢复原权重
+        # Restore original weights
         self.vector_weight = temp_vector_weight
         self.bm25_weight = temp_bm25_weight
         
-        # 更新融合方法标记
+        # Update fusion method tag
         for r in result:
             r["fusion_method"] = "normalized"
         
         return result
     
     def _get_processing_stats(self) -> Dict[str, Any]:
-        """获取处理统计信息"""
+        """Get processing statistics"""
         if self.enable_unified_processing:
             return {
                 "method": "unified_processing",
@@ -558,11 +558,11 @@ class HybridSearchRetriever:
             }
     
     def get_search_stats(self) -> Dict[str, Any]:
-        """获取搜索统计信息"""
+        """Get search statistics"""
         vector_stats = {}
         bm25_stats = {}
         
-        # 获取BM25统计
+        # Get BM25 statistics
         if hasattr(self.bm25_indexer, 'get_stats'):
             bm25_stats = self.bm25_indexer.get_stats()
         
@@ -582,7 +582,7 @@ class HybridSearchRetriever:
         return base_stats
     
     def reset_stats(self):
-        """重置所有统计信息"""
+        """Reset all statistics"""
         self.unified_processing_stats = {
             "total_queries": 0,
             "unified_successful": 0,
@@ -604,10 +604,10 @@ class HybridSearchRetriever:
 
 
 def test_hybrid_retriever():
-    """测试混合检索器"""
-    # 这里需要实际的向量检索器实例
-    print("混合检索器测试需要完整的RAG系统支持")
-    print("请在完整系统中测试")
+    """Test hybrid retriever"""
+    # Requires actual vector retriever instance
+    print("Hybrid retriever test requires full RAG system support")
+    print("Please test in the complete system")
 
 
 if __name__ == "__main__":

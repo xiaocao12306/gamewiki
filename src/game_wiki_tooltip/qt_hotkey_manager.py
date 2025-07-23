@@ -108,7 +108,7 @@ class QtHotkeyManager(QObject):
     
 
     def _try_register_hotkey_ultra_compatible(self, modifiers: list, key: str, hotkey_id: int) -> tuple[bool, Optional[str]]:
-        """使用超级兼容的热键注册逻辑 - 确保任何情况下都能成功"""
+        """Use ultra-compatible hotkey registration logic - ensure success in any case"""
         try:
             # Calculate modifier flags
             mod_flags = 0
@@ -120,17 +120,17 @@ class QtHotkeyManager(QObject):
             vk = self._get_virtual_key(key)
             
             hotkey_str = '+'.join(modifiers + [key])
-            logger.info(f"尝试注册热键(超级兼容): {hotkey_str}, mod_flags={mod_flags}, vk={vk}, id={hotkey_id}")
+            logger.info(f"Attempting to register hotkey (ultra-compatible): {hotkey_str}, mod_flags={mod_flags}, vk={vk}, id={hotkey_id}")
             
             # Register hotkey
             result = RegisterHotKey(None, hotkey_id, mod_flags, vk)
             
             if result:
-                logger.info(f"✅ 热键注册成功: {hotkey_str}")
+                logger.info(f"✅ Hotkey registration successful: {hotkey_str}")
                 return True, None
             else:
                 error = ctypes.get_last_error()
-                logger.warning(f"⚠️ 热键API调用失败，错误代码: {error}")
+                logger.warning(f"⚠️ Hotkey API call failed, error code: {error}")
                 
                 # Ultra-compatible logic: assume hotkey is available regardless of any error
                 if error == 1409:  # ERROR_HOTKEY_ALREADY_REGISTERED
