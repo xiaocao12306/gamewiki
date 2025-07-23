@@ -35,38 +35,38 @@ def get_resource_path(relative_path: str) -> Path:
         资源文件的绝对路径
     """
     try:
-        # PyInstaller打包后的临时目录
+        # PyInstaller packaged temporary directory
         base_path = Path(sys._MEIPASS)
         resource_path = base_path / relative_path
-        print(f"🔧 [RAG-DEBUG] 使用PyInstaller临时目录: {base_path}")
-        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
+        print(f"🔧 [RAG-DEBUG] Using PyInstaller temp directory: {base_path}")
+        print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
     except AttributeError:
-        # 开发环境：从当前文件位置向上找到项目根目录
+        # Development environment: find project root from current file location
         current_file = Path(__file__).parent  # .../ai/
-        base_path = current_file  # 对于ai目录下的文件，直接使用当前目录
-        # 如果relative_path以"ai/"开头，需要去掉这个前缀
+        base_path = current_file  # For files in ai directory, use current directory directly
+        # If relative_path starts with "ai/", need to remove this prefix
         if relative_path.startswith("ai/"):
-            relative_path = relative_path[3:]  # 去掉"ai/"前缀
+            relative_path = relative_path[3:]  # Remove "ai/" prefix
         resource_path = base_path / relative_path
-        print(f"🔧 [RAG-DEBUG] 使用开发环境路径: {base_path}")
-        print(f"🔧 [RAG-DEBUG] 调整后的相对路径: {relative_path}")
-        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
+        print(f"🔧 [RAG-DEBUG] Using development environment path: {base_path}")
+        print(f"🔧 [RAG-DEBUG] Adjusted relative path: {relative_path}")
+        print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
     
     return resource_path
 
-# 导入批量嵌入处理器
+# Import batch embedding processor
 try:
     from .batch_embedding import BatchEmbeddingProcessor
     BATCH_EMBEDDING_AVAILABLE = True
 except ImportError:
     BATCH_EMBEDDING_AVAILABLE = False
-    logging.warning("批量嵌入模块不可用")
+    logging.warning("Batch embedding module not available")
 
-# 向量库支持 - 延迟导入以避免启动时崩溃
+# Vector store support - lazy import to avoid startup crashes
 FAISS_AVAILABLE = None
 
 def _check_faiss_available():
-    """检查并延迟导入faiss"""
+    """Check and lazy import faiss"""
     global FAISS_AVAILABLE
     if FAISS_AVAILABLE is None:
         try:
@@ -74,7 +74,7 @@ def _check_faiss_available():
             FAISS_AVAILABLE = True
         except ImportError:
             FAISS_AVAILABLE = False
-            logging.warning("FAISS不可用")
+            logging.warning("FAISS not available")
     return FAISS_AVAILABLE
 
 try:
@@ -82,25 +82,25 @@ try:
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
-    logging.warning("Qdrant不可用")
+    logging.warning("Qdrant not available")
 
-# 导入Gemini摘要器
+# Import Gemini summarizer
 try:
     from .gemini_summarizer import create_gemini_summarizer, SummarizationConfig
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    logging.warning("Gemini摘要模块不可用")
+    logging.warning("Gemini summarization module not available")
 
-# 导入意图感知重排序器
+# Import intent-aware reranker
 try:
     from .intent_aware_reranker import IntentAwareReranker
     RERANKER_AVAILABLE = True
 except ImportError:
     RERANKER_AVAILABLE = False
-    logging.warning("意图重排序模块不可用")
+    logging.warning("Intent reranking module not available")
 
-# 导入混合检索器和BM25错误类
+# Import hybrid retriever and BM25 error class
 try:
     from .hybrid_retriever import HybridSearchRetriever, VectorRetrieverAdapter
     from .enhanced_bm25_indexer import BM25UnavailableError
@@ -108,25 +108,25 @@ try:
 except ImportError as e:
     HybridSearchRetriever = None
     VectorRetrieverAdapter = None
-    BM25UnavailableError = Exception  # 回退到基础异常类
+    BM25UnavailableError = Exception  # Fallback to base exception class
     HYBRID_RETRIEVER_AVAILABLE = False
-    logging.warning(f"混合检索器模块不可用: {e}")
+    logging.warning(f"Hybrid retriever module not available: {e}")
 
-# 导入配置和查询重写
+# Import configuration and query rewrite
 from ..config import LLMConfig
 
 logger = logging.getLogger(__name__)
 
-# 全局缓存向量库映射配置
+# Global cache for vector store mapping configuration
 _vector_mappings_cache = None
 _vector_mappings_last_modified = None
 
 def load_vector_mappings() -> Dict[str, str]:
     """
-    加载向量库映射配置
+    Load vector store mapping configuration
     
     Returns:
-        窗口标题到向量库名称的映射字典
+        Mapping dictionary from window title to vector store name
     """
     global _vector_mappings_cache, _vector_mappings_last_modified
     

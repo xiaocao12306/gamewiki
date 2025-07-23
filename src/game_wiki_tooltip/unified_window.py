@@ -547,7 +547,7 @@ def convert_markdown_to_html(text: str) -> str:
         
     except Exception as e:
         # 只在转换失败时输出错误信息
-        print(f"❌ [RENDER-ERROR] Markdown转换失败: {e}")
+        print(f"❌ [RENDER-ERROR] Markdown conversion failed: {e}")
         return text
 
 
@@ -811,7 +811,7 @@ class MessageWidget(QFrame):
     def init_ui(self):
         """Initialize the message UI"""
         self.setSizePolicy(
-            QSizePolicy.Policy.Expanding,  # 改为Expanding以占满可用宽度
+            QSizePolicy.Policy.Expanding,  # 改为Expanding以占满可用width
             QSizePolicy.Policy.Minimum
         )
         layout = QHBoxLayout(self)
@@ -824,7 +824,7 @@ class MessageWidget(QFrame):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Minimum
         )
-        # 设置最大宽度为父容器的80%，留出边距
+        # 设置最大width为父容器的80%，留出边距
         bubble.setMaximumWidth(9999)  # 先设置一个大值，后续会动态调整
         bubble_layout = QVBoxLayout(bubble)
         bubble_layout.setContentsMargins(12, 8, 12, 8)
@@ -931,28 +931,28 @@ class MessageWidget(QFrame):
         if self.message.type == MessageType.WIKI_LINK:
             self.content_label.linkActivated.connect(self.on_link_clicked)
             
-        # 设置初始宽度
+        # 设置初始width
         self._set_initial_width()
             
     def _set_initial_width(self):
-        """设置消息的初始宽度，基于父容器"""
+        """设置消息的初始width，基于父容器"""
         # 这个方法会在添加到聊天视图后被_update_message_width方法覆盖
         # 但是可以提供一个合理的初始值
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            bubble.setMaximumWidth(500)  # 设置一个合理的初始最大宽度
+            bubble.setMaximumWidth(500)  # 设置一个合理的初始最大width
             bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
     def on_link_clicked(self, url):
         """Handle wiki link clicks"""
         logger = logging.getLogger(__name__)
-        print(f"🔗 [LINK-DEBUG] 链接被点击: {url}")
-        print(f"🔗 [LINK-DEBUG] 消息类型: {self.message.type}")
-        print(f"🔗 [LINK-DEBUG] 是否为流式消息: {isinstance(self, StreamingMessageWidget)}")
-        print(f"🔗 [LINK-DEBUG] content_label格式: {self.content_label.textFormat()}")
+        print(f"🔗 [LINK-DEBUG] Link clicked: {url}")
+        print(f"🔗 [LINK-DEBUG] Message type: {self.message.type}")
+        print(f"🔗 [LINK-DEBUG] Is streaming message: {isinstance(self, StreamingMessageWidget)}")
+        print(f"🔗 [LINK-DEBUG] content_label format: {self.content_label.textFormat()}")
         print(f"🔗 [LINK-DEBUG] openExternalLinks: {self.content_label.openExternalLinks()}")
         
-        logger.info(f"🔗 Wiki链接被点击: {url}")
+        logger.info(f"🔗 WikiLink clicked: {url}")
         logger.info(f"消息内容: {self.message.content}")
         logger.info(f"消息元数据: {self.message.metadata}")
         
@@ -966,18 +966,18 @@ class MessageWidget(QFrame):
             except:
                 title = "Wiki页面"
         
-        logger.info(f"使用标题: {title}")
-        print(f"🔗 [LINK-DEBUG] 使用标题: {title}")
+        logger.info(f"Using title: {title}")
+        print(f"🔗 [LINK-DEBUG] Using title: {title}")
         
         # 向上查找ChatView实例
         chat_view = self._find_chat_view()
         if chat_view:
-            logger.info(f"找到ChatView实例，调用显示Wiki页面")
-            print(f"🔗 [LINK-DEBUG] 找到ChatView实例，调用显示Wiki页面")
+            logger.info(f"Found ChatView instance, calling show Wiki page")
+            print(f"🔗 [LINK-DEBUG] Found ChatView instance, calling show Wiki page")
             chat_view.show_wiki(url, title)
         else:
-            logger.warning(f"未找到ChatView实例")
-            print(f"🔗 [LINK-DEBUG] ❌ 未找到ChatView实例")
+            logger.warning(f"ChatView instance not found")
+            print(f"🔗 [LINK-DEBUG] ❌ ChatView instance not found")
             
     def _find_chat_view(self):
         """向上查找ChatView实例"""
@@ -1021,13 +1021,13 @@ class StreamingMessageWidget(MessageWidget):
         self.is_stopped = False  # 标记是否被用户停止
         
         # Markdown渲染控制 - 确保每次都重新初始化
-        self.last_render_index = 0  # 上次渲染时的字符位置
-        self.render_interval = 50   # 每50个字符进行一次markdown渲染（减少频率，避免闪烁）
+        self.last_render_index = 0  # 上次渲染时的characters位置
+        self.render_interval = 50   # 每50个characters进行一次markdown渲染（减少频率，避免闪烁）
         self.last_render_time = 0   # 上次渲染时间
         self.render_time_interval = 1.0  # 最长1.0秒进行一次渲染
         self.is_markdown_detected = False  # 缓存markdown检测结果 - 强制重置
         self.current_format = Qt.TextFormat.PlainText  # 当前文本格式 - 强制重置
-        self.link_signal_connected = False  # 跟踪是否已连接linkActivated信号 - 强制重置
+        self.link_signal_connected = False  # 跟踪是否linkActivated signal connected - 强制重置
         self.has_video_source = False  # 跟踪是否已检测到视频源 - 强制重置
         self.force_render_count = 0  # 强制渲染计数器
         
@@ -1050,7 +1050,7 @@ class StreamingMessageWidget(MessageWidget):
         self.dots_timer.start(500)
         
         # 添加调试日志
-        print(f"🔧 [STREAMING] 新StreamingMessageWidget初始化完成，timer状态: {'激活' if self.typing_timer.isActive() else '未激活'}")
+        print(f"🔧 [STREAMING] New StreamingMessageWidget initialization completed, timer status: {'Active' if self.typing_timer.isActive() else '未Active'}")
         
         # 初始化时就配置链接处理
         if hasattr(self, 'content_label'):
@@ -1059,9 +1059,9 @@ class StreamingMessageWidget(MessageWidget):
             try:
                 self.content_label.linkActivated.connect(self.on_link_clicked)
                 self.link_signal_connected = True
-                print(f"🔗 [STREAMING] 初始化时已连接linkActivated信号")
+                print(f"🔗 [STREAMING] linkActivated signal already connected during initialization")
             except Exception as e:
-                print(f"⚠️ [STREAMING] 初始化连接linkActivated信号失败: {e}")
+                print(f"⚠️ [STREAMING] Failed to connect linkActivated signal during initialization: {e}")
                 self.link_signal_connected = False
     
     def _optimize_for_streaming(self):
@@ -1080,15 +1080,15 @@ class StreamingMessageWidget(MessageWidget):
             self.content_label.setWordWrap(True)
             self.content_label.setScaledContents(False)
             
-        # 初始设置宽度（基于父容器）
+        # 初始设置width（基于父容器）
         self._update_bubble_width()
         
-        # 为流式消息固定初始宽度，避免排版跳动
+        # 为流式消息固定初始width，避免排版跳动
         self._fix_width_for_streaming()
     
     def _update_bubble_width(self):
-        """根据聊天窗口宽度动态设置对话框宽度"""
-        # 获取聊天视图的宽度，考虑滚动条宽度
+        """根据聊天窗口width动态设置对话框width"""
+        # 获取聊天视图的width，考虑滚动条width
         parent_widget = self.parent()
         
         # 尝试使用get_chat_view，但在初始化时可能还不可用
@@ -1099,27 +1099,27 @@ class StreamingMessageWidget(MessageWidget):
             
         if chat_view and hasattr(chat_view, 'viewport'):
             viewport_width = chat_view.viewport().width()
-            # 减去滚动条可能占用的宽度（通常约20px）
+            # 减去滚动条可能占用的width（通常约20px）
             if hasattr(chat_view, 'verticalScrollBar'):
                 scrollbar = chat_view.verticalScrollBar()
                 if scrollbar and scrollbar.isVisible():
                     viewport_width -= scrollbar.width()
         else:
-            # 如果无法获取聊天视图宽度，尝试从父容器获取
+            # 如果无法获取聊天视图width，尝试从父容器获取
             viewport_width = parent_widget.width() if parent_widget else 500
         
-        # 确保有效宽度
+        # 确保有效width
         viewport_width = max(300, viewport_width)
         
-        # 计算对话框宽度（聊天视图宽度的75%，减少比例避免过宽，但不超过600px，不少于300px）
+        # 计算对话框width（聊天视图width的75%，减少比例避免过宽，但不超过600px，不少于300px）
         bubble_width = max(300, min(600, int(viewport_width * 0.75)))
         content_width = bubble_width - 24  # 减去边距
         
-        # 保存计算的宽度供后续使用
+        # 保存计算的width供后续使用
         self._calculated_bubble_width = bubble_width
         self._calculated_content_width = content_width
         
-        # 更新气泡和内容宽度 - 使用最大宽度而不是固定宽度
+        # 更新气泡和内容width - 使用最大width而不是固定width
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
             bubble.setMaximumWidth(bubble_width)
@@ -1132,52 +1132,52 @@ class StreamingMessageWidget(MessageWidget):
         # 只在异常情况下输出调试信息
         if chat_view and hasattr(chat_view, 'viewport'):
             original_viewport_width = chat_view.viewport().width()
-            # 只有在宽度异常小时才输出警告
+            # 只有在width异常小时才输出警告
             if original_viewport_width < 400:
-                print(f"⚠️ 流式消息视图宽度异常: viewport={original_viewport_width}px")
+                print(f"⚠️ Streaming message view width abnormal: viewport={original_viewport_width}px")
     
     def _fix_width_for_streaming(self):
-        """为流式消息固定宽度，避免排版跳动"""
+        """为流式消息固定width，避免排版跳动"""
         if not hasattr(self, '_calculated_bubble_width'):
             return
             
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            # 使用固定宽度而不是最大宽度
+            # 使用固定width而不是最大width
             bubble.setFixedWidth(self._calculated_bubble_width)
-            print(f"🔒 [STREAMING] 固定bubble宽度: {self._calculated_bubble_width}px")
+            print(f"🔒 [STREAMING] Fixed bubble width: {self._calculated_bubble_width}px")
             
         if hasattr(self, 'content_label'):
-            # 内容标签也使用固定宽度
+            # 内容标签也使用固定width
             self.content_label.setFixedWidth(self._calculated_content_width)
             # 设置最小高度，避免垂直跳动
             self.content_label.setMinimumHeight(30)
-            print(f"🔒 [STREAMING] 固定content宽度: {self._calculated_content_width}px")
+            print(f"🔒 [STREAMING] Fixed content width: {self._calculated_content_width}px")
             
-        # 标记已固定宽度
+        # 标记已固定width
         self._width_fixed = True
     
     def _restore_flexible_width(self):
-        """恢复灵活宽度设置（流式结束后调用）"""
+        """恢复灵活width设置（流式结束后调用）"""
         if not hasattr(self, '_width_fixed') or not self._width_fixed:
             return
             
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble and hasattr(self, '_calculated_bubble_width'):
-            # 移除固定宽度，恢复最大宽度限制
+            # 移除固定width，恢复最大width限制
             bubble.setMinimumWidth(0)
             bubble.setMaximumWidth(self._calculated_bubble_width)
             bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
-            print(f"🔓 [STREAMING] 恢复bubble灵活宽度，最大: {self._calculated_bubble_width}px")
+            print(f"🔓 [STREAMING] Restored bubble flexible width, max: {self._calculated_bubble_width}px")
             
         if hasattr(self, 'content_label') and hasattr(self, '_calculated_content_width'):
-            # 移除固定宽度，恢复最大宽度限制
+            # 移除固定width，恢复最大width限制
             self.content_label.setMinimumWidth(0)
             self.content_label.setMaximumWidth(self._calculated_content_width)
             self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
-            print(f"🔓 [STREAMING] 恢复content灵活宽度，最大: {self._calculated_content_width}px")
+            print(f"🔓 [STREAMING] Restored content flexible width, max: {self._calculated_content_width}px")
             
-        # 标记已恢复灵活宽度
+        # 标记已恢复灵活width
         self._width_fixed = False
         
     def get_chat_view(self):
@@ -1196,24 +1196,24 @@ class StreamingMessageWidget(MessageWidget):
         设置markdown渲染参数
         
         Args:
-            char_interval: 字符间隔，每多少个字符进行一次渲染
+            char_interval: characters间隔，每多少个characters进行一次渲染
             time_interval: 时间间隔，最长多少秒进行一次渲染
         """
-        self.render_interval = max(20, char_interval)  # 最少20个字符
+        self.render_interval = max(20, char_interval)  # 最少20个characters
         self.render_time_interval = max(0.5, time_interval)  # 最少0.5秒
         
     def append_chunk(self, chunk: str):
         """Append text chunk for streaming display"""
         # 更严格的停止检查，直接返回不处理
         if self.is_stopped:
-            print(f"🛑 流式消息已停止，拒绝新内容块: '{chunk[:50]}...'")
+            print(f"🛑 Streaming message stopped, rejecting new content chunk: '{chunk[:50]}...'")
             return
         
         # 记录timer状态用于调试
         timer_was_active = self.typing_timer.isActive()
         
         self.full_text += chunk
-        print(f"✅ [STREAMING-WIDGET] 全文已更新，新长度: {len(self.full_text)}")
+        print(f"✅ [STREAMING-WIDGET] Full text updated, new length: {len(self.full_text)}")
         
         # 改进的初始检测逻辑：
         # 1. 移除timer检查限制，确保每个新消息都能进行初始检测
@@ -1229,44 +1229,44 @@ class StreamingMessageWidget(MessageWidget):
             self.is_markdown_detected = detect_markdown_content(self.full_text)
             # 如果检测到markdown，立即进行初始渲染
             if self.is_markdown_detected:
-                print(f"🔍 [STREAMING] 初始检测到markdown格式，长度: {len(self.full_text)}")
-                print(f"📋 [STREAMING] Timer状态: {'激活' if timer_was_active else '未激活'}")
-                print(f"📝 [STREAMING] 前50字符: {self.full_text[:50]}...")
+                print(f"🔍 [STREAMING] Initially detected markdown format, length: {len(self.full_text)}")
+                print(f"📋 [STREAMING] Timer status: {'Active' if timer_was_active else '未Active'}")
+                print(f"📝 [STREAMING] First 50 characters: {self.full_text[:50]}...")
                 # 立即设置正确的格式
                 self.current_format = Qt.TextFormat.RichText
                 self.content_label.setTextFormat(Qt.TextFormat.RichText)
                 
         # 确保timer启动
         if not self.typing_timer.isActive():
-            print(f"⏰ [STREAMING-WIDGET] 启动打字机定时器")
+            print(f"⏰ [STREAMING-WIDGET] Started typewriter timer")
             # 更快的打字机效果：5ms per character（之前是20ms）
             self.typing_timer.start(5)
         else:
-            print(f"⏰ [STREAMING-WIDGET] 打字机定时器已在运行")
+            print(f"⏰ [STREAMING-WIDGET] Typewriter timer already running")
     
     def _adjust_typing_speed(self):
         """动态调整打字机速度"""
         remaining_chars = len(self.full_text) - self.display_index
         
-        # 如果剩余字符很多，加速显示
+        # 如果Remainingcharacters很多，加速显示
         if remaining_chars > 500:
-            # 大量剩余内容，极快速度
+            # 大量Remaining内容，极快速度
             new_interval = 1
         elif remaining_chars > 200:
-            # 中等剩余内容，快速度
+            # 中等Remaining内容，快速度
             new_interval = 2
         elif remaining_chars > 50:
-            # 少量剩余内容，正常速度
+            # 少量Remaining内容，正常速度
             new_interval = 3
         else:
-            # 很少剩余内容，慢速度保持打字效果
+            # 很少Remaining内容，慢速度保持打字效果
             new_interval = 5
             
         # 检查是否需要调整定时器间隔
         if self.typing_timer.isActive():
             current_interval = self.typing_timer.interval()
             if current_interval != new_interval:
-                print(f"🚀 [TYPING] 调整打字速度: {current_interval}ms -> {new_interval}ms, 剩余: {remaining_chars}字符")
+                print(f"🚀 [TYPING] Adjusted typing speed: {current_interval}ms -> {new_interval}ms, Remaining: {remaining_chars}characters")
                 self.typing_timer.setInterval(new_interval)
     
     def mark_as_stopped(self):
@@ -1285,10 +1285,10 @@ class StreamingMessageWidget(MessageWidget):
         self.content_label.setText(stopped_text)
         self.content_label.setTextFormat(Qt.TextFormat.PlainText)
         
-        # 转换消息类型为AI_RESPONSE
+        # 转换Message type为AI_RESPONSE
         self.message.type = MessageType.AI_RESPONSE
         
-        print(f"🛑 流式消息已停止，显示位置: {self.display_index}/{len(self.full_text)}")
+        print(f"🛑 Streaming message stopped, display position: {self.display_index}/{len(self.full_text)}")
             
     def show_next_char(self):
         """Show next character in typing animation"""
@@ -1296,10 +1296,10 @@ class StreamingMessageWidget(MessageWidget):
         # 首先检查是否已被停止
         if self.is_stopped:
             self.typing_timer.stop()
-            print(f"🛑 打字机效果检测到停止状态，立即终止")
+            print(f"🛑 Typewriter effect detected stop state, immediately terminating")
             return
             
-        # 动态调整打字速度（根据剩余字符数量）
+        # 动态Adjusted typing speed（根据Remainingcharacters数量）
         self._adjust_typing_speed()
             
         if self.display_index < len(self.full_text):
@@ -1307,13 +1307,13 @@ class StreamingMessageWidget(MessageWidget):
             display_text = self.full_text[:self.display_index]
             current_time = time.time()
             
-            # 早期markdown检测（在前20个字符时就开始检测）
+            # 早期markdown检测（在前20个characters时就开始检测）
             if self.display_index <= 20 and not self.is_markdown_detected and len(self.full_text) > 5:
                 if detect_markdown_content(self.full_text):
                     self.is_markdown_detected = True
                     self.current_format = Qt.TextFormat.RichText
                     self.content_label.setTextFormat(Qt.TextFormat.RichText)
-                    print(f"🚀 [STREAMING] 早期检测到markdown格式（{self.display_index}字符），全文长度: {len(self.full_text)}")
+                    print(f"🚀 [STREAMING] Early detected markdown format（{self.display_index}characters），Full text length: {len(self.full_text)}")
             
             # 检查是否需要进行阶段性markdown渲染
             should_render = False
@@ -1321,8 +1321,8 @@ class StreamingMessageWidget(MessageWidget):
             # 添加更新缓冲检查 - 减少频繁的DOM操作
             should_update_display = False
             
-            # 缓冲条件1: 每5个字符更新一次显示（减少更新频率）
-            # 但前10个字符立即显示，确保用户看到内容开始
+            # 缓冲条件1: 每5个characters更新一次显示（减少更新频率）
+            # 但前10个characters立即显示，确保用户看到内容开始
             if self.display_index <= 10 or self.display_index % 5 == 0:
                 should_update_display = True
             
@@ -1330,7 +1330,7 @@ class StreamingMessageWidget(MessageWidget):
             elif display_text and display_text[-1] in ['\n', '.', '。', '!', '！', '?', '？']:
                 should_update_display = True
             
-            # 缓冲条件3: 达到字符间隔时必须更新
+            # 缓冲条件3: 达到characters间隔时必须更新
             if self.display_index - self.last_render_index >= self.render_interval:
                 should_render = True
                 should_update_display = True
@@ -1347,15 +1347,15 @@ class StreamingMessageWidget(MessageWidget):
                 should_render = True
                 should_update_display = True
                 self.has_video_source = True  # 标记已检测到视频源，避免重复打印
-                print(f"🎬 [STREAMING] 检测到视频源内容，触发渲染")
+                print(f"🎬 [STREAMING] Detected video source content, triggering render")
             
             # 条件4: 检测到markdown格式内容（新增条件，确保格式内容能被渲染）
             elif not self.is_markdown_detected and len(display_text) > 5 and detect_markdown_content(display_text):
                 should_render = True
                 should_update_display = True
                 self.is_markdown_detected = True
-                print(f"🔄 [STREAMING] 检测到格式内容，触发渲染，当前长度: {len(display_text)}")
-                print(f"📝 [STREAMING] 前50字符: {display_text[:50]}...")
+                print(f"🔄 [STREAMING] Detected format content, triggering render, current length: {len(display_text)}")
+                print(f"📝 [STREAMING] First 50 characters: {display_text[:50]}...")
                 # 立即设置正确的格式
                 self.current_format = Qt.TextFormat.RichText
                 self.content_label.setTextFormat(Qt.TextFormat.RichText)
@@ -1365,24 +1365,24 @@ class StreamingMessageWidget(MessageWidget):
                 # 重新检测整个文本，避免误判
                 if detect_markdown_content(self.full_text):
                     should_render = True
-                    print(f"🔄 [STREAMING] 重新检测到格式内容，触发渲染")
+                    print(f"🔄 [STREAMING] Re-detected format content, triggering render")
                 else:
                     # 如果确实没有格式，重置状态
                     self.is_markdown_detected = False
                     self.current_format = Qt.TextFormat.PlainText
-                    print(f"🔄 [STREAMING] 重置为纯文本格式")
+                    print(f"🔄 [STREAMING] Reset to plain text format")
             
-            # 条件6: 每100个字符强制检测一次格式（新增，确保不会遗漏格式内容）
+            # 条件6: 每100个characters强制检测一次格式（新增，确保不会遗漏格式内容）
             elif self.display_index % 100 == 0 and self.display_index > 0:
                 if detect_markdown_content(display_text) and not self.is_markdown_detected:
                     should_render = True
                     self.is_markdown_detected = True
-                    print(f"🔄 [STREAMING] 强制检测到格式内容，触发渲染，位置: {self.display_index}")
+                    print(f"🔄 [STREAMING] Force detected format content, triggering render, position: {self.display_index}")
             
             # 条件7: 如果已经检测到markdown但还没有渲染过，强制渲染（新增）
             elif self.is_markdown_detected and self.current_format == Qt.TextFormat.PlainText:
                 should_render = True
-                print(f"🔄 [STREAMING] 强制渲染已检测的markdown内容，位置: {self.display_index}")
+                print(f"🔄 [STREAMING] Force render detected markdown content, position: {self.display_index}")
             
             # 进行渲染处理
             if should_render and self.message.type == MessageType.AI_STREAMING:
@@ -1396,20 +1396,20 @@ class StreamingMessageWidget(MessageWidget):
                     if self.current_format != Qt.TextFormat.RichText:
                         self.content_label.setTextFormat(Qt.TextFormat.RichText)
                         self.current_format = Qt.TextFormat.RichText
-                        print(f"📝 [STREAMING] 切换到RichText格式，内容长度: {len(display_text)}")
+                        print(f"📝 [STREAMING] Switched to RichText format, content length: {len(display_text)}")
                     self.content_label.setText(html_content)
                     
                     # 如果还未连接linkActivated信号，现在连接
                     if not self.link_signal_connected:
                         self.content_label.linkActivated.connect(self.on_link_clicked)
                         self.link_signal_connected = True
-                        print(f"🔗 [STREAMING] 已连接linkActivated信号")
-                        print(f"🔗 [STREAMING] 当前内容包含链接: {'<a href' in html_content}")
+                        print(f"🔗 [STREAMING] linkActivated signal connected")
+                        print(f"🔗 [STREAMING] Current content contains links: {'<a href' in html_content}")
                         
                     # 确保内容标签启用了链接打开
                     self.content_label.setOpenExternalLinks(False)  # 确保信号处理而不是直接打开
-                    print(f"🔗 [STREAMING] 内容标签配置 - OpenExternalLinks: {self.content_label.openExternalLinks()}")
-                    print(f"🔗 [STREAMING] 内容标签格式: {self.content_label.textFormat()}")
+                    print(f"🔗 [STREAMING] Content label config - OpenExternalLinks: {self.content_label.openExternalLinks()}")
+                    print(f"🔗 [STREAMING] Content label format: {self.content_label.textFormat()}")
                     
                     # 确保状态一致
                     self.is_markdown_detected = True
@@ -1418,7 +1418,7 @@ class StreamingMessageWidget(MessageWidget):
                     if self.current_format != Qt.TextFormat.PlainText:
                         self.content_label.setTextFormat(Qt.TextFormat.PlainText)
                         self.current_format = Qt.TextFormat.PlainText
-                        print(f"📝 [STREAMING] 切换到PlainText格式，内容长度: {len(display_text)}")
+                        print(f"📝 [STREAMING] Switched to PlainText format, content length: {len(display_text)}")
                     self.content_label.setText(display_text)
                     
                     # 确保状态一致
@@ -1450,9 +1450,9 @@ class StreamingMessageWidget(MessageWidget):
                 
                 # 恢复更新
                 self.content_label.setUpdatesEnabled(True)
-            # 如果既不需要渲染也不需要更新显示，但这是前5个字符，强制至少显示一次
+            # 如果既不需要渲染也不需要更新显示，但这是前5个characters，强制至少显示一次
             elif self.display_index <= 5:
-                print(f"🚀 [DISPLAY] 强制显示前5个字符: display_index={self.display_index}")
+                print(f"🚀 [DISPLAY] 强制显示前5个characters: display_index={self.display_index}")
                 should_update_display = True
                 if self.is_markdown_detected:
                     html_content = convert_markdown_to_html(display_text)
@@ -1469,9 +1469,9 @@ class StreamingMessageWidget(MessageWidget):
         else:
             self.typing_timer.stop()
             
-            # 最终完成时，转换消息类型并进行最终渲染
+            # 最终完成时，转换Message type并进行最终渲染
             if self.message.type == MessageType.AI_STREAMING and self.full_text and not self.is_stopped:
-                # 将消息类型改为AI_RESPONSE，表示流式输出已完成
+                # 将Message type改为AI_RESPONSE，表示流式输出已完成
                 self.message.type = MessageType.AI_RESPONSE
                 
                 # 输出完成信息
@@ -1480,12 +1480,12 @@ class StreamingMessageWidget(MessageWidget):
                     '---\n<small>', 
                     '<small>.*?来源.*?</small>'
                 ])
-                print(f"🎬 [STREAMING] 流式消息完成，长度: {len(self.full_text)} 字符，包含视频源: {has_video_sources}")
+                print(f"🎬 [STREAMING] Streaming message completed, length: {len(self.full_text)} characters，Contains video sources: {has_video_sources}")
                 
                 # 发出完成信号
                 self.streaming_finished.emit()
                 
-                # 进行最终的格式检测和转换 - 强制重新检测，忽略缓存状态
+                # 进行最终的格式检测和转换 - 强制重新检测，忽略Cache status
                 final_has_format = detect_markdown_content(self.full_text)
                 final_has_video_sources = has_video_sources
                 
@@ -1493,11 +1493,11 @@ class StreamingMessageWidget(MessageWidget):
                 if not self.is_markdown_detected and final_has_format:
                     self.is_markdown_detected = True
                     self.current_format = Qt.TextFormat.RichText
-                    print(f"⚡ [STREAMING] 最终检测到markdown格式，强制更新渲染")
+                    print(f"⚡ [STREAMING] Finally detected markdown format, force update render")
                 
-                print(f"🔄 [STREAMING] 最终格式检测: markdown={final_has_format}, video={final_has_video_sources}, 缓存状态={self.is_markdown_detected}")
+                print(f"🔄 [STREAMING] Final format detection: markdown={final_has_format}, video={final_has_video_sources}, Cache status={self.is_markdown_detected}")
                 
-                # 确保最终渲染使用正确的格式 - 基于实际检测结果而不是缓存状态
+                # 确保最终渲染使用正确的格式 - 基于实际检测结果而不是Cache status
                 if final_has_format or final_has_video_sources:
                     html_content = convert_markdown_to_html(self.full_text)
                     self.content_label.setText(html_content)
@@ -1509,23 +1509,23 @@ class StreamingMessageWidget(MessageWidget):
                     if not self.link_signal_connected:
                         self.content_label.linkActivated.connect(self.on_link_clicked)
                         self.link_signal_connected = True
-                        print(f"🔗 [STREAMING] 最终渲染时连接linkActivated信号")
+                        print(f"🔗 [STREAMING] Connect linkActivated signal during final render")
                         
                     # 确保内容标签配置正确
                     self.content_label.setOpenExternalLinks(False)  # 确保信号处理而不是直接打开
-                    print(f"🔗 [STREAMING] 最终渲染 - 内容包含链接: {'<a href' in html_content}")
-                    print(f"🔗 [STREAMING] 最终渲染 - OpenExternalLinks: {self.content_label.openExternalLinks()}")
-                    print(f"🔗 [STREAMING] 最终渲染 - 文本格式: {self.content_label.textFormat()}")
+                    print(f"🔗 [STREAMING] Final render - content contains links: {'<a href' in html_content}")
+                    print(f"🔗 [STREAMING] Final render - OpenExternalLinks: {self.content_label.openExternalLinks()}")
+                    print(f"🔗 [STREAMING] Final render - text format: {self.content_label.textFormat()}")
                     
-                    print(f"✅ [STREAMING] 最终渲染完成，使用RichText格式")
+                    print(f"✅ [STREAMING] Final render completed, using RichText format")
                 else:
                     self.content_label.setText(self.full_text)
                     self.content_label.setTextFormat(Qt.TextFormat.PlainText)
                     self.current_format = Qt.TextFormat.PlainText
                     self.is_markdown_detected = False  # 更新状态与检测结果一致
-                    print(f"✅ [STREAMING] 最终渲染完成，使用PlainText格式")
+                    print(f"✅ [STREAMING] Final render completed, using PlainText format")
                 
-                # 流式结束后恢复灵活宽度
+                # 流式结束后恢复灵活width
                 self._restore_flexible_width()
                 
                 # 只在流式结束后进行一次完整的布局更新
@@ -1549,20 +1549,20 @@ class StreamingMessageWidget(MessageWidget):
         self.content_label.setText(f"{self.message.content}{dots}")
     
     def mark_as_completed(self):
-        """标记流式输出已完成，快速显示剩余内容"""
-        print(f"🏁 [STREAMING] 流式输出完成，快速显示剩余内容")
-        print(f"🏁 [STREAMING] 当前显示: {self.display_index}/{len(self.full_text)} 字符")
+        """标记流式输出已完成，快速显示Remaining内容"""
+        print(f"🏁 [STREAMING] 流式输出完成，快速显示Remaining内容")
+        print(f"🏁 [STREAMING] Currently displaying: {self.display_index}/{len(self.full_text)} characters")
         
         # 如果还有很多未显示的内容，直接快速显示
         remaining_chars = len(self.full_text) - self.display_index
         if remaining_chars > 50:
-            print(f"⚡ [STREAMING] 剩余 {remaining_chars} 字符，切换到极速显示模式")
+            print(f"⚡ [STREAMING] Remaining {remaining_chars} characters，切换到极速显示模式")
             # 停止当前定时器
             self.typing_timer.stop()
-            # 使用极快的定时器快速显示剩余内容
+            # 使用极快的定时器快速显示Remaining内容
             self.typing_timer.start(1)  # 1ms per character，极快速度
         else:
-            print(f"✅ [STREAMING] 剩余 {remaining_chars} 字符不多，保持当前速度")
+            print(f"✅ [STREAMING] Remaining {remaining_chars} characters不多，保持当前速度")
 
 
 class ChatView(QScrollArea):
@@ -1640,7 +1640,7 @@ class ChatView(QScrollArea):
         self._add_welcome_message()
         
     def _check_and_fix_width(self):
-        """检查并修复ChatView宽度异常"""
+        """检查并修复ChatView width异常"""
         if not self.parent():
             return
             
@@ -1648,38 +1648,38 @@ class ChatView(QScrollArea):
         current_width = self.width()
         viewport_width = self.viewport().width()
         
-        # 如果父容器宽度正常但ChatView宽度异常
+        # 如果Parent container width正常但ChatView width异常
         if parent_width > 600 and current_width < 600:
-            print(f"🔧 检测到ChatView宽度异常，开始修复:")
-            print(f"  父容器宽度: {parent_width}px")
-            print(f"  ChatView宽度: {current_width}px") 
-            print(f"  viewport宽度: {viewport_width}px")
+            print(f"🔧 Detected ChatView width abnormal, starting fix:")
+            print(f"  Parent container width: {parent_width}px")
+            print(f"  ChatView width: {current_width}px") 
+            print(f"  viewport width: {viewport_width}px")
             
             # 显示完整的父容器链
-            print(f"  完整父容器链:")
+            print(f"  Complete parent container chain:")
             parent = self.parent()
             level = 0
             while parent and level < 5:
                 parent_width_info = parent.width() if hasattr(parent, 'width') else "N/A"
                 parent_type = type(parent).__name__
                 parent_geometry = parent.geometry() if hasattr(parent, 'geometry') else "N/A"
-                print(f"    └─ [{level}] {parent_type}: 宽度={parent_width_info}px, 几何={parent_geometry}")
+                print(f"    └─ [{level}] {parent_type}: width={parent_width_info}px, geometry={parent_geometry}")
                 parent = parent.parent() if hasattr(parent, 'parent') else None
                 level += 1
             
-            # 强制设置为父容器宽度
+            # 强制设置为Parent container width
             self.setFixedWidth(parent_width)
-            QTimer.singleShot(50, lambda: self.setMaximumWidth(16777215))  # 延迟移除固定宽度限制
+            QTimer.singleShot(50, lambda: self.setMaximumWidth(16777215))  # 延迟移除固定width限制
             QTimer.singleShot(100, lambda: self.setMinimumWidth(0))
             
-            print(f"🔧 已修复ChatView宽度为: {parent_width}px")
+            print(f"🔧 已修复ChatView width为: {parent_width}px")
             
-        # 如果viewport宽度异常，强制刷新
+        # 如果viewport width异常，强制刷新
         elif viewport_width < 600 and parent_width > 600:
-            print(f"🔧 检测到viewport宽度异常，强制刷新layout")
-            print(f"  当前尺寸策略: {self.sizePolicy().horizontalPolicy()}")
-            print(f"  最小尺寸: {self.minimumSize()}")
-            print(f"  最大尺寸: {self.maximumSize()}")
+            print(f"🔧 检测到viewport width异常，强制刷新layout")
+            print(f"  Current size policy: {self.sizePolicy().horizontalPolicy()}")
+            print(f"  Minimum size: {self.minimumSize()}")
+            print(f"  Maximum size: {self.maximumSize()}")
             
             self.updateGeometry()
             self.container.updateGeometry()
@@ -1718,7 +1718,7 @@ class ChatView(QScrollArea):
     def add_message(self, msg_type: MessageType, content: str, 
                    metadata: Dict[str, Any] = None) -> MessageWidget:
         """Add a new message to the chat"""
-        # 检查并修复ChatView宽度异常
+        # 检查并修复ChatView width异常
         self._check_and_fix_width()
         
         message = ChatMessage(
@@ -1735,7 +1735,7 @@ class ChatView(QScrollArea):
         self.layout.insertWidget(self.layout.count() - 1, widget)
         self.messages.append(widget)
         
-        # 动态设置消息最大宽度为聊天视图宽度的75%
+        # 动态设置消息最大width为聊天视图width的75%
         self._update_message_width(widget)
         
         # 温和的布局更新，避免强制调整大小
@@ -1749,20 +1749,20 @@ class ChatView(QScrollArea):
         
     def add_streaming_message(self) -> StreamingMessageWidget:
         """Add a new streaming message"""
-        print(f"🎬 [UI-DEBUG] 开始创建流式消息组件")
+        print(f"🎬 [UI-DEBUG] Started creating streaming message component")
         try:
             # 创建流式消息，完成后会转换为AI_RESPONSE类型
             streaming_widget = self.add_message(MessageType.AI_STREAMING, "")
-            print(f"✅ [UI-DEBUG] 流式消息组件创建成功: {streaming_widget}")
-            print(f"✅ [UI-DEBUG] 流式消息组件类型: {type(streaming_widget)}")
+            print(f"✅ [UI-DEBUG] Streaming message component created successfully: {streaming_widget}")
+            print(f"✅ [UI-DEBUG] Streaming message component type: {type(streaming_widget)}")
             return streaming_widget
         except Exception as e:
-            print(f"❌ [UI-DEBUG] 创建流式消息组件失败: {e}")
+            print(f"❌ [UI-DEBUG] Failed to create streaming message component: {e}")
             raise
         
     def show_status(self, message: str) -> StatusMessageWidget:
         """显示状态信息"""
-        # 检查并修复ChatView宽度异常
+        # 检查并修复ChatView width异常
         self._check_and_fix_width()
         
         # 如果已有状态消息，先隐藏
@@ -1773,7 +1773,7 @@ class ChatView(QScrollArea):
         self.current_status_widget = StatusMessageWidget(message, self)
         self.layout.insertWidget(self.layout.count() - 1, self.current_status_widget)
         
-        # 动态设置消息最大宽度
+        # 动态设置消息最大width
         self._update_status_width(self.current_status_widget)
         
         # 温和的布局更新
@@ -1802,26 +1802,26 @@ class ChatView(QScrollArea):
             self.current_status_widget = None
             
     def _update_status_width(self, widget: StatusMessageWidget):
-        """更新状态消息控件的最大宽度"""
-        # 获取聊天视图的实际宽度，考虑滚动条宽度
+        """更新状态消息控件的最大width"""
+        # 获取聊天视图的实际width，考虑滚动条width
         chat_width = self.viewport().width()
         
-        # 减去滚动条可能占用的宽度
+        # 减去滚动条可能占用的width
         scrollbar = self.verticalScrollBar()
         if scrollbar and scrollbar.isVisible():
             chat_width -= scrollbar.width()
             
         if chat_width > 0:
-            # 确保有效宽度
+            # 确保有效width
             chat_width = max(300, chat_width)
             
-            # 设置状态消息最大宽度为聊天视图宽度的75%，最小300px，最大600px
+            # 设置状态消息最大width为聊天视图width的75%，最小300px，最大600px
             max_width = min(max(int(chat_width * 0.75), 300), 600)
-            # 找到状态气泡并设置其最大宽度
+            # 找到状态气泡并设置其最大width
             bubble = widget.findChild(QFrame, "statusBubble")
             if bubble:
                 bubble.setMaximumWidth(max_width)
-                # 使用首选尺寸策略，避免固定宽度造成布局问题
+                # 使用首选尺寸策略，避免固定width造成布局问题
                 bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         
     def scroll_to_bottom(self):
@@ -1837,12 +1837,12 @@ class ChatView(QScrollArea):
     def request_auto_scroll(self):
         """请求自动滚动（防抖动）"""
         if not self.auto_scroll_enabled or self.user_scrolled_manually:
-            print(f"🚫 [SCROLL] 滚动请求被拒绝 - auto_enabled: {self.auto_scroll_enabled}, manual: {self.user_scrolled_manually}")
+            print(f"🚫 [SCROLL] Scroll request rejected - auto_enabled: {self.auto_scroll_enabled}, manual: {self.user_scrolled_manually}")
             return
             
         # 标记有滚动请求
         self._scroll_request_pending = True
-        print(f"📋 [SCROLL] 收到滚动请求，启动防抖定时器")
+        print(f"📋 [SCROLL] Received scroll request, starting debounce timer")
         
         # 使用防抖动定时器，避免频繁滚动
         self._scroll_request_timer.stop()
@@ -1850,15 +1850,15 @@ class ChatView(QScrollArea):
         
     def _perform_auto_scroll(self):
         """实际执行自动滚动"""
-        print(f"🔄 [SCROLL] _perform_auto_scroll 被调用，pending: {self._scroll_request_pending}")
+        print(f"🔄 [SCROLL] _perform_auto_scroll called, pending: {self._scroll_request_pending}")
         if not self._scroll_request_pending:
             return
             
         # 检查内容高度是否变化
         current_height = self.container.sizeHint().height()
         if current_height != self._last_content_height:
-            # 内容还在变化，等待稳定
-            print(f"📏 [SCROLL] 内容高度变化: {self._last_content_height} -> {current_height}，等待稳定")
+            # 内容还在变化，Waiting for stability
+            print(f"📏 [SCROLL] Content height changed: {self._last_content_height} -> {current_height}，Waiting for stability")
             self._last_content_height = current_height
             self._content_stable_timer.stop()
             self._content_stable_timer.start(50)  # 50ms后再次检查
@@ -1870,14 +1870,14 @@ class ChatView(QScrollArea):
             scrollbar = self.verticalScrollBar()
             at_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
             
-            print(f"📊 [SCROLL] 滚动检查 - max: {scrollbar.maximum()}, value: {scrollbar.value()}, at_bottom: {at_bottom}")
+            print(f"📊 [SCROLL] Scroll check - max: {scrollbar.maximum()}, value: {scrollbar.value()}, at_bottom: {at_bottom}")
             
             if at_bottom or self._scroll_request_pending:
                 # 平滑滚动到底部
                 self.scroll_to_bottom()
-                print(f"📍 [SCROLL] 执行自动滚动，高度: {current_height}px")
+                print(f"📍 [SCROLL] Executing auto scroll, height: {current_height}px")
         else:
-            print(f"🚫 [SCROLL] 滚动被禁用或用户手动滚动")
+            print(f"🚫 [SCROLL] Scroll disabled or user manually scrolled")
                 
         self._scroll_request_pending = False
         
@@ -1902,7 +1902,7 @@ class ChatView(QScrollArea):
         
         # 如果用户滚动到接近底部，重新启用自动滚动
         if near_bottom and self.user_scrolled_manually:
-            print("📍 用户滚动到底部附近，重新启用自动滚动")
+            print("📍 User scrolled near bottom, re-enabling auto scroll")
             self.user_scrolled_manually = False
             self.auto_scroll_enabled = True
             
@@ -1917,14 +1917,14 @@ class ChatView(QScrollArea):
         near_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
         
         if not near_bottom:
-            # 如果不在底部，禁用自动滚动
+            # 如果不在底部，Disable auto scroll
             self.auto_scroll_enabled = False
-            print("📍 用户手动滚动离开底部，禁用自动滚动")
+            print("📍 User manually scrolled away from bottom, disabling auto scroll")
         else:
             # 如果在底部，保持自动滚动
             self.auto_scroll_enabled = True
             self.user_scrolled_manually = False
-            print("📍 用户在底部附近，保持自动滚动")
+            print("📍 User near bottom, maintaining auto scroll")
             
     def wheelEvent(self, event):
         """鼠标滚轮事件 - 检测用户滚轮操作"""
@@ -1947,42 +1947,42 @@ class ChatView(QScrollArea):
             self.auto_scroll_enabled = True
             self.user_scrolled_manually = False
         else:
-            # 否则禁用自动滚动
+            # 否则Disable auto scroll
             self.auto_scroll_enabled = False
-            print("📍 滚轮操作离开底部，禁用自动滚动")
+            print("📍 Wheel operation left bottom, disabling auto scroll")
             
     def mouseDoubleClickEvent(self, event):
         """双击事件 - 手动重新启用自动滚动并滚动到底部"""
         if event.button() == Qt.MouseButton.LeftButton:
-            print("📍 双击聊天区域，重新启用自动滚动")
+            print("📍 Double-clicked chat area, re-enabling auto scroll")
             self.auto_scroll_enabled = True
             self.user_scrolled_manually = False
             self.scroll_to_bottom()
         super().mouseDoubleClickEvent(event)
         
     def reset_auto_scroll(self):
-        """重置自动滚动状态（供外部调用）"""
+        """Reset auto scroll state（供外部调用）"""
         self.auto_scroll_enabled = True
         self.user_scrolled_manually = False
-        print("📍 重置自动滚动状态")
+        print("📍 Reset auto scroll state")
         
     def disable_auto_scroll(self):
-        """禁用自动滚动（供外部调用）"""
+        """Disable auto scroll（供外部调用）"""
         self.auto_scroll_enabled = False
         self.user_scrolled_manually = True
-        print("📍 禁用自动滚动")
+        print("📍 Disable auto scroll")
         
     def keyPressEvent(self, event):
         """键盘事件 - 支持快捷键控制自动滚动"""
         if event.key() == Qt.Key.Key_End:
             # End键：重新启用自动滚动并滚动到底部
-            print("📍 按下End键，重新启用自动滚动")
+            print("📍 Pressed End key, re-enabling auto scroll")
             self.auto_scroll_enabled = True
             self.user_scrolled_manually = False
             self.scroll_to_bottom()
         elif event.key() == Qt.Key.Key_Home:
-            # Home键：滚动到顶部并禁用自动滚动
-            print("📍 按下Home键，滚动到顶部并禁用自动滚动")
+            # Home键：滚动到顶部并Disable auto scroll
+            print("📍 按下Home键，滚动到顶部并Disable auto scroll")
             self.auto_scroll_enabled = False
             self.user_scrolled_manually = True
             scrollbar = self.verticalScrollBar()
@@ -1998,20 +1998,20 @@ class ChatView(QScrollArea):
         logger.info(f"📤 已发出wiki_requested信号")
         
     def _update_message_width(self, widget: MessageWidget):
-        """更新消息控件的最大宽度"""
+        """更新消息控件的最大width"""
         # 如果正在动画中，跳过更新
         if self._is_animating:
             return
             
-        # 获取多层容器的宽度信息，用于调试
+        # 获取多层容器的width信息，用于调试
         viewport_width = self.viewport().width()
         scroll_area_width = self.width()
         parent_window_width = self.parent().width() if self.parent() else "N/A"
         
-        # 获取聊天视图的实际宽度，考虑滚动条宽度
+        # 获取聊天视图的实际width，考虑滚动条width
         chat_width = viewport_width
         
-        # 减去滚动条可能占用的宽度
+        # 减去滚动条可能占用的width
         scrollbar = self.verticalScrollBar()
         scrollbar_width = 0
         if scrollbar and scrollbar.isVisible():
@@ -2019,32 +2019,32 @@ class ChatView(QScrollArea):
             chat_width -= scrollbar_width
             
         if chat_width > 0:
-            # 确保有效宽度
+            # 确保有效width
             chat_width = max(300, chat_width)
             
-            # 设置消息最大宽度为聊天视图宽度的75%，最小300px，最大600px
+            # 设置消息最大width为聊天视图width的75%，最小300px，最大600px
             max_width = min(max(int(chat_width * 0.75), 300), 600)
             
             # 如果是StreamingMessageWidget，调用其专门的更新方法
             if isinstance(widget, StreamingMessageWidget):
                 widget._update_bubble_width()
             else:
-                # 对于普通消息，使用最大宽度而不是固定宽度
+                # 对于普通消息，使用最大width而不是固定width
                 bubble = widget.findChild(QFrame, "messageBubble")
                 if bubble:
-                    # 使用最大宽度，让布局系统自由决定实际宽度
+                    # 使用最大width，让布局系统自由决定实际width
                     bubble.setMaximumWidth(max_width)
                     bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
                 
-                # 同时更新content_label的宽度
+                # 同时更新content_label的width
                 if hasattr(widget, 'content_label'):
                     content_width = max_width - 24  # 减去边距
                     widget.content_label.setMaximumWidth(content_width)
                     widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
                 
                 # 只在异常情况下输出调试信息
-                if viewport_width < 400:  # 当视图宽度异常小时输出警告
-                    print(f"⚠️ 视图宽度异常: viewport={viewport_width}px")
+                if viewport_width < 400:  # 当视图width异常小时输出警告
+                    print(f"⚠️ 视图width异常: viewport={viewport_width}px")
                 
     def resizeEvent(self, event):
         """窗口大小改变时触发防抖动更新"""
@@ -2054,24 +2054,24 @@ class ChatView(QScrollArea):
         if self._is_animating:
             return
         
-        # 强制ChatView保持正确的宽度（立即执行，避免显示异常）
+        # 强制ChatView保持正确的width（立即执行，避免显示异常）
         parent_width = self.parent().width() if self.parent() else 0
         current_width = self.width()
         if parent_width > 0 and abs(current_width - parent_width) > 5:  # 超过5px差异
             self.resize(parent_width, self.height())
         
-        # 使用防抖动机制延迟更新消息宽度（恢复原有逻辑）
+        # 使用防抖动机制延迟更新消息width（恢复原有逻辑）
         self.resize_timer.stop()  # 停止之前的计时器
         self.resize_timer.start(200)  # 0.2秒后执行更新
         
     def _performDelayedResize(self):
         """延迟执行的resize更新操作"""
-        print(f"📏 ChatView布局更新: {self.size()}")
+        print(f"📏 ChatView layout updated: {self.size()}")
         
-        # 更新所有现有消息的宽度
+        # 更新所有现有消息的width
         for widget in self.messages:
             self._update_message_width(widget)
-        # 更新状态消息的宽度
+        # 更新状态消息的width
         if self.current_status_widget:
             self._update_status_width(self.current_status_widget)
             
@@ -2091,7 +2091,7 @@ class ChatView(QScrollArea):
             for widget in self.messages:
                 if hasattr(widget, 'content_label'):
                     try:
-                        # 1. 更新消息宽度
+                        # 1. 更新消息width
                         self._update_message_width(widget)
                         
                         # 2. 强制内容标签重新计算尺寸
@@ -2133,7 +2133,7 @@ class ChatView(QScrollArea):
                         
                     except Exception as e:
                         # 记录错误而不是静默处理
-                        print(f"更新消息显示时出错: {e}")
+                        print(f"Error updating message display: {e}")
             
             # 更新状态消息
             if self.current_status_widget:
@@ -2149,7 +2149,7 @@ class ChatView(QScrollArea):
             
         except Exception as e:
             # 记录全局错误
-            print(f"_ensureContentComplete 出错: {e}")
+            print(f"_ensureContentComplete error: {e}")
     
     def _updateBubbleHeight(self, widget, bubble, content_label):
         """延迟更新气泡高度，确保内容渲染完成"""
@@ -2184,7 +2184,7 @@ class ChatView(QScrollArea):
             widget.update()
             
         except Exception as e:
-            print(f"更新气泡高度时出错: {e}")
+            print(f"Error updating bubble height: {e}")
     
     def _finalizeContentDisplay(self):
         """最终确认内容显示完整"""
@@ -2205,14 +2205,14 @@ class ChatView(QScrollArea):
             pass
             
     def update_all_message_widths(self):
-        """更新所有消息的宽度（用于窗口显示后的初始化）"""
+        """更新所有消息的width（用于窗口显示后的初始化）"""
         for widget in self.messages:
             self._update_message_width(widget)
         if self.current_status_widget:
             self._update_status_width(self.current_status_widget)
         
     def showEvent(self, event):
-        """窗口显示时更新消息宽度"""
+        """窗口显示时更新消息width"""
         super().showEvent(event)
         # 延迟更新，确保窗口已完全显示
         QTimer.singleShot(100, self.update_all_message_widths)
@@ -2370,24 +2370,24 @@ class WikiView(QWidget):
         # Try WebView2 first if enabled and available
         if USE_WEBVIEW2 and WEBVIEW2_AVAILABLE:
             try:
-                print("🔧 尝试创建WebView2...")
+                print("🔧 Attempting to create WebView2...")
                 self.web_view = WebView2Widget()
                 self.content_widget = self.web_view
                 self._webview_ready = True
                 webview_created = True
-                print("✅ WebView2创建成功 - 支持完整视频播放")
+                print("✅ WebView2 created successfully - supports full video playback")
                 
                 # 连接导航信号
                 self._connect_navigation_signals()
                 
             except Exception as e:
-                print(f"❌ WebView2创建失败: {e}")
+                print(f"❌ WebView2 creation failed: {e}")
                 webview_created = False
         
         
         # Final fallback to text view
         if not webview_created:
-            print("⚠️ WebView不可用，使用文本视图")
+            print("⚠️ WebView not available, using text view")
             self.web_view = None
             self.content_widget = self._create_fallback_text_view()
         
@@ -2491,7 +2491,7 @@ class WikiView(QWidget):
                 QTimer.singleShot(2000, self._check_for_redirect)
                 
         except Exception as e:
-            print(f"页面加载完成处理失败: {e}")
+            print(f"Page load completion handling failed: {e}")
             
     def _check_for_redirect(self):
         """检查页面是否已重定向到真实wiki页面"""
@@ -2506,7 +2506,7 @@ class WikiView(QWidget):
                     self._on_title_received
                 )
         except Exception as e:
-            print(f"重定向检查失败: {e}")
+            print(f"Redirect check failed: {e}")
             
     def _is_real_wiki_page(self, url: str) -> bool:
         """判断是否是真实的wiki页面（而不是搜索页面）"""
@@ -2558,18 +2558,18 @@ class WikiView(QWidget):
             self.current_title = title
             
             # 发出信号，通知找到了真实的wiki页面
-            print(f"📄 WikiView找到真实wiki页面: {title} -> {current_url}")
+            print(f"📄 WikiView found real wiki page: {title} -> {current_url}")
             self.wiki_page_loaded.emit(current_url, title)
             
         except Exception as e:
-            print(f"处理页面标题失败: {e}")
+            print(f"Failed to process page title: {e}")
     
     
     def _create_fallback_text_view(self):
         """创建降级的文本视图"""
         text_view = QTextEdit()
         text_view.setReadOnly(True)
-        text_view.setMinimumSize(100, 100)  # 减小最小尺寸，避免影响布局
+        text_view.setMinimumSize(100, 100)  # 减小Minimum size，避免影响布局
         text_view.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding
@@ -2589,14 +2589,14 @@ class WikiView(QWidget):
     def _delayed_webview_creation(self):
         """延迟创建WebView，在Qt应用完全初始化后执行"""
         try:
-            print("🔧 开始延迟WebView创建...")
+            print("🔧 Starting delayed WebView creation...")
             
             
             # WebView2 is the only supported option - skip creation
             new_web_view = None
             
             if new_web_view is not None:
-                print("✅ WebView延迟创建成功")
+                print("✅ WebView delayed creation successful")
                 
                 # 配置WebView属性
                 try:
@@ -2902,7 +2902,7 @@ class WikiView(QWidget):
                  
     def hideEvent(self, event):
         """当WikiView被隐藏时自动暂停媒体播放"""
-        # 只有在当前显示Wiki视图时才暂停
+        # 只有在Currently displayingWiki视图时才暂停
         if hasattr(self, 'parent') and self.parent():
             parent = self.parent()
             if hasattr(parent, 'content_stack'):
@@ -2955,8 +2955,8 @@ class UnifiedAssistantWindow(QMainWindow):
         )
         
         # 确保窗口可以自由调整大小，移除任何尺寸限制
-        self.setMinimumSize(300, 200)  # 设置一个合理的最小尺寸
-        self.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
+        self.setMinimumSize(300, 200)  # 设置一个合理的Minimum size
+        self.setMaximumSize(16777215, 16777215)  # 移除Maximum size限制
         
         # Central widget
         central = QWidget()
@@ -2988,7 +2988,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.wiki_view = WikiView()
         self.wiki_view.back_requested.connect(self.show_chat_view)  # This will restore input/shortcuts
         self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
-        # 确保Wiki视图有合理的最小尺寸但不强制固定尺寸
+        # 确保Wiki视图有合理的Minimum size但不强制固定尺寸
         self.wiki_view.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding
@@ -3189,8 +3189,8 @@ class UnifiedAssistantWindow(QMainWindow):
         
     def reset_size_constraints(self):
         """重置窗口尺寸约束，确保可以自由调整大小"""
-        self.setMinimumSize(300, 200)  # 保持合理的最小尺寸
-        self.setMaximumSize(16777215, 16777215)  # 移除最大尺寸限制
+        self.setMinimumSize(300, 200)  # 保持合理的Minimum size
+        self.setMaximumSize(16777215, 16777215)  # 移除Maximum size限制
         
     def apply_shadow(self):
         """Apply shadow effect to window"""
@@ -3245,11 +3245,11 @@ class UnifiedAssistantWindow(QMainWindow):
                 position_type = "相对坐标" if popup_config.use_relative_position else "绝对坐标"
                 size_type = "相对尺寸" if popup_config.use_relative_size else "固定尺寸"
                 
-                logging.info(f"恢复窗口几何: 位置({phys_x},{phys_y}) 尺寸({phys_w}x{phys_h}) "
+                logging.info(f"恢复窗口geometry: 位置({phys_x},{phys_y}) 尺寸({phys_w}x{phys_h}) "
                            f"屏幕({screen_info}) DPI缩放({scale:.2f}) "
                            f"配置({position_type}+{size_type})")
                 
-                # 恢复几何后重置尺寸约束，确保可以自由调整大小
+                # 恢复geometry后重置尺寸约束，确保可以自由调整大小
                 self.reset_size_constraints()
                 
                 # 如果是首次使用且创建了智能默认配置，保存到设置中
@@ -3257,7 +3257,7 @@ class UnifiedAssistantWindow(QMainWindow):
                     self._save_initial_geometry_config(popup_config)
                 
             except Exception as e:
-                logging.error(f"恢复窗口几何信息失败: {e}")
+                logging.error(f"恢复窗口geometry信息失败: {e}")
                 # 失败时使用安全的默认值
                 self._apply_safe_default_geometry()
         else:
@@ -3265,21 +3265,21 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def _final_geometry_check(self, x, y, width, height, screen):
         """
-        最终的几何检查，确保窗口完全可见且可操作
+        最终的geometry检查，确保窗口完全可见且可操作
         
         Args:
-            x, y, width, height: 窗口几何参数
+            x, y, width, height: 窗口geometry参数
             screen: 屏幕可用区域
             
         Returns:
             tuple: 调整后的(x, y, width, height)
         """
-        # 确保最小尺寸
+        # 确保Minimum size
         min_width, min_height = 300, 200
         width = max(min_width, width)
         height = max(min_height, height)
         
-        # 确保最大尺寸不超过屏幕
+        # 确保Maximum size不超过屏幕
         max_width = screen.width() - 20
         max_height = screen.height() - 40
         width = min(width, max_width)
@@ -3298,7 +3298,7 @@ class UnifiedAssistantWindow(QMainWindow):
         return x, y, width, height
     
     def _apply_safe_default_geometry(self):
-        """应用安全的默认几何配置"""
+        """应用安全的默认geometry配置"""
         try:
             screen = QApplication.primaryScreen().availableGeometry()
             # 使用屏幕中心偏右的安全位置
@@ -3308,17 +3308,17 @@ class UnifiedAssistantWindow(QMainWindow):
             safe_y = screen.y() + (screen.height() - safe_height) // 4
             
             self.setGeometry(safe_x, safe_y, safe_width, safe_height)
-            logging.info(f"应用安全默认几何: ({safe_x},{safe_y},{safe_width},{safe_height})")
+            logging.info(f"应用安全默认geometry: ({safe_x},{safe_y},{safe_width},{safe_height})")
         except Exception as e:
             # 最后的兜底方案
-            logging.error(f"应用安全默认几何失败: {e}")
+            logging.error(f"应用安全默认geometry失败: {e}")
             self.setGeometry(100, 100, 600, 500)
         
         self.reset_size_constraints()
     
     def _save_initial_geometry_config(self, popup_config):
         """
-        保存初始几何配置到设置文件
+        保存初始geometry配置到设置文件
         
         Args:
             popup_config: PopupConfig实例
@@ -3329,7 +3329,7 @@ class UnifiedAssistantWindow(QMainWindow):
             self.settings_manager.update({'popup': popup_dict})
             logging.info("已保存智能默认窗口配置到设置文件")
         except Exception as e:
-            logging.warning(f"保存初始几何配置失败: {e}")
+            logging.warning(f"保存初始geometry配置失败: {e}")
     
     def save_geometry(self):
         """Save window geometry to settings with enhanced format support"""
@@ -3401,12 +3401,12 @@ class UnifiedAssistantWindow(QMainWindow):
                 # 记录保存信息
                 pos_type = "相对" if use_relative_position else "绝对"
                 size_type = "相对" if use_relative_size else "固定"
-                logging.info(f"保存窗口几何: {pos_type}位置({css_x},{css_y}|{left_percent:.2f},{top_percent:.2f}) "
+                logging.info(f"保存窗口geometry: {pos_type}位置({css_x},{css_y}|{left_percent:.2f},{top_percent:.2f}) "
                            f"{size_type}尺寸({css_w}x{css_h}|{width_percent:.2f}x{height_percent:.2f}) "
                            f"DPI缩放({scale:.2f})")
                 
             except Exception as e:
-                logging.error(f"保存窗口几何信息失败: {e}")
+                logging.error(f"保存窗口geometry信息失败: {e}")
                 # 兜底保存基本信息
                 try:
                     geo = self.geometry()
@@ -3418,13 +3418,13 @@ class UnifiedAssistantWindow(QMainWindow):
                             'height': geo.height()
                         }
                     })
-                    logging.warning("使用基本格式保存窗口几何信息")
+                    logging.warning("使用基本格式保存窗口geometry信息")
                 except Exception as fallback_error:
                     logging.error(f"基本格式保存也失败: {fallback_error}")
     
     def show_chat_view(self):
         """Switch to chat view"""
-        # 首先停止WikiView中的媒体播放（只有在当前显示Wiki视图时才暂停）
+        # 首先停止WikiView中的媒体播放（只有在Currently displayingWiki视图时才暂停）
         if hasattr(self, 'wiki_view') and self.wiki_view:
             current_widget = self.content_stack.currentWidget()
             if current_widget == self.wiki_view:
@@ -3438,7 +3438,7 @@ class UnifiedAssistantWindow(QMainWindow):
             self.shortcut_container.show()
         # 切换到聊天视图时重置尺寸约束
         self.reset_size_constraints()
-        # 确保消息宽度正确并触发完整的布局更新
+        # 确保消息width正确并触发完整的布局更新
         QTimer.singleShot(50, self.chat_view.update_all_message_widths)
         # 延迟执行完整的布局更新，确保内容完整显示
         QTimer.singleShot(100, self.chat_view._performDelayedResize)
@@ -4218,7 +4218,7 @@ class UnifiedAssistantWindow(QMainWindow):
         event.ignore()  # Don't actually close the window
         self.hide()  # Just hide it
         
-        # 保存几何信息
+        # 保存geometry信息
         try:
             self.save_geometry()
         except Exception:
@@ -4366,10 +4366,10 @@ class AssistantController:
         self._fade_in_animation.setEndValue(1.0)
         self._fade_in_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
         
-        # 动画完成后聚焦到输入框并更新消息宽度
+        # 动画完成后聚焦到输入框并更新消息width
         def on_fade_in_finished():
             logger.info("Fade-in animation completed")
-            # 更新所有消息宽度
+            # 更新所有消息width
             if hasattr(self.main_window, 'chat_view'):
                 self.main_window.chat_view.update_all_message_widths()
             # 聚焦输入框
@@ -4399,7 +4399,7 @@ class AssistantController:
                 self.main_window.move(x, y)
                 logger.info(f"Adjusted window position to ensure visibility: ({x}, {y})")
             
-            # 消息宽度更新和输入框焦点设置将在动画完成后进行
+            # 消息width更新和输入框焦点设置将在动画完成后进行
             
             logger.info("Window position adjusted, fade-in animation in progress")
         else:
@@ -4407,7 +4407,7 @@ class AssistantController:
             # 使用restore_geometry恢复上次的窗口位置和大小
             self.main_window.restore_geometry()
             
-            # 窗口动画效果播放期间不需要更新消息宽度（动画结束后会更新）
+            # 窗口动画效果播放期间不需要更新消息width（动画结束后会更新）
             
         self.current_mode = WindowMode.CHAT
         
@@ -4435,7 +4435,7 @@ class AssistantController:
             query
         )
         
-        # 重置自动滚动状态，确保新查询时启用自动滚动
+        # Reset auto scroll state，确保新查询时启用自动滚动
         self.main_window.chat_view.reset_auto_scroll()
         
         # Show initial processing status
@@ -4589,7 +4589,7 @@ class AssistantController:
     def toggle_visibility(self):
         """切换显示/隐藏状态"""
         if self.is_visible():
-            # 记录当前显示的窗口模式
+            # 记录Currently displaying的窗口模式
             self._last_visible_mode = self.current_mode
             self._is_manually_hidden = True  # 用户主动隐藏
             self.hide_all()

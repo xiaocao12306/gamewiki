@@ -61,7 +61,7 @@ GAMES_CONFIG_PATH = APPDATA_DIR / "games.json"
 
 
 class ApiKeyMissingDialog(QDialog):
-    """自定义对话框，用于处理API key缺失的通知"""
+    """Custom dialog for handling API key missing notifications"""
     
     def __init__(self, missing_keys, parent=None):
         super().__init__(parent)
@@ -71,22 +71,22 @@ class ApiKeyMissingDialog(QDialog):
         self._init_ui()
         
     def _init_ui(self):
-        """初始化用户界面"""
+        """Initialize user interface"""
         self.setWindowTitle("GameWiki Assistant")
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
         self.setModal(True)
         self.setFixedSize(400, 220)
         
-        # 主布局
+        # Main layout
         layout = QVBoxLayout()
         layout.setSpacing(15)
         
-        # 标题
+        # Title
         title_label = QLabel("AI Features Unavailable")
         title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #d32f2f;")
         layout.addWidget(title_label)
         
-        # 消息内容
+        # Message content
         message = (
             "AI guide features require both API keys to function properly:\n\n"
             f"Missing: {', '.join(self.missing_keys)}\n\n"
@@ -100,16 +100,16 @@ class ApiKeyMissingDialog(QDialog):
         message_label.setStyleSheet("font-size: 11px; line-height: 1.4;")
         layout.addWidget(message_label)
         
-        # "不再提醒" 复选框
+        # "Don't remind me again" checkbox
         self.dont_remind_checkbox = QCheckBox("Don't remind me again (Wiki search only)")
         self.dont_remind_checkbox.setStyleSheet("font-size: 11px;")
         layout.addWidget(self.dont_remind_checkbox)
         
-        # 按钮布局
+        # Button layout
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
-        # 配置按钮
+        # Configure button
         config_button = QPushButton("Configure API Keys")
         config_button.setStyleSheet("""
             QPushButton {
@@ -127,7 +127,7 @@ class ApiKeyMissingDialog(QDialog):
         config_button.clicked.connect(self._on_configure_clicked)
         button_layout.addWidget(config_button)
         
-        # 稍后按钮
+        # Later button
         later_button = QPushButton("Maybe Later")
         later_button.setStyleSheet("""
             QPushButton {
@@ -167,19 +167,19 @@ class WindowsHotkeyFilter(QAbstractNativeEventFilter):
     def __init__(self, hotkey_handler):
         super().__init__()
         self.hotkey_handler = hotkey_handler
-        logger.info("WindowsHotkeyFilter初始化完成")
+        logger.info("WindowsHotkeyFilter initialization completed")
     
     def nativeEventFilter(self, eventType, message):
-        """过滤Windows原生消息"""
+        """Filter Windows native messages"""
         try:
-            # 检查是否是Windows消息
+            # Check if it's a Windows message
             if eventType == b"windows_generic_MSG":
-                # 将消息转换为可读格式
+                # Convert message to readable format
                 msg_ptr = int(message)
                 import ctypes
                 from ctypes import wintypes
                 
-                # 定义MSG结构
+                # Define MSG structure
                 class MSG(ctypes.Structure):
                     _fields_ = [
                         ("hwnd", wintypes.HWND),
@@ -190,24 +190,24 @@ class WindowsHotkeyFilter(QAbstractNativeEventFilter):
                         ("pt", wintypes.POINT)
                     ]
                 
-                # 获取消息内容
+                # Get message content
                 msg = MSG.from_address(msg_ptr)
                 
-                # 检查是否是热键消息
+                # Check if it's a hotkey message
                 if msg.message == win32con.WM_HOTKEY:
-                    logger.info(f"📨 原生事件过滤器收到热键消息: wParam={msg.wParam}, lParam={msg.lParam}")
+                    logger.info(f"📨 Native event filter received hotkey message: wParam={msg.wParam}, lParam={msg.lParam}")
                     
-                    # 调用热键处理函数
+                    # Call hotkey handler function
                     if self.hotkey_handler:
-                        self.hotkey_handler(msg.wParam, msg.lParam, "原生事件过滤器")
+                        self.hotkey_handler(msg.wParam, msg.lParam, "Native Event Filter")
                     
-                    # 返回True表示消息已处理
+                    # Return True to indicate message was handled
                     return True, 0
                     
         except Exception as e:
-            logger.error(f"原生事件过滤器错误: {e}")
+            logger.error(f"Native event filter error: {e}")
         
-        # 返回False表示消息未处理，继续传递
+        # Return False to indicate message was not handled, continue passing
         return False, 0
 
 
@@ -248,9 +248,9 @@ class GameWikiApp(QObject):
         self.settings_window = None
         self.assistant_ctrl = None
         self.hotkey_mgr = None
-        self.message_timer = None  # 用于主线程消息监听（备用）
-        self.hotkey_triggered_count = 0  # 热键触发计数器
-        self.native_filter = None  # Windows原生事件过滤器
+        self.message_timer = None  # For main thread message monitoring (backup)
+        self.hotkey_triggered_count = 0  # Hotkey trigger counter
+        self.native_filter = None  # Windows native event filter
         
         # Check command line arguments
         self.force_settings = '--settings' in sys.argv or '--config' in sys.argv

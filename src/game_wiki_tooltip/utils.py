@@ -4,19 +4,19 @@ from importlib import resources
 
 def package_file(relative_path: str) -> Path:
     """
-    返回打包在 game_wiki_tooltip/assets 里的文件的路径。
-    支持开发环境和PyInstaller打包环境。
+    Returns the path to files packaged in game_wiki_tooltip/assets.
+    Supports both development environment and PyInstaller packaged environment.
     """
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # PyInstaller打包环境
+        # PyInstaller packaged environment
         base_path = Path(sys._MEIPASS) / "assets"
         return base_path / relative_path
     else:
-        # 开发环境，使用importlib.resources
+        # Development environment, use importlib.resources
         try:
             return resources.files("src.game_wiki_tooltip.assets").joinpath(relative_path)
         except (ImportError, ModuleNotFoundError):
-            # 备用方案：基于当前文件的相对路径
+            # Fallback: relative path based on current file
             current_dir = Path(__file__).parent
             assets_dir = current_dir / "assets"
             return assets_dir / relative_path

@@ -90,58 +90,58 @@ class GeminiSummarizer:
                 "sources": []
             }
         
-        # 显示知识块信息
-        print(f"📋 [SUMMARY-DEBUG] 输入知识块详情:")
+        # Display knowledge chunk information
+        print(f"📋 [SUMMARY-DEBUG] Input knowledge chunk details:")
         for i, chunk in enumerate(chunks, 1):
-            print(f"   {i}. 主题: {chunk.get('topic', 'Unknown')}")
-            print(f"      分数: {chunk.get('score', 0):.4f}")
-            print(f"      类型: {chunk.get('type', 'General')}")
-            print(f"      关键词: {chunk.get('keywords', [])}")
-            print(f"      摘要: {chunk.get('summary', '')[:100]}...")
+            print(f"   {i}. Topic: {chunk.get('topic', 'Unknown')}")
+            print(f"      Score: {chunk.get('score', 0):.4f}")
+            print(f"      Type: {chunk.get('type', 'General')}")
+            print(f"      Keywords: {chunk.get('keywords', [])}")
+            print(f"      Summary: {chunk.get('summary', '')[:100]}...")
         
         try:
-            # 检测语言
+            # Detect language
             language = self._detect_language(query) if self.config.language == "auto" else self.config.language
-            print(f"🌐 [SUMMARY-DEBUG] 检测到语言: {language}")
+            print(f"🌐 [SUMMARY-DEBUG] Detected language: {language}")
             
             # Build the summarization prompt
-            print(f"📝 [SUMMARY-DEBUG] 构建通用摘要提示词")
+            print(f"📝 [SUMMARY-DEBUG] Building general summarization prompt")
             prompt = self._build_summarization_prompt(chunks, query, original_query, context)
-            print(f"   - 提示词长度: {len(prompt)} 字符")
-            print(f"   - 温度设置: {self.config.temperature}")
-            print(f"   - 无输出长度限制，由LLM自行判断")
+            print(f"   - Prompt length: {len(prompt)} characters")
+            print(f"   - Temperature setting: {self.config.temperature}")
+            print(f"   - No output length limit, let LLM decide")
             
             # Generate summary
-            print(f"🤖 [SUMMARY-DEBUG] 调用Gemini生成摘要")
+            print(f"🤖 [SUMMARY-DEBUG] Calling Gemini to generate summary")
             response = self.model.generate_content(prompt)
             
-            print(f"✅ [SUMMARY-DEBUG] Gemini响应成功")
-            print(f"   - 响应长度: {len(response.text)} 字符")
-            print(f"   - 完整响应内容:")
+            print(f"✅ [SUMMARY-DEBUG] Gemini response successful")
+            print(f"   - Response length: {len(response.text)} characters")
+            print(f"   - Complete response content:")
             print(f"{response.text}")
-            print(f"   - [响应内容结束]")
+            print(f"   - [Response content end]")
             
             # Parse and format the response
             formatted_response = self._format_summary_response(response.text, chunks)
             
-            print(f"📊 [SUMMARY-DEBUG] 摘要生成完成")
-            print(f"   - 使用的知识块数: {formatted_response['chunks_used']}")
-            print(f"   - 来源数: {len(formatted_response['sources'])}")
-            print(f"   - 最终摘要长度: {len(formatted_response['summary'])} 字符")
+            print(f"📊 [SUMMARY-DEBUG] Summary generation completed")
+            print(f"   - Knowledge chunks used: {formatted_response['chunks_used']}")
+            print(f"   - Sources count: {len(formatted_response['sources'])}")
+            print(f"   - Final summary length: {len(formatted_response['summary'])} characters")
             
             return formatted_response
             
         except Exception as e:
-            print(f"❌ [SUMMARY-DEBUG] 摘要生成失败: {e}")
+            print(f"❌ [SUMMARY-DEBUG] Summary generation failed: {e}")
             logger.error(f"Error in summarization: {str(e)}")
             
             # Fallback to simple concatenation
-            print(f"🔄 [SUMMARY-DEBUG] 使用降级摘要策略")
+            print(f"🔄 [SUMMARY-DEBUG] Using fallback summary strategy")
             fallback_result = self._fallback_summary(chunks, query, original_query)
             
-            print(f"📊 [SUMMARY-DEBUG] 降级摘要完成")
-            print(f"   - 使用的知识块数: {fallback_result['chunks_used']}")
-            print(f"   - 降级摘要长度: {len(fallback_result['summary'])} 字符")
+            print(f"📊 [SUMMARY-DEBUG] Fallback summary completed")
+            print(f"   - Knowledge chunks used: {fallback_result['chunks_used']}")
+            print(f"   - Fallback summary length: {len(fallback_result['summary'])} characters")
             
             return fallback_result
     
@@ -179,102 +179,102 @@ class GeminiSummarizer:
             print(f"⚠️ [STREAM-DEBUG] No context provided, game name not stored")
         
         if not chunks:
-            yield "抱歉，没有找到相关的游戏信息。"
+            yield "Sorry, no relevant game information found."
             return
             
         try:
-            print(f"🚀 [STREAM-DEBUG] 调用Gemini流式API")
+            print(f"🚀 [STREAM-DEBUG] Calling Gemini streaming API")
             
-            # 构建prompt
+            # Build prompt
             prompt = self._build_summarization_prompt(chunks, query, original_query, context)
             
-            # 用于收集完整响应文本以提取视频源
+            # For collecting complete response text to extract video sources
             complete_response = ""
             
-            # 使用新的Client API进行流式调用
+            # Use new Client API for streaming calls
             import google.generativeai as genai
             from google import genai as new_genai
             
             try:
-                # 尝试使用新的Client API（推荐方式）
+                # Try to use new Client API (recommended way)
                 client = new_genai.Client(api_key=self.config.api_key)
                 
-                # 流式生成内容
+                # Stream content generation
                 response = client.models.generate_content_stream(
                     model=self.config.model_name,
                     contents=[prompt]
                 )
                 
-                print(f"✅ [STREAM-DEBUG] 开始接收流式响应（新Client API）")
+                print(f"✅ [STREAM-DEBUG] Started receiving streaming response (new Client API)")
                 
-                # 实时产出流式内容
+                # Real-time streaming content output
                 for chunk in response:
                     if chunk.text:
-                        print(f"📝 [STREAM-DEBUG] 接收到流式片段: {len(chunk.text)} 字符")
+                        print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
                         complete_response += chunk.text
                         yield chunk.text
                     
-                print(f"🎉 [STREAM-DEBUG] 流式响应完成（新Client API）")
+                print(f"🎉 [STREAM-DEBUG] Streaming response completed (new Client API)")
                 
             except (ImportError, AttributeError) as e:
-                # 如果新API不可用，回退到尝试旧API
-                print(f"⚠️ [STREAM-DEBUG] 新Client API不可用({e})，尝试旧API方式")
+                # If new API is not available, fallback to old API
+                print(f"⚠️ [STREAM-DEBUG] New Client API not available({e}), trying old API method")
                 
-                # 配置生成参数
+                # Configure generation parameters
                 generation_config = genai.types.GenerationConfig(
                     temperature=self.config.temperature,
                     max_output_tokens=8192,
                 )
                 
-                # 使用旧的GenerativeModel API
+                # Use old GenerativeModel API
                 model = genai.GenerativeModel(
                     model_name=self.config.model_name,
                     generation_config=generation_config,
                 )
                 
-                # 检查是否有流式方法
+                # Check if streaming method exists
                 if hasattr(model, 'generate_content_stream'):
-                    print(f"✅ [STREAM-DEBUG] 使用旧API的流式方法")
+                    print(f"✅ [STREAM-DEBUG] Using old API streaming method")
                     response = model.generate_content_stream(prompt)
                     
                     for chunk in response:
                         if chunk.text:
-                            print(f"📝 [STREAM-DEBUG] 接收到流式片段: {len(chunk.text)} 字符")
+                            print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
                             complete_response += chunk.text
                             yield chunk.text
                 else:
-                    print(f"❌ [STREAM-DEBUG] 旧API也不支持流式，回退到同步方法")
-                    # 完全回退到同步方法
+                    print(f"❌ [STREAM-DEBUG] Old API doesn't support streaming, fallback to sync method")
+                    # Complete fallback to sync method
                     response = model.generate_content(prompt)
                     if response and response.text:
                         complete_response = response.text
                         yield response.text
             
-            # 流式输出完成后，添加视频来源信息
-            print(f"🎬 [STREAM-DEBUG] 流式输出完成，开始提取视频来源")
+            # After streaming output completes, add video source information
+            print(f"🎬 [STREAM-DEBUG] Streaming output completed, starting video source extraction")
             video_sources_text = self._extract_video_sources(chunks, complete_response)
             if video_sources_text:
-                print(f"✅ [STREAM-DEBUG] 找到视频来源，添加到流式输出")
-                # 添加分隔符确保能被正确识别
+                print(f"✅ [STREAM-DEBUG] Found video sources, adding to streaming output")
+                # Add separator to ensure proper identification
                 separator = "\n\n---\n"
                 yield separator + video_sources_text
             else:
-                print(f"❌ [STREAM-DEBUG] 未找到视频来源")
+                print(f"❌ [STREAM-DEBUG] No video sources found")
                     
         except Exception as e:
-            print(f"❌ [STREAM-DEBUG] 流式API调用失败: {e}")
-            print(f"🔄 [STREAM-DEBUG] 回退到同步方法")
+            print(f"❌ [STREAM-DEBUG] Streaming API call failed: {e}")
+            print(f"🔄 [STREAM-DEBUG] Fallback to sync method")
             import traceback
-            print(f"❌ [STREAM-DEBUG] 详细错误信息: {traceback.format_exc()}")
+            print(f"❌ [STREAM-DEBUG] Detailed error info: {traceback.format_exc()}")
             
-            # 检查是否是API密钥问题
+            # Check if it's an API key issue
             error_msg = str(e).lower()
             if 'api_key' in error_msg or 'authentication' in error_msg or 'unauthorized' in error_msg or 'inputs argument' in error_msg:
-                print(f"🔑 [STREAM-DEBUG] 检测到API密钥相关错误")
-                yield "❌ API密钥配置有问题，请检查Gemini API密钥是否正确配置。\n\n"
+                print(f"🔑 [STREAM-DEBUG] Detected API key related error")
+                yield "❌ API key configuration issue, please check if Gemini API key is correctly configured.\n\n"
                 return
             
-            # 回退到原有的同步方法
+            # Fallback to original sync method
             try:
                 result = self.summarize_chunks(chunks, query, original_query, context)
                 yield result.get('summary', str(result))

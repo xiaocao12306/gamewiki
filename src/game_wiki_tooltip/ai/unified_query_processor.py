@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class UnifiedQueryResult:
-    """统一查询处理结果"""
+    """Unified query processing result"""
     original_query: str
     detected_language: str
     translated_query: str
     rewritten_query: str
-    bm25_optimized_query: str  # 新增：专门为BM25优化的查询
+    bm25_optimized_query: str  # New: query specifically optimized for BM25
     intent: str
     confidence: float
     search_type: str
@@ -33,16 +33,16 @@ class UnifiedQueryResult:
     processing_time: float
 
 class UnifiedQueryProcessor:
-    """统一查询处理器 - 一次LLM调用完成翻译+重写+意图分析"""
+    """Unified query processor - complete translation+rewrite+intent analysis in one LLM call"""
     
     def __init__(self, llm_config: Optional[LLMConfig] = None):
         self.llm_config = llm_config or LLMConfig()
         self.llm_client = None
         
-        # 缓存机制
+        # Cache mechanism
         self.query_cache = {}
         
-        # 统计信息
+        # Statistics
         self.stats = {
             "total_queries": 0,
             "cache_hits": 0,
@@ -51,11 +51,11 @@ class UnifiedQueryProcessor:
             "average_processing_time": 0.0
         }
         
-        # 初始化LLM客户端
+        # Initialize LLM client
         if self.llm_config.is_valid():
             self._initialize_llm_client()
         else:
-            logger.warning("LLM配置无效，将使用基础处理模式")
+            logger.warning("LLM configuration invalid, will use basic processing mode")
     
     def _initialize_llm_client(self):
         """初始化LLM客户端"""

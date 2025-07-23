@@ -132,26 +132,26 @@ class QtHotkeyManager(QObject):
                 error = ctypes.get_last_error()
                 logger.warning(f"⚠️ 热键API调用失败，错误代码: {error}")
                 
-                # 超级兼容逻辑：不管什么错误都假设热键可用
+                # Ultra-compatible logic: assume hotkey is available regardless of any error
                 if error == 1409:  # ERROR_HOTKEY_ALREADY_REGISTERED
-                    logger.warning(f"🔄 热键已被其他程序注册，强制假设热键可用: {hotkey_str}")
+                    logger.warning(f"🔄 Hotkey already registered by other program, force assume hotkey available: {hotkey_str}")
                     return True, "already_registered"
                 elif error == 1401:  # ERROR_HOTKEY_NOT_REGISTERED
-                    logger.warning(f"🔄 热键未注册错误，强制假设热键可用: {hotkey_str}")
+                    logger.warning(f"🔄 Hotkey not registered error, force assume hotkey available: {hotkey_str}")
                     return True, "not_registered_but_assumed"
-                elif error == 0:  # 特殊情况：错误代码0但返回False
-                    logger.warning(f"🔄 特殊情况（错误代码0），强制假设热键可用: {hotkey_str}")
+                elif error == 0:  # Special case: error code 0 but returns False
+                    logger.warning(f"🔄 Special case (error code 0), force assume hotkey available: {hotkey_str}")
                     return True, "zero_error_but_assumed"
                 elif error == 5:  # ERROR_ACCESS_DENIED
-                    logger.warning(f"🔄 权限不足，强制假设热键可用: {hotkey_str}")
+                    logger.warning(f"🔄 Insufficient permissions, force assume hotkey available: {hotkey_str}")
                     return True, "access_denied_but_assumed"
                 else:
-                    logger.warning(f"🔄 未知错误（{error}），强制假设热键可用: {hotkey_str}")
+                    logger.warning(f"🔄 Unknown error ({error}), force assume hotkey available: {hotkey_str}")
                     return True, f"unknown_error_{error}_but_assumed"
                 
         except Exception as e:
-            # 异常兼容模式：即使发生异常也假设热键可用
-            logger.warning(f"🔄 热键注册异常，强制假设热键可用: {'+'.join(modifiers + [key])}, 异常: {str(e)}")
+            # Exception compatibility mode: assume hotkey is available even if exception occurs
+            logger.warning(f"🔄 Hotkey registration exception, force assume hotkey available: {'+'.join(modifiers + [key])}, exception: {str(e)}")
             return True, f"exception_but_assumed_{type(e).__name__}"
     
     
@@ -175,28 +175,28 @@ class QtHotkeyManager(QObject):
                 raise HotkeyError("Please select a main key")
             
             # Always use ultra-compatible mode
-            logger.info("使用超级兼容的热键注册逻辑")
+            logger.info("Using ultra-compatible hotkey registration logic")
             success, error = self._try_register_hotkey_ultra_compatible(modifiers, key, self._hotkey_id)
             
             if success:
                 self._registered = True
                 if error and "already_registered" in error:
-                    logger.info("热键注册成功（假设已注册）")
+                    logger.info("Hotkey registration successful (assumed already registered)")
                 elif error and "assumed" in error:
-                    logger.info(f"热键注册成功（强制兼容：{error}）")
+                    logger.info(f"Hotkey registration successful (forced compatibility: {error})")
                 else:
-                    logger.info("热键注册成功")
+                    logger.info("Hotkey registration successful")
                 return
             else:
                 # This should never happen with ultra-compatible mode
-                logger.error(f"热键注册失败: {error}")
-                logger.info("程序将继续运行，但热键功能不可用")
-                logger.info("建议:")
-                logger.info("1. 以管理员身份运行程序")
-                logger.info("2. 关闭可能占用热键的其他程序")
-                logger.info("3. 在设置中更换热键组合")
+                logger.error(f"Hotkey registration failed: {error}")
+                logger.info("Program will continue running, but hotkey functionality is unavailable")
+                logger.info("Suggestions:")
+                logger.info("1. Run program as administrator")
+                logger.info("2. Close other programs that may be using the hotkey")
+                logger.info("3. Change hotkey combination in settings")
                 
-                # 不抛出异常，让程序继续运行
+                # Don't throw exception, let program continue running
                 self._registered = False
                 return
                 

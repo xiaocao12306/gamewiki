@@ -41,16 +41,16 @@ class ApiKeyMissingDialog(QDialog):
         self.setModal(True)
         self.setFixedSize(400, 220)
         
-        # 主布局
+        # Main layout
         layout = QVBoxLayout()
         layout.setSpacing(15)
         
-        # 标题
+        # Title
         title_label = QLabel("AI Features Unavailable")
         title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #d32f2f;")
         layout.addWidget(title_label)
         
-        # 消息内容
+        # Message content
         message = (
             "AI guide features require both API keys to function properly:\n\n"
             f"Missing: {', '.join(self.missing_keys)}\n\n"
@@ -64,16 +64,16 @@ class ApiKeyMissingDialog(QDialog):
         message_label.setStyleSheet("font-size: 11px; line-height: 1.4;")
         layout.addWidget(message_label)
         
-        # "不再提醒" 复选框
+        # "Don't remind me again" checkbox
         self.dont_remind_checkbox = QCheckBox("Don't remind me again (Wiki search only)")
         self.dont_remind_checkbox.setStyleSheet("font-size: 11px;")
         layout.addWidget(self.dont_remind_checkbox)
         
-        # 按钮布局
+        # Button layout
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         
-        # 配置按钮
+        # Configure button
         config_button = QPushButton("Configure API Keys")
         config_button.setStyleSheet("""
             QPushButton {
@@ -91,7 +91,7 @@ class ApiKeyMissingDialog(QDialog):
         config_button.clicked.connect(self._on_configure_clicked)
         button_layout.addWidget(config_button)
         
-        # 稍后按钮
+        # Later button
         later_button = QPushButton("Maybe Later")
         later_button.setStyleSheet("""
             QPushButton {
@@ -113,13 +113,13 @@ class ApiKeyMissingDialog(QDialog):
         self.setLayout(layout)
         
     def _on_configure_clicked(self):
-        """用户点击配置按钮"""
+        """User clicked configure button"""
         self.dont_remind = self.dont_remind_checkbox.isChecked()
         self.open_settings = True
         self.accept()
         
     def _on_later_clicked(self):
-        """用户点击稍后按钮"""
+        """User clicked later button"""
         self.dont_remind = self.dont_remind_checkbox.isChecked()
         self.open_settings = False
         self.accept()
@@ -275,8 +275,8 @@ class QtSettingsWindow(QMainWindow):
         self.tab_widget.addTab(tab, t("language_tab"))
         
     def switch_to_api_tab(self):
-        """切换到API配置标签页"""
-        # API配置标签页是第四个，索引为3（因为Wiki tab插入在第三个位置）
+        """Switch to API configuration tab"""
+        # API configuration tab is the fourth one, index 3 (because Wiki tab is inserted at position 3)
         self.tab_widget.setCurrentIndex(3)
         
     def _create_shortcuts_tab(self):
@@ -391,7 +391,7 @@ class QtSettingsWindow(QMainWindow):
             url = 'https://' + url
             
         # Get icon path (for now, use a default)
-        icon_path = ""  # 使用存在的图标文件，保持完整路径
+        icon_path = ""  # Use existing icon file, keep full path
         
         # Create shortcut
         shortcut = {
@@ -865,28 +865,28 @@ class QtSettingsWindow(QMainWindow):
             dont_remind = current_settings.get('dont_remind_api_missing', False)
             
             if not dont_remind:
-                # 显示友好的对话框
+                # Show friendly dialog
                 dialog = ApiKeyMissingDialog(missing_keys, parent=self)
                 dialog.exec()
                 
-                # 处理用户的选择
+                # Handle user's choice
                 if dialog.dont_remind:
                     logger.info("User selected 'Don't remind me again' in settings")
                     self.settings_manager.update({'dont_remind_api_missing': True})
                 
                 if dialog.open_settings:
-                    # 用户选择配置API keys，直接切换到API配置标签页
+                    # User chose to configure API keys, directly switch to API configuration tab
                     logger.info("User chose to configure API keys, switching to API tab")
                     self.switch_to_api_tab()
                     return
                 else:
-                    # 用户选择稍后配置，继续保存设置但显示受限模式信息
+                    # User chose to configure later, continue saving settings but show limited mode info
                     logger.info("User chose to continue without API keys")
-                    # 继续执行保存设置的逻辑
+                    # Continue with settings save logic
             else:
-                # 用户之前选择了"不再提醒"，静默继续
+                # User previously chose "don't remind me again", silently continue
                 logger.info("User previously chose 'Don't remind me again', proceeding without API key validation")
-                # 继续执行保存设置的逻辑
+                # Continue with settings save logic
             
         # Update settings (only save what user explicitly entered)
         self.settings_manager.update({
