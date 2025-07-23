@@ -64,8 +64,7 @@ class HybridSearchRetriever:
                  rrf_k: int = 60,
                  llm_config: Optional[LLMConfig] = None,
                  enable_unified_processing: bool = True,
-                 enable_query_rewrite: bool = True,
-                 enable_query_translation: bool = True):
+                 enable_query_rewrite: bool = True):
         """
         初始化混合搜索检索器
         
@@ -79,7 +78,6 @@ class HybridSearchRetriever:
             llm_config: LLM配置
             enable_unified_processing: 是否启用统一查询处理（推荐）
             enable_query_rewrite: 是否启用查询重写（仅在统一处理禁用时生效）
-            enable_query_translation: 是否启用查询翻译（仅在统一处理禁用时生效）
         """
         self.vector_retriever = vector_retriever
         self.fusion_method = fusion_method
@@ -91,7 +89,6 @@ class HybridSearchRetriever:
         # 性能优化：统一处理vs分离处理
         self.enable_unified_processing = enable_unified_processing
         self.enable_query_rewrite = enable_query_rewrite if not enable_unified_processing else False
-        self.enable_query_translation = enable_query_translation if not enable_unified_processing else False
         
         # 初始化增强BM25索引器
         self.bm25_indexer = None
@@ -220,18 +217,7 @@ class HybridSearchRetriever:
             translation_applied = False
             rewrite_applied = False
             
-            # 查询翻译（如果启用）
-            if self.enable_query_translation:
-                try:
-                    from .query_translator import translate_query_if_needed
-                    translated_query = translate_query_if_needed(query, self.llm_config)
-                    if translated_query != query:
-                        final_query = translated_query
-                        translation_applied = True
-                        self.query_translation_stats["translated_queries"] += 1
-                        logger.info(f"查询翻译: '{query}' -> '{translated_query}'")
-                except Exception as e:
-                    logger.warning(f"查询翻译失败: {e}")
+            # 查询翻译功能已被统一查询处理器替代，此处删除
             
             # 查询重写（如果启用）
             if self.enable_query_rewrite:
@@ -584,8 +570,7 @@ class HybridSearchRetriever:
             "vector_stats": vector_stats,
             "bm25_stats": bm25_stats,
             "unified_processing_enabled": self.enable_unified_processing,
-            "query_rewrite_enabled": self.enable_query_rewrite,
-            "query_translation_enabled": self.enable_query_translation
+            "query_rewrite_enabled": self.enable_query_rewrite
         }
         
         if self.enable_unified_processing:

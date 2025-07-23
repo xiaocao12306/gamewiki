@@ -71,14 +71,12 @@ class IntentRerankingConfig:
 class QueryProcessingConfig:
     """查询处理配置"""
     enable_query_rewrite: bool = True
-    enable_query_translation: bool = True
     enable_intent_classification: bool = True
     unified_processing: bool = True  # 使用统一处理提高性能
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "enable_query_rewrite": self.enable_query_rewrite,
-            "enable_query_translation": self.enable_query_translation,
             "enable_intent_classification": self.enable_intent_classification,
             "unified_processing": self.unified_processing
         }
@@ -151,7 +149,6 @@ class RAGConfig:
             qp_dict = config_dict["query_processing"]
             config.query_processing = QueryProcessingConfig(
                 enable_query_rewrite=qp_dict.get("enable_query_rewrite", True),
-                enable_query_translation=qp_dict.get("enable_query_translation", True),
                 enable_intent_classification=qp_dict.get("enable_intent_classification", True),
                 unified_processing=qp_dict.get("unified_processing", True)
             )
@@ -255,7 +252,6 @@ def get_default_config() -> RAGConfig:
         ),
         query_processing=QueryProcessingConfig(
             enable_query_rewrite=True,
-            enable_query_translation=True,
             enable_intent_classification=True,
             unified_processing=True
         ),

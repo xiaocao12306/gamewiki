@@ -20,6 +20,8 @@ An intelligent Wiki overlay tool designed specifically for gamers, featuring aut
 - Python 3.8+
 - Internet connection
 - Google Cloud account (optional, for RAG features)
+- JINA API key (for vector embeddings)
+- bm25s and faiss-cpu packages (for search indexes)
 
 ### Installation
 
@@ -32,9 +34,16 @@ An intelligent Wiki overlay tool designed specifically for gamers, featuring aut
 2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
+   pip install bm25s faiss-cpu
    ```
 
-3. **Run the application**
+3. **Set up environment variables**
+   ```bash
+   # Set your JINA API key for vector embeddings
+   export JINA_API_KEY="your_jina_api_key_here"
+   ```
+
+5. **Run the application**
    
    **Qt version (Recommended):**
    ```bash
@@ -81,8 +90,29 @@ Basic Wiki overlay support for quick reference:
 ### Smart Q&A System
 - **Natural Language Processing** - Ask questions in plain English/Chinese
 - **Fast Vector Search** - Millisecond-level response with FAISS database
+- **Hybrid Search** - Combines semantic vector search with BM25 keyword matching
 - **Comprehensive Coverage** - Weapons, items, strategies, characters, and game mechanics
 - **Source Citations** - Every answer includes relevant source references
+
+### AI Knowledge Base Management
+- **Vector Store Builder** - Build FAISS vector indexes for semantic search
+- **BM25 Index Builder** - Create high-performance keyword search indexes using bm25s
+- **Multi-language Support** - Intelligent text processing for Chinese and English
+- **Game-specific Optimization** - Customized processing for different game types
+
+### Building Custom Knowledge Bases
+To add support for new games or update existing knowledge bases:
+
+```bash
+# Build vector store and BM25 index for a new game
+python src/game_wiki_tooltip/ai/build_vector_index.py --game GAME_NAME
+
+# Rebuild only BM25 indexes (keeping existing vector stores)
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py GAME_NAME
+
+# For detailed documentation, see:
+# src/game_wiki_tooltip/ai/README.md
+```
 
 ## 💡 Usage Examples
 
@@ -401,6 +431,57 @@ gamewiki/
 ├── LICENSE                         # License
 ├── CLAUDE.md                       # Claude AI documentation
 └── README.md                       # Documentation
+```
+
+## 🔧 AI Module Development
+
+### Building Knowledge Bases
+The AI module provides comprehensive tools for building and managing game knowledge bases:
+
+#### Quick Commands
+```bash
+# Build complete knowledge base (vector + BM25)
+python src/game_wiki_tooltip/ai/build_vector_index.py --game GAME_NAME
+
+# Rebuild only BM25 indexes
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py GAME_NAME
+
+# Verify existing indexes
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py --verify-only
+```
+
+#### Knowledge Base Format
+Knowledge bases should be JSON files in `data/knowledge_chunk/` with the following structure:
+```json
+[
+  {
+    "video_info": { "url": "...", "title": "...", "game": "..." },
+    "knowledge_chunks": [
+      {
+        "chunk_id": "unique_id",
+        "topic": "Topic Title",
+        "summary": "Detailed description...",
+        "keywords": ["keyword1", "keyword2"],
+        "type": "Build_Recommendation",
+        "build": { "name": "...", "focus": "..." },
+        "structured_data": { "enemy_name": "...", "weak_points": [...] }
+      }
+    ]
+  }
+]
+```
+
+#### Documentation
+- **English**: [AI Module README](src/game_wiki_tooltip/ai/README.md)
+- **中文**: [AI模块文档](src/game_wiki_tooltip/ai/README.zh-CN.md)
+
+### Prerequisites for AI Development
+```bash
+# Install AI dependencies
+pip install bm25s faiss-cpu
+
+# Set API key
+export JINA_API_KEY="your_jina_api_key_here"
 ```
 
 ## 🤝 Contributing

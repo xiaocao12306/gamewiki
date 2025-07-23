@@ -6,7 +6,6 @@ beautifulsoup4>=4.12
 requests>=2.31
 brotli>=1.1.0
 PyQt6>=6.4.0
-PyQt6-WebEngine>=6.4.0
 python-dotenv>=1.0.0
 markdown>=3.5.0
 
@@ -22,7 +21,6 @@ langchain-text-splitters>=0.0.1
 # AI和RAG相关
 openai>=1.3.0
 google-generativeai>=0.3.0
-# rank_bm25>=0.2.2  # 移除旧的BM25实现
 bm25s>=0.2.13  # 新的BM25实现，更快更稳定
 scikit-learn>=1.5.0
 jina-embeddings-v4>=0.1.0  # Jina嵌入模型

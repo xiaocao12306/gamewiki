@@ -36,8 +36,29 @@
 ### 智能问答系统
 - **自然语言处理** - 支持中英文自然语言提问
 - **快速向量搜索** - 毫秒级响应的FAISS数据库
+- **混合搜索** - 结合语义向量搜索和BM25关键词匹配
 - **全面覆盖** - 武器、道具、策略、角色和游戏机制
 - **来源引用** - 每个答案都包含相关的资料来源
+
+### AI知识库管理
+- **向量库构建器** - 构建FAISS向量索引用于语义搜索
+- **BM25索引构建器** - 使用bm25s创建高性能关键词搜索索引
+- **多语言支持** - 智能文本处理，支持中文和英文
+- **游戏特定优化** - 针对不同游戏类型的定制化处理
+
+### 构建自定义知识库
+要为新游戏添加支持或更新现有知识库：
+
+```bash
+# 为新游戏构建向量库和BM25索引
+python src/game_wiki_tooltip/ai/build_vector_index.py --game 游戏名称
+
+# 仅重建BM25索引（保留现有向量库）
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py 游戏名称
+
+# 详细文档请查看：
+# src/game_wiki_tooltip/ai/README.zh-CN.md
+```
 
 
 
@@ -49,6 +70,8 @@
 - Python 3.8+
 - 网络连接
 - Google Cloud账户（可选，用于RAG功能）
+- JINA API密钥（用于向量嵌入）
+- bm25s和faiss-cpu包（用于搜索索引）
 
 ### 安装方法
 
@@ -61,9 +84,16 @@
 2. **安装依赖**
    ```bash
    pip install -r requirements.txt
+   pip install bm25s faiss-cpu
    ```
 
-3. **运行程序**
+3. **设置环境变量**
+   ```bash
+   # 设置JINA API密钥用于向量嵌入
+   export JINA_API_KEY="your_jina_api_key_here"
+   ```
+
+5. **运行程序**
    
    **传统版本（WebView）：**
    ```bash
@@ -364,6 +394,57 @@ gamewiki/
 - **向量诊断** - `python diagnose_vector.py`
 - **质量评估** - `python src/game_wiki_tooltip/ai/run_quality_evaluation.py`
 - **索引重建** - `python src/game_wiki_tooltip/ai/rebuild_enhanced_indexes.py`
+
+## 🔧 AI模块开发
+
+### 构建知识库
+AI模块提供了构建和管理游戏知识库的全面工具：
+
+#### 快速命令
+```bash
+# 构建完整知识库（向量 + BM25）
+python src/game_wiki_tooltip/ai/build_vector_index.py --game 游戏名称
+
+# 仅重建BM25索引
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py 游戏名称
+
+# 验证现有索引
+python src/game_wiki_tooltip/ai/rebuild_bm25_only.py --verify-only
+```
+
+#### 知识库格式
+知识库应为 `data/knowledge_chunk/` 目录下的JSON文件，具有以下结构：
+```json
+[
+  {
+    "video_info": { "url": "...", "title": "...", "game": "..." },
+    "knowledge_chunks": [
+      {
+        "chunk_id": "unique_id",
+        "topic": "主题标题",
+        "summary": "详细描述...",
+        "keywords": ["关键词1", "关键词2"],
+        "type": "Build_Recommendation",
+        "build": { "name": "...", "focus": "..." },
+        "structured_data": { "enemy_name": "...", "weak_points": [...] }
+      }
+    ]
+  }
+]
+```
+
+#### 文档
+- **英文**: [AI Module README](src/game_wiki_tooltip/ai/README.md)
+- **中文**: [AI模块文档](src/game_wiki_tooltip/ai/README.zh-CN.md)
+
+### AI开发先决条件
+```bash
+# 安装AI依赖
+pip install bm25s faiss-cpu
+
+# 设置API密钥
+export JINA_API_KEY="your_jina_api_key_here"
+```
 
 ## 🤝 贡献指南
 

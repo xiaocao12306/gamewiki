@@ -375,14 +375,8 @@ class GameWikiApp(QObject):
             self.tray_icon.toggle_visibility_requested.connect(self._toggle_assistant_visibility)
             self.tray_icon.show()
             
-            # Initialize hotkey manager with conflict resolution
-            from src.game_wiki_tooltip.qt_hotkey_manager import HotkeyConflictStrategy
-            self.hotkey_mgr = QtHotkeyManager(
-                self.settings_mgr, 
-                conflict_strategy=HotkeyConflictStrategy.FORCE_REGISTER,
-                legacy_mode=True,  # 使用旧版兼容模式
-                ultra_compatible_mode=True  # 使用超级兼容逻辑，确保任何情况下都能启动
-            )
+            # Initialize hotkey manager with ultra-compatible mode
+            self.hotkey_mgr = QtHotkeyManager(self.settings_mgr)
             self.hotkey_mgr.hotkey_triggered.connect(self._on_hotkey_triggered)
             logger.info("Hotkey manager signal connected")
             
@@ -395,13 +389,7 @@ class GameWikiApp(QObject):
                     hotkey_string = self.hotkey_mgr.get_hotkey_string()
                     registration_info = self.hotkey_mgr.get_registration_info()
                     
-                    if registration_info["legacy_mode"]:
-                        if registration_info.get("ultra_compatible_mode", False):
-                            mode_text = "超级兼容模式"
-                        else:
-                            mode_text = "旧版兼容模式"
-                    else:
-                        mode_text = "新版冲突处理模式"
+                    mode_text = "超级兼容模式"
                     
                     if limited_mode:
                         # 合并启动通知：热键信息 + 受限模式信息
@@ -420,7 +408,7 @@ class GameWikiApp(QObject):
                         "GameWiki Assistant",
                         notification_msg
                     )
-                    logger.info(f"热键注册成功: {hotkey_string} (legacy_mode={registration_info['legacy_mode']}, ultra_compatible_mode={registration_info.get('ultra_compatible_mode', False)}, limited_mode={limited_mode})")
+                    logger.info(f"热键注册成功: {hotkey_string} (mode=ultra_compatible, limited_mode={limited_mode})")
                 else:
                     # Show warning but continue
                     self.tray_icon.show_notification(

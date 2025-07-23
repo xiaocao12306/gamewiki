@@ -1,0 +1,36 @@
+{
+  "description": "游戏窗口标题到向量库名称的映射配置",
+  "version": "1.0",
+  "mappings": [
+    {
+      "window_titles": ["don't starve together", "don't starve"],
+      "vector_db_name": "dst",
+      "description": "Don't Starve Together / Don't Starve"
+    },
+    {
+      "window_titles": ["helldivers 2", "helldivers™ 2"],
+      "vector_db_name": "helldiver2", 
+      "description": "HELLDIVERS 2"
+    },
+    {
+      "window_titles": ["elden ring"],
+      "vector_db_name": "eldenring",
+      "description": "Elden Ring"
+    },
+    {
+      "window_titles": ["civilization vi", "civilization 6", "sid meier's civilization vi"],
+      "vector_db_name": "civilization6",
+      "description": "Civilization VI"
+    },
+    {
+      "window_titles": ["7 days to die"],
+      "vector_db_name": "7daystodie",
+      "description": "7 Days to Die"
+    },
+    {
+      "window_titles": ["stardew valley"],
+      "vector_db_name": "stardewvalley", 
+      "description": "Stardew Valley"
+    }
+  ]
+} 

@@ -49,7 +49,7 @@ def check_environment():
 
 def get_existing_games() -> List[str]:
     """获取现有向量库的游戏列表"""
-    vectorstore_dir = Path("src/game_wiki_tooltip/ai/vectorstore")
+    vectorstore_dir = Path("vectorstore")
     if not vectorstore_dir.exists():
         return []
     
@@ -67,7 +67,7 @@ def load_game_chunks(game_name: str) -> List[Dict[str, Any]]:
     """从现有的metadata.json加载知识块"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("src/game_wiki_tooltip/ai/vectorstore")
+    vectorstore_dir = Path("vectorstore")
     game_dir = vectorstore_dir / f"{game_name}_vectors"
     metadata_file = game_dir / "metadata.json"
     
@@ -86,7 +86,7 @@ def clean_old_bm25_files(game_name: str):
     """清理旧的BM25索引文件"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("src/game_wiki_tooltip/ai/vectorstore")
+    vectorstore_dir = Path("vectorstore")
     game_dir = vectorstore_dir / f"{game_name}_vectors"
     
     if not game_dir.exists():
@@ -131,7 +131,7 @@ def rebuild_bm25_for_game(game_name: str) -> bool:
         bm25_indexer.build_index(chunks)
         
         # 保存新索引
-        vectorstore_dir = Path("src/game_wiki_tooltip/ai/vectorstore")
+        vectorstore_dir = Path("vectorstore")
         game_dir = vectorstore_dir / f"{game_name}_vectors"
         bm25_index_path = game_dir / "enhanced_bm25_index.pkl"
         
@@ -184,7 +184,7 @@ def verify_bm25_indexes():
     """验证BM25索引的完整性"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("src/game_wiki_tooltip/ai/vectorstore")
+    vectorstore_dir = Path("vectorstore")
     if not vectorstore_dir.exists():
         logger.error("❌ 向量库目录不存在")
         return False

@@ -50,25 +50,13 @@ try:
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
         QPalette, QIcon, QPixmap, QPainterPath, QTextDocument
     )
-    # Try to import WebEngine, but handle gracefully if it fails
-    try:
-        from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings, QWebEnginePage
-        WEBENGINE_AVAILABLE = True
-    except ImportError as e:
-        print(f"Warning: PyQt6 WebEngine not available: {e}")
-        print("Wiki view functionality will be disabled. Using fallback text view.")
-        WEBENGINE_AVAILABLE = False
-        QWebEngineView = None
-        QWebEngineProfile = None
-        QWebEngineSettings = None
-        QWebEnginePage = None
+    # Only WebView2 is supported
 except ImportError:
     print("Error: PyQt6 is required. PyQt5 is no longer supported.")
     sys.exit(1)
 
-# Configuration option to use WebView2 instead of WebEngine
-USE_WEBVIEW2 = True  # Set to True to use lightweight WebView2
+# Always use WebView2 for web content
+USE_WEBVIEW2 = True
 
 # Import WebView2Widget if enabled
 if USE_WEBVIEW2:
@@ -85,7 +73,7 @@ if USE_WEBVIEW2:
     except ImportError as e:
         print(f"Warning: WebView2Widget not available: {e}")
         WEBVIEW2_AVAILABLE = False
-        USE_WEBVIEW2 = False  # Fall back to WebEngine
+        USE_WEBVIEW2 = False  # WebView2 failed to initialize
 else:
     WEBVIEW2_AVAILABLE = False
 
@@ -2230,47 +2218,6 @@ class ChatView(QScrollArea):
         QTimer.singleShot(100, self.update_all_message_widths)
 
 
-# Only define CustomWebEnginePage if WebEngine is available
-if WEBENGINE_AVAILABLE and QWebEnginePage:
-    class CustomWebEnginePage(QWebEnginePage):
-        """Custom page to handle all navigation in current window"""
-        
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # Connect the newWindowRequested signal to handle new window requests
-            self.newWindowRequested.connect(self._handle_new_window_request)
-        
-        def createWindow(self, window_type):
-            """Override to prevent new windows/tabs from opening
-            Return None to trigger newWindowRequested signal"""
-            # Don't create a new window, let the signal handler deal with it
-            return None
-        
-        def _handle_new_window_request(self, request):
-            """Handle new window request by navigating in current window"""
-            # Get the requested URL from the request
-            url = request.requestedUrl()
-            print(f"🔗 新窗口请求被拦截，在当前窗口打开: {url.toString()}")
-            # Navigate to the URL in the current page
-            self.setUrl(url)
-            # The browser history will automatically be updated
-        
-        def acceptNavigationRequest(self, url, nav_type, is_main_frame):
-            """Handle navigation requests"""
-            # Always accept navigation in the main frame
-            if is_main_frame:
-                return True
-            
-            # For subframes (iframes), check the navigation type
-            if nav_type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
-                # If a link in an iframe tries to navigate, load it in the main frame
-                self.setUrl(url)
-                return False
-                
-            # Allow other types of navigation in subframes
-            return super().acceptNavigationRequest(url, nav_type, is_main_frame)
-else:
-    CustomWebEnginePage = None
 
 
 class WikiView(QWidget):
@@ -2437,44 +2384,6 @@ class WikiView(QWidget):
                 print(f"❌ WebView2创建失败: {e}")
                 webview_created = False
         
-        # Fall back to WebEngine if WebView2 failed or not available
-        if not webview_created and WEBENGINE_AVAILABLE and QWebEngineView:
-            try:
-                print("🔧 尝试创建WebEngine...")
-                self.web_view = QWebEngineView()
-                
-                # 使用自定义页面来处理导航
-                if CustomWebEnginePage:
-                    custom_page = CustomWebEnginePage(self.web_view)
-                    self.web_view.setPage(custom_page)
-                
-                # 配置WebEngine设置以允许加载外部内容
-                try:
-                    if hasattr(self.web_view, 'settings'):
-                        settings = self.web_view.settings()
-                        if QWebEngineSettings:
-                            # 允许JavaScript
-                            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-                            # 允许本地内容访问远程资源（重要！）
-                            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-                            # 允许本地内容访问文件
-                            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
-                            # 允许JavaScript打开窗口（重要！这样createWindow才会被调用）
-                            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
-                            print("✅ WebEngine设置已配置")
-                except Exception as settings_error:
-                    print(f"⚠️ WebEngine设置配置失败: {settings_error}")
-                
-                # 连接导航信号
-                self._connect_navigation_signals()
-                
-                self.content_widget = self.web_view
-                self._webview_ready = True
-                webview_created = True
-                print("✅ WebEngine创建成功")
-            except Exception as e:
-                print(f"❌ WebEngine创建失败: {e}")
-                webview_created = False
         
         # Final fallback to text view
         if not webview_created:
@@ -2512,7 +2421,7 @@ class WikiView(QWidget):
         self.web_view.urlChanged.connect(self._on_url_changed)
         self.web_view.loadFinished.connect(self._update_navigation_state)
         
-        # For WebEngine, connect page signals
+        # Connect page signals if available
         if hasattr(self.web_view, 'page') and callable(self.web_view.page):
             page = self.web_view.page()
             if page:
@@ -2655,112 +2564,6 @@ class WikiView(QWidget):
         except Exception as e:
             print(f"处理页面标题失败: {e}")
     
-    def _create_persistent_webview(self):
-        """创建带有持久化Cookie配置的QWebEngineView - 简化版本避免崩溃"""
-        if not WEBENGINE_AVAILABLE or not QWebEngineView or not QWebEngineProfile:
-            return None
-            
-        print("🔧 开始创建持久化WebView...")
-        
-        try:
-            # 先创建基本WebView
-            web_view = QWebEngineView()
-            print("✅ 基本WebView创建成功")
-            
-            # 尝试配置持久化Profile（如果失败不影响WebView使用）
-            try:
-                # 导入路径工具
-                from src.game_wiki_tooltip.utils import APPDATA_DIR
-                
-                # 使用较短的存储名称，避免路径问题
-                storage_name = "GameWiki"
-                
-                # 创建持久化Profile
-                profile = QWebEngineProfile(storage_name)
-                print(f"✅ 创建Profile成功: {storage_name}")
-                
-                # 设置存储路径（如果失败不中断）
-                try:
-                    profile_path = APPDATA_DIR / "webengine_profile"
-                    cache_path = APPDATA_DIR / "webengine_cache"
-                    profile_path.mkdir(parents=True, exist_ok=True)
-                    cache_path.mkdir(parents=True, exist_ok=True)
-                    
-                    profile.setPersistentStoragePath(str(profile_path))
-                    profile.setCachePath(str(cache_path))
-                    print("✅ 存储路径配置成功")
-                except Exception as path_error:
-                    print(f"⚠️ 存储路径配置失败（使用默认）: {path_error}")
-                
-                # 设置Cookie策略（如果失败不中断）
-                try:
-                    # 尝试PyQt6风格
-                    profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
-                    print("✅ Cookie策略配置成功 (PyQt6)")
-                except AttributeError:
-                    try:
-                        # 尝试PyQt5风格
-                        profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
-                        print("✅ Cookie策略配置成功 (PyQt5)")
-                    except Exception as cookie_error:
-                        print(f"⚠️ Cookie策略配置失败: {cookie_error}")
-                
-                # 配置本地文件访问权限（用于DST任务流程等本地HTML文件）
-                try:
-                    # 允许访问本地文件
-                    if hasattr(profile, 'settings'):
-                        settings = profile.settings()
-                        if hasattr(settings, 'setAttribute'):
-                            # 启用本地文件访问
-                            try:
-                                from PyQt6.QtWebEngineCore import QWebEngineSettings
-                                settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
-                                settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-                                print("✅ 本地文件访问权限配置成功 (PyQt6)")
-                            except ImportError:
-                                try:
-                                    from PyQt5.QtWebEngineWidgets import QWebEngineSettings
-                                    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-                                    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-                                    print("✅ 本地文件访问权限配置成功 (PyQt5)")
-                                except Exception as settings_error:
-                                    print(f"⚠️ 本地文件访问权限配置失败: {settings_error}")
-                except Exception as access_error:
-                    print(f"⚠️ 无法配置本地文件访问权限: {access_error}")
-                
-                # 尝试设置WebView使用自定义Profile（关键步骤）
-                try:
-                    try:
-                        from PyQt6.QtWebEngineCore import QWebEnginePage
-                    except ImportError:
-                        from PyQt5.QtWebEngineCore import QWebEnginePage
-                    
-                    if CustomWebEnginePage:
-                        page = CustomWebEnginePage(profile, web_view)
-                        web_view.setPage(page)
-                    else:
-                        page = QWebEnginePage(profile, web_view)
-                        web_view.setPage(page)
-                    print("✅ Profile与WebView关联成功")
-                    
-                    # 验证Profile状态
-                    if hasattr(profile, 'isOffTheRecord') and not profile.isOffTheRecord():
-                        print("✅ Profile支持持久化Cookie")
-                    else:
-                        print("⚠️ Profile可能不支持持久化")
-                        
-                except Exception as page_error:
-                    print(f"⚠️ Profile关联失败，使用默认Profile: {page_error}")
-                    
-            except Exception as profile_error:
-                print(f"⚠️ Profile配置失败，使用默认配置: {profile_error}")
-            
-            print("✅ WebView创建完成")
-            return web_view
-                
-        except Exception as e:
-            print(f"❌ WebView创建完全失败: {e}")
-            return None
     
     def _create_fallback_text_view(self):
         """创建降级的文本视图"""
@@ -2782,48 +2585,15 @@ class WikiView(QWidget):
         """)
         return text_view
     
-    def _check_webengine_ready(self):
-        """检查WebEngine是否已准备就绪"""
-        try:
-            # 检查基本可用性
-            if not WEBENGINE_AVAILABLE or not QWebEngineView:
-                return False, "WebEngine不可用"
-            
-            # 检查是否可以访问Profile
-            try:
-                test_profile = QWebEngineProfile.defaultProfile()
-                if test_profile is None:
-                    return False, "无法访问默认Profile"
-            except Exception as e:
-                return False, f"Profile访问失败: {e}"
-            
-            # 尝试创建一个临时的WebView进行测试
-            try:
-                temp_view = QWebEngineView()
-                temp_view.deleteLater()
-                return True, "WebEngine就绪"
-            except Exception as e:
-                return False, f"WebView创建测试失败: {e}"
-                
-        except Exception as e:
-            return False, f"WebEngine检查失败: {e}"
     
     def _delayed_webview_creation(self):
         """延迟创建WebView，在Qt应用完全初始化后执行"""
         try:
             print("🔧 开始延迟WebView创建...")
             
-            # 首先检查WebEngine是否准备就绪
-            ready, message = self._check_webengine_ready()
-            if not ready:
-                print(f"❌ WebEngine未就绪: {message}")
-                print("继续使用文本视图")
-                return
             
-            print(f"✅ WebEngine状态检查通过: {message}")
-            
-            # 尝试创建WebView
-            new_web_view = self._create_persistent_webview_safe()
+            # WebView2 is the only supported option - skip creation
+            new_web_view = None
             
             if new_web_view is not None:
                 print("✅ WebView延迟创建成功")
@@ -2875,46 +2645,6 @@ class WikiView(QWidget):
             print(f"❌ 延迟WebView创建过程失败: {e}")
             print("继续使用文本视图作为降级方案")
     
-    def _create_persistent_webview_safe(self):
-        """安全创建WebView的方法，包含更多错误处理"""
-        try:
-            print("🔧 开始安全创建WebView...")
-            
-            # 分步骤创建，每步都检查
-            
-            # 步骤1：测试基本WebView创建
-            try:
-                test_view = QWebEngineView()
-                test_view.deleteLater()  # 立即清理
-                print("✅ 基本WebView创建能力确认")
-            except Exception as test_error:
-                print(f"❌ 基本WebView创建测试失败: {test_error}")
-                return None
-            
-            # 步骤2：短暂等待，确保清理完成
-            import time
-            time.sleep(0.1)
-            
-            # 步骤3：尝试创建实际的WebView
-            web_view = self._create_persistent_webview()
-            
-            if web_view is not None:
-                print("✅ 持久化WebView创建成功")
-                return web_view
-            else:
-                print("⚠️ 持久化WebView创建失败，尝试基本WebView")
-                # 最后尝试：创建最基本的WebView
-                try:
-                    basic_view = QWebEngineView()
-                    print("✅ 降级到基本WebView成功")
-                    return basic_view
-                except Exception as basic_error:
-                    print(f"❌ 基本WebView创建也失败: {basic_error}")
-                    return None
-            
-        except Exception as e:
-            print(f"❌ 安全WebView创建完全失败: {e}")
-            return None
         
     def load_wiki(self, url: str, title: str):
         """Load a wiki page"""
@@ -2932,7 +2662,7 @@ class WikiView(QWidget):
                     qurl = QUrl(url)
                     print(f"📄 加载本地文件: {url}")
                     
-                    # 直接加载文件URL，让WebEngine处理外部资源
+                    # Load file URL
                     self.web_view.load(qurl)
                     print(f"✅ 使用load方法加载本地HTML，保留外部资源加载")
                 else:
@@ -2950,7 +2680,7 @@ class WikiView(QWidget):
             <h2>{title}</h2>
             <p><strong>URL:</strong> <a href="{url}">{url}</a></p>
             <hr>
-            <p>WebEngine is not available. Please click "Open in Browser" to view this page in your default browser.</p>
+            <p>WebView2 is not available. Please click "Open in Browser" to view this page in your default browser.</p>
             <p>Alternatively, you can copy and paste the URL above into your browser.</p>
             """
             self.content_widget.setHtml(fallback_text)
@@ -4117,7 +3847,7 @@ class UnifiedAssistantWindow(QMainWindow):
             </html>
             """
             
-            # 只使用文本视图显示，避免WebEngine的问题
+            # Use text view display only
             if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
                 self.wiki_view.content_widget.setHtml(full_html)
                 print("✅ Simple content loaded in text view")
@@ -4145,19 +3875,15 @@ class UnifiedAssistantWindow(QMainWindow):
             self.wiki_view.current_title = title
             self.wiki_view.current_url = "local://dst_task_flow.html"
             
-            # 先检查WebEngine是否可用并已创建
-            if (WEBENGINE_AVAILABLE and 
-                hasattr(self.wiki_view, 'web_view') and 
-                self.wiki_view.web_view is not None):
+            # Check if WebView2 is available and created
+            if hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view is not None:
                 try:
-                    # 使用QWebEngineView的setHtml方法来显示HTML内容
-                    base_url = QUrl.fromLocalFile(str(pathlib.Path(__file__).parent / "assets" / "html" / ""))
-                    self.wiki_view.web_view.setHtml(html_content, base_url)
-                    print("✅ HTML content loaded in WebEngine")
+                    self.wiki_view._display_with_webview2(html_content)
+                    print("✅ HTML content loaded in WebView2")
                     return
                 except Exception as web_error:
-                    print(f"⚠️ WebEngine loading failed: {web_error}")
-                    # 继续到降级方案
+                    print(f"⚠️ WebView2 loading failed: {web_error}")
+                    # Continue to fallback solution
             
             # 降级到文本视图 - 这个应该总是可用的
             if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
@@ -4216,7 +3942,7 @@ class UnifiedAssistantWindow(QMainWindow):
                     <ul>
                         <li>确保HTML文件存在且格式正确</li>
                         <li>重新启动应用程序</li>
-                        <li>检查WebEngine组件是否正常安装</li>
+                        <li>检查WebView2组件是否正常安装</li>
                     </ul>
                 </div>
             </body>

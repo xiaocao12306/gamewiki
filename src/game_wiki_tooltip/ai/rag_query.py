@@ -62,13 +62,20 @@ except ImportError:
     BATCH_EMBEDDING_AVAILABLE = False
     logging.warning("批量嵌入模块不可用")
 
-# 向量库支持
-try:
-    import faiss
-    FAISS_AVAILABLE = True
-except ImportError:
-    FAISS_AVAILABLE = False
-    logging.warning("FAISS不可用")
+# 向量库支持 - 延迟导入以避免启动时崩溃
+FAISS_AVAILABLE = None
+
+def _check_faiss_available():
+    """检查并延迟导入faiss"""
+    global FAISS_AVAILABLE
+    if FAISS_AVAILABLE is None:
+        try:
+            import faiss
+            FAISS_AVAILABLE = True
+        except ImportError:
+            FAISS_AVAILABLE = False
+            logging.warning("FAISS不可用")
+    return FAISS_AVAILABLE
 
 try:
     import qdrant_client
@@ -110,6 +117,58 @@ from ..config import LLMConfig
 
 logger = logging.getLogger(__name__)
 
+# 全局缓存向量库映射配置
+_vector_mappings_cache = None
+_vector_mappings_last_modified = None
+
+def load_vector_mappings() -> Dict[str, str]:
+    """
+    加载向量库映射配置
+    
+    Returns:
+        窗口标题到向量库名称的映射字典
+    """
+    global _vector_mappings_cache, _vector_mappings_last_modified
+    
+    try:
+        # 获取配置文件路径 - 从ai目录向上找到assets目录
+        current_dir = Path(__file__).parent  # .../ai/
+        assets_dir = current_dir.parent / "assets"  # .../game_wiki_tooltip/assets/
+        mapping_file = assets_dir / "vector_mappings.json"
+        
+        # 检查文件是否存在
+        if not mapping_file.exists():
+            logger.warning(f"向量库映射配置文件不存在: {mapping_file}")
+            return
+        
+        # 检查文件修改时间，实现缓存机制
+        current_modified = mapping_file.stat().st_mtime
+        if (_vector_mappings_cache is not None and 
+            _vector_mappings_last_modified == current_modified):
+            return _vector_mappings_cache
+        
+        # 读取配置文件
+        with open(mapping_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        # 构建映射字典
+        mappings = {}
+        for mapping in config.get("mappings", []):
+            vector_db_name = mapping.get("vector_db_name")
+            window_titles = mapping.get("window_titles", [])
+            
+            for title in window_titles:
+                mappings[title.lower()] = vector_db_name
+        
+        # 更新缓存
+        _vector_mappings_cache = mappings
+        _vector_mappings_last_modified = current_modified
+        
+        logger.info(f"成功加载向量库映射配置，包含 {len(mappings)} 个映射")
+        return mappings
+    except Exception as e:
+        return
+
 def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     """
     将窗口标题映射到向量库文件名
@@ -123,17 +182,8 @@ def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     # 转换为小写进行匹配
     title_lower = window_title.lower()
     
-    # 窗口标题到向量库文件名的映射（基于实际存在的向量库文件）
-    title_to_vectordb_mapping = {
-        "don't starve together": "dst",
-        "don't starve": "dst",
-        "helldivers 2": "helldiver2",
-        "elden ring": "eldenring",
-        "civilization vi": "civilization6",
-        "civilization 6": "civilization6",
-        "7 days to die": "7daystodie",
-        "stardew valley": "stardewvalley"
-    }
+    # 加载向量库映射配置
+    title_to_vectordb_mapping = load_vector_mappings()
     
     # 尝试精确匹配
     for title_key, vectordb_name in title_to_vectordb_mapping.items():
@@ -342,7 +392,6 @@ class EnhancedRagQuery:
             # 创建混合检索器 - 从配置中读取统一处理设置
             enable_unified_processing = self.hybrid_config.get("enable_unified_processing", True)
             enable_query_rewrite = self.hybrid_config.get("enable_query_rewrite", self.enable_query_rewrite)
-            enable_query_translation = self.hybrid_config.get("enable_query_translation", self.enable_summarization and self.enable_query_rewrite)
             
             self.hybrid_retriever = HybridSearchRetriever(
                 vector_retriever=vector_retriever,
@@ -353,8 +402,7 @@ class EnhancedRagQuery:
                 rrf_k=self.hybrid_config.get("rrf_k", 60),
                 llm_config=self.llm_config,
                 enable_unified_processing=enable_unified_processing,  # 从配置中读取
-                enable_query_rewrite=enable_query_rewrite,
-                enable_query_translation=enable_query_translation
+                enable_query_rewrite=enable_query_rewrite
             )
             
             if enable_unified_processing:
@@ -475,6 +523,13 @@ class EnhancedRagQuery:
                 return []
             
             # 加载FAISS索引
+            try:
+                import faiss
+            except ImportError:
+                logger.error("无法导入faiss库")
+                print(f"❌ [VECTOR-DEBUG] 无法导入faiss库，请确保已安装faiss-cpu")
+                return []
+            
             index = faiss.read_index(str(index_file_path))
             print(f"📊 [VECTOR-DEBUG] FAISS索引信息: 总向量数={index.ntotal}, 维度={index.d}")
             

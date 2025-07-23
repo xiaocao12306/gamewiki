@@ -36,13 +36,20 @@ except ImportError:
     QDRANT_AVAILABLE = False
     logging.warning("qdrant-client未安装，将使用FAISS作为备选")
 
-try:
-    import faiss
-    from langchain_community.vectorstores import FAISS
-    FAISS_AVAILABLE = True
-except ImportError:
-    FAISS_AVAILABLE = False
-    logging.warning("faiss-cpu未安装，向量库功能不可用")
+# 延迟导入faiss - 只在需要时导入以避免启动时崩溃
+FAISS_AVAILABLE = None
+
+def _check_faiss_available():
+    """检查并延迟导入faiss"""
+    global FAISS_AVAILABLE
+    if FAISS_AVAILABLE is None:
+        try:
+            import faiss
+            FAISS_AVAILABLE = True
+        except ImportError:
+            FAISS_AVAILABLE = False
+            logging.warning("faiss-cpu未安装，向量库功能不可用")
+    return FAISS_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +114,7 @@ class BatchEmbeddingProcessor:
             logger.warning("Qdrant不可用，切换到FAISS")
             self.vector_store_type = "faiss"
             
-        if not FAISS_AVAILABLE:
+        if not _check_faiss_available():
             raise ImportError("需要安装faiss-cpu或qdrant-client")
     
     def build_text(self, chunk: Dict[str, Any]) -> str:
@@ -312,6 +319,11 @@ class BatchEmbeddingProcessor:
         index_path.mkdir(exist_ok=True)
         
         # 创建并保存FAISS索引
+        try:
+            import faiss
+        except ImportError:
+            raise ImportError("无法导入faiss库，请确保已安装faiss-cpu")
+        
         index = faiss.IndexFlatIP(vectors_array.shape[1])  # 使用实际维度
         index.add(vectors_array)
         faiss.write_index(index, str(index_path / "index.faiss"))
@@ -399,7 +411,7 @@ class BatchEmbeddingProcessor:
     
     def _load_faiss_store(self, config: Dict) -> Any:
         """加载FAISS存储"""
-        if not FAISS_AVAILABLE:
+        if not _check_faiss_available():
             raise ImportError("faiss-cpu未安装")
         
         # 获取配置文件所在的目录

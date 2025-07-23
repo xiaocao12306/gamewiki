@@ -81,39 +81,15 @@ class EnhancedBM25Indexer:
             default_stop_words.update(stop_words)
             
         return default_stop_words
-        
+
     def _normalize_enemy_name(self, text: str) -> str:
         """标准化敌人名称 - 基于当前游戏配置"""
         text = text.lower()
-        
+
         # 基于游戏特定的敌人关键词进行标准化
         # 这里我们使用一个通用的方法，不再硬编码特定游戏的映射
         # 可以根据需要在游戏配置中添加别名映射
-        
-        # 针对Helldivers 2的特殊处理 (保留向后兼容性)
-        if self.game_name == "helldiver2":
-            enemy_mappings = {
-                'bt': 'bile titan',
-                'biletitan': 'bile titan',
-                'bile_titan': 'bile titan',
-                '胆汁泰坦': 'bile titan',
-                '巨人机甲': 'hulk',
-                'hulk devastator': 'hulk',
-                '冲锋者': 'charger',
-                '穿刺者': 'impaler',
-                '潜行者': 'stalker',
-                '族群指挥官': 'brood commander',
-                '工厂行者': 'factory strider',
-                '毁灭者': 'devastator',
-                '狂战士': 'berserker',
-                '武装直升机': 'gunship',
-                '坦克': 'tank',
-                '运输舰': 'dropship',
-            }
-            
-            for original, normalized in enemy_mappings.items():
-                text = text.replace(original, normalized)
-            
+
         return text
         
     def preprocess_text(self, text: str) -> List[str]:
@@ -129,7 +105,7 @@ class EnhancedBM25Indexer:
         """
         if not text:
             return []
-            
+
         # 转换为小写并标准化敌人名称
         text = self._normalize_enemy_name(text.lower())
         
