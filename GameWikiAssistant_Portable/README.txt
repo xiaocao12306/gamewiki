@@ -48,6 +48,13 @@
 ### Problem: Video playback fails
 **Solution**: Confirm that WebView2 Runtime is correctly installed and restart the program
 
+### Problem: Temporary files accumulation
+**Note**: When the program exits abnormally or crashes, temporary files may remain in the system temp directory:
+- Location: %TEMP%\_MEI****** (such as: AppData\Local\Temp\_MEI260882\)
+- These folders are safe to delete and won't affect system operation
+- PyInstaller automatically cleans up these folders on normal program exit
+- You can manually delete these folders periodically to free up disk space
+
 ## Support
 
 If you have any problems, please visit the project page for help.

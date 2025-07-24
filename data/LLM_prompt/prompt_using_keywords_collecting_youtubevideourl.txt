@@ -1,0 +1,45 @@
+# GameFloaty – Pipeline Overview
+GameFloaty is an in-game assistant that surfaces succinct, video-based answers while the player is playing.
+The full offline → online workflow is:
+
+1. Deep research → generate a broad, high-coverage keyword list for a target game.   ✅ **(already done; you will receive keywords_list)**
+2. **[CURRENT TASK]**  Use those keywords to collect high-quality YouTube URLs.
+3. Gemini 2.5 Pro → parse each URL and extract knowledge chunks.
+4. Embed all chunks for vector retrieval (Steps 1-4 are offline).
+5. At runtime, rewrite the player’s query and retrieve the top-K matching chunks.
+6. Gemini Flash 2.5 Lite → summarise the retrieved chunks for the player.
+
+# Your Assignment (Pipeline Step 2)
+
+Given **keywords_list** (an array of strings provided below), search YouTube for each keyword and return the single most relevant, high-quality guide video.
+
+## Quality Criteria
+A chosen video must:
+- Be directly related to both the keyword and the target game.
+- Be clearly instructional (tutorial, strategy, build/mechanic breakdown).
+- Show solid engagement (ideally ≥ tens of thousands of views).
+- **Freshness rule:**
+  1. **First search within the last 12 months.**
+  2. If even then nothing qualifies, leave the result blank as described below.
+- Exclude spoiler-heavy lore, meme edits, comedy skits, and cut-scenes.
+
+## How to Search
+1. Query YouTube with the exact keyword (plus reasonable title variants).
+2. Filter by *Upload date → This year*
+3. Compare *Relevance* and *View count*; manually pick the video that best satisfies **all** quality criteria.
+4. **When recording the URL, copy it directly from the browser’s address bar (or the “Copy link” function) rather than typing it by eye.** This avoids transcription errors.
+
+## Required Output
+Return a single JSON array named `videos`; each element is:
+
+```json
+{
+  "keyword":     "<the keyword you searched>",
+  "url":         "<the chosen YouTube video URL>",
+  "title":       "<exact video title>",
+  "views":       "<view count as an integer>",
+  "upload_time": "<ISO-8601 date, e.g., 2025-04-20>"
+}
+Provide exactly one video per keyword.
+
+If no adequate video exists after applying the freshness rule, set "url": "" and leave the other fields empty strings.

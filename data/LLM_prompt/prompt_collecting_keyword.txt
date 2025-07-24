@@ -1,0 +1,33 @@
+# GameFloaty – Keyword Generation Task (Pipeline Step 1 of 6)
+
+ ## Product Context
+ GameFloaty is an in-game assistant that surfaces concise, video-based guides.
+ The full offline ➜ online workflow is:
+
+ 1. **Deep research (current step)** – craft a seed list of YouTube-search keywords for a given game.
+ 2. Use those keywords to collect hundreds of high-view, high-quality YouTube URLs.
+ 3. Feed each URL to Gemini 2.5 Pro to extract knowledge chunks.
+ 4. Embed every chunk for vector retrieval (steps 1-4 are offline).
+ 5. At run-time, rewrite the user’s query and retrieve the top-K relevant chunks.
+ 6. Summarize the retrieved chunks with Gemini Flash 2.5 Lite and return the answer to the player.
+
+ ## Your Assignment (Step 1)
+ Generate **exactly 15** English YouTube-search keywords for the game **《》**.
+
+ ### Constraints & Quality Criteria
+ - Keywords must be **highly relevant** and together give **comprehensive coverage** of the game — from beginner survival basics to late-game boss fights and optimization.
+ - Focus on **tutorials, strategy guides, build explanations, mechanic breakdowns, seasonal survival tips, resource management, map exploration, and boss counters**.
+ - **Exclude** lore spoilers, story cut-scenes, meme edits, or comedy skits; GameFloaty is meant for live reference while playing.
+ - Phrase keywords in a way that matches common YouTube title conventions and uploader habits (e.g., “How to…”, “Beginner Guide”, “Day 100 Solo”, “Best Setup”, “Boss Tips”).
+ - Because this list drives downstream cost, you must output **only 15 keywords**.
+ - For each keyword, add **one sentence explaining why it was chosen** and which gameplay aspect it targets.
+
+ ### Required Output Format
+ Return a list of keywords. e.g. keywords_list={keyword1,keyword2,.....}
+ and Return a single JSON array named `keywords`; each element is an object with:
+
+ ```json
+ {
+   "keyword": "<string>",
+   "reason": "<string>"
+ }

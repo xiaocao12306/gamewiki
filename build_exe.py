@@ -328,7 +328,7 @@ def create_portable_package():
 
 ### Problem: Temporary files accumulation
 **Note**: When the program exits abnormally or crashes, temporary files may remain in the system temp directory:
-- Location: %TEMP%\_MEI****** (such as: AppData\Local\Temp\_MEI260882\)
+- Location: %TEMP%\\_MEI****** (such as: AppData\\Local\\Temp\\_MEI260882\\)
 - These folders are safe to delete and won't affect system operation
 - PyInstaller automatically cleans up these folders on normal program exit
 - You can manually delete these folders periodically to free up disk space
@@ -448,7 +448,7 @@ def main():
         print("  - GameWikiAssistant_Portable/ (portable directory)")
         print("\n💡 Tips:")
         print("  - You can compress the portable directory and distribute it to other users")
-        print("  - If program crashes, temporary files may remain in %TEMP%\\_MEI****** folders")
+        print("  - If program crashes, temporary files may remain in %TEMP%\\\\_MEI****** folders")
         print("  - These temporary folders can be safely deleted to free up disk space")
         
         return 0
