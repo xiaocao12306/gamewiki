@@ -19,23 +19,40 @@
     "summarization": {
         "enabled": true,
         "api_key": "",
-        "model_name": "gemini-2.5-flash-lite-preview-06-17",
+        "model_name": "gemini-2.0-flash",
         "max_summary_length": 300,
         "temperature": 0.3,
         "include_sources": true,
         "language": "auto"
     },
-    "hybrid_search": {
-        "enabled": true,
-        "fusion_method": "rrf",
-        "vector_weight": 0.5,
-        "bm25_weight": 0.5,
-        "rrf_k": 60
-    },
-    "intent_reranking": {
-        "enabled": true,
-        "intent_weight": 0.4,
-        "semantic_weight": 0.6
+    "rag": {
+        "hybrid_search": {
+            "enabled": true,
+            "fusion_method": "rrf",
+            "vector_weight": 0.5,
+            "bm25_weight": 0.5,
+            "rrf_k": 60
+        },
+        "summarization": {
+            "enabled": true,
+            "model_name": "gemini-2.0-flash",
+            "max_summary_length": 300,
+            "temperature": 0.3,
+            "include_sources": true,
+            "language": "auto"
+        },
+        "intent_reranking": {
+            "enabled": true,
+            "intent_weight": 0.4,
+            "semantic_weight": 0.6,
+            "confidence_threshold": 0.7
+        },
+        "query_processing": {
+            "enable_translation": true,
+            "enable_rewrite": true,
+            "enable_cache": true,
+            "cache_ttl": 3600
+        }
     },
     "shortcuts": [
         {"name": "Google", "url": "https://www.google.com", "icon": "assets/icons/google.ico", "visible": true},

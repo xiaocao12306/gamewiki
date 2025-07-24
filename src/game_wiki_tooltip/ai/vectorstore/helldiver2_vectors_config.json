@@ -2,9 +2,9 @@
   "vector_store_type": "faiss",
   "collection_name": "helldiver2_vectors",
   "game_name": "helldiver2",
-  "model": "jina-embeddings-v4",
+  "model": "gemini-embedding-001",
   "output_dim": 768,
-  "chunk_count": 83,
+  "chunk_count": 76,
   "index_path": "helldiver2_vectors",
   "bm25_index_path": "helldiver2_vectors/enhanced_bm25_index.pkl",
   "hybrid_search_enabled": true

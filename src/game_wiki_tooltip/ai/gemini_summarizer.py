@@ -8,6 +8,7 @@ from typing import List, Dict, Optional, Any, AsyncGenerator
 import google.generativeai as genai
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 # Import i18n for internationalization
 from src.game_wiki_tooltip.i18n import t
@@ -19,10 +20,11 @@ logger = logging.getLogger(__name__)
 class SummarizationConfig:
     """Configuration for Gemini summarization"""
     api_key: str
-    model_name: str = "gemini-2.5-flash-lite-preview-06-17"
+    model_name: str = "gemini-2.5-flash-lite"
     temperature: float = 0.3
     include_sources: bool = True
     language: str = "auto"  # auto, zh, en
+    check_sufficiency: bool = True  # Check if knowledge is sufficient
 
 
 class GeminiSummarizer:
@@ -129,11 +131,22 @@ class GeminiSummarizer:
             print(f"   - Sources count: {len(formatted_response['sources'])}")
             print(f"   - Final summary length: {len(formatted_response['summary'])} characters")
             
+            # Check if knowledge is sufficient (if enabled)
+            if self.config.check_sufficiency:
+                formatted_response['knowledge_sufficient'] = self._check_knowledge_sufficiency(response.text)
+            
             return formatted_response
             
         except Exception as e:
             print(f"❌ [SUMMARY-DEBUG] Summary generation failed: {e}")
             logger.error(f"Error in summarization: {str(e)}")
+            
+            # Check if it's a rate limit error
+            error_str = str(e).lower()
+            if "quota" in error_str or "rate limit" in error_str or "429" in error_str:
+                logger.warning("⏱️ API rate limit detected")
+                # Re-raise with clear message
+                raise Exception("API_RATE_LIMIT: " + str(e))
             
             # Fallback to simple concatenation
             print(f"🔄 [SUMMARY-DEBUG] Using fallback summary strategy")
@@ -216,6 +229,12 @@ class GeminiSummarizer:
                     
                 print(f"🎉 [STREAM-DEBUG] Streaming response completed (new Client API)")
                 
+                # Check knowledge sufficiency and notify if insufficient
+                if self.config.check_sufficiency:
+                    is_sufficient = self._check_knowledge_sufficiency(complete_response)
+                    if not is_sufficient:
+                        yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
+                
             except (ImportError, AttributeError) as e:
                 # If new API is not available, fallback to old API
                 print(f"⚠️ [STREAM-DEBUG] New Client API not available({e}), trying old API method")
@@ -242,6 +261,12 @@ class GeminiSummarizer:
                             print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
                             complete_response += chunk.text
                             yield chunk.text
+                    
+                    # Check knowledge sufficiency
+                    if self.config.check_sufficiency:
+                        is_sufficient = self._check_knowledge_sufficiency(complete_response)
+                        if not is_sufficient:
+                            yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
                 else:
                     print(f"❌ [STREAM-DEBUG] Old API doesn't support streaming, fallback to sync method")
                     # Complete fallback to sync method
@@ -249,6 +274,12 @@ class GeminiSummarizer:
                     if response and response.text:
                         complete_response = response.text
                         yield response.text
+                        
+                        # Check knowledge sufficiency
+                        if self.config.check_sufficiency:
+                            is_sufficient = self._check_knowledge_sufficiency(complete_response)
+                            if not is_sufficient:
+                                yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
             
             # After streaming output completes, add video source information
             print(f"🎬 [STREAM-DEBUG] Streaming output completed, starting video source extraction")
@@ -340,6 +371,10 @@ class GeminiSummarizer:
 • 基于JSON中的实际数据，不要编造信息
 • 如果信息不相关或不足，请明确说明
 
+重要：在回答的最后，添加一个特殊标记来指示知识是否充足：
+• 如果知识充足以完整回答问题：添加 [KNOWLEDGE_SUFFICIENT]
+• 如果知识不足，需要网络搜索补充：添加 [KNOWLEDGE_INSUFFICIENT]
+
 你的回答："""
         else:
             detail_instruction = "detailed explanations with reasons and strategies" if is_detailed_query else "concise and clear responses"
@@ -379,6 +414,10 @@ Format requirements:
 • Use friendly gaming terminology
 • Base on actual data from JSON, don't fabricate information
 • If information is irrelevant or insufficient, clearly state so
+
+Important: At the end of your response, add a special marker to indicate knowledge sufficiency:
+• If knowledge is sufficient to fully answer the question: add [KNOWLEDGE_SUFFICIENT]
+• If knowledge is insufficient and web search is needed: add [KNOWLEDGE_INSUFFICIENT]
 
 Your response:"""
         
@@ -458,12 +497,15 @@ Your response:"""
         else:
             print(f"❌ [FORMAT-DEBUG] No video sources returned")
         
+        # Clean response from markers
+        cleaned_summary = self._clean_response(summary_text)
+        
         return {
-            "summary": summary_text.strip(),
+            "summary": cleaned_summary.strip(),
             "chunks_used": len(chunks),
             "sources": sources,
             "model": self.config.model_name,
-            "language": self._detect_language(summary_text)
+            "language": self._detect_language(cleaned_summary)
         }
     
     def _fallback_summary(
@@ -641,12 +683,33 @@ Your response:"""
             return "zh"
         else:
             return "en"
+    
+    def _check_knowledge_sufficiency(self, response_text: str) -> bool:
+        """
+        Check if the knowledge is sufficient based on response markers
+        
+        Returns:
+            True if knowledge is sufficient, False otherwise
+        """
+        # Remove the markers from the response
+        if "[KNOWLEDGE_SUFFICIENT]" in response_text:
+            return True
+        elif "[KNOWLEDGE_INSUFFICIENT]" in response_text:
+            return False
+        else:
+            # Default to sufficient if no marker found
+            return True
+    
+    def _clean_response(self, response_text: str) -> str:
+        """Remove knowledge sufficiency markers from response"""
+        cleaned = response_text.replace("[KNOWLEDGE_SUFFICIENT]", "").replace("[KNOWLEDGE_INSUFFICIENT]", "")
+        return cleaned.strip()
 
 
 # Convenience function for creating summarizer
 def create_gemini_summarizer(
     api_key: Optional[str] = None,
-    model_name: str = "gemini-2.5-flash-lite-preview-06-17",
+    model_name: str = "gemini-2.5-flash-lite",
     **kwargs
 ) -> GeminiSummarizer:
     """

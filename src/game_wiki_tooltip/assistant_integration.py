@@ -17,6 +17,7 @@ from src.game_wiki_tooltip.unified_window import (
 )
 from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
 from src.game_wiki_tooltip.utils import get_foreground_title
+from src.game_wiki_tooltip.i18n import t, get_current_language
 
 # Lazy load AI modules - import only when needed to speed up startup
 logger = logging.getLogger(__name__)
@@ -101,11 +102,12 @@ class QueryWorker(QThread):
     guide_chunk = pyqtSignal(str)  # streaming chunk
     error_occurred = pyqtSignal(str)  # error message
     
-    def __init__(self, rag_integration, query: str, game_context: str = None, parent=None):
+    def __init__(self, rag_integration, query: str, game_context: str = None, search_mode: str = "auto", parent=None):
         super().__init__(parent)
         self.rag_integration = rag_integration
         self.query = query
         self.game_context = game_context
+        self.search_mode = search_mode
         self._stop_requested = False
         self._current_task = None  # Current running async task
         
@@ -136,7 +138,8 @@ class QueryWorker(QThread):
             # Use unified query processor for intent detection and query optimization
             intent = await self.rag_integration.process_query_async(
                 self.query, 
-                game_context=self.game_context
+                game_context=self.game_context,
+                search_mode=self.search_mode
             )
             
             # Check again if stop has been requested
@@ -316,23 +319,22 @@ class RAGIntegration(QObject):
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
             gemini_api_key = api_settings.get('gemini_api_key', '')
-            jina_api_key = api_settings.get('jina_api_key', '')
+            # No longer need separate Jina API key, use Gemini API key for embeddings
             
             # Check environment variables
             if not gemini_api_key:
                 gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-            if not jina_api_key:
-                jina_api_key = os.getenv('JINA_API_KEY')
+            # Gemini API key is used for both LLM and embeddings
             
-            # Check if there are two API keys
-            has_both_keys = bool(gemini_api_key and jina_api_key)
+            # Check if API key is available
+            has_api_key = bool(gemini_api_key)
             
-            if has_both_keys:
+            if has_api_key:
                 logger.info("✅ Complete API key configuration detected, initializing AI components")
                 
                 llm_config = LLMConfig(
                     api_key=gemini_api_key,
-                    model='gemini-2.5-flash-lite-preview-06-17'
+                    model='gemini-2.5-flash-lite'
                 )
                 
                 # Store LLM configuration for other methods
@@ -351,7 +353,7 @@ class RAGIntegration(QObject):
                     
                     if vector_game_name:
                         logger.info(f"Detected game window '{game_title}' -> Vector library: {vector_game_name}")
-                        self._init_rag_for_game(vector_game_name, llm_config, jina_api_key)
+                        self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key)
                     else:
                         logger.info(f"Current window '{game_title}' is not a supported game, skipping RAG initialization")
                         logger.info("RAG engine will be dynamically initialized based on game window when user first queries")
@@ -362,7 +364,7 @@ class RAGIntegration(QObject):
                 missing_keys = []
                 if not gemini_api_key:
                     missing_keys.append("Gemini API Key")
-                if not jina_api_key:
+                if not has_api_key:
                     missing_keys.append("Jina API Key")
                 
                 logger.warning(f"❌ Missing required API keys: {', '.join(missing_keys)}")
@@ -376,7 +378,7 @@ class RAGIntegration(QObject):
         self._ai_initialized = True
         return True
             
-    def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, jina_api_key: str, wait_for_init: bool = False):
+    def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, google_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
         try:
             if not (get_default_config and EnhancedRagQuery):
@@ -405,7 +407,7 @@ class RAGIntegration(QObject):
                 enable_hybrid_search=rag_config.hybrid_search.enabled,
                 hybrid_config=custom_hybrid_config,  # Use custom configuration
                 llm_config=llm_config,
-                jina_api_key=jina_api_key,  # Pass Jina API key
+                google_api_key=google_api_key,  # Pass Google API key
                 enable_query_rewrite=False,  # Disable query rewrite, avoid duplicate LLM calls
                 enable_summarization=rag_config.summarization.enabled,
                 summarization_config=rag_config.summarization.to_dict(),
@@ -458,9 +460,27 @@ class RAGIntegration(QObject):
         except Exception as e:
             logger.error(f"Failed to initialize RAG for {game_name}: {e}")
             
-    async def process_query_async(self, query: str, game_context: str = None) -> QueryIntent:
+    async def process_query_async(self, query: str, game_context: str = None, search_mode: str = "auto") -> QueryIntent:
         """Process query using unified query processor for intent detection"""
-        logger.info(f"Start unified query processing: '{query}' (game context: {game_context}, limited mode: {self.limited_mode})")
+        logger.info(f"Start unified query processing: '{query}' (game context: {game_context}, search mode: {search_mode}, limited mode: {self.limited_mode})")
+        
+        # Handle manual search mode selection
+        if search_mode == "wiki":
+            logger.info("📚 Manual wiki search mode selected")
+            return QueryIntent(
+                intent_type='wiki',
+                confidence=1.0,
+                rewritten_query=query,
+                translated_query=query
+            )
+        elif search_mode == "ai":
+            logger.info("🤖 Manual AI search mode selected")
+            return QueryIntent(
+                intent_type='guide',
+                confidence=1.0,
+                rewritten_query=query,
+                translated_query=query
+            )
         
         # If in limited mode, always return wiki intent
         if self.limited_mode:
@@ -516,7 +536,7 @@ class RAGIntegration(QObject):
             if not llm_config:
                 # If there is no stored configuration, create temporary configuration and check API key
                 llm_config = LLMConfig(
-                    model='gemini-2.5-flash-lite-preview-06-17'
+                    model='gemini-2.5-flash-lite'
                 )
                 
                 # Use LLMConfig's get_api_key method to get API key (supports GEMINI_API_KEY environment variable)
@@ -804,23 +824,21 @@ class RAGIntegration(QObject):
                     settings = self.settings_manager.get()
                     api_settings = settings.get('api', {})
                     gemini_api_key = api_settings.get('gemini_api_key', '')
-                    jina_api_key = api_settings.get('jina_api_key', '')
+                    # No longer need separate Jina API key, use Gemini API key for embeddings
                     
                     # Check environment variables
                     if not gemini_api_key:
                         gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-                    if not jina_api_key:
-                        jina_api_key = os.getenv('JINA_API_KEY')
                     
-                    # Check if there are two API keys
-                    has_both_keys = bool(gemini_api_key and jina_api_key)
+                    # Check if API key is available
+                    has_api_key = bool(gemini_api_key)
                     
-                    if has_both_keys:
+                    if has_api_key:
                         llm_config = LLMConfig(
                             api_key=gemini_api_key,
-                            model='gemini-2.5-flash-lite-preview-06-17'
+                            model='gemini-2.5-flash-lite'
                         )
-                        self._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=True)
+                        self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=True)
                         
                         if not self.rag_engine:
                             # Check if the vector library does not exist
@@ -859,7 +877,7 @@ class RAGIntegration(QObject):
                         missing_keys = []
                         if not gemini_api_key:
                             missing_keys.append("Gemini API Key")
-                        if not jina_api_key:
+                        if not has_api_key:
                             missing_keys.append("Jina API Key")
                         
                         # Use internationalized error information
@@ -1006,8 +1024,30 @@ class RAGIntegration(QObject):
                 from src.game_wiki_tooltip.i18n import t, get_current_language
                 
                 current_lang = get_current_language()
+                error_str = str(e)
                 
-                if isinstance(e, VectorStoreUnavailableError):
+                # Check for rate limit errors
+                if "API_RATE_LIMIT" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower() or "429" in error_str:
+                    logger.warning("⏱️ API rate limit detected")
+                    if current_lang == 'zh':
+                        error_msg = (
+                            "⏱️ **API 使用限制**\n\n"
+                            "您已达到 Google Gemini API 的使用限制。免费账户限制：\n"
+                            "• 每分钟最多 15 次请求\n"
+                            "• 每天最多 1500 次请求\n\n"
+                            "请稍等片刻后再试，或考虑升级到付费账户以获得更高的配额。"
+                        )
+                    else:
+                        error_msg = (
+                            "⏱️ **API Rate Limit**\n\n"
+                            "You've reached the Google Gemini API usage limit. Free tier limits:\n"
+                            "• Maximum 15 requests per minute\n"
+                            "• Maximum 1500 requests per day\n\n"
+                            "Please wait a moment and try again, or consider upgrading to a paid account for higher quotas."
+                        )
+                    self.streaming_chunk_ready.emit(error_msg)
+                    return
+                elif isinstance(e, VectorStoreUnavailableError):
                     if current_lang == 'zh':
                         error_msg = f"❌ {t('rag_vector_store_error')}: {str(e)}"
                     else:
@@ -1171,13 +1211,29 @@ class IntegratedAssistantController(AssistantController):
             self._on_error
         )
         
-    def handle_query(self, query: str):
+    def handle_query(self, query: str, mode: str = "auto"):
         """Override to handle query with RAG integration"""
+        # Store search mode
+        self._search_mode = mode
+        
         # Add user message
         self.main_window.chat_view.add_message(
             MessageType.USER_QUERY,
             query
         )
+        
+        # Check if user requested web search
+        query_lower = query.lower()
+        web_search_keywords = [
+            'search web', 'web search', 'search online', 'online search',
+            '搜索网络', '网络搜索', '在线搜索', '搜索在线'
+        ]
+        
+        if getattr(self, '_web_search_suggested', False) and any(kw in query_lower for kw in web_search_keywords):
+            logger.info("🔍 User requested web search")
+            self._web_search_suggested = False
+            self._perform_web_search()
+            return
         
         # Check RAG engine initialization status
         if getattr(self, '_rag_initializing', False):
@@ -1262,6 +1318,10 @@ class IntegratedAssistantController(AssistantController):
             
     def _process_query_immediately(self, query: str):
         """Immediately process query (RAG engine is ready)"""
+        # Save query for potential web search
+        self._last_user_query = query
+        self._last_game_context = getattr(self, 'current_game_window', None)
+        
         # Stop any existing worker and reset UI state
         if self._current_worker and self._current_worker.isRunning():
             logger.info("🛑 New query started, stop previous generation")
@@ -1295,7 +1355,8 @@ class IntegratedAssistantController(AssistantController):
         self._current_worker = QueryWorker(
             self.rag_integration, 
             query, 
-            game_context=self.current_game_window
+            game_context=self.current_game_window,
+            search_mode=getattr(self, '_search_mode', 'auto')
         )
         self._current_worker.intent_detected.connect(self._on_intent_detected)
         self._current_worker.wiki_result.connect(self._on_wiki_result_from_worker)
@@ -1328,6 +1389,10 @@ class IntegratedAssistantController(AssistantController):
     def _on_intent_detected(self, intent: QueryIntent):
         """Handle intent detection result"""
         try:
+            # Save rewritten query for potential web search
+            if intent.rewritten_query:
+                self._last_rewritten_query = intent.rewritten_query
+            
             if intent.intent_type == "wiki":
                 # Show wiki search transition
                 self._current_transition_msg = self.main_window.chat_view.add_message(
@@ -1466,6 +1531,16 @@ class IntegratedAssistantController(AssistantController):
         print(f"🌊 [STREAMING-DEBUG] Waiting for RAG output status: {getattr(self, '_waiting_for_rag_output', 'undefined')}")
         print(f"🌊 [STREAMING-DEBUG] Current streaming message component: {hasattr(self, '_current_streaming_msg') and self._current_streaming_msg is not None}")
         
+        # Check for insufficient knowledge marker
+        if "[INSUFFICIENT_KNOWLEDGE_MARKER]" in chunk:
+            print(f"🔍 [STREAMING-DEBUG] Detected insufficient knowledge marker")
+            self._knowledge_insufficient = True
+            # Remove the marker from chunk
+            chunk = chunk.replace("[INSUFFICIENT_KNOWLEDGE_MARKER]", "")
+            # If chunk is now empty, return
+            if not chunk.strip():
+                return
+        
         # If waiting for RAG output and this is the first content chunk, create streaming message component
         if getattr(self, '_waiting_for_rag_output', False) and chunk.strip():
             logger.info("🔄 Received first RAG output chunk, create streaming message component")
@@ -1544,6 +1619,11 @@ class IntegratedAssistantController(AssistantController):
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
             self._current_streaming_msg.mark_as_completed()
         
+        # Check if knowledge was insufficient and add web search option
+        if getattr(self, '_knowledge_insufficient', False):
+            self._add_web_search_option()
+            self._knowledge_insufficient = False
+        
         # Reset UI state
         if self.main_window:
             self.main_window.set_generating_state(False)
@@ -1608,35 +1688,34 @@ class IntegratedAssistantController(AssistantController):
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
             gemini_api_key = api_settings.get('gemini_api_key', '')
-            jina_api_key = api_settings.get('jina_api_key', '')
+            # No longer need separate Jina API key, use Gemini API key for embeddings
             
             # Check environment variables
             if not gemini_api_key:
                 gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-            if not jina_api_key:
-                jina_api_key = os.getenv('JINA_API_KEY')
+            # Gemini API key is used for both LLM and embeddings
             
-            # Check if there are two API keys
-            has_both_keys = bool(gemini_api_key and jina_api_key)
+            # Check if API key is available
+            has_api_key = bool(gemini_api_key)
             
-            if has_both_keys:
+            if has_api_key:
                 llm_config = LLMConfig(
                     api_key=gemini_api_key,
-                    model='gemini-2.5-flash-lite-preview-06-17'
+                    model='gemini-2.5-flash-lite'
                 )
                 
                 # Update stored LLM configuration
                 self._llm_config = llm_config
                 
                 # Asynchronously initialize RAG engine (do not wait for completion)
-                self.rag_integration._init_rag_for_game(vector_game_name, llm_config, jina_api_key, wait_for_init=False)
+                self.rag_integration._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=False)
                 logger.info(f"🔄 RAG engine initialization started (asynchronous): {vector_game_name}")
                 
                 # Mark RAG engine as initializing
                 self._rag_initializing = True
                 self._target_vector_game = vector_game_name
             else:
-                logger.warning(f"⚠️ API keys are incomplete, cannot initialize RAG engine (Gemini: {bool(gemini_api_key)}, Jina: {bool(jina_api_key)})")
+                logger.warning(f"⚠️ API key is missing, cannot initialize RAG engine (Gemini: {bool(gemini_api_key)})")
                 
         except Exception as e:
             logger.error(f"RAG engine reinitialization failed: {e}")
@@ -1669,6 +1748,122 @@ class IntegratedAssistantController(AssistantController):
         if self.main_window and hasattr(self.main_window, 'stop_generation_requested'):
             self.main_window.stop_generation_requested.connect(self.stop_current_generation)
             logger.info("✅ Stop generation signal connected")
+    
+    def _add_web_search_option(self):
+        """Add web search option when knowledge is insufficient"""
+        logger.info("🔍 Adding web search option for insufficient knowledge")
+        
+        current_lang = get_current_language()
+        
+        # Create web search prompt message
+        if current_lang == 'zh':
+            message = "\n\n💡 知识库中的信息可能不够全面。您可以点击下方按钮进行网络搜索以获取更详细的信息。"
+            button_text = "🔍 搜索网络"
+        else:
+            message = "\n\n💡 The knowledge base might not have sufficient information. You can click the button below to search the web for more details."
+            button_text = "🔍 Search Web"
+        
+        # Add message to chat
+        if self.main_window and hasattr(self.main_window, 'chat_view'):
+            self.main_window.chat_view.add_message(MessageType.ASSISTANT, message)
+            
+            # Add interactive button
+            self.main_window.chat_view.add_interactive_button(
+                button_text,
+                self._perform_web_search
+            )
+    
+    def _perform_web_search(self):
+        """Perform web search using Google Search grounding"""
+        logger.info("🌐 Starting web search with Google grounding")
+        
+        # Get the last user query
+        if not hasattr(self, '_last_user_query'):
+            logger.error("No user query available for web search")
+            return
+        
+        # Start web search in a new worker
+        self._start_web_search_worker(
+            self._last_user_query,
+            getattr(self, '_last_rewritten_query', None),
+            getattr(self, '_last_game_context', None)
+        )
+    
+    def _start_web_search_worker(self, query: str, rewritten_query: str = None, game_context: str = None):
+        """Start web search worker"""
+        from PyQt6.QtCore import QThread
+        
+        # Create web search worker
+        class WebSearchWorker(QThread):
+            chunk_ready = pyqtSignal(str)
+            finished_signal = pyqtSignal()
+            error_signal = pyqtSignal(str)
+            
+            def __init__(self, query, rewritten_query, game_context, api_key):
+                super().__init__()
+                self.query = query
+                self.rewritten_query = rewritten_query
+                self.game_context = game_context
+                self.api_key = api_key
+                
+            def run(self):
+                try:
+                    # Import and use Google Search grounding
+                    from src.game_wiki_tooltip.ai.google_search_grounding import create_google_search_grounding
+                    
+                    grounding = create_google_search_grounding(api_key=self.api_key)
+                    
+                    # Run async in sync context
+                    import asyncio
+                    
+                    async def search_and_stream():
+                        async for chunk in grounding.search_and_generate_stream(
+                            self.query,
+                            self.rewritten_query,
+                            self.game_context
+                        ):
+                            self.chunk_ready.emit(chunk)
+                    
+                    # Run the async function
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(search_and_stream())
+                    
+                    self.finished_signal.emit()
+                    
+                except Exception as e:
+                    logger.error(f"Web search error: {e}")
+                    self.error_signal.emit(str(e))
+        
+        # Get API key
+        settings = self.settings_manager.get()
+        api_settings = settings.get('api', {})
+        api_key = api_settings.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+        
+        if not api_key:
+            logger.error("No API key available for web search")
+            return
+        
+        # Create and start worker
+        self._web_search_worker = WebSearchWorker(query, rewritten_query, game_context, api_key)
+        
+        # Setup streaming message for web search
+        current_lang = get_current_language()
+        if current_lang == 'zh':
+            self.main_window.chat_view.add_message("🌐 正在搜索网络信息...\n\n", MessageType.ASSISTANT)
+        else:
+            self.main_window.chat_view.add_message("🌐 Searching the web...\n\n", MessageType.ASSISTANT)
+        
+        self._setup_streaming_message()
+        
+        # Connect signals
+        self._web_search_worker.chunk_ready.connect(self._on_streaming_chunk)
+        self._web_search_worker.finished_signal.connect(self._on_streaming_finished)
+        self._web_search_worker.error_signal.connect(self._on_error)
+        
+        # Start worker
+        self._web_search_worker.start()
+        self.main_window.set_generating_state(True)
     
     def stop_current_generation(self):
         """Stop current generation process"""

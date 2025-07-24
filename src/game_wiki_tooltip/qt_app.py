@@ -272,11 +272,7 @@ class GameWikiApp(QObject):
             os.getenv('GOOGLE_API_KEY')
         )
         
-        # Check Jina API key (现在也是必需的，不再是可选的)
-        jina_api_key = (
-            api_config.get('jina_api_key') or 
-            os.getenv('JINA_API_KEY')
-        )
+        # No longer need separate Jina API key, Gemini is used for both LLM and embeddings
         
         # Debug information
         logger.info(f"API Key Detection:")
@@ -284,29 +280,20 @@ class GameWikiApp(QObject):
         logger.info(f"  - Environment GEMINI_API_KEY: {'***found***' if os.getenv('GEMINI_API_KEY') else 'not found'}")
         logger.info(f"  - Environment GOOGLE_API_KEY: {'***found***' if os.getenv('GOOGLE_API_KEY') else 'not found'}")
         logger.info(f"  - Final Gemini API key: {'***found***' if gemini_api_key else 'not found'}")
-        logger.info(f"  - settings.json Jina API key: {'***found***' if api_config.get('jina_api_key') else 'not found'}")
-        logger.info(f"  - Environment JINA_API_KEY: {'***found***' if os.getenv('JINA_API_KEY') else 'not found'}")
-        logger.info(f"  - Final Jina API key: {'***found***' if jina_api_key else 'not found'}")
         
-        # 检查是否同时有两个API key
-        has_both_keys = bool(gemini_api_key and jina_api_key)
+        # 检查API key是否可用
+        has_api_key = bool(gemini_api_key)
         dont_remind = settings.get('dont_remind_api_missing', False)
-        logger.info(f"  - Both API keys available: {has_both_keys}")
+        logger.info(f"  - API key available: {has_api_key}")
         logger.info(f"  - Don't remind API missing: {dont_remind}")
         
         # 修改逻辑：强制显示设置窗口的情况
         if self.force_settings:
             logger.info("Settings window forced by command line argument")
             self._show_settings(initial_setup=False)
-        elif not has_both_keys:
-            # 没有两个API key时，显示信息但不强制退出
-            missing_keys = []
-            if not gemini_api_key:
-                missing_keys.append("Gemini API Key")
-            if not jina_api_key:
-                missing_keys.append("Jina API Key")
-            
-            logger.info(f"Missing API keys: {', '.join(missing_keys)}, starting in limited mode")
+        elif not has_api_key:
+            # 没有API key时，显示信息但不强制退出
+            logger.info("Missing Gemini API Key, starting in limited mode")
             logger.info("User will be able to use wiki search but not AI guide features")
             
             # 显示通知告知用户功能受限
@@ -507,22 +494,18 @@ class GameWikiApp(QObject):
                 os.getenv('GOOGLE_API_KEY')
             )
             
-            # Check Jina API key (现在也是必需的)
-            jina_api_key = (
-                api_config.get('jina_api_key') or 
-                os.getenv('JINA_API_KEY')
-            )
+            # No longer need separate Jina API key
             
-            # 检查是否同时有两个API key
-            has_both_keys = bool(gemini_api_key and jina_api_key)
+            # 检查是否有API key
+            has_api_key = bool(gemini_api_key)
             dont_remind = settings.get('dont_remind_api_missing', False)
             
             # 检查是否需要切换模式
             current_limited_mode = getattr(self.assistant_ctrl, 'limited_mode', True)
-            new_limited_mode = not has_both_keys
+            new_limited_mode = not has_api_key
             
             logger.info(f"Mode check: current limited mode={current_limited_mode}, new limited mode={new_limited_mode}")
-            logger.info(f"API key status: Gemini={'✓' if gemini_api_key else '✗'}, Jina={'✓' if jina_api_key else '✗'}")
+            logger.info(f"API key status: Gemini={'✓' if gemini_api_key else '✗'}")
             
             # Check if API key missing dialog should be shown (only when switching from full to limited mode)
             show_api_dialog = (new_limited_mode and not current_limited_mode and not dont_remind)
@@ -531,8 +514,7 @@ class GameWikiApp(QObject):
                 missing_keys = []
                 if not gemini_api_key:
                     missing_keys.append("Gemini API Key")
-                if not jina_api_key:
-                    missing_keys.append("Jina API Key")
+                # Only need Gemini API key now
                 
                 # 显示自定义对话框
                 dialog = ApiKeyMissingDialog(missing_keys, parent=None)
@@ -604,8 +586,7 @@ class GameWikiApp(QObject):
                         missing_keys = []
                         if not gemini_api_key:
                             missing_keys.append("Gemini API Key")
-                        if not jina_api_key:
-                            missing_keys.append("Jina API Key")
+                        # Only need Gemini API key now
                         
                         self.tray_icon.show_notification(
                             "GameWiki Assistant",

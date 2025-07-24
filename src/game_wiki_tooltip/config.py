@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LLMConfig:
     """LLM configuration class"""
-    model: str = "gemini-2.5-flash-lite-preview-06-17"
+    model: str = "gemini-2.5-flash-lite"
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     max_tokens: int = 1000
@@ -263,7 +263,6 @@ class PopupConfig:
 @dataclass
 class ApiConfig:
     gemini_api_key: str = ""
-    jina_api_key: str = ""
 
 
 @dataclass

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class ApiKeyMissingDialog(QDialog):
-    """自定义对话框，用于处理API key缺失的通知"""
+    """Custom dialog for handling API key missing notifications"""
     
     def __init__(self, missing_keys, parent=None):
         super().__init__(parent)
@@ -35,7 +35,7 @@ class ApiKeyMissingDialog(QDialog):
         self._init_ui()
         
     def _init_ui(self):
-        """初始化用户界面"""
+        """Initialize user interface"""
         self.setWindowTitle("GameWiki Assistant")
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
         self.setModal(True)
@@ -689,22 +689,7 @@ class QtSettingsWindow(QMainWindow):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         group_layout.addWidget(separator)
         
-        # Jina API key
-        jina_layout = QVBoxLayout()
-        jina_label = QLabel(t("jina_api_label"))
-        jina_layout.addWidget(jina_label)
-        
-        self.jina_api_input = QLineEdit()
-        self.jina_api_input.setPlaceholderText(t("jina_api_placeholder"))
-        self.jina_api_input.setEchoMode(QLineEdit.EchoMode.Password)
-        jina_layout.addWidget(self.jina_api_input)
-        
-        jina_help = QLabel(f'<a href="https://jina.ai/">{t("jina_api_help")}</a>')
-        jina_help.setOpenExternalLinks(True)
-        jina_help.setStyleSheet("color: #1668dc;")
-        jina_layout.addWidget(jina_help)
-        
-        group_layout.addLayout(jina_layout)
+        # Jina API no longer needed - using Gemini for embeddings
         
         layout.addWidget(group)
         
@@ -777,7 +762,6 @@ class QtSettingsWindow(QMainWindow):
         
         # Update placeholders
         self.google_api_input.setPlaceholderText(t("google_api_placeholder"))
-        self.jina_api_input.setPlaceholderText(t("jina_api_placeholder"))
         
     def _load_settings(self):
         """Load current settings"""
@@ -815,13 +799,6 @@ class QtSettingsWindow(QMainWindow):
         )
         self.google_api_input.setText(gemini_api_key)
         
-        # Jina API key: settings.json -> environment variables
-        jina_api_key = (
-            api.get('jina_api_key') or 
-            os.getenv('JINA_API_KEY') or 
-            ''
-        )
-        self.jina_api_input.setText(jina_api_key)
         
     def _on_apply(self):
         """Apply settings"""
@@ -848,16 +825,13 @@ class QtSettingsWindow(QMainWindow):
         gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         gemini_api_key = gemini_api_key_input or gemini_api_key_env
         
-        jina_api_key_input = self.jina_api_input.text().strip()
-        jina_api_key_env = os.getenv('JINA_API_KEY')
-        jina_api_key = jina_api_key_input or jina_api_key_env
+        # Jina API key no longer needed
         
         # Check if both API keys are available
         missing_keys = []
         if not gemini_api_key:
             missing_keys.append("Gemini API Key")
-        if not jina_api_key:
-            missing_keys.append("Jina API Key")
+        # Only need Gemini API key now
         
         if missing_keys:
             # Check if user previously chose "don't remind me again"
@@ -897,7 +871,7 @@ class QtSettingsWindow(QMainWindow):
             },
             'api': {
                 'gemini_api_key': gemini_api_key_input,  # Only save user input
-                'jina_api_key': self.jina_api_input.text().strip()
+                # jina_api_key removed
             },
             'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
         })
@@ -945,16 +919,13 @@ class QtSettingsWindow(QMainWindow):
         gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         gemini_api_key = gemini_api_key_input or gemini_api_key_env
         
-        jina_api_key_input = self.jina_api_input.text().strip()
-        jina_api_key_env = os.getenv('JINA_API_KEY')
-        jina_api_key = jina_api_key_input or jina_api_key_env
+        # Jina API key no longer needed
         
         # Check if both API keys are available
         missing_keys = []
         if not gemini_api_key:
             missing_keys.append("Gemini API Key")
-        if not jina_api_key:
-            missing_keys.append("Jina API Key")
+        # Only need Gemini API key now
         
         if missing_keys:
             # Check if user previously chose "don't remind me again"

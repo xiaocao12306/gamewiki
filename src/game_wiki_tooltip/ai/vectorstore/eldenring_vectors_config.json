@@ -2,7 +2,7 @@
   "vector_store_type": "faiss",
   "collection_name": "eldenring_vectors",
   "game_name": "eldenring",
-  "model": "jina-embeddings-v4",
+  "model": "gemini-embedding-001",
   "output_dim": 768,
   "chunk_count": 214,
   "index_path": "eldenring_vectors",

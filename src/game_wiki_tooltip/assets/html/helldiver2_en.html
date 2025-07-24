@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helldivers 2 Ultimate Beginner's Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark gray background */
+            color: #E5E7EB; /* Light gray text */
+        }
+        .guide-card {
+            background-color: #1F2937; /* Slightly lighter dark card background */
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .guide-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(250, 204, 21, 0.1), 0 4px 6px -2px rgba(250, 204, 21, 0.05);
+        }
+        .title-highlight {
+            color: #FACC15; /* Helldivers Yellow */
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.3);
+        }
+        .section-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #F3F4F6;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #FACC15;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .keyword {
+            background-color: #374151;
+            color: #FACC15;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .timestamp {
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            background-color: #374151;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .tip-box {
+            background-color: rgba(250, 204, 21, 0.05);
+            border-left: 4px solid #FACC15;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.25rem;
+        }
+        .video-link {
+            color: #60A5FA;
+            text-decoration: underline;
+            margin-left: 0.5rem;
+        }
+        .video-link:hover {
+            color: #93C5FD;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-black title-highlight mb-2">HELLDIVERS 2</h1>
+            <p class="text-xl md:text-2xl text-gray-300">Ultimate Beginner's Guide (2025 Edition)</p>
+            <p class="text-sm text-gray-500 mt-2">
+                Content sourced from Scyushi's tutorial video
+                <a href="https://www.youtube.com/watch?v=SW13pGZsKqE" target="_blank" rel="noopener noreferrer" class="video-link">Watch here</a>
+            </p>
+        </header>
+
+        <!-- Section 1: Core Progression Systems -->
+        <div>
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Core Progression Systems
+            </h2>
+
+            <!-- Warbonds Card -->
+            <div class="guide-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">1. Warbonds: The Battle Pass That Never Expires</h3>
+                    <span class="timestamp">00:34</span>
+                </div>
+                <p class="text-gray-400 mb-4">"Warbonds" are the game's version of a battle pass, but with a key difference: <strong class="text-yellow-400">they never expire</strong>. You can unlock content at your own pace without fear of missing out.</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>Core Mechanic:</strong> Use <span class="keyword">Medals</span> earned from completing missions and orders to unlock items.</li>
+                    <li><strong>Unlockable Content:</strong> Weapons, Armor, Helmets, Capes, Emotes, Victory Poses, and <span class="keyword">Super Credits</span>.</li>
+                    <li><strong>Free Pass:</strong> The game includes the "Helldivers Mobilize!" free Warbond, providing plenty of starting gear.</li>
+                </ul>
+            </div>
+
+            <!-- Superstore Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">2. Superstore & Super Credits</h3>
+                    <span class="timestamp">02:06</span>
+                </div>
+                <p class="text-gray-400 mb-4">A rotating daily shop where you can purchase unique armor sets using "Super Credits".</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>Acquiring Currency:</strong>
+                        <ul class="list-inside list-['-_'] ml-4">
+                            <li>Purchase with real money.</li>
+                            <li class="font-semibold text-green-400">Found for free by exploring Points of Interest in missions.</li>
+                            <li>Unlocked from Warbonds.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <div class="tip-box">
+                    <p class="font-bold text-yellow-300">New Player Advice:</p>
+                    <p class="text-yellow-200">Prioritize using freely earned credits to unlock Premium Warbonds rather than spending in the store. You can absolutely unlock everything without spending any money.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pre-Mission Preparation -->
+        <div class="mt-12">
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m0-8v-2m0 4h.01M6 12H4m16 0h-2m-8 0h-2m0 4h.01M12 6h.01M12 18h.01M18 12h.01M6 12h.01M6 6l1.414-1.414M18 18l-1.414-1.414M6 18l1.414 1.414M18 6l-1.414 1.414"></path></svg>
+                Pre-Mission Preparation
+            </h2>
+
+            <!-- Ship Management Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">3. Ship Management: Unlocks & Upgrades</h3>
+                    <span class="timestamp">03:12</span>
+                </div>
+                <p class="text-gray-400 mb-4">At the Ship Management terminal, you can spend two types of resources to strengthen yourself.</p>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                        <h4 class="font-bold text-lg text-yellow-400">Stratagems</h4>
+                        <p class="text-sm text-gray-400">Airstrikes, weapons, and other support called in during missions.</p>
+                        <p class="mt-2"><strong>Unlock Currency:</strong> <span class="keyword">Requisition Slips (R-points)</span></p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                        <h4 class="font-bold text-lg text-yellow-400">Ship Modules</h4>
+                        <p class="text-sm text-gray-400">Provides permanent passive buffs for your Stratagems.</p>
+                        <p class="mt-2"><strong>Unlock Currency:</strong> <span class="keyword bg-green-600 text-white">Common Samples</span> <span class="keyword bg-orange-500 text-white">Rare Samples</span> <span class="keyword bg-pink-500 text-white">Super Samples</span></p>
+                    </div>
+                </div>
+                 <div class="tip-box">
+                    <p class="text-yellow-200">Samples must be <strong class="font-bold">successfully extracted</strong> to be kept. Plan your upgrade path carefully.</p>
+                </div>
+            </div>
+
+            <!-- Armory Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">4. Armory: Customizing Your Loadout</h3>
+                    <span class="timestamp">07:07</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>Body Armor:</strong> <strong class="text-yellow-400">Crucial!</strong> Provides stats for Armor, Speed, and Stamina, and comes with a <strong class="text-yellow-400">unique passive ability</strong>.</li>
+                    <li><strong>Helmets & Capes:</strong> Purely cosmetic items that offer no gameplay advantages.</li>
+                    <li><strong>Booster:</strong> Provides a team-wide passive buff for the mission, but the same effect <strong class="text-red-400">does not stack</strong>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 3: Into the Fray -->
+        <div class="mt-12">
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Into the Fray
+            </h2>
+
+            <!-- Galactic War Card -->
+            <div class="guide-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">5. Galactic War Map & Missions</h3>
+                    <span class="timestamp">09:55</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>Increased Difficulty:</strong> It doesn't just increase enemy health; it introduces <strong class="text-yellow-400">new, stronger enemy types</strong> and <strong class="text-yellow-400">new mission objectives</strong>.</li>
+                    <li><strong>Operation:</strong> Completing all missions in an Operation rewards <strong class="text-green-400">bonus Medals</strong>.</li>
+                </ul>
+            </div>
+
+            <!-- In-Mission Tips Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">6. Core Combat Mechanics</h3>
+                    <span class="timestamp">12:23</span>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">Weapon Customization</h4>
+                        <p class="text-gray-300"><strong class="text-white">Hold the reload key (R)</strong> to adjust fire mode, scope magnification, and flashlight.</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">Realistic Reloading</h4>
+                        <p class="text-gray-300">Reloading <strong class="text-red-400">discards the entire magazine and any remaining bullets</strong>. Reload wisely!</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">Physical Aiming</h4>
+                        <p class="text-gray-300">After a quick turn, you must wait for the gun to align with the crosshair for accurate shots.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exploration Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">7. Map Exploration & Hidden Mechanics</h3>
+                    <span class="timestamp">19:03</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>Minor Points of Interest (POIs):</strong> Explore unmarked locations on the map to find valuable resources like <strong class="text-green-400">Medals, Super Credits, and Samples</strong>.</li>
+                    <li><strong>Radar Tower:</strong> Activating it will <strong class="text-blue-400">reveal all POIs on the map</strong>.</li>
+                    <li><strong>Raise Flag Objective:</strong> Using the <strong class="text-yellow-400">"Salute" emote</strong> on the flagpole while it's raising will <strong class="text-yellow-400">make it go faster</strong>!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 py-4 border-t border-gray-700">
+            <p class="text-gray-500">For Managed Democracy! Good luck out there, Helldiver!</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

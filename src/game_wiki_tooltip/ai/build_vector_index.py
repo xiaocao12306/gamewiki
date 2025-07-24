@@ -67,8 +67,8 @@ def process_single_game(game_name: str,
         
         # 检查API密钥
         import os
-        if not os.environ.get("JINA_API_KEY"):
-            print("Error: JINA_API_KEY environment variable is required")
+        if not (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")):
+            print("Error: GOOGLE_API_KEY or GEMINI_API_KEY environment variable is required")
             return False
         
         # 处理知识库
@@ -139,8 +139,8 @@ def process_custom_file(file_path: str,
         
         # 检查API密钥
         import os
-        if not os.environ.get("JINA_API_KEY"):
-            print("Error: JINA_API_KEY environment variable is required")
+        if not (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")):
+            print("Error: GOOGLE_API_KEY or GEMINI_API_KEY environment variable is required")
             return False
         
         # 创建处理器

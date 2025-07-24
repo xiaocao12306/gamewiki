@@ -1008,6 +1008,67 @@ class MessageWidget(QFrame):
         self.adjustSize()
 
 
+class InteractiveButtonWidget(QWidget):
+    """Interactive button widget for chat messages"""
+    
+    def __init__(self, button_text: str, callback, parent=None):
+        super().__init__(parent)
+        self.callback = callback
+        self.init_ui(button_text)
+        
+    def init_ui(self, button_text: str):
+        """Initialize button UI"""
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(20, 10, 20, 10)
+        
+        # Create button
+        self.button = QPushButton(button_text)
+        self.button.clicked.connect(self._on_click)
+        
+        # Style the button
+        self.button.setStyleSheet("""
+            QPushButton {
+                background-color: #4096ff;
+                color: white;
+                border-radius: 20px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: bold;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #3080ff;
+            }
+            QPushButton:pressed {
+                background-color: #2060df;
+            }
+        """)
+        
+        # Center the button
+        layout.addStretch()
+        layout.addWidget(self.button)
+        layout.addStretch()
+        
+    def _on_click(self):
+        """Handle button click"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔘 Interactive button clicked: {self.button.text()}")
+        
+        # Disable button to prevent multiple clicks
+        self.button.setEnabled(False)
+        self.button.setText("处理中..." if "搜索" in self.button.text() else "Processing...")
+        
+        # Call the callback
+        if self.callback:
+            try:
+                self.callback()
+            except Exception as e:
+                logger.error(f"Error in button callback: {e}")
+                # Re-enable button on error
+                self.button.setEnabled(True)
+                self.button.setText("重试" if "处理中" in self.button.text() else "Retry")
+
+
 class StreamingMessageWidget(MessageWidget):
     """Message widget with streaming/typing animation support"""
     
@@ -1759,6 +1820,29 @@ class ChatView(QScrollArea):
         except Exception as e:
             print(f"❌ [UI-DEBUG] Failed to create streaming message component: {e}")
             raise
+    
+    def add_interactive_button(self, button_text: str, callback) -> InteractiveButtonWidget:
+        """Add an interactive button to the chat"""
+        logger.info(f"🔘 Adding interactive button: {button_text}")
+        
+        # Check and fix ChatView width
+        self._check_and_fix_width()
+        
+        # Create button widget
+        button_widget = InteractiveButtonWidget(button_text, callback, self)
+        
+        # Add to layout
+        self.layout.insertWidget(self.layout.count() - 1, button_widget)
+        self.messages.append(button_widget)
+        
+        # Update layout
+        button_widget.updateGeometry()
+        self.container.updateGeometry()
+        
+        # Request auto scroll
+        self.request_auto_scroll()
+        
+        return button_widget
         
     def show_status(self, message: str) -> StatusMessageWidget:
         """Display status information"""
@@ -3095,7 +3179,7 @@ class WikiView(QWidget):
 class UnifiedAssistantWindow(QMainWindow):
     """Main unified window with all modes"""
     
-    query_submitted = pyqtSignal(str)
+    query_submitted = pyqtSignal(str, str)  # query, mode
     window_closing = pyqtSignal()  # Signal when window is closing
     wiki_page_found = pyqtSignal(str, str)  # New signal: pass real wiki page information to controller
     visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
@@ -3104,7 +3188,7 @@ class UnifiedAssistantWindow(QMainWindow):
     def __init__(self, settings_manager=None):
         super().__init__()
         self.settings_manager = settings_manager
-        self.current_mode = "wiki"
+        self.current_mode = "auto"
         self.is_generating = False
         self.streaming_widget = None
         self.current_game_window = None  # Record current game window title
@@ -3251,16 +3335,26 @@ class UnifiedAssistantWindow(QMainWindow):
         """)
         
         # Add mode options
-        wiki_action = mode_menu.addAction("Search wiki / guide")
+        from src.game_wiki_tooltip.i18n import t
+        
+        auto_action = mode_menu.addAction(t("search_mode_auto"))
+        auto_action.triggered.connect(lambda: self.set_mode("auto"))
+        
+        wiki_action = mode_menu.addAction(t("search_mode_wiki"))
         wiki_action.triggered.connect(lambda: self.set_mode("wiki"))
         
-        url_action = mode_menu.addAction("Go to URL")
+        ai_action = mode_menu.addAction(t("search_mode_ai"))
+        ai_action.triggered.connect(lambda: self.set_mode("ai"))
+        
+        mode_menu.addSeparator()
+        
+        url_action = mode_menu.addAction(t("search_mode_url"))
         url_action.triggered.connect(lambda: self.set_mode("url"))
         
         self.mode_button.setMenu(mode_menu)
         
         # Update button text to include arrow
-        self.mode_button.setText("Search info ▼")
+        self.mode_button.setText(t("search_mode_auto") + " ▼")
         
         # Input field - use QLineEdit for single line input
         self.input_field = QLineEdit()
@@ -3338,7 +3432,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.history_button.clicked.connect(self.show_history_menu)
         
         # Current mode
-        self.current_mode = "wiki"
+        self.current_mode = "auto"
         
         input_layout.addWidget(self.mode_button)
         input_layout.addWidget(self.history_button)
@@ -3695,10 +3789,12 @@ class UnifiedAssistantWindow(QMainWindow):
         self.wiki_page_found.emit(url, title)
         
     def set_mode(self, mode: str):
-        """Set the input mode (wiki or url)"""
+        """Set the input mode (auto, wiki, ai or url)"""
+        from src.game_wiki_tooltip.i18n import t
+        
         self.current_mode = mode
         if mode == "url":
-            self.mode_button.setText("Go to URL ▼")
+            self.mode_button.setText(t("search_mode_url") + " ▼")
             self.input_field.setPlaceholderText("Enter URL...")
             self.send_button.setText("Open")
             # Disconnect and reconnect send button
@@ -3707,8 +3803,28 @@ class UnifiedAssistantWindow(QMainWindow):
             except:
                 pass
             self.send_button.clicked.connect(self.on_open_url_clicked)
-        else:
-            self.mode_button.setText("Search info ▼")
+        elif mode == "wiki":
+            self.mode_button.setText(t("search_mode_wiki") + " ▼")
+            self.input_field.setPlaceholderText("Enter search query...")
+            self.send_button.setText("Send")
+            # Disconnect and reconnect send button
+            try:
+                self.send_button.clicked.disconnect()
+            except:
+                pass
+            self.send_button.clicked.connect(self.on_send_clicked)
+        elif mode == "ai":
+            self.mode_button.setText(t("search_mode_ai") + " ▼")
+            self.input_field.setPlaceholderText("Enter question...")
+            self.send_button.setText("Send")
+            # Disconnect and reconnect send button
+            try:
+                self.send_button.clicked.disconnect()
+            except:
+                pass
+            self.send_button.clicked.connect(self.on_send_clicked)
+        else:  # auto mode
+            self.mode_button.setText(t("search_mode_auto") + " ▼")
             self.input_field.setPlaceholderText("Enter message...")
             self.send_button.setText("Send")
             # Disconnect and reconnect send button
@@ -3877,6 +3993,13 @@ class UnifiedAssistantWindow(QMainWindow):
                 'window_titles': ["don't starve together", "dst"],
                 'html_files': {'en': 'dst_en.html', 'zh': 'dst_zh.html'},
                 'button_color': '#4CAF50'
+            },
+            {
+                'game_name': 'helldiver2',
+                'display_name': t('helldiver2_task_button'),
+                'window_titles': ["HELLDIVERS™ 2", "HELLDIVERS 2"],
+                'html_files': {'en': 'helldiver2_en.html', 'zh': 'helldiver2_zh.html'},
+                'button_color': '#E5E7EB'
             },
             {
                 'game_name': 'civilization6',
@@ -4314,6 +4437,10 @@ class UnifiedAssistantWindow(QMainWindow):
                     'window_titles': ["don't starve together", "dst"]
                 },
                 {
+                    'game_name': 'helldiver2',
+                    'window_titles': ["HELLDIVERS™ 2", "HELLDIVERS 2"]
+                },
+                {
                     'game_name': 'civilization6',
                     'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"]
                 }
@@ -4349,7 +4476,7 @@ class UnifiedAssistantWindow(QMainWindow):
                     self.stop_generation()
                     
                 self.input_field.clear()
-                self.query_submitted.emit(text)
+                self.query_submitted.emit(text, self.current_mode)
     
     def set_generating_state(self, is_generating: bool, streaming_msg=None):
         """Set generation state"""
@@ -4693,7 +4820,7 @@ class AssistantController:
         if self.main_window:
             self.main_window.load_shortcuts()
         
-    def handle_query(self, query: str):
+    def handle_query(self, query: str, mode: str = "auto"):
         """Handle user query"""
         # Add user message to chat
         self.main_window.chat_view.add_message(

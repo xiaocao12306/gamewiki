@@ -204,7 +204,7 @@ class EnhancedRagQuery:
                  enable_hybrid_search: bool = True,
                  hybrid_config: Optional[Dict] = None,
                  llm_config: Optional[LLMConfig] = None,
-                 jina_api_key: Optional[str] = None,
+                 google_api_key: Optional[str] = None,
                  enable_query_rewrite: bool = True,
                  enable_summarization: bool = True,
                  summarization_config: Optional[Dict] = None,
@@ -233,12 +233,12 @@ class EnhancedRagQuery:
         self.enable_hybrid_search = enable_hybrid_search
         self.hybrid_config = hybrid_config or {
             "fusion_method": "rrf",
-            "vector_weight": 0.3,
-            "bm25_weight": 0.7,
+            "vector_weight": 0.5,
+            "bm25_weight": 0.5,
             "rrf_k": 60
         }
         self.llm_config = llm_config
-        self.jina_api_key = jina_api_key
+        self.google_api_key = google_api_key
         self.enable_query_rewrite = enable_query_rewrite
         self.hybrid_retriever = None
         
@@ -318,7 +318,7 @@ class EnhancedRagQuery:
             
             # Load vector store
             try:
-                self.processor = BatchEmbeddingProcessor(api_key=self.jina_api_key)
+                self.processor = BatchEmbeddingProcessor(api_key=self.google_api_key)
                 self.vector_store = self.processor.load_vector_store(self.vector_store_path)
                 
                 # Load configuration and metadata
@@ -399,8 +399,8 @@ class EnhancedRagQuery:
                 vector_retriever=vector_retriever,
                 bm25_index_path=str(bm25_path),
                 fusion_method=self.hybrid_config.get("fusion_method", "rrf"),
-                vector_weight=self.hybrid_config.get("vector_weight", 0.3),
-                bm25_weight=self.hybrid_config.get("bm25_weight", 0.7),
+                vector_weight=self.hybrid_config.get("vector_weight", 0.5),
+                bm25_weight=self.hybrid_config.get("bm25_weight", 0.5),
                 rrf_k=self.hybrid_config.get("rrf_k", 60),
                 llm_config=self.llm_config,
                 enable_unified_processing=enable_unified_processing,  # Read from configuration
@@ -448,7 +448,7 @@ class EnhancedRagQuery:
             # Create summary configuration (remove deprecated max_summary_length parameter)
             config = SummarizationConfig(
                 api_key=api_key,
-                model_name=self.summarization_config.get("model_name", "gemini-2.5-flash-lite-preview-06-17"),
+                model_name=self.summarization_config.get("model_name", "gemini-2.5-flash-lite"),
                 temperature=self.summarization_config.get("temperature", 0.3),
                 include_sources=self.summarization_config.get("include_sources", True),
                 language=self.summarization_config.get("language", "auto")
@@ -501,7 +501,11 @@ class EnhancedRagQuery:
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
             print(f"📄 [VECTOR-DEBUG] Building query text: '{query_text[:100]}...'")
             
-            query_vectors = self.processor.embed_batch([query_text])
+            # Use Gemini embeddings with QUESTION_ANSWERING task type for queries
+            if hasattr(self.processor, 'embedding_client'):
+                query_vectors = [self.processor.embedding_client.embed_query(query_text)]
+            else:
+                query_vectors = self.processor.embed_batch([query_text])
             query_vector = np.array(query_vectors[0], dtype=np.float32).reshape(1, -1)
             print(f"🔢 [VECTOR-DEBUG] Query vector dimension: {query_vector.shape}, first 5 values: {query_vector[0][:5]}")
             
@@ -602,7 +606,11 @@ class EnhancedRagQuery:
             query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
             print(f"📄 [VECTOR-DEBUG] Building query text: '{query_text[:100]}...'")
             
-            query_vectors = self.processor.embed_batch([query_text])
+            # Use Gemini embeddings with QUESTION_ANSWERING task type for queries
+            if hasattr(self.processor, 'embedding_client'):
+                query_vectors = [self.processor.embedding_client.embed_query(query_text)]
+            else:
+                query_vectors = self.processor.embed_batch([query_text])
             query_vector = query_vectors[0]
             print(f"🔢 [VECTOR-DEBUG] Query vector dimension: {len(query_vector)}, first 5 values: {query_vector[:5]}")
             
@@ -1499,8 +1507,8 @@ async def query_enhanced_rag(question: str,
                 enable_hybrid_search = hybrid_search_settings.get("enabled", True)
                 hybrid_config = {
                     "fusion_method": hybrid_search_settings.get("fusion_method", "rrf"),
-                    "vector_weight": hybrid_search_settings.get("vector_weight", 0.3),
-                    "bm25_weight": hybrid_search_settings.get("bm25_weight", 0.7),
+                    "vector_weight": hybrid_search_settings.get("vector_weight", 0.5),
+                    "bm25_weight": hybrid_search_settings.get("bm25_weight", 0.5),
                     "rrf_k": hybrid_search_settings.get("rrf_k", 60)
                 }
             
@@ -1510,7 +1518,7 @@ async def query_enhanced_rag(question: str,
                 enable_summarization = summarization_settings.get("enabled", True)  # Default to enable summary
                 summarization_config = {
                     "api_key": summarization_settings.get("api_key") or os.environ.get("GEMINI_API_KEY"),
-                    "model_name": summarization_settings.get("model_name", "gemini-2.5-flash-lite-preview-06-17"),
+                    "model_name": summarization_settings.get("model_name", "gemini-2.5-flash-lite"),
                     # Remove deprecated max_summary_length parameter
                     "temperature": summarization_settings.get("temperature", 0.3),
                     "include_sources": summarization_settings.get("include_sources", True),

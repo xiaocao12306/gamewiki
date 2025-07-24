@@ -287,8 +287,15 @@ class TranslationManager:
             "status_error_not_found": "Sorry, no relevant information found",
             "status_error_timeout": "Request timeout, please try again later",
             
+            # Search mode menu
+            "search_mode_auto": "Auto search",
+            "search_mode_wiki": "Wiki search",
+            "search_mode_ai": "AI search",
+            "search_mode_url": "Go to URL",
+            
             # Game Task Flow Buttons and Content
             "dst_task_button": "📋 DST Task Flow",
+            "helldiver2_task_button": "📋 Helldivers 2 Guide",
             "dst_task_flow_title": "DST Task Flow",
             "dst_survival_guide_title": "Don't Starve Together - Survival Guide",
             "dst_technical_error": "Unable to display the complete task flow page due to technical issues.",
@@ -443,8 +450,15 @@ class TranslationManager:
                 "status_error_not_found": "抱歉，未找到相关信息",
                 "status_error_timeout": "请求超时，请稍后重试",
                 
+                # Search mode menu
+                "search_mode_auto": "自动搜索",
+                "search_mode_wiki": "Wiki 搜索",
+                "search_mode_ai": "AI 搜索",
+                "search_mode_url": "访问网址",
+                
                 # Game Task Flow Buttons and Content
                 "dst_task_button": "📋 DST任务流程",
+                "helldiver2_task_button": "📋 地狱潜兵2攻略",
                 "dst_task_flow_title": "DST 任务流程",
                 "dst_survival_guide_title": "饥荒联机版 - 生存指南",
                 "dst_technical_error": "由于技术问题，无法显示完整的任务流程页面。",

@@ -2,7 +2,7 @@
   "vector_store_type": "faiss",
   "collection_name": "civilization6_vectors",
   "game_name": "civilization6",
-  "model": "jina-embeddings-v4",
+  "model": "gemini-embedding-001",
   "output_dim": 768,
   "chunk_count": 28,
   "index_path": "civilization6_vectors",

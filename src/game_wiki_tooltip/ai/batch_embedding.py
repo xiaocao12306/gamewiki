@@ -81,33 +81,44 @@ def get_resource_path(relative_path: str) -> Path:
 # 导入翻译函数
 from src.game_wiki_tooltip.i18n import t
 
+# Import Gemini embedding client
+try:
+    from .gemini_embedding import GeminiEmbeddingClient
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    logging.warning("Gemini embedding client not available")
+
 class BatchEmbeddingProcessor:
     """Batch Embedding Processor"""
     
     def __init__(self, 
                  api_key: Optional[str] = None,
-                 model: str = "jina-embeddings-v4",
-                 adapter: str = "retrieval.passage",
+                 model: str = "gemini-embedding-001",
                  output_dim: int = 768,
                  vector_store_type: str = "faiss"):
         """
         Initialize the batch embedding processor
         
         Args:
-            api_key: Jina API key, if None will get from environment variable
-            model: Embedding model to use
-            adapter: Adapter type
+            api_key: Google API key, if None will get from environment variable
+            model: Embedding model to use (default: gemini-embedding-001)
             output_dim: Output vector dimension
             vector_store_type: Vector store type ("faiss" or "qdrant")
         """
-        self.api_key = api_key or os.environ.get("JINA_API_KEY")
+        self.api_key = api_key or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
-            raise ValueError("JINA_API_KEY environment variable or parameter is required")
+            raise ValueError("GOOGLE_API_KEY or GEMINI_API_KEY environment variable or parameter is required")
+        
+        if not GEMINI_AVAILABLE:
+            raise ImportError("Gemini embedding client not available")
             
         self.model = model
-        self.adapter = adapter
         self.output_dim = output_dim
         self.vector_store_type = vector_store_type.lower()
+        
+        # Initialize Gemini client
+        self.embedding_client = GeminiEmbeddingClient(api_key=self.api_key, model=model, output_dim=output_dim)
         
         # Validate vector store support
         if self.vector_store_type == "qdrant" and not QDRANT_AVAILABLE:
@@ -132,16 +143,12 @@ class BatchEmbeddingProcessor:
             chunk.get('summary', ''),
             f"Keywords: {', '.join(chunk.get('keywords', []))}"
         ]
-        
-        # Optional: add rationale information
-        if 'build' in chunk and 'focus' in chunk['build']:
-            text_parts.append(f"Focus: {chunk['build']['focus']}")
             
         return "\n".join(text_parts)
     
     def embed_batch(self, texts: List[str]) -> List[List[float]]:
         """
-        Batch call Jina API for embeddings
+        Batch call Gemini API for embeddings
         
         Args:
             texts: List of text
@@ -149,45 +156,8 @@ class BatchEmbeddingProcessor:
         Returns:
             List of embedding vectors
         """
-        url = "https://api.jina.ai/v1/embeddings"
-        
-        # Build input according to Jina official example format
-        input_data = [{"text": text} for text in texts]
-        
-        payload = {
-            "model": self.model,
-            "task": self.adapter,
-            "dimensions": self.output_dim,  # Use dimensions instead of output_dim
-            "input": input_data
-        }
-        
-        try:
-            response = requests.post(
-                url,
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            # Add debug info
-            if result.get("data") and len(result["data"]) > 0:
-                first_embedding = result["data"][0].get("embedding", [])
-                logger.info(f"First vector length returned by Jina: {len(first_embedding)}")
-                logger.info(f"Expected vector dimension: {self.output_dim}")
-            
-            return [e["embedding"] for e in result["data"]]
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Jina API call failed: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"API response: {e.response.text}")
-            raise
+        # Use Gemini embeddings with RETRIEVAL_DOCUMENT task type for knowledge base
+        return self.embedding_client.embed_documents(texts)
     
     def process_json_file(self, 
                          json_path: str, 

@@ -36,7 +36,7 @@ class HybridSearchConfig:
 class SummarizationConfig:
     """Summary generation configuration"""
     enabled: bool = True
-    model_name: str = "gemini-2.0-flash-exp"
+    model_name: str = "gemini-2.0-flash"
     max_summary_length: int = 300
     temperature: float = 0.3
     include_sources: bool = True
@@ -127,7 +127,7 @@ class RAGConfig:
             sum_dict = config_dict["summarization"]
             config.summarization = SummarizationConfig(
                 enabled=sum_dict.get("enabled", True),
-                model_name=sum_dict.get("model_name", "gemini-2.0-flash-exp"),
+                model_name=sum_dict.get("model_name", "gemini-2.0-flash"),
                 max_summary_length=sum_dict.get("max_summary_length", 300),
                 temperature=sum_dict.get("temperature", 0.3),
                 include_sources=sum_dict.get("include_sources", True),
@@ -238,7 +238,7 @@ def get_default_config() -> RAGConfig:
         ),
         summarization=SummarizationConfig(
             enabled=True,
-            model_name="gemini-2.0-flash-exp",
+            model_name="gemini-2.0-flash",
             max_summary_length=300,
             temperature=0.3,
             include_sources=True,

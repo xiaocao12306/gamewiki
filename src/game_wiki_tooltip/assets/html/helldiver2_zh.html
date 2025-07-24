@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helldivers 2 新手入门终极指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark gray background */
+            color: #E5E7EB; /* Light gray text */
+        }
+        .guide-card {
+            background-color: #1F2937; /* Slightly lighter dark card background */
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .guide-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(250, 204, 21, 0.1), 0 4px 6px -2px rgba(250, 204, 21, 0.05);
+        }
+        .title-highlight {
+            color: #FACC15; /* Helldivers Yellow */
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.3);
+        }
+        .section-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #F3F4F6;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #FACC15;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .keyword {
+            background-color: #374151;
+            color: #FACC15;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .timestamp {
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            background-color: #374151;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .tip-box {
+            background-color: rgba(250, 204, 21, 0.05);
+            border-left: 4px solid #FACC15;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-black title-highlight mb-2">HELLDIVERS 2</h1>
+            <p class="text-xl md:text-2xl text-gray-300">新手入门终极指南 (2025版)</p>
+            <p class="text-sm text-gray-500 mt-2">内容源自 Scyushi 的教学视频</p>
+        </header>
+
+        <!-- Section 1: Core Progression Systems -->
+        <div>
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                核心进度系统
+            </h2>
+
+            <!-- Warbonds Card -->
+            <div class="guide-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">1. 战争债券 (Warbonds): 永不过期的战斗通行证</h3>
+                    <span class="timestamp">00:34</span>
+                </div>
+                <p class="text-gray-400 mb-4">“战争债券”是游戏的战斗通行证，但最关键的是：<strong class="text-yellow-400">它们永远不会过期</strong>。您可以按照自己的节奏解锁，无需担心错过。</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>核心机制:</strong> 使用完成任务和指令获得的 <span class="keyword">奖章</span> 来解锁物品。</li>
+                    <li><strong>解锁内容:</strong> 武器, 护甲, 头盔, 披风, 表情, 胜利姿势, 以及 <span class="keyword">超级制作凭证</span>。</li>
+                    <li><strong>免费通行证:</strong> 游戏自带“绝地潜兵，动员！”免费战争债券，提供大量初始装备。</li>
+                </ul>
+            </div>
+
+            <!-- Superstore Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">2. 超级商店 (Superstore) 与 超级制作凭证</h3>
+                    <span class="timestamp">02:06</span>
+                </div>
+                <p class="text-gray-400 mb-4">一个每日轮换的商店，可使用“超级制作凭证”购买独特的盔甲套装。</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>货币获取:</strong>
+                        <ul class="list-inside list-['-_'] ml-4">
+                            <li>用现实货币购买。</li>
+                            <li class="font-semibold text-green-400">在任务中探索兴趣点免费拾取。</li>
+                            <li>从战争债券中解锁。</li>
+                        </ul>
+                    </li>
+                </ul>
+                <div class="tip-box">
+                    <p class="font-bold text-yellow-300">新手建议:</p>
+                    <p class="text-yellow-200">优先用免费获得的凭证解锁高级战争债券，而非在商店消费。您完全可以不花一分钱就解锁所有内容。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pre-Mission Preparation -->
+        <div class="mt-12">
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m0-8v-2m0 4h.01M6 12H4m16 0h-2m-8 0h-2m0 4h.01M12 6h.01M12 18h.01M18 12h.01M6 12h.01M6 6l1.414-1.414M18 18l-1.414-1.414M6 18l1.414 1.414M18 6l-1.414 1.414"></path></svg>
+                战前准备
+            </h2>
+
+            <!-- Ship Management Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">3. 飞船管理: 解锁与升级</h3>
+                    <span class="timestamp">03:12</span>
+                </div>
+                <p class="text-gray-400 mb-4">在飞船管理终端，您可以消耗两种资源来强化自己。</p>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                        <h4 class="font-bold text-lg text-yellow-400">战略配备 (Stratagems)</h4>
+                        <p class="text-sm text-gray-400">任务中呼叫的空袭、武器等支援。</p>
+                        <p class="mt-2"><strong>解锁货币:</strong> <span class="keyword">申请单 (R-points)</span></p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                        <h4 class="font-bold text-lg text-yellow-400">飞船模块 (Ship Modules)</h4>
+                        <p class="text-sm text-gray-400">为战略配备提供永久被动增益。</p>
+                        <p class="mt-2"><strong>解锁货币:</strong> <span class="keyword bg-green-600 text-white">普通样本</span> <span class="keyword bg-orange-500 text-white">稀有样本</span> <span class="keyword bg-pink-500 text-white">超级样本</span></p>
+                    </div>
+                </div>
+                 <div class="tip-box">
+                    <p class="text-yellow-200">样本必须<strong class="font-bold">成功撤离</strong>才能带回，请谨慎规划升级路线。</p>
+                </div>
+            </div>
+
+            <!-- Armory Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">4. 武装库 (Armory): 定制装备</h3>
+                    <span class="timestamp">07:07</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>身体护甲:</strong> <strong class="text-yellow-400">至关重要！</strong> 提供护甲、速度、体力三大属性，并附带一个<strong class="text-yellow-400">独特被动技能</strong>。</li>
+                    <li><strong>头盔与披风:</strong> 纯粹的外观物品，不提供任何属性加成。</li>
+                    <li><strong>强化剂 (Booster):</strong> 为全队提供被动增益，但同种效果<strong class="text-red-400">不叠加</strong>。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 3: In-Mission Guide -->
+        <div class="mt-12">
+            <h2 class="section-title">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                投身战斗
+            </h2>
+
+            <!-- Galactic War Card -->
+            <div class="guide-card">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">5. 银河战争地图与任务</h3>
+                    <span class="timestamp">09:55</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>难度提升:</strong> 不仅是敌人血量增加，更会引入<strong class="text-yellow-400">新的强力敌人种类</strong>和<strong class="text-yellow-400">新的任务目标</strong>。</li>
+                    <li><strong>行动 (Operation):</strong> 连续完成一个行动中的所有任务会奖励<strong class="text-green-400">额外奖章</strong>。</li>
+                </ul>
+            </div>
+
+            <!-- In-Mission Tips Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">6. 核心战斗技巧</h3>
+                    <span class="timestamp">12:23</span>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">武器自定义</h4>
+                        <p class="text-gray-300"><strong class="text-white">长按装填键 (R)</strong> 可调整开火模式、瞄准镜倍率、手电筒。</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">拟真装填</h4>
+                        <p class="text-gray-300">更换弹匣会<strong class="text-red-400">丢弃当前弹匣中所有剩余子弹</strong>。请谨慎换弹！</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-bold text-lg text-yellow-400">物理瞄准</h4>
+                        <p class="text-gray-300">快速转身后，需等待枪口与准星对齐才能保证精准射击。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exploration Card -->
+            <div class="guide-card">
+                 <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-white">7. 地图探索与隐藏机制</h3>
+                    <span class="timestamp">19:03</span>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-300">
+                    <li><strong>次要兴趣点 (POI):</strong> 探索地图上未标记的地点，可以找到<strong class="text-green-400">奖章、超级凭证、样本</strong>等珍贵物资。</li>
+                    <li><strong>雷达塔:</strong> 激活后会<strong class="text-blue-400">揭示地图上所有兴趣点</strong>。</li>
+                    <li><strong>升旗任务:</strong> 升旗时对其使用<strong class="text-yellow-400">“敬礼”</strong>表情可以<strong class="text-yellow-400">加快升旗速度</strong>！</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 py-4 border-t border-gray-700">
+            <p class="text-gray-500">为了管理式民主！祝您武运昌隆，绝地潜兵！</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>
