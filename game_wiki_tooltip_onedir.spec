@@ -246,7 +246,7 @@ exe = EXE(
         'msvcp*.dll',
         'python*.dll',
     ],
-    console=False,  # Hide console window for production
+    console=True,  # Hide console window for production
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

@@ -17,6 +17,9 @@ class InitializationThread(QThread):
     
     def run(self):
         """Run initialization tasks"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             # Step 1: Import core modules
             self.progress_update.emit(10, "Loading core modules...")
@@ -33,16 +36,44 @@ class InitializationThread(QThread):
             from .config import SettingsManager
             settings_manager = SettingsManager()
             
-            # Step 4: Start background preloading
-            self.progress_update.emit(55, "Initializing AI modules...")
+            # Step 4: Load AI modules directly (not just start background loading)
+            self.progress_update.emit(55, "Loading AI modules...")
             try:
-                from .preloader import start_preloading
-                start_preloading()
-            except:
-                pass
+                # Import and initialize AI modules during splash screen
+                from .ai.unified_query_processor import process_query_unified
+                from .ai.rag_config import get_default_config
+                from .ai.rag_query import EnhancedRagQuery
+                
+                # Mark AI modules as loaded in assistant_integration
+                from . import assistant_integration as ai_integration
+                ai_integration.process_query_unified = process_query_unified
+                ai_integration.get_default_config = get_default_config
+                ai_integration.EnhancedRagQuery = EnhancedRagQuery
+                ai_integration._ai_modules_loaded = True
+                ai_integration._ai_modules_loading = False
+                
+                logger.info("✅ AI modules loaded during splash screen")
+            except Exception as e:
+                logger.warning(f"Failed to load AI modules during splash: {e}")
+                # Still start background preloading as fallback
+                try:
+                    from .preloader import start_preloading
+                    start_preloading()
+                except:
+                    pass
             
-            # Step 5: Preload critical modules
-            self.progress_update.emit(70, "Loading game mappings...")
+            # Step 5: Initialize jieba and load vector mappings
+            self.progress_update.emit(70, "Initializing text processing...")
+            try:
+                # Initialize jieba to avoid delay on first use
+                import jieba
+                jieba.lcut("初始化", cut_all=False)  # Force initialization
+                logger.info("✅ Jieba initialized during splash screen")
+            except Exception as e:
+                logger.warning(f"Failed to initialize jieba: {e}")
+            
+            # Step 6: Load game mappings
+            self.progress_update.emit(80, "Loading game database...")
             try:
                 # Force load vector mappings early
                 from .ai.rag_query import load_vector_mappings
@@ -50,8 +81,9 @@ class InitializationThread(QThread):
             except:
                 pass
             
-            # Step 6: Final initialization
+            # Step 7: Final initialization
             self.progress_update.emit(90, "Almost ready...")
+
             import time
             time.sleep(0.2)  # Brief pause for visual effect
             
@@ -249,6 +281,9 @@ class FirstRunInitializationThread(InitializationThread):
     
     def run(self):
         """Run initialization tasks for first run"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             # Step 1: Initial setup
             self.progress_update.emit(5, "Initializing application...")
@@ -270,24 +305,99 @@ class FirstRunInitializationThread(InitializationThread):
             from .config import SettingsManager
             settings_manager = SettingsManager()
             
-            # Step 5: Start background preloading
-            self.progress_update.emit(60, "Preparing AI modules...")
+            # Step 5: Load AI modules
+            self.progress_update.emit(60, "Loading AI modules...")
             try:
-                from .preloader import start_preloading
-                start_preloading()
-            except:
-                pass
+                # Import and initialize AI modules during splash screen
+                from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified
+                from src.game_wiki_tooltip.ai.rag_config import get_default_config
+                from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery
+                
+                # Mark AI modules as loaded in assistant_integration
+                import src.game_wiki_tooltip.assistant_integration as ai_integration
+                ai_integration.process_query_unified = process_query_unified
+                ai_integration.get_default_config = get_default_config
+                ai_integration.EnhancedRagQuery = EnhancedRagQuery
+                ai_integration._ai_modules_loaded = True
+                ai_integration._ai_modules_loading = False
+                
+                logger.info("✅ AI modules loaded during first run splash")
+            except Exception as e:
+                logger.warning(f"Failed to load AI modules: {e}")
             
-            # Step 6: Preload critical modules
+            # Step 6: Initialize text processing and game database
             self.progress_update.emit(75, "Loading game database...")
             try:
+                # Initialize jieba
+                import jieba
+                jieba.lcut("初始化", cut_all=False)
+                
+                # Load vector mappings
                 from .ai.rag_query import load_vector_mappings
-                load_vector_mappings()
-            except:
-                pass
+                mappings = load_vector_mappings()
+                logger.info(f"✅ Game database loaded: {len(mappings)} games")
+            except Exception as e:
+                logger.warning(f"Failed to load game database: {e}")
             
-            # Step 7: Final initialization
-            self.progress_update.emit(90, "Finalizing...")
+            # Step 7: Pre-initialize RAG engine (same as regular initialization)
+            self.progress_update.emit(85, "Initializing AI engine...")
+            try:
+                import os
+                # Check if we have API keys
+                api_config = settings_manager.get().get('api', {})
+                gemini_api_key = (
+                    api_config.get('gemini_api_key') or 
+                    os.getenv('GEMINI_API_KEY') or 
+                    os.getenv('GOOGLE_API_KEY')
+                )
+                
+                if gemini_api_key and ai_integration.get_default_config and ai_integration.EnhancedRagQuery:
+                    # Pre-initialize RAG for Helldivers 2
+                    from src.game_wiki_tooltip.ai.rag_config import LLMConfig
+                    
+                    llm_config = LLMConfig(
+                        api_key=gemini_api_key,
+                        model='gemini-2.5-flash-lite'
+                    )
+                    
+                    # Get RAG config
+                    rag_config = ai_integration.get_default_config()
+
+                    # Create RAG engine instance
+                    rag_engine = ai_integration.EnhancedRagQuery(
+                        vector_store_path=None,
+                        enable_hybrid_search=rag_config.hybrid_search.enabled,
+                        hybrid_config=rag_config.hybrid_search.to_dict(),
+                        llm_config=llm_config,
+                        google_api_key=gemini_api_key,
+                        enable_query_rewrite=False,
+                        enable_summarization=rag_config.summarization.enabled,
+                        summarization_config=rag_config.summarization.to_dict(),
+                        enable_intent_reranking=rag_config.intent_reranking.enabled,
+                        reranking_config=rag_config.intent_reranking.to_dict()
+                    )
+                    
+                    # Initialize for Helldivers 2
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        loop.run_until_complete(rag_engine.initialize("helldiver2"))
+                        logger.info("✅ RAG engine pre-initialized for Helldivers 2 (first run)")
+                        
+                        # Store the pre-initialized engine
+                        ai_integration._preinitialized_rag_engine = rag_engine
+                        ai_integration._preinitialized_rag_game = "helldiver2"
+                    finally:
+                        loop.close()
+                else:
+                    logger.info("No API key or modules not loaded, skipping RAG pre-initialization")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to pre-initialize RAG engine: {e}")
+            
+            # Step 9: Final initialization
+            self.progress_update.emit(95, "Finalizing...")
             time.sleep(0.3)
             
             self.progress_update.emit(100, "Ready to start!")

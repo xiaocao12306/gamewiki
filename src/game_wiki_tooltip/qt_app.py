@@ -213,21 +213,17 @@ class WindowsHotkeyFilter(QAbstractNativeEventFilter):
 
 class GameWikiApp(QObject):
     """Main application controller"""
-    
+
     def __init__(self, splash_screen=None, force_settings=False):
         super().__init__()
-        
+
         # Store splash screen reference
         self.splash_screen = splash_screen
         self.force_settings = force_settings
-        
-        # Start background preloading immediately
-        try:
-            from .preloader import start_preloading
-            start_preloading()
-            logger.info("Background preloading initiated")
-        except Exception as e:
-            logger.warning(f"Failed to start preloader: {e}")
+
+        # AI modules are now preloaded during splash screen
+        # No need for background preloading here
+        logger.info("AI modules should have been loaded during splash screen")
         
         # Get existing QApplication instance
         self.app = QApplication.instance()
@@ -474,14 +470,29 @@ class GameWikiApp(QObject):
             self.message_timer.start(50)  # Check every 50ms as backup
             logger.info("Windows message listener started (backup)")
             
-            # Show mini assistant (delayed display to ensure cleanup operations complete)
-            logger.info("Showing mini assistant...")
-            QTimer.singleShot(50, self._show_mini_and_close_splash)
-            
-            # Pre-create chat window for faster first-time response
-            # Wait a bit longer to ensure AI modules are loading
-            logger.info("Scheduling chat window pre-creation...")
-            QTimer.singleShot(2000, self._precreate_chat_window)
+            # Connect AI loading completion signal
+            if hasattr(self.assistant_ctrl, '_on_ai_modules_loaded'):
+                # Find the AI loader if it exists
+                if hasattr(self.assistant_ctrl, '_ai_loader') and self.assistant_ctrl._ai_loader:
+                    self.assistant_ctrl._ai_loader.load_completed.connect(
+                        lambda success: self._on_ai_ready(success)
+                    )
+                    logger.info("Connected to existing AI loader signal")
+                else:
+                    # If AI loader hasn't started yet, wait for it
+                    def check_ai_loader():
+                        if hasattr(self.assistant_ctrl, '_ai_loader') and self.assistant_ctrl._ai_loader:
+                            self.assistant_ctrl._ai_loader.load_completed.connect(
+                                lambda success: self._on_ai_ready(success)
+                            )
+                            logger.info("Connected to AI loader signal after delay")
+                        else:
+                            # If still no loader, show UI anyway after timeout
+                            QTimer.singleShot(1000, self._show_ui_fallback)
+                    QTimer.singleShot(200, check_ai_loader)
+            else:
+                # No AI loading support, show UI immediately
+                QTimer.singleShot(100, self._precreate_chat_window_and_show_mini)
             
             logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
             
@@ -494,25 +505,8 @@ class GameWikiApp(QObject):
             )
             sys.exit(1)
             
-    def _show_mini_and_close_splash(self):
-        """Show mini window and close splash screen"""
-        logger.info("Showing mini window")
-        self.assistant_ctrl.show_mini()
-        
-        # Close splash screen after mini window is shown
-        if self.splash_screen:
-            logger.info("Scheduling splash screen closure")
-            QTimer.singleShot(100, self._close_splash_screen)
-            
-    def _close_splash_screen(self):
-        """Close splash screen"""
-        if self.splash_screen:
-            logger.info("Closing splash screen after mini window displayed")
-            self.splash_screen.close_and_cleanup()
-            self.splash_screen = None
-            
-    def _precreate_chat_window(self):
-        """Pre-create chat window for faster first-time response"""
+    def _precreate_chat_window_and_show_mini(self):
+        """Pre-create chat window and show mini assistant"""
         try:
             logger.info("Starting chat window pre-creation...")
             
@@ -533,6 +527,37 @@ class GameWikiApp(QObject):
         except Exception as e:
             logger.warning(f"Failed to pre-create chat window: {e}")
             # Not critical, just means first hotkey will be slower
+            
+        # Show mini assistant after chat window is ready
+        logger.info("Showing mini assistant...")
+        self.assistant_ctrl.show_mini()
+        
+        # Close splash screen after mini window is shown
+        if self.splash_screen:
+            logger.info("Scheduling splash screen closure")
+            QTimer.singleShot(100, self._close_splash_screen)
+            
+    def _close_splash_screen(self):
+        """Close splash screen"""
+        if self.splash_screen:
+            logger.info("Closing splash screen after mini window displayed")
+            self.splash_screen.close_and_cleanup()
+            self.splash_screen = None
+            
+    def _on_ai_ready(self, success: bool):
+        """Called when AI modules are loaded"""
+        if success:
+            logger.info("✅ AI modules loaded successfully, showing UI")
+        else:
+            logger.warning("⚠️ AI modules loading failed, showing UI anyway")
+        
+        # Pre-create chat window and show mini assistant
+        self._precreate_chat_window_and_show_mini()
+        
+    def _show_ui_fallback(self):
+        """Fallback to show UI if AI loading signal wasn't connected"""
+        logger.info("⏱️ AI loading timeout, showing UI as fallback")
+        self._precreate_chat_window_and_show_mini()
             
     def _show_settings(self, initial_setup=False):
         """Show settings window"""
@@ -830,12 +855,6 @@ class GameWikiApp(QObject):
         if not self.assistant_ctrl:
             logger.warning("assistant_ctrl is None, cannot process hotkey")
             return
-            
-        # Check if assistant controller has smart interaction manager
-        if not hasattr(self.assistant_ctrl, 'smart_interaction'):
-            logger.warning("Smart interaction manager not available, using fallback logic")
-            self._legacy_hotkey_logic()
-            return
         
         try:
             # Get current chat window visibility status - 只检查聊天窗口
@@ -851,93 +870,10 @@ class GameWikiApp(QObject):
                                self.assistant_ctrl.main_window.isVisible())
                 self.tray_icon.update_toggle_text(final_visible)
                 logger.info(f"🎯 Smart hotkey processing completed, chat window visible: {final_visible}")
-            else:
-                logger.warning("Smart hotkey was not handled, falling back to legacy logic")
-                self._legacy_hotkey_logic()
-                
         except Exception as e:
-            logger.error(f"Smart hotkey processing failed: {e}")
-            import traceback
-            traceback.print_exc()
-            # Fall back to legacy logic on error
-            self._legacy_hotkey_logic()
+            return
             
         logger.info("=== Smart hotkey processing completed ===")
-    
-    def _legacy_hotkey_logic(self):
-        """Legacy hotkey logic as fallback"""
-        logger.info("🔄 Using legacy hotkey logic")
-        
-        # Get current foreground window (game window) before showing chat window
-        from src.game_wiki_tooltip.utils import get_foreground_title
-        game_window_title = get_foreground_title()
-        logger.info(f"🎮 Foreground window: '{game_window_title}'")
-        
-        # Check if chat window is already visible
-        if (self.assistant_ctrl.main_window and 
-            self.assistant_ctrl.main_window.isVisible()):
-            logger.info("Chat window already visible, hiding window")
-            # Window is visible, save geometry and hide it
-            try:
-                self.assistant_ctrl.main_window.save_geometry()
-            except Exception as e:
-                logger.warning(f"Failed to save geometry when hiding via hotkey: {e}")
-            self.assistant_ctrl.main_window.hide()
-            self.assistant_ctrl.show_mini()
-            # Update tray icon menu text
-            self.tray_icon.update_toggle_text(False)
-            return
-        
-        try:
-            # Record game window first but don't initialize RAG immediately
-            self.assistant_ctrl.current_game_window = game_window_title
-            logger.info(f"🎮 Recording game window: '{game_window_title}'")
-            
-            # Update game context in pre-created window if it exists
-            if self.assistant_ctrl.main_window:
-                self.assistant_ctrl.main_window.set_current_game_window(game_window_title)
-                logger.info(f"Updated game context in pre-created window: '{game_window_title}'")
-                # Set flag to avoid duplicate calls in expand_to_chat
-                self.assistant_ctrl._game_window_already_set = True
-            
-            # Show chat window immediately
-            self.assistant_ctrl.expand_to_chat()
-            logger.info("expand_to_chat() executed successfully")
-            
-            # Update tray icon menu text
-            self.tray_icon.update_toggle_text(True)
-            
-            # Delay RAG initialization until after window animation completes
-            # This ensures smooth window appearance without interference
-            def init_rag_after_animation():
-                logger.info(f"Starting RAG initialization for game: '{game_window_title}'")
-                # Only initialize RAG, don't set game window again to avoid button state issues
-                if hasattr(self.assistant_ctrl, '_reinitialize_rag_for_game'):
-                    from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
-                    vector_game_name = map_window_title_to_game_name(game_window_title)
-                    if vector_game_name:
-                        self.assistant_ctrl._reinitialize_rag_for_game(vector_game_name)
-                        logger.info(f"RAG engine reinitialized for game: {vector_game_name}")
-                    else:
-                        logger.info(f"No RAG mapping found for game: {game_window_title}")
-                else:
-                    # Fallback: call set_current_game_window but ensure button state is preserved
-                    logger.info("Using fallback RAG initialization method")
-                    self.assistant_ctrl.set_current_game_window(game_window_title)
-                
-                # Clear the flag after RAG initialization to allow future updates
-                if hasattr(self.assistant_ctrl, '_game_window_already_set'):
-                    self.assistant_ctrl._game_window_already_set = False
-                    logger.info("🏁 Legacy hotkey processing completed, flag cleared")
-            
-            # Wait for fade-in animation to complete (typically 300-500ms)
-            QTimer.singleShot(600, init_rag_after_animation)
-            logger.info("RAG initialization scheduled after window animation")
-            
-        except Exception as e:
-            logger.error(f"Legacy hotkey logic failed: {e}")
-            import traceback
-            traceback.print_exc()
             
     def _quit_application(self):
         """Quit application"""

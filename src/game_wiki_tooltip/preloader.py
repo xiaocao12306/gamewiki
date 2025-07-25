@@ -48,7 +48,7 @@ def preload_vector_mappings():
 
 
 def preload_ai_modules():
-    """Preload AI modules in background thread"""
+    """Preload AI modules - now called from splash screen instead of background thread"""
     try:
         logger.info("Preloading AI modules...")
         
@@ -57,15 +57,12 @@ def preload_ai_modules():
         from .ai import rag_query
         from .ai import enhanced_bm25_indexer
         
-        # Preload jieba specifically
-        preload_jieba()
+        # These heavy imports are now done in splash_screen.py
+        # Just ensure basic modules are available
         
-        # Preload vector mappings
-        preload_vector_mappings()
-        
-        logger.info("✅ AI modules preloaded successfully")
+        logger.info("✅ Basic AI modules imported")
     except Exception as e:
-        logger.warning(f"Failed to preload AI modules: {e}")
+        logger.warning(f"Failed to import basic AI modules: {e}")
 
 
 class BackgroundPreloader:

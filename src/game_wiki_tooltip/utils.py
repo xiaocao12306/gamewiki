@@ -1,6 +1,5 @@
 import ctypes, shutil, sys, os
 from pathlib import Path
-from importlib import resources
 
 def package_file(relative_path: str) -> Path:
     """
@@ -12,14 +11,10 @@ def package_file(relative_path: str) -> Path:
         base_path = Path(sys._MEIPASS) / "src" / "game_wiki_tooltip" / "assets"
         return base_path / relative_path
     else:
-        # Development environment, use importlib.resources
-        try:
-            return resources.files("src.game_wiki_tooltip.assets").joinpath(relative_path)
-        except (ImportError, ModuleNotFoundError):
-            # Fallback: relative path based on current file
-            current_dir = Path(__file__).parent
-            assets_dir = current_dir / "assets"
-            return assets_dir / relative_path
+        # Development environment, use simple relative path approach for Windows compatibility
+        current_dir = Path(__file__).parent
+        assets_dir = current_dir / "assets"
+        return assets_dir / relative_path
 
 # ---- constants ----
 APPDATA_DIR = Path.home() / "AppData" / "Roaming" / "GameWikiTooltip"

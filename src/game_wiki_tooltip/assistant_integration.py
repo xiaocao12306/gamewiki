@@ -59,6 +59,7 @@ def _lazy_load_ai_modules():
     
     with _ai_load_lock:
         if _ai_modules_loaded:
+            logger.info("✅ AI modules already loaded (probably during splash screen)")
             return True
             
         if _ai_modules_loading:
@@ -71,9 +72,18 @@ def _lazy_load_ai_modules():
         _ai_modules_loading = True
         
     try:
-        logger.info("🔄 Starting AI module loading...")
+        logger.info("🔄 Starting AI module loading (fallback - should have been loaded during splash)...")
         start_time = time.time()
         
+        # Check if modules were already loaded by splash screen
+        if process_query_unified and get_default_config and EnhancedRagQuery:
+            logger.info("✅ AI modules were already loaded by splash screen")
+            with _ai_load_lock:
+                _ai_modules_loaded = True
+                _ai_modules_loading = False
+            return True
+        
+        # Fallback: load modules if not already loaded
         from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified as _process_query_unified
         from src.game_wiki_tooltip.ai.rag_config import get_default_config as _get_default_config
         from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery as _EnhancedRagQuery
@@ -87,7 +97,7 @@ def _lazy_load_ai_modules():
             _ai_modules_loading = False
             
         elapsed = time.time() - start_time
-        logger.info(f"✅ AI module loading completed, time taken: {elapsed:.2f} seconds")
+        logger.info(f"✅ AI module loading completed (fallback), time taken: {elapsed:.2f} seconds")
         return True
     except ImportError as e:
         logger.error(f"Failed to import AI components: {e}")
@@ -333,7 +343,7 @@ class RAGIntegration(QObject):
             logger.info("🚨 Skipping AI component initialization in limited mode")
             return
             
-        # Defer AI component initialization until actually needed
+        # Just log that we'll initialize on demand - don't actually initialize anything
         logger.info("📌 AI components will be initialized on first use (lazy loading)")
         
     def _ensure_ai_components_loaded(self):
@@ -388,22 +398,10 @@ class RAGIntegration(QObject):
                 # if process_query_unified:
                 #     self.query_processor = process_query_unified(llm_config=llm_config)
                 
-                # Smart initialization of RAG engine
-                game_title = get_selected_game_title()
-                if game_title:
-                    # Use window title to map to vector library name
-                    from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
-                    vector_game_name = map_window_title_to_game_name(game_title)
-                    
-                    if vector_game_name:
-                        logger.info(f"Detected game window '{game_title}' -> Vector library: {vector_game_name}")
-                        self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key)
-                    else:
-                        logger.info(f"Current window '{game_title}' is not a supported game, skipping RAG initialization")
-                        logger.info("RAG engine will be dynamically initialized based on game window when user first queries")
-                        # Don't initialize RAG engine, wait for dynamic detection when user queries
-                else:
-                    logger.info("No foreground window detected, skipping RAG initialization")
+                # Don't read game window at startup - wait for user interaction
+                logger.info("✅ AI components configuration ready, RAG will be initialized on demand")
+                self._last_game_window = None
+                self._last_vector_game_name = None
             else:
                 missing_keys = []
                 if not gemini_api_key:
@@ -930,41 +928,55 @@ class RAGIntegration(QObject):
                             api_key=gemini_api_key,
                             model='gemini-2.5-flash-lite'
                         )
-                        self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=True)
                         
-                        if not self.rag_engine:
-                            # Check if the vector library does not exist
-                            logger.info(f"📋 The vector library for game '{vector_game_name}' does not exist, provide fallback solution")
+                        # Check if RAG is already initializing
+                        if self._rag_initializing and self._rag_init_game == vector_game_name:
+                            logger.info(f"RAG already initializing for {vector_game_name}, showing status and queueing query")
+                            # Show initialization status
+                            self.streaming_chunk_ready.emit("🚀 AI guide system is initializing, please wait a moment...")
                             
-                            # Use internationalized error information
-                            from src.game_wiki_tooltip.i18n import t, get_current_language
-                            current_lang = get_current_language()
+                            # Queue the query to be processed after initialization
+                            self._pending_query = {
+                                'query': query,
+                                'game_context': game_context,
+                                'original_query': original_query,
+                                'skip_query_processing': skip_query_processing,
+                                'unified_query_result': unified_query_result,
+                                'stop_flag': stop_flag
+                            }
                             
-                            if current_lang == 'zh':
-                                error_msg = (
-                                    f"🎮 Game '{game_context}' does not have a guide database yet\n\n"
-                                    "💡 Suggestion: You can try using the Wiki search function to find related information\n\n"
-                                    "📚 Games currently supporting guide queries:\n"
-                                    "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
-                                    "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
-                                    "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
-                                    "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
-                                    "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
-                                )
-                            else:
-                                error_msg = (
-                                    f"🎮 Game '{game_context}' doesn't have a guide database yet\n\n"
-                                    "💡 Suggestion: You can try using the Wiki search function to find related information\n\n"
-                                    "📚 Games currently supporting guide queries:\n"
-                                    "• HELLDIVERS 2 - Weapon builds, enemy guides, etc.\n"
-                                    "• Elden Ring - Boss guides, equipment recommendations, etc.\n"
-                                    "• Don't Starve Together - Survival tips, character guides, etc.\n"
-                                    "• Civilization VI - Civilization features, victory strategies, etc.\n"
-                                    "• 7 Days to Die - Construction, weapon crafting, etc."
-                                )
-                            
-                            self.error_occurred.emit(error_msg)
+                            # Start checking initialization status
+                            if not hasattr(self, '_init_check_timer') or not self._init_check_timer:
+                                from PyQt6.QtCore import QTimer
+                                self._init_check_timer = QTimer()
+                                self._init_check_timer.timeout.connect(self._check_rag_init_and_process_query)
+                                self._init_check_timer.start(100)  # Check every 100ms
                             return
+                        
+                        # Use asynchronous initialization to avoid blocking UI
+                        self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=False)
+                        
+                        # Show initialization status
+                        self.streaming_chunk_ready.emit("🚀 AI guide system is initializing for the first time, please wait...")
+                        
+                        # Queue the query
+                        self._pending_query = {
+                            'query': query,
+                            'game_context': game_context,
+                            'original_query': original_query,
+                            'skip_query_processing': skip_query_processing,
+                            'unified_query_result': unified_query_result,
+                            'stop_flag': stop_flag
+                        }
+                        
+                        # Start checking initialization status
+                        if not hasattr(self, '_init_check_timer') or not self._init_check_timer:
+                            from PyQt6.QtCore import QTimer
+                            self._init_check_timer = QTimer()
+                            self._init_check_timer.timeout.connect(self._check_rag_init_and_process_query)
+                            self._init_check_timer.start(100)  # Check every 100ms
+                        
+                        return
                     else:
                         missing_keys = []
                         if not gemini_api_key:
@@ -1224,7 +1236,18 @@ class IntegratedAssistantController(AssistantController):
             logger.info("✅ Running in full mode: supports Wiki search and AI guide functionality")
             # Don't preload AI modules immediately, wait for first window display
             self._ai_preload_scheduled = False
+            
+            # Schedule AI preload immediately after initialization (with a small delay to avoid blocking)
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(100, self._schedule_ai_preload_on_startup)
         
+    def _schedule_ai_preload_on_startup(self):
+        """Schedule AI preload on startup if not already scheduled"""
+        if not hasattr(self, '_ai_preload_scheduled') or not self._ai_preload_scheduled:
+            self._ai_preload_scheduled = True
+            logger.info("🚀 Scheduling AI module preload on startup")
+            self._schedule_ai_preload()
+    
     def _schedule_ai_preload(self):
         """Preload AI modules when idle"""
         # Check if already loading
@@ -1255,15 +1278,19 @@ class IntegratedAssistantController(AssistantController):
             # Record loading success status
             self._ai_modules_ready = True
             
-            # Try to preinitialize RAG components
-            try:
-                self.rag_integration._ensure_ai_components_loaded()
-                logger.info("✅ RAG components preinitialized")
-            except Exception as e:
-                logger.warning(f"⚠️ RAG components preinitialization failed: {e}")
+            # Now initialize RAG if we have cached game window
+            if hasattr(self.rag_integration, '_last_vector_game_name') and self.rag_integration._last_vector_game_name:
+                try:
+                    logger.info(f"🎮 Initializing RAG for cached game: {self.rag_integration._last_vector_game_name}")
+                    self.rag_integration._init_rag_for_game(
+                        self.rag_integration._last_vector_game_name,
+                        self.rag_integration._llm_config,
+                        self.rag_integration._llm_config.api_key if hasattr(self.rag_integration, '_llm_config') else None
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to initialize RAG for cached game: {e}")
         else:
             logger.warning("⚠️ AI module background loading failed")
-            self._ai_modules_ready = False
             
         # Clean up loader reference
         self._ai_loader = None
@@ -1783,6 +1810,55 @@ class IntegratedAssistantController(AssistantController):
             f"❌ {error_msg}"
         )
         
+    def _check_rag_init_and_process_query(self):
+        """Check if RAG initialization is complete and process pending query"""
+        # Check if RAG is still initializing
+        if self.rag_integration._rag_initializing:
+            # Still initializing, continue waiting
+            logger.debug("RAG still initializing, waiting...")
+            return
+            
+        # Stop the timer
+        if hasattr(self, '_init_check_timer') and self._init_check_timer:
+            self._init_check_timer.stop()
+            self._init_check_timer = None
+            
+        # Check if we have a pending query
+        if not hasattr(self, '_pending_query') or not self._pending_query:
+            logger.warning("No pending query found after RAG initialization")
+            return
+            
+        # Extract pending query details
+        pending = self._pending_query
+        self._pending_query = None  # Clear pending query
+        
+        # Check if RAG engine is now available
+        if self.rag_integration.rag_engine:
+            logger.info("✅ RAG initialization complete, processing pending query")
+            # Clear initialization message
+            if self.main_window:
+                self.main_window.chat_view.hide_status()
+            
+            # Process the query using asyncio
+            import asyncio
+            task = asyncio.create_task(
+                self.rag_integration.generate_guide_async(
+                    query=pending['query'],
+                    game_context=pending['game_context'],
+                    original_query=pending['original_query'],
+                    skip_query_processing=pending['skip_query_processing'],
+                    unified_query_result=pending['unified_query_result'],
+                    stop_flag=pending.get('stop_flag')
+                )
+            )
+            # Store task reference for potential cancellation
+            self._current_task = task
+        else:
+            logger.error("RAG initialization failed, unable to process query")
+            self.rag_integration.error_occurred.emit(
+                "Failed to initialize AI guide system. Please check your API keys and try again."
+            )
+        
     def _on_wiki_result(self, url: str, title: str):
         """Handle wiki search result from RAG integration"""
         try:
@@ -1889,12 +1965,16 @@ class IntegratedAssistantController(AssistantController):
             self.main_window.stop_generation_requested.connect(self.stop_current_generation)
             logger.info("✅ Stop generation signal connected")
             
-        # Schedule AI preload after first window display
+        # Schedule AI preload after first window display (only if not already scheduled)
         if not self.limited_mode and (not hasattr(self, '_ai_preload_scheduled') or not self._ai_preload_scheduled):
-            self._ai_preload_scheduled = True
-            # Start AI loading immediately but with low priority
-            QTimer.singleShot(0, self._schedule_ai_preload)
-            logger.info("📅 AI modules loading started with low priority")
+            # Check if AI modules are already loaded
+            if _ai_modules_loaded:
+                logger.info("✅ AI modules already loaded, skipping preload schedule")
+            else:
+                self._ai_preload_scheduled = True
+                # Start AI loading immediately but with low priority
+                QTimer.singleShot(0, self._schedule_ai_preload)
+                logger.info("📅 AI modules loading started with low priority from expand_to_chat")
     
     def _add_web_search_option(self):
         """Add web search option when knowledge is insufficient"""
@@ -2079,32 +2159,9 @@ class IntegratedAssistantController(AssistantController):
         # Debug: Log smart hotkey processing start
         logger.info(f"🎯 [DEBUG] Smart hotkey processing started")
         
-        # 热键触发时按需检测当前游戏窗口并初始化RAG引擎
+        # 检测当前游戏窗口但先不设置，避免阻塞窗口显示
         current_game_window = self.smart_interaction.get_current_game_window()
         logger.info(f"🔍 [DEBUG] Detected current game window: '{current_game_window}'")
-        
-        if current_game_window:
-            # Debug: Log before setting game window
-            logger.info(f"🎮 [DEBUG] About to set current game window: '{current_game_window}'")
-            logger.info(f"📋 [DEBUG] Main window exists: {self.main_window is not None}")
-            if self.main_window:
-                logger.info(f"📋 [DEBUG] Main window task buttons count before: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
-            
-            # 设置游戏窗口并确保task flow按钮正确显示
-            self.set_current_game_window(current_game_window)
-            
-            # Debug: Log after setting game window
-            if self.main_window:
-                logger.info(f"📋 [DEBUG] Main window task buttons count after: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
-                # Log visibility of each button
-                for game_name, button in getattr(self.main_window, 'game_task_buttons', {}).items():
-                    if button:
-                        is_visible = button.isVisible()
-                        logger.info(f"    📋 [DEBUG] {game_name} task button visible: {is_visible}")
-            
-            # 标记游戏窗口已经设置，避免expand_to_chat中重复设置
-            self._game_window_already_set = True
-            logger.info(f"🏁 [DEBUG] Game window already set flag: True")
         
         # 强制更新交互模式，确保正确识别当前游戏状态
         mouse_state = self.smart_interaction.get_mouse_state()
@@ -2122,9 +2179,17 @@ class IntegratedAssistantController(AssistantController):
         logger.info(f"🔥 Smart hotkey handling result: {action}")
         
         if action == 'show_chat':
+            # 先显示聊天窗口
             self.show_chat_window()
-            # Clear the flag after handling to allow future updates
-            self._game_window_already_set = False
+            logger.info("💬 Show chat window requested - executed before game window setting")
+            
+            # 然后异步设置游戏窗口（避免阻塞UI）
+            if current_game_window:
+                logger.info(f"🎮 Setting current game window after chat display: '{current_game_window}'")
+                # 使用QTimer异步设置游戏窗口，避免阻塞UI
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(50, lambda: self._delayed_set_game_window(current_game_window))
+                
             return True
         elif action == 'hide_chat':
             self.hide_chat_window()
@@ -2145,6 +2210,35 @@ class IntegratedAssistantController(AssistantController):
         # Clear the flag if no action was taken
         self._game_window_already_set = False
         return False
+    
+    def _delayed_set_game_window(self, game_window_title: str):
+        """延迟设置游戏窗口，避免阻塞UI"""
+        try:
+            logger.info(f"🎮 [DEBUG] About to set current game window (delayed): '{game_window_title}'")
+            logger.info(f"📋 [DEBUG] Main window exists: {self.main_window is not None}")
+            if self.main_window:
+                logger.info(f"📋 [DEBUG] Main window task buttons count before: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
+            
+            # 设置游戏窗口并确保task flow按钮正确显示
+            self.set_current_game_window(game_window_title)
+            
+            # Debug: Log after setting game window
+            if self.main_window:
+                logger.info(f"📋 [DEBUG] Main window task buttons count after: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
+                # Log visibility of each button
+                for game_name, button in getattr(self.main_window, 'game_task_buttons', {}).items():
+                    if button:
+                        is_visible = button.isVisible()
+                        logger.info(f"    📋 [DEBUG] {game_name} task button visible: {is_visible}")
+            
+            # 标记游戏窗口已经设置
+            self._game_window_already_set = True
+            logger.info(f"🏁 [DEBUG] Game window already set flag: True (delayed)")
+            
+        except Exception as e:
+            logger.error(f"Error in delayed game window setting: {e}")
+            import traceback
+            traceback.print_exc()
     
     def switch_game(self, game_name: str):
         """Switch to a different game (game_name should be window title)"""
@@ -2180,6 +2274,12 @@ class IntegratedAssistantController(AssistantController):
             self.main_window.show()
             self.main_window.raise_()
             self.main_window.activateWindow()
+            
+            # 🔧 添加focus设置逻辑
+            logger.info("🎯 Setting focus for existing chat window")
+            # 确保切换到聊天视图并设置focus
+            self.main_window.show_chat_view()
+            
         logger.info("💬 Chat window shown")
     
     def hide_chat_window(self):

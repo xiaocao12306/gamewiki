@@ -227,3 +227,32 @@ def handle_query(self, query: str):
 2. 测试初始化期间提交查询的处理
 3. 测试快速切换不同游戏的场景
 4. 测试初始化失败的错误处理
+
+## 2024-12-25 更新：解决首次查询阻塞问题
+
+### 新发现的问题
+虽然窗口显示已经优化为立即响应，但在首次提交查询时，`generate_guide_async` 方法会检查 RAG 引擎是否已初始化。如果未初始化，它会使用 `wait_for_init=True` 进行同步初始化，导致 UI 阻塞。
+
+### 解决方案
+修改 `generate_guide_async` 中的 RAG 初始化逻辑：
+1. 改用异步初始化（`wait_for_init=False`）
+2. 显示初始化状态消息："🚀 AI guide system is initializing, please wait..."
+3. 将查询缓存到 `_pending_query`
+4. 启动定时器定期检查初始化状态（`_check_rag_init_and_process_query`）
+5. 初始化完成后自动处理缓存的查询
+
+这样确保了整个流程都是异步的，UI 始终保持响应。
+
+## 2024-12-25 更新2：修复热键处理中的窗口显示顺序
+
+### 进一步发现的问题
+用户反馈在智能热键处理流程中，`handle_smart_hotkey` 方法先调用 `set_current_game_window` 加载向量数据库，然后才显示聊天窗口，导致窗口显示延迟。
+
+### 解决方案
+修改 `handle_smart_hotkey` 方法中的执行顺序：
+1. 检测游戏窗口但不立即设置
+2. 先显示聊天窗口（`show_chat_window()`）
+3. 使用 `QTimer.singleShot(50ms)` 延迟异步设置游戏窗口
+4. 添加 `_delayed_set_game_window()` 方法处理延迟设置
+
+这确保了无论是通过智能热键处理还是回退到传统逻辑，聊天窗口都会立即显示。

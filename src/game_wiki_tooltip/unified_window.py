@@ -3809,20 +3809,56 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(150, self._set_chat_input_focus)
         
     def _set_chat_input_focus(self):
-        """Set focus to input field in chat view"""
-        if hasattr(self, 'input_field') and self.input_field:
-            try:
-                # Ensure the chat view is visible and active
-                self.activateWindow()
-                self.raise_()
-                # Set focus to input field
-                self.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
-                logger = logging.getLogger(__name__)
-                logger.info("Chat input focus set successfully")
-            except Exception as e:
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to set chat input focus: {e}")
+        """Set focus to input field in chat view with improved reliability"""
+        if not hasattr(self, 'input_field') or not self.input_field:
+            return
+            
+        logger = logging.getLogger(__name__)
         
+        def try_set_focus():
+            try:
+                # 1. Ensure window is properly shown and active
+                if not self.isVisible():
+                    logger.warning("Window is not visible, cannot set focus")
+                    return False
+                    
+                # 2. Bring window to front and activate
+                self.raise_()
+                self.activateWindow()
+                
+                # 3. Wait a bit for window manager to process
+                QApplication.processEvents()
+                
+                # 4. Verify window is actually active
+                if not self.isActiveWindow():
+                    logger.warning("Window is not active after activation attempt")
+                    # Try once more
+                    self.activateWindow()
+                    QApplication.processEvents()
+                
+                # 5. Set focus to input field
+                self.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
+                
+                # 6. Verify focus was set
+                if self.input_field.hasFocus():
+                    logger.info("✅ Chat input focus set successfully")
+                    return True
+                else:
+                    logger.warning("⚠️ Input field does not have focus after setting")
+                    return False
+                    
+            except Exception as e:
+                logger.warning(f"❌ Failed to set chat input focus: {e}")
+                return False
+        
+        # Try immediately first
+        if try_set_focus():
+            return
+            
+        # If immediate attempt fails, try again after a longer delay
+        logger.info("🔄 Retrying focus setting after delay...")
+        QTimer.singleShot(300, lambda: try_set_focus())
+
     def show_wiki_page(self, url: str, title: str):
         """Switch to wiki view and load page"""
         logger = logging.getLogger(__name__)
@@ -5059,15 +5095,12 @@ class AssistantController:
             # Update all message width
             if hasattr(self.main_window, 'chat_view'):
                 self.main_window.chat_view.update_all_message_widths()
-            # Focus on input field with simple focus setting
-            if hasattr(self.main_window, 'input_field'):
-                logger.info("Setting focus to input field after animation")
-                try:
-                    # Simple focus setting
-                    self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
-                    logger.info("Input field focus set successfully after animation")
-                except Exception as e:
-                    logger.warning(f"Failed to set input focus after animation: {e}")
+            # Use unified focus setting method
+            if hasattr(self.main_window, '_set_chat_input_focus'):
+                logger.info("Using unified focus setting method after animation")
+                self.main_window._set_chat_input_focus()
+            else:
+                logger.warning("Unified focus method not found")
                 
         self._fade_in_animation.finished.connect(on_fade_in_finished)
         self._fade_in_animation.start()
