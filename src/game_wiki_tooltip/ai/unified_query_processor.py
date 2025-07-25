@@ -12,7 +12,7 @@ import logging
 from typing import Dict, Any, Optional, Literal
 from dataclasses import dataclass
 
-from ..config import LLMConfig
+from src.game_wiki_tooltip.config import LLMConfig
 
 logger = logging.getLogger(__name__)
 

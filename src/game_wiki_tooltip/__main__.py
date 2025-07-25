@@ -1,8 +1,23 @@
 """
-Entry point for `python -m game_wiki_tooltip`.
+Direct entry point for running as module: python -m game_wiki_tooltip
+This ensures splash screen appears immediately.
 """
 
-from src.game_wiki_tooltip.qt_app import main
+import sys
+import os
 
-if __name__ == "__main__":
+# Minimal check
+if sys.platform != "win32":
+    print("This tool only works on Windows.")
+    sys.exit(1)
+
+# Check if we should use bootstrap (for packaged exe)
+if hasattr(sys, '_MEIPASS') or os.environ.get('GAMEWIKI_USE_BOOTSTRAP'):
+    # Use bootstrap for immediate splash in packaged mode
+    from .qt_app_bootstrap import main
+else:
+    # Use normal entry for development
+    from .qt_app import main
+
+if __name__ == '__main__':
     main()

@@ -10,6 +10,12 @@ src_path = project_root / "src"
 # Add source code path to sys.path
 sys.path.insert(0, str(src_path))
 
+# Optimization level for bytecode compilation
+# 0 = no optimization (default)
+# 1 = basic optimization (-O)
+# 2 = advanced optimization (-OO, removes docstrings)
+OPTIMIZE = 1
+
 # Collect hidden imports
 hiddenimports = [
     # PyQt6 related
@@ -38,10 +44,6 @@ hiddenimports = [
     'qdrant_client',
     'langchain_community',
     'langchain_text_splitters',
-    
-    # GameWiki Assistant core modules - ensure splash screen is available immediately
-    'src.game_wiki_tooltip.splash_screen',
-    'src.game_wiki_tooltip.preloader',
     
     # GameWiki Assistant AI modules - explicitly add all AI-related internal modules
     'src.game_wiki_tooltip.ai',
@@ -187,15 +189,24 @@ except Exception as e:
 # Exclude modules - only exclude modules that are truly not needed
 excludes = [
     'tkinter',  # GUI toolkit (we use PyQt6)
-    # Remove 'unittest' - some dependencies need it
-    # 'pydoc',    # Documentation generation tool - removed because some AI dependencies need it
     'doctest',  # Documentation testing tool
     'test',     # Python test modules
     'tests',    # Application test modules
+    # Additional excludes to reduce size
+    'matplotlib',  # Plotting library (if not used)
+    'IPython',     # Interactive Python (not needed in production)
+    'jupyter',     # Jupyter notebook support
+    'notebook',    # Jupyter notebook
+    '_pytest',     # Testing framework
+    'pytest',      # Testing framework
 ]
 
+# Optional: Create a splash screen for onedir mode
+# This improves perceived startup time
+splash = None  # Set to path of splash image if desired
+
 a = Analysis(
-    [str(src_path / "game_wiki_tooltip" / "qt_app_bootstrap.py")],
+    [str(src_path / "game_wiki_tooltip" / "qt_app.py")],
     pathex=[str(project_root), str(src_path)],
     binaries=binaries,
     datas=datas,
@@ -208,24 +219,34 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=None,
     noarchive=False,
+    optimize=OPTIMIZE,  # Enable bytecode optimization
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+pyz = PYZ(
+    a.pure, 
+    a.zipped_data, 
+    cipher=None,
+    optimize=OPTIMIZE,  # Apply optimization to PYZ archive
+)
 
-# OneDir mode for faster startup (no extraction needed)
 exe = EXE(
     pyz,
     a.scripts,
-    [],  # Empty list for onedir mode
+    splash,  # Add splash screen if defined
+    [],  # Empty list for onedir mode (no bundled files in exe)
     exclude_binaries=True,  # Important for onedir mode
     name='GameWikiAssistant',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,  # Disable UPX for onedir mode (doesn't help much)
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,  # Hide console window for better user experience
+    upx=True,
+    upx_exclude=[
+        # Exclude DLLs that might have issues with UPX compression
+        'vcruntime*.dll',
+        'msvcp*.dll',
+        'python*.dll',
+    ],
+    console=False,  # Hide console window for production
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -236,14 +257,19 @@ exe = EXE(
     manifest='GameWikiAssistant.manifest',  # Add manifest for DPI awareness and compatibility
 )
 
-# Create the collection for onedir mode
+# COLLECT is used for onedir mode
 coll = COLLECT(
     exe,
     a.binaries,
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=False,  # Disable UPX for DLLs
-    upx_exclude=[],
+    upx=True,
+    upx_exclude=[
+        # Exclude DLLs that might have issues with UPX compression
+        'vcruntime*.dll',
+        'msvcp*.dll',
+        'python*.dll',
+    ],
     name='GameWikiAssistant',
-) 
+)

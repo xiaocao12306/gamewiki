@@ -13,6 +13,7 @@ import time
 import os
 import pathlib
 from datetime import datetime
+import threading
 from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
 from dataclasses import dataclass, field
@@ -2450,36 +2451,27 @@ class WikiView(QWidget):
         toolbar_layout.addSpacing(10)
         toolbar_layout.addWidget(self.open_browser_button)
         
-        # Content area - simplified WebView creation logic
+        # Content area - delayed WebView creation
         self.web_view = None
         self.content_widget = None
+        self._webview_initialized = False
+        self._webview_initializing = False
         
-        # Try to create WebView, prioritize WebView2
-        webview_created = False
+        # Create placeholder widget first
+        self.placeholder_widget = QFrame()
+        self.placeholder_widget.setStyleSheet("""
+            QFrame {
+                background-color: #f8f9fa;
+                border: 1px solid #e0e0e0;
+            }
+        """)
+        placeholder_layout = QVBoxLayout(self.placeholder_widget)
+        placeholder_label = QLabel("Loading...")
+        placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        placeholder_label.setStyleSheet("color: #666; font-size: 14px;")
+        placeholder_layout.addWidget(placeholder_label)
         
-        # Try WebView2 first if enabled and available
-        if USE_WEBVIEW2 and WEBVIEW2_AVAILABLE:
-            try:
-                print("🔧 Attempting to create WebView2...")
-                self.web_view = WebView2Widget()
-                self.content_widget = self.web_view
-                self._webview_ready = True
-                webview_created = True
-                print("✅ WebView2 created successfully - supports full video playback")
-                
-                # Connect navigation signals
-                self._connect_navigation_signals()
-                
-            except Exception as e:
-                print(f"❌ WebView2 creation failed: {e}")
-                webview_created = False
-        
-        
-        # Final fallback to text view
-        if not webview_created:
-            print("⚠️ WebView not available, using text view")
-            self.web_view = None
-            self.content_widget = self._create_fallback_text_view()
+        self.content_widget = self.placeholder_widget
         
         layout.addWidget(toolbar)
         layout.addWidget(self.content_widget)
@@ -2488,11 +2480,18 @@ class WikiView(QWidget):
         self.current_url = ""
         self.current_title = ""
         
+        # Start WebView2 initialization immediately in background
+        QTimer.singleShot(0, self._initialize_webview_async)
+        
     def load_url(self, url: str):
         """Load a URL in the web view"""
-        if self.web_view:
+        if self.web_view and self._webview_initialized:
             self.web_view.setUrl(QUrl(url))
             self.current_url = url
+        else:
+            # Store pending URL, will be loaded when WebView is ready
+            self._pending_url = url
+            # WebView should already be initializing, just wait
     
     def _connect_navigation_signals(self):
         """Connect navigation-related signals"""
@@ -2580,6 +2579,7 @@ class WikiView(QWidget):
                 else:
                     source = "web"
                 
+                self._ensure_history_manager()
                 self.history_manager.add_entry(current_url, title, source=source)
                 self._last_recorded_url = current_url
                 self._pending_navigation = None  # Clear pending state
@@ -2839,6 +2839,86 @@ class WikiView(QWidget):
         """)
         return text_view
     
+    def _initialize_webview_async(self):
+        """Initialize WebView2 asynchronously"""
+        if self._webview_initialized or self._webview_initializing:
+            return
+            
+        self._webview_initializing = True
+        
+        # WebView2 must be created in main thread due to COM requirements
+        # Use QTimer to defer creation to avoid blocking current event
+        def create_webview():
+            try:
+                if USE_WEBVIEW2 and WEBVIEW2_AVAILABLE:
+                    print("🔧 Creating WebView2...")
+                    start_time = time.time()
+                    web_view = WebView2Widget()
+                    elapsed = time.time() - start_time
+                    print(f"✅ WebView2 created in {elapsed:.2f}s")
+                    self._apply_webview(web_view)
+                else:
+                    print("⚠️ WebView2 not available")
+                    self._apply_fallback_view()
+            except Exception as e:
+                print(f"❌ WebView2 creation failed: {e}")
+                self._apply_fallback_view()
+        
+        # Defer to next event loop iteration to avoid blocking
+        QTimer.singleShot(10, create_webview)
+        
+    def _apply_webview(self, web_view):
+        """Apply WebView2 widget (must be called in main thread)"""
+        if self._webview_initialized:
+            return
+            
+        try:
+            # Remove placeholder
+            layout = self.layout()
+            layout.removeWidget(self.placeholder_widget)
+            self.placeholder_widget.deleteLater()
+            
+            # Apply WebView2
+            self.web_view = web_view
+            self.content_widget = self.web_view
+            layout.addWidget(self.content_widget)
+            
+            # Connect signals
+            self._connect_navigation_signals()
+            
+            self._webview_ready = True
+            self._webview_initialized = True
+            self._webview_initializing = False
+            
+            print("✅ WebView2 applied successfully")
+            
+            # If there's a pending URL to load
+            if hasattr(self, '_pending_url'):
+                self.load_url(self._pending_url)
+                delattr(self, '_pending_url')
+                
+        except Exception as e:
+            print(f"❌ Failed to apply WebView2: {e}")
+            self._apply_fallback_view()
+            
+    def _apply_fallback_view(self):
+        """Apply fallback text view"""
+        if self._webview_initialized:
+            return
+            
+        # Remove placeholder
+        layout = self.layout()
+        layout.removeWidget(self.placeholder_widget)
+        self.placeholder_widget.deleteLater()
+        
+        # Apply fallback view
+        self.web_view = None
+        self.content_widget = self._create_fallback_text_view()
+        layout.addWidget(self.content_widget)
+        
+        self._webview_initialized = True
+        self._webview_initializing = False
+        print("⚠️ Using fallback text view")
     
     def _delayed_webview_creation(self):
         """Delayed WebView creation, executed after Qt application is fully initialized"""
@@ -3172,6 +3252,11 @@ class WikiView(QWidget):
     def showEvent(self, event):
         """When WikiView is displayed, restore page activity"""
         super().showEvent(event)
+        
+        # Ensure WebView2 is initialized when showing
+        if not self._webview_initialized and not self._webview_initializing:
+            self._initialize_webview_async()
+            
         # Delay restore, ensure the page is fully displayed
         QTimer.singleShot(100, self.resume_page)
 
@@ -3194,9 +3279,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.current_game_window = None  # Record current game window title
         self.game_task_buttons = {}  # Store all game task flow buttons
         
-        # Initialize history record manager
-        from src.game_wiki_tooltip.history_manager import WebHistoryManager
-        self.history_manager = WebHistoryManager()
+        # History manager will be initialized lazily
+        self.history_manager = None
         
         # Track current navigation to avoid duplicate history entries
         self._pending_navigation = None  # URL being navigated to
@@ -3207,6 +3291,13 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Debug: print size after initialization
         print(f"🏠 UnifiedAssistantWindow initialized, size: {self.size()}")
+        
+    def _ensure_history_manager(self):
+        """Ensure history manager is initialized"""
+        if self.history_manager is None:
+            from src.game_wiki_tooltip.history_manager import WebHistoryManager
+            self.history_manager = WebHistoryManager()
+            print("📚 History manager initialized")
         
     def init_ui(self):
         """Initialize the main window UI"""
@@ -3273,8 +3364,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.shortcut_layout.setContentsMargins(10, 4, 10, 4)
         self.shortcut_layout.setSpacing(8)
         
-        # Load shortcuts
-        self.load_shortcuts()
+        # Don't load shortcuts immediately - defer to after window is shown
+        self.shortcuts_loaded = False
         
         # Input area
         self.input_container = QFrame()
@@ -3761,6 +3852,7 @@ class UnifiedAssistantWindow(QMainWindow):
                     source = "wiki"
                 else:
                     source = "web"
+                self._ensure_history_manager()
                 self.history_manager.add_entry(url, title, source=source)
                 self._last_recorded_url = url
             else:
@@ -3985,6 +4077,12 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def _create_game_task_buttons(self):
         """Create task flow buttons for all games"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Debug: Log method entry
+        logger.info(f"🏗️ [DEBUG] _create_game_task_buttons called")
+        
         # Define games that support task flow
         game_configs = [
             {
@@ -3997,9 +4095,9 @@ class UnifiedAssistantWindow(QMainWindow):
             {
                 'game_name': 'helldiver2',
                 'display_name': t('helldiver2_task_button'),
-                'window_titles': ["HELLDIVERS™ 2", "HELLDIVERS 2"],
+                'window_titles': ["helldivers™ 2", "helldivers 2"],
                 'html_files': {'en': 'helldiver2_en.html', 'zh': 'helldiver2_zh.html'},
-                'button_color': '#E5E7EB'
+                'button_color': '#111827'
             },
             {
                 'game_name': 'civilization6',
@@ -4010,23 +4108,51 @@ class UnifiedAssistantWindow(QMainWindow):
             }
         ]
         
+        # Debug: Log game configurations
+        logger.info(f"🎮 [DEBUG] Creating task buttons for {len(game_configs)} games:")
+        for config in game_configs:
+            logger.debug(f"    📋 [DEBUG] {config['game_name']}: '{config['display_name']}' (matches: {config['window_titles']})")
+        
         # Clear existing buttons
-        for btn in self.game_task_buttons.values():
+        existing_button_count = len(self.game_task_buttons)
+        logger.info(f"🧹 [DEBUG] Clearing {existing_button_count} existing task buttons")
+        for game_name, btn in self.game_task_buttons.items():
             if btn:
+                logger.debug(f"    🗑️ [DEBUG] Removing {game_name} button from layout")
                 self.shortcut_layout.removeWidget(btn)
                 btn.deleteLater()
         self.game_task_buttons.clear()
+        logger.info(f"✅ [DEBUG] Existing task buttons cleared")
         
         # Create new buttons
+        created_count = 0
+        failed_count = 0
         for config in game_configs:
+            game_name = config['game_name']
             try:
+                logger.debug(f"🔨 [DEBUG] Creating task button for {game_name}...")
                 button = self._create_single_game_button(config)
                 if button:
-                    self.game_task_buttons[config['game_name']] = button
+                    self.game_task_buttons[game_name] = button
                     self.shortcut_layout.addWidget(button)
                     button.hide()  # Initially hidden
+                    created_count += 1
+                    logger.debug(f"    ✅ [DEBUG] {game_name} task button created and added to layout (initially hidden)")
+                else:
+                    failed_count += 1
+                    logger.warning(f"    ❌ [DEBUG] Failed to create {game_name} task button (returned None)")
             except Exception as e:
-                print(f"Failed to create task button for {config['game_name']}: {e}")
+                failed_count += 1
+                logger.error(f"    ❌ [DEBUG] Failed to create task button for {game_name}: {e}")
+                import traceback
+                logger.debug(f"    📋 [DEBUG] Exception details:\n{traceback.format_exc()}")
+        
+        # Debug: Summary
+        logger.info(f"📊 [DEBUG] Task button creation completed:")
+        logger.info(f"    ✅ Created: {created_count}")
+        logger.info(f"    ❌ Failed: {failed_count}")
+        logger.info(f"    📋 Total buttons in dict: {len(self.game_task_buttons)}")
+        logger.info(f"    🔍 Button names: {list(self.game_task_buttons.keys())}")
     
     def _create_single_game_button(self, config):
         """Create single game task flow button"""
@@ -4321,8 +4447,7 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def show_history_menu(self):
         """Show history menu"""
-        if not hasattr(self, 'history_manager'):
-            return
+        self._ensure_history_manager()
             
         history_menu = QMenu(self)
         history_menu.setStyleSheet("""
@@ -4399,20 +4524,55 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def clear_history(self):
         """Clear browsing history"""
-        if hasattr(self, 'history_manager'):
-            self.history_manager.clear_history()
-            # Show notification
-            QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
-            QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
+        self._ensure_history_manager()
+        self.history_manager.clear_history()
+        # Show notification
+        QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
+        QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
     
     def set_current_game_window(self, game_window_title: str):
         """Set current game window title and update DST button visibility"""
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        
+        # Debug: Log method call with stack trace to identify caller
+        logger.info(f"🎮 [DEBUG] set_current_game_window called with: '{game_window_title}'")
+        logger.debug(f"🔍 [DEBUG] Call stack (last 3 frames):")
+        stack = traceback.extract_stack()
+        for i, frame in enumerate(stack[-4:-1]):  # Skip current frame, show last 3
+            logger.debug(f"    Frame {i+1}: {frame.filename}:{frame.lineno} in {frame.name}")
+        
+        # Debug: Log current state before change
+        old_game_window = getattr(self, 'current_game_window', None)
+        logger.info(f"🔄 [DEBUG] Game window change: '{old_game_window}' -> '{game_window_title}'")
+        
+        # Debug: Check if task buttons are initialized
+        button_count = len(getattr(self, 'game_task_buttons', {}))
+        logger.info(f"📋 [DEBUG] Current task buttons count: {button_count}")
+        
+        # Critical fix: Ensure task buttons are created before trying to update visibility
+        if button_count == 0:
+            logger.warning(f"⚠️ [DEBUG] Task buttons not created yet, creating them first")
+            if hasattr(self, 'shortcut_layout'):
+                logger.info(f"🔧 [DEBUG] Shortcut layout exists, creating task buttons")
+                self._create_game_task_buttons()
+                new_button_count = len(getattr(self, 'game_task_buttons', {}))
+                logger.info(f"✅ [DEBUG] Task buttons created: {new_button_count}")
+            else:
+                logger.warning(f"⚠️ [DEBUG] Shortcut layout not available, buttons will be created later")
+        
+        # Set the new game window
         self.current_game_window = game_window_title
+        
+        # Debug: Log before button visibility update
+        logger.info(f"🎯 [DEBUG] About to update task button visibility for: '{game_window_title}'")
+        
+        # Update button visibility
         self._update_dst_button_visibility()
         
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"🎮 Recording game window: '{game_window_title}'")
+        # Debug: Log completion
+        logger.info(f"✅ [DEBUG] set_current_game_window completed for: '{game_window_title}'")
     
     def _update_dst_button_visibility(self):
         """Update game task button visibility"""
@@ -4420,15 +4580,39 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def _update_game_task_buttons_visibility(self):
         """Update visibility of all game task buttons based on current game window"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
+            # Debug: Log method entry with current state
+            logger.info(f"🔍 [DEBUG] _update_game_task_buttons_visibility called")
+            logger.info(f"📋 [DEBUG] Current game window: '{self.current_game_window}'")
+            logger.info(f"📋 [DEBUG] Available task buttons: {list(self.game_task_buttons.keys())}")
+            
+            # Debug: Log each button's current state
+            for game_name, button in self.game_task_buttons.items():
+                if button:
+                    is_visible = button.isVisible()
+                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=True, visible={is_visible}")
+                else:
+                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=False")
+            
             if not self.current_game_window:
-                # Hide all buttons
-                for button in self.game_task_buttons.values():
+                # Hide all buttons if no game window
+                logger.info(f"⚠️ [DEBUG] No current game window, hiding all task buttons")
+                hidden_count = 0
+                for game_name, button in self.game_task_buttons.items():
                     if button:
+                        was_visible = button.isVisible()
                         button.hide()
+                        if was_visible:
+                            hidden_count += 1
+                            logger.debug(f"    🙈 [DEBUG] Hidden {game_name} task button")
+                logger.info(f"🙈 [DEBUG] Hidden {hidden_count} task buttons due to no game window")
                 return
             
             game_title_lower = self.current_game_window.lower()
+            logger.info(f"🔤 [DEBUG] Game title for matching (lowercase): '{game_title_lower}'")
             
             # Define game configurations (same as when creating buttons)
             game_configs = [
@@ -4438,7 +4622,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 },
                 {
                     'game_name': 'helldiver2',
-                    'window_titles': ["HELLDIVERS™ 2", "HELLDIVERS 2"]
+                    'window_titles': ["helldivers™ 2", "helldivers 2"]
                 },
                 {
                     'game_name': 'civilization6',
@@ -4446,21 +4630,56 @@ class UnifiedAssistantWindow(QMainWindow):
                 }
             ]
             
-            # Check each game
+            # Debug: Log game configurations
+            logger.debug(f"🎮 [DEBUG] Checking against {len(game_configs)} game configurations:")
             for config in game_configs:
-                button = self.game_task_buttons.get(config['game_name'])
+                logger.debug(f"    🎯 [DEBUG] {config['game_name']}: {config['window_titles']}")
+            
+            # Check each game and update button visibility
+            buttons_shown = 0
+            buttons_hidden = 0
+            for config in game_configs:
+                game_name = config['game_name']
+                window_titles = config['window_titles']
+                button = self.game_task_buttons.get(game_name)
+                
+                logger.debug(f"🔍 [DEBUG] Processing {game_name} task button...")
+                
                 if button:
+                    was_visible = button.isVisible()
+                    
                     # Check if current window matches this game
-                    is_matched = any(title in game_title_lower for title in config['window_titles'])
+                    matched_titles = [title for title in window_titles if title in game_title_lower]
+                    is_matched = len(matched_titles) > 0
+                    
+                    logger.debug(f"    🎯 [DEBUG] Matching check for {game_name}:")
+                    logger.debug(f"        Window titles to check: {window_titles}")
+                    logger.debug(f"        Matched titles: {matched_titles}")
+                    logger.debug(f"        Is matched: {is_matched}")
+                    logger.debug(f"        Button was visible: {was_visible}")
                     
                     if is_matched:
                         button.show()
-                        print(f"{config['game_name']} task button shown for game: {self.current_game_window}")
+                        if not was_visible:
+                            buttons_shown += 1
+                        logger.info(f"✅ [DEBUG] {game_name} task button SHOWN for game: '{self.current_game_window}' (matched: {matched_titles})")
                     else:
                         button.hide()
+                        if was_visible:
+                            buttons_hidden += 1
+                        logger.debug(f"🙈 [DEBUG] {game_name} task button hidden (no match)")
+                else:
+                    logger.warning(f"⚠️ [DEBUG] {game_name} task button not found in game_task_buttons dict")
+            
+            # Debug: Summary of changes
+            logger.info(f"📊 [DEBUG] Task button visibility update completed:")
+            logger.info(f"    ✅ Buttons shown: {buttons_shown}")
+            logger.info(f"    🙈 Buttons hidden: {buttons_hidden}")
                     
         except Exception as e:
-            print(f"Failed to update game task buttons visibility: {e}")
+            logger.error(f"❌ [DEBUG] Failed to update game task buttons visibility: {e}")
+            import traceback
+            logger.error(f"❌ [DEBUG] Exception traceback:\n{traceback.format_exc()}")
 
     def on_send_clicked(self):
         """Handle send button click"""
@@ -4568,6 +4787,39 @@ class UnifiedAssistantWindow(QMainWindow):
         self.hide()
         self.visibility_changed.emit(False)
         
+    def showEvent(self, event):
+        """Handle show event - defer loading non-critical content"""
+        super().showEvent(event)
+        
+        # Load shortcuts and history after window is shown
+        if not self.shortcuts_loaded:
+            self.shortcuts_loaded = True
+            # Use QTimer to defer loading to next event loop iteration
+            QTimer.singleShot(0, self._load_deferred_content)
+            
+    def _load_deferred_content(self):
+        """Load non-critical content after window is shown"""
+        try:
+            # Load shortcuts
+            print("📌 Loading shortcuts...")
+            start_time = time.time()
+            self.load_shortcuts()
+            print(f"✅ Shortcuts loaded in {time.time() - start_time:.2f}s")
+            
+            # Initialize history manager
+            print("📌 Initializing history manager...")
+            start_time = time.time()
+            self._ensure_history_manager()
+            print(f"✅ History manager initialized in {time.time() - start_time:.2f}s")
+            
+            # Load other deferred content
+            # Add more deferred loading here if needed
+            
+        except Exception as e:
+            print(f"❌ Error loading deferred content: {e}")
+            import traceback
+            traceback.print_exc()
+        
     def closeEvent(self, event):
         """Handle close event - just hide the window"""
         event.ignore()  # Don't actually close the window
@@ -4585,6 +4837,11 @@ class UnifiedAssistantWindow(QMainWindow):
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
         if event.key() == Qt.Key.Key_Escape:
+            # Save geometry before hiding
+            try:
+                self.save_geometry()
+            except Exception:
+                pass
             self.hide()  # Hide instead of close
             self.window_closing.emit()  # Show mini window
         elif event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
@@ -4594,7 +4851,12 @@ class UnifiedAssistantWindow(QMainWindow):
         """Handle window state changes"""
         if event.type() == event.Type.WindowStateChange:
             if self.windowState() & Qt.WindowState.WindowMinimized:
-                # Window is minimized, hide it and show mini window
+                # Window is minimized, save geometry and hide it
+                try:
+                    self.save_geometry()
+                except Exception:
+                    pass
+                # Hide and show mini window
                 QTimer.singleShot(100, lambda: (
                     self.hide(),
                     self.setWindowState(Qt.WindowState.WindowNoState),
@@ -4616,6 +4878,7 @@ class AssistantController:
         self.current_game_window = None  # Record current game window title
         self._is_manually_hidden = False  # Record if user manually hidden the floating window
         self._was_hidden_before_hotkey = False  # Record hidden state before hotkey
+        self._precreated = False  # Track if window has been pre-created
         
     def show_mini(self):
         """Show mini assistant"""
@@ -4632,9 +4895,13 @@ class AssistantController:
         # If user manually hidden the floating window, skip showing
         if self._is_manually_hidden:
             logger.info("Mini window was manually hidden, skipping show")
-            # If there is main window, also hide it
+            # If there is main window, save geometry and hide it
             if self.main_window:
                 logger.info("Hiding main window")
+                try:
+                    self.main_window.save_geometry()
+                except Exception as e:
+                    logger.warning(f"Failed to save geometry when hiding main window: {e}")
                 self.main_window.hide()
             return
         
@@ -4651,9 +4918,13 @@ class AssistantController:
         self.mini_window.raise_()
         self.mini_window.activateWindow()
         
-        # If there is main window, hide it
+        # If there is main window, save geometry and hide it
         if self.main_window:
             logger.info("Hiding main window")
+            try:
+                self.main_window.save_geometry()
+            except Exception as e:
+                logger.warning(f"Failed to save geometry when hiding main window: {e}")
             self.main_window.hide()
         
         self.current_mode = WindowMode.MINI
@@ -4669,7 +4940,54 @@ class AssistantController:
         
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"🎮 Recording game window: '{game_window_title}'")
+        logger.info(f"🎮 Recording game window: '{game_window_title}'\n ")
+    def precreate_chat_window(self):
+        """Pre-create chat window for faster first-time response"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        if self._precreated or self.main_window:
+            logger.info("Chat window already created or pre-created")
+            return
+            
+        try:
+            logger.info("Pre-creating chat window...")
+            
+            # Create window but keep it hidden
+            self.main_window = UnifiedAssistantWindow(self.settings_manager)
+            self.main_window.query_submitted.connect(self.handle_query)
+            self.main_window.window_closing.connect(self.show_mini)
+            self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
+            
+            # CRITICAL FIX: Ensure task buttons are created during pre-creation
+            # The issue: load_shortcuts (which creates task buttons) is only called in showEvent,
+            # but pre-created windows are kept hidden, so showEvent never fires.
+            logger.info(f"🔍 [DEBUG] Force loading shortcuts for pre-created window...")
+            try:
+                # Call _load_deferred_content directly since showEvent won't be triggered
+                self.main_window._load_deferred_content()
+                self.main_window.shortcuts_loaded = True  # Mark as loaded
+                button_count = len(getattr(self.main_window, 'game_task_buttons', {}))
+                logger.info(f"✅ [DEBUG] Shortcuts loaded for pre-created window, task buttons: {button_count}")
+            except Exception as e:
+                logger.error(f"❌ [DEBUG] Failed to load shortcuts for pre-created window: {e}")
+            
+            # If we already have a game context, set it AFTER shortcuts are loaded
+            if self.current_game_window:
+                self.main_window.set_current_game_window(self.current_game_window)
+                logger.info(f"✅ [DEBUG] Set game context for pre-created window: {self.current_game_window}")
+            
+            # Important: Keep window hidden
+            self.main_window.hide()
+            
+            # Mark as pre-created
+            self._precreated = True
+            logger.info("✅ Chat window pre-created and hidden")
+            
+        except Exception as e:
+            logger.error(f"Failed to pre-create chat window: {e}")
+            self.main_window = None
+            self._precreated = False
         
     def expand_to_chat(self):
         """Expand from mini to chat window with animation"""
@@ -4694,16 +5012,24 @@ class AssistantController:
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             self.main_window.visibility_changed.connect(self._on_main_window_visibility_changed)
             
-            # If there is current game window information, pass to new window
+            # CRITICAL FIX: Always set current game window for new window (ignore the flag)
             if self.current_game_window:
+                logger.info(f"🎮 [DEBUG] Setting game window on NEW main window: '{self.current_game_window}'")
                 self.main_window.set_current_game_window(self.current_game_window)
+                logger.info(f"✅ [DEBUG] Game window set and task buttons should be visible now")
+            else:
+                logger.info(f"⚠️ [DEBUG] No current game window to set on new window")
             
             logger.info("UnifiedAssistantWindow created and signals connected")
         else:
             logger.info("Reusing existing UnifiedAssistantWindow")
-            # If game window changed, update it
+            # For existing windows, always update game context to ensure task buttons are visible
             if self.current_game_window:
+                logger.info(f"🎮 [DEBUG] Updating game window on EXISTING main window: '{self.current_game_window}'")
                 self.main_window.set_current_game_window(self.current_game_window)
+                logger.info(f"✅ [DEBUG] Game window updated and task buttons should be visible now")
+            else:
+                logger.info(f"⚠️ [DEBUG] No current game window to set on existing window")
         
         # Set window initial opacity to 0 (prepare fade-in animation)
         self.main_window.setWindowOpacity(0.0)
@@ -4722,10 +5048,10 @@ class AssistantController:
         
         # Create fade-in animation
         self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
-        self._fade_in_animation.setDuration(200)  # 200ms fade-in animation
+        self._fade_in_animation.setDuration(100)  # 100ms fade-in animation (faster)
         self._fade_in_animation.setStartValue(0.0)
         self._fade_in_animation.setEndValue(1.0)
-        self._fade_in_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self._fade_in_animation.setEasingCurve(QEasingCurve.Type.OutQuad)  # Faster curve
         
         # After animation, focus on input field and update message width
         def on_fade_in_finished():
@@ -4976,6 +5302,12 @@ class AssistantController:
         if self.mini_window:
             self.mini_window.hide()
         if self.main_window:
+            try:
+                self.main_window.save_geometry()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to save geometry when hiding all windows: {e}")
             self.main_window.hide()
         self.current_mode = None
         

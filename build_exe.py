@@ -4,12 +4,14 @@
 GameWiki Assistant Packaging Script
 
 This script is used to package GameWiki Assistant into a standalone exe file.
+Supports both onefile and onedir modes, with optional Inno Setup integration.
 """
 
 import os
 import sys
 import shutil
 import subprocess
+import argparse
 from pathlib import Path
 
 def print_status(message):
@@ -87,7 +89,8 @@ def clean_build():
     """Clean build directory"""
     print_status("Cleaning previous build files...")
     
-    dirs_to_clean = ['build', 'dist', '__pycache__']
+    # 清理 PyInstaller 生成的目录
+    dirs_to_clean = ['build', '__pycache__']
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
             try:
@@ -96,6 +99,19 @@ def clean_build():
             except Exception as e:
                 print(f"  Cannot delete {dir_name}: {e}")
                 # Continue, do not stop the entire process
+    
+    # 清理便携版目录（如果存在）
+    portable_dirs = [
+        'GameWikiAssistant_Portable_onedir',
+        'GameWikiAssistant_Portable_onefile'
+    ]
+    for dir_name in portable_dirs:
+        if os.path.exists(dir_name):
+            try:
+                shutil.rmtree(dir_name)
+                print(f"  Deleted: {dir_name}")
+            except Exception as e:
+                print(f"  Cannot delete {dir_name}: {e}")
     
     # Delete spec generated cache files
     try:
@@ -130,6 +146,53 @@ def check_assets():
         return False
     
     print_success("Resource files checked")
+    return True
+
+def check_ai_modules():
+    """Check if AI modules can be imported correctly"""
+    print_status("Checking AI module dependencies...")
+    
+    # AI module import tests
+    ai_modules_to_test = [
+        "src.game_wiki_tooltip.ai.hybrid_retriever",
+        "src.game_wiki_tooltip.ai.enhanced_bm25_indexer", 
+        "src.game_wiki_tooltip.ai.batch_embedding",
+        "src.game_wiki_tooltip.ai.rag_query",
+        "src.game_wiki_tooltip.ai.unified_query_processor",
+        "src.game_wiki_tooltip.config",
+    ]
+    
+    # Temporarily add src to path for testing
+    original_sys_path = sys.path.copy()
+    src_path = Path("src")
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+    
+    failed_imports = []
+    
+    try:
+        for module_name in ai_modules_to_test:
+            try:
+                __import__(module_name)
+                print(f"  ✓ {module_name}")
+            except ImportError as e:
+                failed_imports.append(f"{module_name}: {e}")
+                print(f"  ❌ {module_name}: {e}")
+            except Exception as e:
+                print(f"  ⚠️  {module_name}: {e} (non-import error)")
+    finally:
+        # Restore original sys.path
+        sys.path[:] = original_sys_path
+    
+    if failed_imports:
+        print_error("Some AI modules failed to import:")
+        for failure in failed_imports:
+            print(f"  - {failure}")
+        print("\n💡 This may cause 'hybrid retriever module is not available' errors in the packaged exe")
+        print("   Please ensure all dependencies are properly installed")
+        return False
+    
+    print_success("All AI modules can be imported correctly")
     return True
 
 def check_webview2_requirements():
@@ -232,128 +295,164 @@ def update_spec_for_webview2():
     print_success("spec file updated to support WebView2")
     return True
 
-def build_exe():
-    """Build exe file using PyInstaller"""
-    print_status("Building exe file...")
+def build_exe(mode='onedir'):
+    """Build exe file using PyInstaller
+    
+    Args:
+        mode: 'onedir' or 'onefile' - specifies packaging mode
+    """
+    print_status(f"Building exe file in {mode} mode...")
     print("This may take a few minutes, please wait...")
     
-    # Use spec file to build
-    success, output = run_command("pyinstaller game_wiki_tooltip.spec --clean --noconfirm")
+    # 定义最终输出目录
+    final_output_dir = f"GameWikiAssistant_Portable_{mode}"
+    
+    # 使用 --distpath 参数直接指定输出到最终目录
+    spec_file = "game_wiki_tooltip.spec"
+    
+    # 修改 PyInstaller 命令，直接输出到最终目录
+    success, output = run_command(f"pyinstaller {spec_file} --clean --noconfirm --distpath {final_output_dir}")
     
     if not success:
         print_error(f"Build failed: {output}")
         return False
     
-    # Check generated exe file
-    exe_path = Path("dist/GameWikiAssistant.exe")
-    if exe_path.exists():
-        print_success(f"Build successful! exe file location: {exe_path.absolute()}")
-        print(f"File size: {exe_path.stat().st_size / 1024 / 1024:.1f} MB")
-        return True
+    # 检查生成的文件
+    if mode == 'onedir':
+        exe_dir = Path(final_output_dir) / "GameWikiAssistant"
+        exe_path = exe_dir / "GameWikiAssistant.exe"
+        if exe_dir.exists() and exe_path.exists():
+            print_success(f"Build successful! Output directory: {exe_dir.absolute()}")
+            # 计算总目录大小
+            total_size = sum(f.stat().st_size for f in exe_dir.rglob('*') if f.is_file())
+            print(f"Total size: {total_size / 1024 / 1024:.1f} MB")
+            return True
     else:
-        print_error("Build completed but exe file not found")
+        exe_path = Path(final_output_dir) / "GameWikiAssistant.exe"
+        if exe_path.exists():
+            print_success(f"Build successful! exe file location: {exe_path.absolute()}")
+            print(f"File size: {exe_path.stat().st_size / 1024 / 1024:.1f} MB")
+            return True
+    
+    print_error("Build completed but output not found")
+    return False
+
+def create_portable_package(mode='onedir'):
+    """Create portable package
+    
+    Args:
+        mode: 'onedir' or 'onefile' - specifies which build to package
+    """
+    print_status(f"Adding portable package files for {mode} build...")
+    
+    # 最终目录已经由 PyInstaller 直接创建
+    portable_dir = Path(f"GameWikiAssistant_Portable_{mode}")
+    
+    if not portable_dir.exists():
+        print_error(f"Target directory not found: {portable_dir}")
         return False
-
-def create_portable_package():
-    """Create portable package"""
-    print_status("Creating portable package...")
     
-    dist_dir = Path("dist")
-    if not dist_dir.exists():
-        print_error("dist directory not found")
-        return False
+    # 验证构建文件是否存在
+    if mode == 'onedir':
+        exe_path = portable_dir / "GameWikiAssistant" / "GameWikiAssistant.exe"
+        if not exe_path.exists():
+            print_error(f"OneDir build not found: {exe_path}")
+            return False
+    else:
+        exe_path = portable_dir / "GameWikiAssistant.exe"
+        if not exe_path.exists():
+            print_error(f"Onefile build not found: {exe_path}")
+            return False
     
-    # Create portable directory
-    portable_dir = Path("GameWikiAssistant_Portable")
-    if portable_dir.exists():
-        shutil.rmtree(portable_dir)
-    
-    portable_dir.mkdir()
-    
-    # Copy exe file
-    exe_file = dist_dir / "GameWikiAssistant.exe"
-    if exe_file.exists():
-        shutil.copy2(exe_file, portable_dir)
-    
-    # Copy necessary documents
-    readme_content = """# GameWiki Assistant 便携版
+    # 创建 README 文档
+    readme_content = f"""# GameWiki Assistant Portable ({mode.capitalize()} Mode)
 
-## Instructions
+## 使用说明
 
-1. **Read Before First Use**: This application uses WebView2 technology and requires Microsoft Edge WebView2 Runtime.
-2. Double-click GameWikiAssistant.exe to start the program.
-3. Opening this exe can take a few seconds (normally in 10 seconds).
-4. If the program fails to start or displays a white screen, please install the WebView2 Runtime.
-5. API keys need to be configured on first run (optional).
-6. Use the shortcut Ctrl+X or set a new shortcut to activate the game assistant feature.
+1. **首次使用必读**：本应用程序使用 WebView2 技术，需要 Microsoft Edge WebView2 Runtime 支持。
+2. {'运行 GameWikiAssistant/GameWikiAssistant.exe' if mode == 'onedir' else '双击 GameWikiAssistant.exe'} 启动程序。
+3. 如果程序无法启动或显示白屏，请安装 WebView2 Runtime。
+4. 首次运行需要配置 API 密钥（可选）。
+5. 使用快捷键 Ctrl+Q 或设置新的快捷键来激活游戏助手功能。
 
-## System Requirements
+## 系统要求
 
-- Windows 10 or higher (recommended Windows 11)
-- 64-bit system (64-bit system is recommended)
+- Windows 10 或更高版本（推荐 Windows 11）
+- 64位系统（推荐64位系统）
 - Microsoft Edge WebView2 Runtime
 
-## WebView2 Runtime Installation
+## WebView2 Runtime 安装
 
-### Windows 11 Users
-✅ Your system is pre-installed with WebView2 Runtime, you can use it directly.
+### Windows 11 用户
+✅ 您的系统已预装 WebView2 Runtime，可直接使用。
 
-### Windows 10 Users  
-⚠️ Need to install WebView2 Runtime:
+### Windows 10 用户  
+⚠️ 需要安装 WebView2 Runtime：
 
-**Method 1 (recommended)**: Run the automatic installation script
-1. Enter the runtime folder
-2. Double-click to run install_webview2.bat
-3. Follow the prompts to complete the installation
+**方法一（推荐）**：运行自动安装脚本
+1. 进入 runtime 文件夹
+2. 双击运行 install_webview2.bat
+3. 按提示完成安装
 
-**Method 2**: Manually download and install
-1. Visit: https://go.microsoft.com/fwlink/p/?LinkId=2124703
-2. Download and install WebView2 Runtime
-3. Restart the application
+**方法二**：手动下载安装
+1. 访问：https://go.microsoft.com/fwlink/p/?LinkId=2124703
+2. 下载并安装 WebView2 Runtime
+3. 重启应用程序
 
-## Notes
+## 注意事项
 
-- This program is a standalone portable version, no installation required (except for WebView2 Runtime)
-- Configuration files will be saved in the system's AppData directory
-- For full AI functionality, please configure Gemini and Jina API keys
-- The first installation of WebView2 Runtime requires downloading about 100MB, but only needs to be installed once
+- 本程序为独立便携版，无需安装（WebView2 Runtime 除外）
+- 配置文件将保存在系统 AppData 目录
+- 完整 AI 功能需要配置 Gemini 和 Jina API 密钥
+- WebView2 Runtime 首次安装需要下载约100MB，但只需安装一次
 
-## Troubleshooting
+## 故障排除
 
-### Problem: The program fails to start or displays a white screen
-**Solution**: Install WebView2 Runtime (see installation instructions above)
+### 问题：程序无法启动或显示白屏
+**解决方案**：安装 WebView2 Runtime（参见上述安装说明）
 
-### Problem: Video playback fails
-**Solution**: Confirm that WebView2 Runtime is correctly installed and restart the program
+### 问题：视频播放失败
+**解决方案**：确认 WebView2 Runtime 已正确安装，重启程序
 
-### Problem: Temporary files accumulation
-**Note**: When the program exits abnormally or crashes, temporary files may remain in the system temp directory:
-- Location: %TEMP%\\_MEI****** (such as: AppData\\Local\\Temp\\_MEI260882\\)
-- These folders are safe to delete and won't affect system operation
-- PyInstaller automatically cleans up these folders on normal program exit
-- You can manually delete these folders periodically to free up disk space
+### 问题：临时文件堆积
+**说明**：{'这主要是 onefile 模式的问题。OneDir 模式不会产生临时文件。' if mode == 'onedir' else '当程序异常退出或崩溃时，可能在系统临时目录留下临时文件：'}
+{'- OneDir 模式直接从安装目录运行，不会解压临时文件' if mode == 'onedir' else '''- 位置：%TEMP%\\_MEI****** （如：AppData\\Local\\Temp\\_MEI260882\\）
+- 这些文件夹可以安全删除，不会影响系统运行
+- PyInstaller 在程序正常退出时会自动清理这些文件夹
+- 您可以定期手动删除这些文件夹来释放磁盘空间'''}
 
-## Support
+## 技术支持
 
-If you have any problems, please visit the project page for help.
+如遇问题，请访问项目页面获取帮助。
 """
     
-    with open(portable_dir / "README.txt", "w", encoding="utf-8") as f:
-        f.write(readme_content)
-    
-    print_success(f"Portable package created: {portable_dir.absolute()}")
-    return True
-
-def create_webview2_runtime_installer():
-    """Create WebView2 Runtime installer"""
-    print_status("Creating WebView2 Runtime installer...")
-    
-    portable_dir = Path("GameWikiAssistant_Portable")
-    if not portable_dir.exists():
-        print_error("Portable directory not found")
+    readme_path = portable_dir / "README.txt"
+    try:
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write(readme_content)
+        print(f"  ✓ Created: {readme_path.name}")
+    except Exception as e:
+        print_error(f"Failed to create README: {e}")
         return False
     
-    # Create runtime directory
+    print_success(f"Portable package files added to: {portable_dir.absolute()}")
+    return True
+
+def create_webview2_runtime_installer(portable_dir):
+    """Create WebView2 Runtime installer
+    
+    Args:
+        portable_dir: Path to the portable directory (can be string or Path object)
+    """
+    print_status("Creating WebView2 Runtime installer...")
+    
+    # 确保 portable_dir 是 Path 对象
+    portable_dir = Path(portable_dir)
+    if not portable_dir.exists():
+        print_error(f"Portable directory not found: {portable_dir}")
+        return False
+    
+    # 创建 runtime 目录
     runtime_dir = portable_dir / "runtime"
     runtime_dir.mkdir(exist_ok=True)
     
@@ -398,6 +497,123 @@ pause
         print_error(f"Failed to create WebView2 Runtime installer: {e}")
         return False
 
+def create_inno_setup_script(mode='onedir'):
+    """Create Inno Setup script for creating installer
+    
+    Args:
+        mode: 'onedir' or 'onefile' - specifies which build to create installer for
+    """
+    print_status("Creating Inno Setup script...")
+    
+    # Determine source directory based on mode
+    if mode == 'onedir':
+        source_dir = f"GameWikiAssistant_Portable_{mode}\\GameWikiAssistant"
+        files_section = f"""Source: "{source_dir}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs"""
+    else:
+        source_dir = f"GameWikiAssistant_Portable_{mode}"
+        files_section = f"""Source: "{source_dir}\\GameWikiAssistant.exe"; DestDir: "{{app}}"; Flags: ignoreversion"""
+    
+    script_content = f"""#define MyAppName "GameWiki Assistant"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "GameWiki Team"
+#define MyAppURL "https://github.com/yourusername/gamewiki"
+#define MyAppExeName "GameWikiAssistant.exe"
+
+[Setup]
+; NOTE: The value of AppId uniquely identifies this application.
+; Do not use the same AppId value in installers for other applications.
+AppId={{{{8F7A9E2C-4B3D-4E6A-9C1F-2A3B4C5D6E7F}}
+AppName={{#MyAppName}}
+AppVersion={{#MyAppVersion}}
+AppPublisher={{#MyAppPublisher}}
+AppPublisherURL={{#MyAppURL}}
+AppSupportURL={{#MyAppURL}}
+AppUpdatesURL={{#MyAppURL}}
+DefaultDirName={{autopf}}\\{{#MyAppName}}
+DefaultGroupName={{#MyAppName}}
+AllowNoIcons=yes
+; Remove the following line to run in administrative install mode
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog
+OutputDir=installer
+OutputBaseFilename=GameWikiAssistant_Setup_{mode}
+SetupIconFile=src\\game_wiki_tooltip\\assets\\app.ico
+Compression=lzma2/max
+SolidCompression=yes
+WizardStyle=modern
+; Enable disk spanning for better performance with signed installers
+DiskSpanning=yes
+DiskSliceSize=max
+; Uncomment the following lines if you have a code signing certificate
+; SignTool=signtool
+; SignedUninstaller=yes
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\\ChineseSimplified.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{{cm:CreateDesktopIcon}}"; GroupDescription: "{{cm:AdditionalIcons}}"; Flags: unchecked
+Name: "quicklaunchicon"; Description: "{{cm:CreateQuickLaunchIcon}}"; GroupDescription: "{{cm:AdditionalIcons}}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
+
+[Files]
+{files_section}
+; WebView2 Runtime installer
+Source: "GameWikiAssistant_Portable_{mode}\\runtime\\MicrosoftEdgeWebView2Setup.exe"; DestDir: "{{tmp}}"; Flags: deleteafterinstall
+
+[Icons]
+Name: "{{group}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"
+Name: "{{group}}\\{{cm:UninstallProgram,{{#MyAppName}}}}"; Filename: "{{uninstallexe}}"
+Name: "{{autodesktop}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: desktopicon
+Name: "{{userappdata}}\\Microsoft\\Internet Explorer\\Quick Launch\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: quicklaunchicon
+
+[Run]
+; Check and install WebView2 Runtime if not present
+Filename: "{{tmp}}\\MicrosoftEdgeWebView2Setup.exe"; Parameters: "/silent /install"; StatusMsg: "Installing WebView2 Runtime..."; Check: not IsWebView2RuntimeInstalled
+Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Description: "{{cm:LaunchProgram,{{#StringChange(MyAppName, '&', '&&')}}}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function IsWebView2RuntimeInstalled: Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Check if WebView2 Runtime is installed by looking for the registry key
+  Result := RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}}');
+  if not Result then
+    Result := RegKeyExists(HKEY_CURRENT_USER, 'SOFTWARE\\Microsoft\\EdgeUpdate\\Clients\\{{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}}');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+  begin
+    // Delete old temporary files if they exist
+    DelTree(ExpandConstant('{{localappdata}}\\Temp\\_MEI*'), False, True, False);
+  end;
+end;
+
+[UninstallDelete]
+; Clean up any remaining temporary files during uninstall
+Type: filesandordirs; Name: "{{localappdata}}\\Temp\\_MEI*"
+Type: filesandordirs; Name: "{{userappdata}}\\game_wiki_tooltip"
+"""
+    
+    # Write the script file
+    script_path = Path(f"GameWikiAssistant_{mode}.iss")
+    try:
+        with open(script_path, 'w', encoding='utf-8') as f:
+            f.write(script_content)
+        print_success(f"Inno Setup script created: {script_path}")
+        print("\n💡 To create the installer:")
+        print(f"   1. Install Inno Setup from https://jrsoftware.org/isdl.php")
+        print(f"   2. Open {script_path} in Inno Setup Compiler")
+        print(f"   3. Click 'Build' -> 'Compile' (or press F9)")
+        print(f"   4. The installer will be created in the 'installer' directory")
+        return True
+    except Exception as e:
+        print_error(f"Failed to create Inno Setup script: {e}")
+        return False
+
 def main():
     """Main function"""
     # Set console encoding to ensure Chinese characters are displayed correctly
@@ -409,7 +625,18 @@ def main():
         except:
             pass
     
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='GameWiki Assistant Packaging Tool')
+    parser.add_argument('--mode', choices=['onedir', 'onefile'], default='onedir',
+                        help='Packaging mode: onedir (faster startup) or onefile (single exe)')
+    parser.add_argument('--skip-deps', action='store_true',
+                        help='Skip dependency installation')
+    parser.add_argument('--create-installer', action='store_true',
+                        help='Create Inno Setup script for installer')
+    args = parser.parse_args()
+    
     print("🚀 GameWiki Assistant Packaging Tool")
+    print(f"📦 Mode: {args.mode}")
     print("=" * 50)
     
     # Check Python version
@@ -423,17 +650,29 @@ def main():
         return 1
     
     try:
-        # Execute build steps
+        # Define build steps based on options
         steps = [
-            ("Install dependencies", install_dependencies),
             ("Clean build", clean_build),
             ("Check resources", check_assets),
+            ("Check AI modules", check_ai_modules),
             ("Check WebView2 requirements", check_webview2_requirements),
             ("Update spec file", update_spec_for_webview2),
-            ("Build exe", build_exe),
-            ("Create portable package", create_portable_package),
-            ("Create WebView2 Runtime installer", create_webview2_runtime_installer),
         ]
+        
+        # Skip dependency installation if requested
+        if not args.skip_deps:
+            steps.insert(0, ("Install dependencies", install_dependencies))
+        
+        # Add build and packaging steps
+        steps.extend([
+            ("Build exe", lambda: build_exe(args.mode)),
+            ("Add portable package files", lambda: create_portable_package(args.mode)),
+            ("Create WebView2 Runtime installer", lambda: create_webview2_runtime_installer(f"GameWikiAssistant_Portable_{args.mode}")),
+        ])
+        
+        # Add Inno Setup script creation if requested
+        if args.create_installer:
+            steps.append(("Create Inno Setup script", lambda: create_inno_setup_script(args.mode)))
         
         for step_name, step_func in steps:
             print(f"\n📋 Step: {step_name}")
@@ -444,12 +683,25 @@ def main():
         print("\n" + "=" * 50)
         print_success("🎉 Packaging completed!")
         print("\n📦 Generated files:")
-        print("  - dist/GameWikiAssistant.exe (standalone exe file)")
-        print("  - GameWikiAssistant_Portable/ (portable directory)")
+        portable_dir = f"GameWikiAssistant_Portable_{args.mode}"
+        if args.mode == 'onedir':
+            print(f"  - {portable_dir}/GameWikiAssistant/ (application directory)")
+        else:
+            print(f"  - {portable_dir}/GameWikiAssistant.exe (standalone exe file)")
+        print(f"  - {portable_dir}/README.txt (user guide)")
+        print(f"  - {portable_dir}/runtime/ (WebView2 installer)")
+        
+        if args.create_installer:
+            print(f"  - GameWikiAssistant_{args.mode}.iss (Inno Setup script)")
+        
         print("\n💡 Tips:")
-        print("  - You can compress the portable directory and distribute it to other users")
-        print("  - If program crashes, temporary files may remain in %TEMP%\\\\_MEI****** folders")
-        print("  - These temporary folders can be safely deleted to free up disk space")
+        print(f"  - {args.mode.capitalize()} mode: {'Fast startup, no temp files' if args.mode == 'onedir' else 'Slower startup, creates temp files'}")
+        print(f"  - You can compress the {portable_dir} directory and distribute it to other users")
+        if args.mode == 'onefile':
+            print("  - If program crashes, temporary files may remain in %TEMP%\\\\_MEI****** folders")
+            print("  - These temporary folders can be safely deleted to free up disk space")
+        if args.create_installer:
+            print("\n🔧 Next step: Use Inno Setup to compile the installer script")
         
         return 0
         

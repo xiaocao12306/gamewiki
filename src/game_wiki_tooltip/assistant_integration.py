@@ -18,6 +18,7 @@ from src.game_wiki_tooltip.unified_window import (
 from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
 from src.game_wiki_tooltip.utils import get_foreground_title
 from src.game_wiki_tooltip.i18n import t, get_current_language
+from src.game_wiki_tooltip.smart_interaction_manager import SmartInteractionManager, InteractionMode
 
 # Lazy load AI modules - import only when needed to speed up startup
 logger = logging.getLogger(__name__)
@@ -34,6 +35,21 @@ class AIModuleLoader(QThread):
     
     def run(self):
         """Load AI modules in background thread"""
+        # Set low priority to avoid affecting UI responsiveness
+        try:
+            import os
+            if hasattr(os, 'nice'):
+                os.nice(10)  # Unix/Linux
+            else:
+                # Windows: set thread priority
+                import ctypes
+                import sys
+                if sys.platform == 'win32':
+                    thread_handle = ctypes.windll.kernel32.GetCurrentThread()
+                    ctypes.windll.kernel32.SetThreadPriority(thread_handle, -1)  # THREAD_PRIORITY_BELOW_NORMAL
+        except Exception as e:
+            logger.warning(f"Failed to set thread priority: {e}")
+        
         success = _lazy_load_ai_modules()
         self.load_completed.emit(success)
 
@@ -134,6 +150,11 @@ class QueryWorker(QThread):
             # Check if stop has been requested
             if self._stop_requested:
                 return
+            
+            # Wait for AI modules to load if needed (with timeout)
+            if not await self._wait_for_ai_modules():
+                self.error_occurred.emit("AI modules are still loading. Please try again in a moment.")
+                return
                 
             # Use unified query processor for intent detection and query optimization
             intent = await self.rag_integration.process_query_async(
@@ -191,6 +212,28 @@ class QueryWorker(QThread):
             if not self._stop_requested:  # Only report error if not stopped
                 logger.error(f"Query processing error: {e}")
                 self.error_occurred.emit(str(e))
+    
+    async def _wait_for_ai_modules(self) -> bool:
+        """Wait for AI modules to load with timeout"""
+        max_wait = 5.0  # Maximum 5 seconds
+        check_interval = 0.1
+        elapsed = 0.0
+        
+        while elapsed < max_wait:
+            # Check if modules are loaded
+            if _ai_modules_loaded:
+                return True
+            
+            # Check if stop requested
+            if self._stop_requested:
+                return False
+                
+            # Wait a bit
+            await asyncio.sleep(check_interval)
+            elapsed += check_interval
+            
+        # Timeout
+        return _ai_modules_loaded
             
     def stop(self):
         """Request to stop the worker"""
@@ -293,16 +336,12 @@ class RAGIntegration(QObject):
         if self.limited_mode:
             return False
             
-        # If AI modules are loading, wait for completion
+        # If AI modules are loading, wait but don't block UI
         if _ai_modules_loading:
-            logger.info("⏳ AI modules are loading in background, waiting for completion...")
-            max_wait = 10  # Wait up to 10 seconds
-            start_time = time.time()
-            while _ai_modules_loading and (time.time() - start_time) < max_wait:
-                time.sleep(0.1)
-            
+            logger.info("⏳ AI modules are loading in background...")
+            # For UI operations, return immediately
+            # The actual query processing will handle waiting
             if not _ai_modules_loaded:
-                logger.error("❌ AI module loading timeout")
                 return False
         
         # Try to load AI modules
@@ -381,8 +420,15 @@ class RAGIntegration(QObject):
     def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, google_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
         try:
+            # Ensure AI components are loaded first
+            if not _ai_modules_loaded:
+                logger.info("AI modules not yet loaded, ensuring they are loaded first...")
+                if not self._ensure_ai_components_loaded():
+                    logger.error("Failed to load AI components, cannot initialize RAG")
+                    return
+            
             if not (get_default_config and EnhancedRagQuery):
-                logger.warning("RAG components not available")
+                logger.warning("RAG components not available after loading attempt")
                 return
                 
             logger.info(f"🔄 Initializing new RAG engine for game '{game_name}'")
@@ -417,6 +463,21 @@ class RAGIntegration(QObject):
             
             # Initialize the engine in thread
             def init_rag():
+                # Set low priority to avoid affecting UI responsiveness
+                try:
+                    import os
+                    if hasattr(os, 'nice'):
+                        os.nice(10)  # Unix/Linux
+                    else:
+                        # Windows: set thread priority
+                        import ctypes
+                        import sys
+                        if sys.platform == 'win32':
+                            thread_handle = ctypes.windll.kernel32.GetCurrentThread()
+                            ctypes.windll.kernel32.SetThreadPriority(thread_handle, -2)  # THREAD_PRIORITY_LOWEST
+                except Exception as e:
+                    logger.warning(f"Failed to set thread priority: {e}")
+                
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
@@ -1119,6 +1180,10 @@ class IntegratedAssistantController(AssistantController):
         self._rag_initializing = False  # Mark RAG as initializing
         self._target_vector_game = None  # Target vector game name
         
+        # Initialize smart interaction manager (pass None as parent, but pass self as controller reference)
+        self.smart_interaction = SmartInteractionManager(parent=None, controller=self)
+        self._setup_smart_interaction()
+        
         # Register as global instance
         IntegratedAssistantController._global_instance = self
         logger.info(f"🌐 Registered as global assistant controller instance (limited_mode={limited_mode})")
@@ -1128,26 +1193,31 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🚨 Running in limited mode: only Wiki search functionality is supported")
         else:
             logger.info("✅ Running in full mode: supports Wiki search and AI guide functionality")
-            # Preload AI modules when idle
-            self._schedule_ai_preload()
+            # Don't preload AI modules immediately, wait for first window display
+            self._ai_preload_scheduled = False
         
     def _schedule_ai_preload(self):
         """Preload AI modules when idle"""
-        # Store loader reference to prevent garbage collection
-        self._ai_loader = None
-        
-        def start_background_loading():
-            """Start background loading thread"""
-            logger.info("🚀 Start AI module background loading thread...")
+        # Check if already loading
+        if hasattr(self, '_ai_loader') and self._ai_loader:
+            logger.info("⏭️ AI modules already loading, skipping duplicate request")
+            return
             
-            # Create and start loader thread
-            self._ai_loader = AIModuleLoader()
-            self._ai_loader.load_completed.connect(self._on_ai_modules_loaded)
-            self._ai_loader.start()
+        # First ensure basic modules are preloaded via preloader
+        try:
+            from src.game_wiki_tooltip.preloader import ensure_preloaded
+            ensure_preloaded(timeout=0.1)  # Quick check, don't block
+        except:
+            pass
+            
+        logger.info("🚀 Starting AI module background loading immediately...")
         
-        # Use QTimer to delay 3 seconds before starting background loading (give UI enough time to initialize)
-        QTimer.singleShot(3000, start_background_loading)
-        logger.info("📅 AI modules scheduled for background loading in 3 seconds")
+        # Create and start loader thread with low priority
+        self._ai_loader = AIModuleLoader()
+        self._ai_loader.load_completed.connect(self._on_ai_modules_loaded)
+        self._ai_loader.start()
+        
+        logger.info("📋 AI modules loading started in background thread")
         
     def _on_ai_modules_loaded(self, success: bool):
         """Callback when AI modules are loaded"""
@@ -1179,6 +1249,20 @@ class IntegratedAssistantController(AssistantController):
         """Override parent class method, set current game window and handle RAG engine initialization"""
         super().set_current_game_window(game_window_title)
         
+        # 排除应用程序自身的窗口
+        title_lower = game_window_title.lower()
+        app_window_keywords = [
+            'gamewiki assistant',
+            'gamewiki',
+            'game wiki assistant',
+            'game wiki'
+        ]
+        
+        # 如果是应用程序自身的窗口，不处理
+        if any(app_keyword in title_lower for app_keyword in app_window_keywords):
+            logger.debug(f"🚫 Ignoring self window: '{game_window_title}'")
+            return
+        
         # Check if RAG engine needs to be initialized or switched
         from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
         vector_game_name = map_window_title_to_game_name(game_window_title)
@@ -1195,7 +1279,7 @@ class IntegratedAssistantController(AssistantController):
                 logger.info(f"✓ Game not switched, continue using current RAG engine: {vector_game_name}")
         else:
             logger.info(f"⚠️ Window '{game_window_title}' is not a supported game")
-        
+    
     def _setup_connections(self):
         """Setup signal connections"""
         self.rag_integration.streaming_chunk_ready.connect(
@@ -1211,6 +1295,20 @@ class IntegratedAssistantController(AssistantController):
             self._on_error
         )
         
+    def _setup_smart_interaction(self):
+        """Setup smart interaction manager"""
+        # Connect interaction mode change signal
+        self.smart_interaction.interaction_mode_changed.connect(
+            self._on_interaction_mode_changed
+        )
+        
+        # Connect mouse state change signal
+        self.smart_interaction.mouse_state_changed.connect(
+            self._on_mouse_state_changed
+        )
+        
+        # 移除窗口状态变化的信号连接 - 改为热键触发时按需检测
+    
     def handle_query(self, query: str, mode: str = "auto"):
         """Override to handle query with RAG integration"""
         # Store search mode
@@ -1684,6 +1782,13 @@ class IntegratedAssistantController(AssistantController):
         try:
             logger.info(f"🚀 Start reinitializing RAG engine for vector library '{vector_game_name}' (asynchronous mode)")
             
+            # Ensure AI modules are loaded before attempting RAG initialization
+            if not self.rag_integration._ensure_ai_components_loaded():
+                logger.warning("AI components not yet loaded, deferring RAG initialization")
+                # Schedule another attempt after a delay
+                QTimer.singleShot(1000, lambda: self._reinitialize_rag_for_game(vector_game_name))
+                return
+            
             # Get API settings
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
@@ -1744,10 +1849,17 @@ class IntegratedAssistantController(AssistantController):
         # Call parent class expand_to_chat method
         super().expand_to_chat()
         
-            # Connect stop generation signal
+        # Connect stop generation signal
         if self.main_window and hasattr(self.main_window, 'stop_generation_requested'):
             self.main_window.stop_generation_requested.connect(self.stop_current_generation)
             logger.info("✅ Stop generation signal connected")
+            
+        # Schedule AI preload after first window display
+        if not self.limited_mode and (not hasattr(self, '_ai_preload_scheduled') or not self._ai_preload_scheduled):
+            self._ai_preload_scheduled = True
+            # Start AI loading immediately but with low priority
+            QTimer.singleShot(0, self._schedule_ai_preload)
+            logger.info("📅 AI modules loading started with low priority")
     
     def _add_web_search_option(self):
         """Add web search option when knowledge is insufficient"""
@@ -1897,6 +2009,108 @@ class IntegratedAssistantController(AssistantController):
                 except:
                     pass
     
+    # Smart interaction manager signal handling methods
+    def _on_interaction_mode_changed(self, mode: InteractionMode):
+        """Handle interaction mode changes"""
+        logger.info(f"🎮 Interaction mode changed: {mode.value}")
+        
+        # Adjust window mouse passthrough state based on interaction mode
+        if hasattr(self, 'main_window') and self.main_window:
+            should_passthrough = self.smart_interaction.should_enable_mouse_passthrough()
+            self.smart_interaction.apply_mouse_passthrough(self.main_window, should_passthrough)
+            
+            # Show status message for different modes
+            if mode == InteractionMode.GAME_HIDDEN:
+                logger.info("🎮 Game mouse hidden mode: enabled mouse passthrough to prevent accidental clicks")
+            elif mode == InteractionMode.GAME_VISIBLE:
+                logger.info("🎮 Game mouse visible mode: normal interaction")
+            else:
+                logger.info("🖥️ Normal mode: normal interaction")
+        
+    def _on_mouse_state_changed(self, mouse_state):
+        """Handle mouse state changes"""
+        logger.debug(f"🖱️ Mouse state changed: visible={mouse_state.is_visible}, position={mouse_state.position}")
+    
+    def handle_smart_hotkey(self, current_visible: bool) -> bool:
+        """
+        Handle hotkey events using smart interaction manager
+        
+        Args:
+            current_visible: Whether the chat window (main_window) is visible
+            
+        Returns:
+            Whether the hotkey event was handled
+        """
+        # Debug: Log smart hotkey processing start
+        logger.info(f"🎯 [DEBUG] Smart hotkey processing started")
+        
+        # 热键触发时按需检测当前游戏窗口并初始化RAG引擎
+        current_game_window = self.smart_interaction.get_current_game_window()
+        logger.info(f"🔍 [DEBUG] Detected current game window: '{current_game_window}'")
+        
+        if current_game_window:
+            # Debug: Log before setting game window
+            logger.info(f"🎮 [DEBUG] About to set current game window: '{current_game_window}'")
+            logger.info(f"📋 [DEBUG] Main window exists: {self.main_window is not None}")
+            if self.main_window:
+                logger.info(f"📋 [DEBUG] Main window task buttons count before: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
+            
+            # 设置游戏窗口并确保task flow按钮正确显示
+            self.set_current_game_window(current_game_window)
+            
+            # Debug: Log after setting game window
+            if self.main_window:
+                logger.info(f"📋 [DEBUG] Main window task buttons count after: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
+                # Log visibility of each button
+                for game_name, button in getattr(self.main_window, 'game_task_buttons', {}).items():
+                    if button:
+                        is_visible = button.isVisible()
+                        logger.info(f"    📋 [DEBUG] {game_name} task button visible: {is_visible}")
+            
+            # 标记游戏窗口已经设置，避免expand_to_chat中重复设置
+            self._game_window_already_set = True
+            logger.info(f"🏁 [DEBUG] Game window already set flag: True")
+        
+        # 强制更新交互模式，确保正确识别当前游戏状态
+        mouse_state = self.smart_interaction.get_mouse_state()
+        window_state = self.smart_interaction.get_window_state()
+        if mouse_state and window_state:
+            new_mode = self.smart_interaction._calculate_interaction_mode(mouse_state, window_state)
+            if new_mode != self.smart_interaction.current_mode:
+                old_mode = self.smart_interaction.current_mode
+                self.smart_interaction.current_mode = new_mode
+                logger.info(f"🎮 Interaction mode updated for hotkey: {old_mode.value} -> {new_mode.value}")
+        
+        # 只检查聊天窗口的可见性，而不是所有窗口
+        chat_visible = (self.main_window and self.main_window.isVisible())
+        action = self.smart_interaction.handle_hotkey_press(chat_visible)
+        logger.info(f"🔥 Smart hotkey handling result: {action}")
+        
+        if action == 'show_chat':
+            self.show_chat_window()
+            # Clear the flag after handling to allow future updates
+            self._game_window_already_set = False
+            return True
+        elif action == 'hide_chat':
+            self.hide_chat_window()
+            # Clear the flag after handling to allow future updates
+            self._game_window_already_set = False
+            return True
+        elif action == 'show_mouse':
+            self.show_mouse_for_interaction()
+            # Clear the flag after handling to allow future updates
+            self._game_window_already_set = False
+            return True
+        elif action == 'ignore':
+            logger.info("🎮 Ignoring hotkey event")
+            # Clear the flag after handling to allow future updates
+            self._game_window_already_set = False
+            return True
+        
+        # Clear the flag if no action was taken
+        self._game_window_already_set = False
+        return False
+    
     def switch_game(self, game_name: str):
         """Switch to a different game (game_name should be window title)"""
         # Stop current worker
@@ -1914,3 +2128,84 @@ class IntegratedAssistantController(AssistantController):
             self._reinitialize_rag_for_game(vector_game_name)
         else:
             logger.warning(f"⚠️ Game '{game_name}' not supported, cannot switch RAG engine")
+    
+    def show_chat_window(self):
+        """显示聊天窗口，隐藏悬浮窗"""
+        logger.info("💬 Show chat window requested")
+        
+        # 隐藏悬浮窗
+        if self.mini_window:
+            self.mini_window.hide()
+            logger.info("🔹 Mini window hidden")
+        
+        # 显示聊天窗口
+        if not self.main_window:
+            self.expand_to_chat()  # 创建并显示聊天窗口
+        else:
+            self.main_window.show()
+            self.main_window.raise_()
+            self.main_window.activateWindow()
+        logger.info("💬 Chat window shown")
+    
+    def hide_chat_window(self):
+        """隐藏聊天窗口，根据用户设置决定是否显示悬浮窗"""
+        logger.info("💬 Hide chat window requested")
+        
+        # 隐藏聊天窗口
+        if self.main_window:
+            self.main_window.hide()
+            logger.info("💬 Chat window hidden")
+        
+        # 检查用户设置的悬浮窗隐藏状态
+        if hasattr(self, '_is_manually_hidden') and self._is_manually_hidden:
+            logger.info("🔹 Mini window stays hidden (user setting)")
+        else:
+            # 显示悬浮窗
+            self.show_mini()
+            logger.info("🔹 Mini window shown")
+    
+    def show_mouse_for_interaction(self):
+        """显示鼠标以便与聊天窗口互动"""
+        logger.info("🖱️ Show mouse for interaction requested")
+        try:
+            # 调用Windows API显示鼠标
+            from .utils import show_cursor_until_visible
+            show_cursor_until_visible()
+            logger.info("🖱️ Mouse cursor shown")
+        except Exception as e:
+            logger.error(f"Failed to show mouse cursor: {e}")
+    
+    def show_assistant(self):
+        """显示助手窗口"""
+        logger.info("🔍 Show assistant requested")
+        self.show_mini()
+    
+    def hide_assistant(self):
+        """隐藏助手窗口"""
+        logger.info("🚫 Hide assistant requested")
+        if hasattr(self, '_is_manually_hidden'):
+            self._is_manually_hidden = True
+        
+        # 隐藏所有窗口
+        if self.mini_window:
+            self.mini_window.hide()
+        if self.main_window:
+            self.main_window.hide()
+    
+    def toggle_assistant(self):
+        """切换助手窗口显示状态"""
+        logger.info("🔄 Toggle assistant requested")
+        
+        # 使用统一的可见性检查方法
+        if self.is_assistant_visible():
+            self.hide_assistant()
+        else:
+            self.show_assistant()
+
+    def is_assistant_visible(self) -> bool:
+        """检查助手窗口是否可见（检查所有窗口）"""
+        if self.mini_window and self.mini_window.isVisible():
+            return True
+        if self.main_window and self.main_window.isVisible():
+            return True
+        return False

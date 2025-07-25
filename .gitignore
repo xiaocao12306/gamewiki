@@ -131,6 +131,7 @@ dmypy.json
 *.exe
 *.msi
 GameWikiAssistant_Portable/
+GameWikiAssistant_Portable_onedir/
 build/
 dist/
 
@@ -219,3 +220,4 @@ Windows10_Graphics_Fix_README.md
 *.bak
 *.backup
 *~
+GameWikiAssistant_Portable_onedir/

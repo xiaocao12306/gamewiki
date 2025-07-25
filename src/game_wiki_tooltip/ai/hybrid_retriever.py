@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
 from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
 from .unified_query_processor import process_query_unified, UnifiedQueryResult
-from ..config import LLMConfig
+from src.game_wiki_tooltip.config import LLMConfig
 from src.game_wiki_tooltip.i18n import t
 
 logger = logging.getLogger(__name__)
@@ -219,20 +219,13 @@ class HybridSearchRetriever:
             
             # Query translation feature has been replaced by unified query processor, removed here
             
-            # Query rewrite (if enabled)
+            # Query rewrite (if enabled) - Note: This is legacy fallback mode
+            # The unified query processor is recommended for better performance
             if self.enable_query_rewrite:
-                try:
-                    from .intent.intent_classifier import rewrite_query_for_search
-                    rewrite_result = rewrite_query_for_search(final_query, self.llm_config)
-                    
-                    if rewrite_result.rewritten_query != final_query:
-                        final_query = rewrite_result.rewritten_query
-                        rewrite_applied = True
-                        self.query_rewrite_stats["rewritten_queries"] += 1
-                        logger.info(f"Query rewritten: '{query}' -> '{final_query}'")
-                        
-                except Exception as e:
-                    logger.warning(f"Query rewrite failed: {e}")
+                logger.warning("Legacy query rewrite mode is deprecated. Use unified processing instead.")
+                # Fallback to basic processing without external dependencies
+                final_query = query
+                rewrite_applied = False
             
             query_metadata = {
                 "original_query": query,

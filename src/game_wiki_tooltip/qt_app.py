@@ -214,18 +214,31 @@ class WindowsHotkeyFilter(QAbstractNativeEventFilter):
 class GameWikiApp(QObject):
     """Main application controller"""
     
-    def __init__(self):
+    def __init__(self, splash_screen=None, force_settings=False):
         super().__init__()
         
-        # Create QApplication first
+        # Store splash screen reference
+        self.splash_screen = splash_screen
+        self.force_settings = force_settings
+        
+        # Start background preloading immediately
+        try:
+            from .preloader import start_preloading
+            start_preloading()
+            logger.info("Background preloading initiated")
+        except Exception as e:
+            logger.warning(f"Failed to start preloader: {e}")
+        
+        # Get existing QApplication instance
         self.app = QApplication.instance()
         if self.app is None:
+            # This should not happen as QApplication is created in main()
+            logger.error("QApplication instance not found!")
             self.app = QApplication(sys.argv)
-            logger.info("QApplication created successfully with graphics compatibility attributes")
             
         # Set application properties
         self.app.setQuitOnLastWindowClosed(False)
-        self.app.setApplicationName("GameWiki Assistant")
+        # Application name already set in main()
         
         # Try to set app icon
         try:
@@ -252,11 +265,47 @@ class GameWikiApp(QObject):
         self.hotkey_triggered_count = 0  # Hotkey trigger counter
         self.native_filter = None  # Windows native event filter
         
+        # Preload icon resources
+        self._preload_icons()
+        
         # Check command line arguments
         self.force_settings = '--settings' in sys.argv or '--config' in sys.argv
         
         # Check if first run
         self._check_first_run()
+        
+    def _preload_icons(self):
+        """Preload icon resources to avoid runtime errors"""
+        try:
+            # Preload main app icon
+            app_icon_path = package_file("app.ico")
+            logger.info(f"Preloaded app icon: {app_icon_path}")
+            
+            # Preload other common icons from assets/icons directory
+            icon_files = [
+                "google.ico",
+                "youtube.png", 
+                "bilibili.ico",
+                "reddit.ico",
+                "nexusmods.ico",
+                "instagram.png"
+            ]
+            
+            for icon_file in icon_files:
+                try:
+                    icon_path = package_file(f"icons/{icon_file}")
+                    if icon_path.exists():
+                        logger.debug(f"Preloaded icon: {icon_path}")
+                    else:
+                        logger.warning(f"Icon not found: {icon_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to preload icon {icon_file}: {e}")
+                    
+            logger.info("Icon preloading completed")
+            
+        except Exception as e:
+            logger.error(f"Failed to preload icons: {e}")
+            # Don't fail the app initialization if icon preloading fails
         
     def _check_first_run(self):
         """Check if this is first run and show settings"""
@@ -427,7 +476,13 @@ class GameWikiApp(QObject):
             
             # Show mini assistant (delayed display to ensure cleanup operations complete)
             logger.info("Showing mini assistant...")
-            QTimer.singleShot(50, self.assistant_ctrl.show_mini)
+            QTimer.singleShot(50, self._show_mini_and_close_splash)
+            
+            # Pre-create chat window for faster first-time response
+            # Wait a bit longer to ensure AI modules are loading
+            logger.info("Scheduling chat window pre-creation...")
+            QTimer.singleShot(2000, self._precreate_chat_window)
+            
             logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
             
         except Exception as e:
@@ -438,6 +493,46 @@ class GameWikiApp(QObject):
                 f"程序初始化失败：{e}\n\n程序将退出。"
             )
             sys.exit(1)
+            
+    def _show_mini_and_close_splash(self):
+        """Show mini window and close splash screen"""
+        logger.info("Showing mini window")
+        self.assistant_ctrl.show_mini()
+        
+        # Close splash screen after mini window is shown
+        if self.splash_screen:
+            logger.info("Scheduling splash screen closure")
+            QTimer.singleShot(100, self._close_splash_screen)
+            
+    def _close_splash_screen(self):
+        """Close splash screen"""
+        if self.splash_screen:
+            logger.info("Closing splash screen after mini window displayed")
+            self.splash_screen.close_and_cleanup()
+            self.splash_screen = None
+            
+    def _precreate_chat_window(self):
+        """Pre-create chat window for faster first-time response"""
+        try:
+            logger.info("Starting chat window pre-creation...")
+            
+            # Check if assistant controller supports pre-creation
+            if hasattr(self.assistant_ctrl, 'precreate_chat_window'):
+                self.assistant_ctrl.precreate_chat_window()
+                logger.info("✅ Chat window pre-created successfully")
+            else:
+                # Fallback: Try to create and immediately hide the window
+                logger.info("Using fallback pre-creation method")
+                if hasattr(self.assistant_ctrl, 'main_window') and not self.assistant_ctrl.main_window:
+                    # Temporarily create and hide the window
+                    from .unified_window import UnifiedAssistantWindow
+                    self.assistant_ctrl.main_window = UnifiedAssistantWindow(self.assistant_ctrl)
+                    self.assistant_ctrl.main_window.hide()
+                    logger.info("✅ Chat window pre-created via fallback method")
+                    
+        except Exception as e:
+            logger.warning(f"Failed to pre-create chat window: {e}")
+            # Not critical, just means first hotkey will be slower
             
     def _show_settings(self, initial_setup=False):
         """Show settings window"""
@@ -728,54 +823,121 @@ class GameWikiApp(QObject):
             return False
             
     def _on_hotkey_triggered(self):
-        """Handle hotkey trigger"""
-        logger.info("=== HOTKEY TRIGGERED ===")
-        logger.info(f"Hotkey triggered! {self.hotkey_triggered_count}th time, preparing to expand chat window...")
+        """Handle hotkey trigger using smart interaction manager"""
+        logger.info("=== SMART HOTKEY TRIGGERED ===")
+        logger.info(f"Hotkey triggered! {self.hotkey_triggered_count}th time")
+        
+        if not self.assistant_ctrl:
+            logger.warning("assistant_ctrl is None, cannot process hotkey")
+            return
+            
+        # Check if assistant controller has smart interaction manager
+        if not hasattr(self.assistant_ctrl, 'smart_interaction'):
+            logger.warning("Smart interaction manager not available, using fallback logic")
+            self._legacy_hotkey_logic()
+            return
+        
+        try:
+            # Get current chat window visibility status - 只检查聊天窗口
+            current_visible = (self.assistant_ctrl.main_window and 
+                             self.assistant_ctrl.main_window.isVisible())
+            
+            # Use smart interaction manager to handle hotkey
+            handled = self.assistant_ctrl.handle_smart_hotkey(current_visible)
+            
+            if handled:
+                # Update tray icon based on final chat window state - 只检查聊天窗口
+                final_visible = (self.assistant_ctrl.main_window and 
+                               self.assistant_ctrl.main_window.isVisible())
+                self.tray_icon.update_toggle_text(final_visible)
+                logger.info(f"🎯 Smart hotkey processing completed, chat window visible: {final_visible}")
+            else:
+                logger.warning("Smart hotkey was not handled, falling back to legacy logic")
+                self._legacy_hotkey_logic()
+                
+        except Exception as e:
+            logger.error(f"Smart hotkey processing failed: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall back to legacy logic on error
+            self._legacy_hotkey_logic()
+            
+        logger.info("=== Smart hotkey processing completed ===")
+    
+    def _legacy_hotkey_logic(self):
+        """Legacy hotkey logic as fallback"""
+        logger.info("🔄 Using legacy hotkey logic")
         
         # Get current foreground window (game window) before showing chat window
         from src.game_wiki_tooltip.utils import get_foreground_title
         game_window_title = get_foreground_title()
-        logger.info(f"🎮 Foreground window when hotkey triggered: '{game_window_title}'")
+        logger.info(f"🎮 Foreground window: '{game_window_title}'")
         
-        if self.assistant_ctrl:
-            logger.info("assistant_ctrl exists, checking window status...")
-            
-            # Check if chat window is already visible
-            if (self.assistant_ctrl.main_window and 
-                self.assistant_ctrl.main_window.isVisible()):
-                logger.info("Chat window already visible, hiding window")
-                # Window is visible, hide it
-                self.assistant_ctrl.main_window.hide()
-                self.assistant_ctrl.show_mini()
-                # Update tray icon menu text
-                self.tray_icon.update_toggle_text(False)
-                return
-            
+        # Check if chat window is already visible
+        if (self.assistant_ctrl.main_window and 
+            self.assistant_ctrl.main_window.isVisible()):
+            logger.info("Chat window already visible, hiding window")
+            # Window is visible, save geometry and hide it
             try:
-                # Optimized flow: show window quickly first, then initialize RAG engine asynchronously
-                # 1. Record game window first but don't initialize RAG immediately
-                self.assistant_ctrl.current_game_window = game_window_title
-                logger.info(f"🎮 Recording game window: '{game_window_title}'")
-                
-                # 2. Show chat window immediately (no need to wait for RAG initialization)
-                self.assistant_ctrl.expand_to_chat()
-                logger.info("expand_to_chat() executed successfully")
-                
-                # Update tray icon menu text
-                self.tray_icon.update_toggle_text(True)
-                
-                # 3. After window is shown, initialize RAG engine asynchronously
-                QTimer.singleShot(100, lambda: self.assistant_ctrl.set_current_game_window(game_window_title))
-                logger.info("RAG engine initialization scheduled as async task")
-                
+                self.assistant_ctrl.main_window.save_geometry()
             except Exception as e:
-                logger.error(f"expand_to_chat() execution failed: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            logger.warning("assistant_ctrl is None, cannot expand chat window")
+                logger.warning(f"Failed to save geometry when hiding via hotkey: {e}")
+            self.assistant_ctrl.main_window.hide()
+            self.assistant_ctrl.show_mini()
+            # Update tray icon menu text
+            self.tray_icon.update_toggle_text(False)
+            return
+        
+        try:
+            # Record game window first but don't initialize RAG immediately
+            self.assistant_ctrl.current_game_window = game_window_title
+            logger.info(f"🎮 Recording game window: '{game_window_title}'")
             
-        logger.info("=== Hotkey processing completed ===")
+            # Update game context in pre-created window if it exists
+            if self.assistant_ctrl.main_window:
+                self.assistant_ctrl.main_window.set_current_game_window(game_window_title)
+                logger.info(f"Updated game context in pre-created window: '{game_window_title}'")
+                # Set flag to avoid duplicate calls in expand_to_chat
+                self.assistant_ctrl._game_window_already_set = True
+            
+            # Show chat window immediately
+            self.assistant_ctrl.expand_to_chat()
+            logger.info("expand_to_chat() executed successfully")
+            
+            # Update tray icon menu text
+            self.tray_icon.update_toggle_text(True)
+            
+            # Delay RAG initialization until after window animation completes
+            # This ensures smooth window appearance without interference
+            def init_rag_after_animation():
+                logger.info(f"Starting RAG initialization for game: '{game_window_title}'")
+                # Only initialize RAG, don't set game window again to avoid button state issues
+                if hasattr(self.assistant_ctrl, '_reinitialize_rag_for_game'):
+                    from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+                    vector_game_name = map_window_title_to_game_name(game_window_title)
+                    if vector_game_name:
+                        self.assistant_ctrl._reinitialize_rag_for_game(vector_game_name)
+                        logger.info(f"RAG engine reinitialized for game: {vector_game_name}")
+                    else:
+                        logger.info(f"No RAG mapping found for game: {game_window_title}")
+                else:
+                    # Fallback: call set_current_game_window but ensure button state is preserved
+                    logger.info("Using fallback RAG initialization method")
+                    self.assistant_ctrl.set_current_game_window(game_window_title)
+                
+                # Clear the flag after RAG initialization to allow future updates
+                if hasattr(self.assistant_ctrl, '_game_window_already_set'):
+                    self.assistant_ctrl._game_window_already_set = False
+                    logger.info("🏁 Legacy hotkey processing completed, flag cleared")
+            
+            # Wait for fade-in animation to complete (typically 300-500ms)
+            QTimer.singleShot(600, init_rag_after_animation)
+            logger.info("RAG initialization scheduled after window animation")
+            
+        except Exception as e:
+            logger.error(f"Legacy hotkey logic failed: {e}")
+            import traceback
+            traceback.print_exc()
             
     def _quit_application(self):
         """Quit application"""
@@ -865,16 +1027,28 @@ class GameWikiApp(QObject):
         return self.app.exec()
 
 
-def main():
-    """Main entry point"""
-    if sys.platform != "win32":
-        raise RuntimeError("This tool only works on Windows.")
+def run_main_app(qapp, splash_screen=None):
+    """Run the main application with provided QApplication and splash screen"""
+    # Step 3: Continue with other initialization (while splash is visible)
+    # Suppress warnings
+    try:
+        from src.game_wiki_tooltip.preloader import suppress_warnings
+        suppress_warnings()
+    except:
+        pass
     
-    # Apply Windows 10 PyQt6 graphics compatibility fixes BEFORE any Qt initialization
+    # Initialize logging
+    import logging
+    
+    # Apply graphics fixes
     logger.info("Applying PyQt6 Windows graphics compatibility fixes...")
-    apply_windows_10_fixes()  # Auto-detects Windows version and applies appropriate fixes
+    from src.game_wiki_tooltip.graphics_compatibility import (
+        apply_windows_10_fixes, get_graphics_debug_info,
+        set_qt_attributes_before_app_creation, GraphicsMode
+    )
+    apply_windows_10_fixes()
     
-    # Log graphics configuration for debugging
+    # Log debug info
     debug_info = get_graphics_debug_info()
     logger.info(f"Graphics configuration: {debug_info}")
     
@@ -887,19 +1061,87 @@ def main():
     if args.settings:
         logger.info("Settings window will be forced to show")
     
-    # Set Qt application attributes and DPI policy BEFORE creating QApplication
-    # This prevents attribute and DPI policy errors
+    # Set remaining Qt attributes
     try:
-        from src.game_wiki_tooltip.graphics_compatibility import GraphicsMode
-        set_qt_attributes_before_app_creation(GraphicsMode.AUTO)  # Auto-detect Windows version
-        logger.info("Qt application attributes and DPI policy set successfully")
+        set_qt_attributes_before_app_creation(GraphicsMode.AUTO)
+        logger.info("Qt application attributes set successfully")
     except Exception as e:
         logger.error(f"Failed to set Qt application attributes: {e}")
-        # Continue anyway, but the app might have graphics issues
-        
-    # Create and run app
-    app = GameWikiApp()
+    
+    # Create main application (pass splash screen reference)
+    app = GameWikiApp(splash_screen=splash_screen, force_settings=args.settings)
+    
+    # Run application (splash screen will be closed when mini window is shown)
     sys.exit(app.run())
+
+def main():
+    import sys
+    """Main entry point"""
+    if sys.platform != "win32":
+        raise RuntimeError("This tool only works on Windows.")
+    
+    # Step 1: Minimal Qt setup for splash screen
+    # Set critical Qt attributes before QApplication
+    try:
+        from PyQt6.QtCore import Qt
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+    except:
+        pass
+    
+    # Create QApplication instance immediately
+    qapp = QApplication(sys.argv)
+    qapp.setApplicationName("GameWiki Assistant")
+    
+    # Step 2: Show splash screen IMMEDIATELY
+    splash = None
+    try:
+        from src.game_wiki_tooltip.splash_screen import SplashScreen, FirstRunSplashScreen
+        import sys
+        import os
+        
+        # Check if this is first run (for onedir mode)
+        if hasattr(sys, '_MEIPASS'):
+            # Running from PyInstaller bundle
+            # For onedir mode, check if settings file exists (more reliable indicator)
+            from src.game_wiki_tooltip.utils import APPDATA_DIR
+            settings_path = APPDATA_DIR / "settings.json"
+            marker_file = APPDATA_DIR / '.first_run_complete'
+            
+            # First run if neither settings nor marker file exists
+            is_first_run = not settings_path.exists() and not marker_file.exists()
+            
+            if is_first_run:
+                # Show special first-run splash screen
+                splash = FirstRunSplashScreen()
+                splash.show()
+                qapp.processEvents()
+                
+                # Create APPDATA directory if it doesn't exist
+                APPDATA_DIR.mkdir(parents=True, exist_ok=True)
+                
+                # Create marker file in APPDATA (persistent location)
+                try:
+                    marker_file.write_text('1')
+                    logger.info(f"Created first run marker at: {marker_file}")
+                except Exception as e:
+                    logger.warning(f"Failed to create first run marker: {e}")
+            else:
+                # Normal splash screen
+                splash = SplashScreen()
+                splash.show()
+                qapp.processEvents()
+        else:
+            # Development mode - normal splash
+            splash = SplashScreen()
+            splash.show()
+            qapp.processEvents()
+            
+    except Exception as e:
+        print(f"Failed to show splash screen: {e}")
+    
+    # Run the main app
+    run_main_app(qapp, splash)
 
 
 if __name__ == "__main__":

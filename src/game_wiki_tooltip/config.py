@@ -345,13 +345,13 @@ class SettingsManager:
         # Get default settings file path
         default_settings_path = package_file("settings.json")
         
-        # If target file does not exist, or default file is newer than target file, copy default file
-        if not self.path.exists() or default_settings_path.stat().st_mtime > self.path.stat().st_mtime:
+        # If target file does not exist, copy default file (remove time-based check to prevent overwriting user settings in exe)
+        if not self.path.exists():
             # First create target directory
             self.path.parent.mkdir(parents=True, exist_ok=True)
             # Copy default settings file
             shutil.copyfile(default_settings_path, self.path)
-            print(f"Settings file updated: {self.path}")
+            print(f"Settings file created: {self.path}")
             
         # Ensure roaming settings contains all necessary fields
         try:

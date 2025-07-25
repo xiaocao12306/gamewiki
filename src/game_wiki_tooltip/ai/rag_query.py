@@ -111,7 +111,7 @@ except ImportError as e:
     logging.warning(f"Hybrid retriever module not available: {e}")
 
 # Import configuration and query rewrite
-from ..config import LLMConfig
+from src.game_wiki_tooltip.config import LLMConfig
 
 logger = logging.getLogger(__name__)
 
