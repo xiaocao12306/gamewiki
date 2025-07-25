@@ -271,6 +271,11 @@ class RAGIntegration(QObject):
         self._pending_wiki_update = None  # Store wiki link information to be updated
         self._llm_config = None  # Store configured LLM configuration
         
+        # RAG initialization state tracking
+        self._rag_initializing = False  # Flag to prevent duplicate initializations
+        self._rag_init_game = None      # Track which game is being initialized
+        self._current_rag_game = None   # Track current initialized game
+        
         # Initialize game configuration manager
         from src.game_wiki_tooltip.utils import APPDATA_DIR
         from src.game_wiki_tooltip.config import GameConfigManager
@@ -420,15 +425,32 @@ class RAGIntegration(QObject):
     def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, google_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
         try:
+            # Check if already initializing or initialized for this game
+            if self._rag_initializing and self._rag_init_game == game_name:
+                logger.info(f"⚠️ RAG initialization already in progress for game '{game_name}', skipping duplicate")
+                return
+                
+            if self._current_rag_game == game_name and self.rag_engine:
+                logger.info(f"✓ RAG engine already initialized for game '{game_name}', no need to reinitialize")
+                return
+            
+            # Mark as initializing
+            self._rag_initializing = True
+            self._rag_init_game = game_name
+            
             # Ensure AI components are loaded first
             if not _ai_modules_loaded:
                 logger.info("AI modules not yet loaded, ensuring they are loaded first...")
                 if not self._ensure_ai_components_loaded():
                     logger.error("Failed to load AI components, cannot initialize RAG")
+                    self._rag_initializing = False
+                    self._rag_init_game = None
                     return
             
             if not (get_default_config and EnhancedRagQuery):
                 logger.warning("RAG components not available after loading attempt")
+                self._rag_initializing = False
+                self._rag_init_game = None
                 return
                 
             logger.info(f"🔄 Initializing new RAG engine for game '{game_name}'")
@@ -486,6 +508,9 @@ class RAGIntegration(QObject):
                     logger.info(f"✅ RAG engine initialization completed (game: {game_name})")
                     self._rag_init_complete = True
                     self._current_rag_game = game_name  # Record current RAG engine game
+                    # Clear initialization flags on success
+                    self._rag_initializing = False
+                    self._rag_init_game = None
                     # Clear error information
                     if hasattr(self, '_rag_init_error'):
                         delattr(self, '_rag_init_error')
@@ -495,6 +520,9 @@ class RAGIntegration(QObject):
                     self._rag_init_complete = False
                     self._rag_init_error = str(e)  # Record initialization error
                     self._current_rag_game = None
+                    # Clear initialization flags on failure
+                    self._rag_initializing = False
+                    self._rag_init_game = None
                 finally:
                     loop.close()
             
@@ -520,6 +548,9 @@ class RAGIntegration(QObject):
             
         except Exception as e:
             logger.error(f"Failed to initialize RAG for {game_name}: {e}")
+            # Ensure initialization flags are cleared on any error
+            self._rag_initializing = False
+            self._rag_init_game = None
             
     async def process_query_async(self, query: str, game_context: str = None, search_mode: str = "auto") -> QueryIntent:
         """Process query using unified query processor for intent detection"""
@@ -1177,8 +1208,6 @@ class IntegratedAssistantController(AssistantController):
         self._setup_connections()
         self._current_worker = None
         self._current_wiki_message = None  # Store current wiki link message component
-        self._rag_initializing = False  # Mark RAG as initializing
-        self._target_vector_game = None  # Target vector game name
         
         # Initialize smart interaction manager (pass None as parent, but pass self as controller reference)
         self.smart_interaction = SmartInteractionManager(parent=None, controller=self)
@@ -1333,11 +1362,11 @@ class IntegratedAssistantController(AssistantController):
             self._perform_web_search()
             return
         
-        # Check RAG engine initialization status
-        if getattr(self, '_rag_initializing', False):
+        # Check RAG engine initialization status (check the RAGIntegration's status)
+        if hasattr(self.rag_integration, '_rag_initializing') and self.rag_integration._rag_initializing:
             # RAG engine is initializing, display waiting status
             from src.game_wiki_tooltip.i18n import t
-            logger.info("🔄 RAG engine is initializing, display waiting status")
+            logger.info(f"🔄 RAG engine is initializing for game '{self.rag_integration._rag_init_game}', display waiting status")
             self.main_window.chat_view.show_status(t("rag_initializing"))
             
             # Delay processing query, check initialization status periodically
@@ -1352,20 +1381,23 @@ class IntegratedAssistantController(AssistantController):
         """Check RAG initialization status periodically"""
         from src.game_wiki_tooltip.i18n import t
         
-        if hasattr(self.rag_integration, '_rag_init_complete') and self.rag_integration._rag_init_complete:
-            # Initialization completed
-            logger.info("✅ RAG engine initialization completed, start processing query")
-            self._rag_initializing = False
+        # Check if initialization is complete (check if _rag_initializing is False)
+        if not self.rag_integration._rag_initializing:
+            # Initialization completed (either success or failure)
+            if self.rag_integration.rag_engine and self.rag_integration._current_rag_game:
+                logger.info("✅ RAG engine initialization completed, start processing query")
+            else:
+                logger.warning("⚠️ RAG engine initialization finished but engine not available")
+            
             self.main_window.chat_view.hide_status()
             
             # Process waiting query
             if hasattr(self, '_pending_query'):
                 self._process_query_immediately(self._pending_query)
                 delattr(self, '_pending_query')
-        elif hasattr(self.rag_integration, '_rag_init_complete') and self.rag_integration._rag_init_complete is False:
+        elif hasattr(self.rag_integration, '_rag_init_error'):
             # Initialization failed
-            logger.error("❌ RAG engine initialization failed")
-            self._rag_initializing = False
+            logger.error(f"❌ RAG engine initialization failed: {self.rag_integration._rag_init_error}")
             self.main_window.chat_view.hide_status()
             
             # Display error information
@@ -1396,7 +1428,6 @@ class IntegratedAssistantController(AssistantController):
             import time
             if time.time() - self._rag_init_start_time > 10:  # Timeout 10 seconds
                 logger.warning("RAG initialization timeout")
-                self._rag_initializing = False
                 self.main_window.chat_view.hide_status()
                 
                 # Display timeout error
@@ -1782,6 +1813,15 @@ class IntegratedAssistantController(AssistantController):
         try:
             logger.info(f"🚀 Start reinitializing RAG engine for vector library '{vector_game_name}' (asynchronous mode)")
             
+            # Check if RAG is already initializing or initialized for this game
+            if self.rag_integration._rag_initializing:
+                logger.info(f"⚠️ RAG already initializing for game '{self.rag_integration._rag_init_game}', skipping")
+                return
+                
+            if self.rag_integration._current_rag_game == vector_game_name and self.rag_integration.rag_engine:
+                logger.info(f"✓ RAG already initialized for game '{vector_game_name}', no need to reinitialize")
+                return
+            
             # Ensure AI modules are loaded before attempting RAG initialization
             if not self.rag_integration._ensure_ai_components_loaded():
                 logger.warning("AI components not yet loaded, deferring RAG initialization")
@@ -1815,16 +1855,11 @@ class IntegratedAssistantController(AssistantController):
                 # Asynchronously initialize RAG engine (do not wait for completion)
                 self.rag_integration._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=False)
                 logger.info(f"🔄 RAG engine initialization started (asynchronous): {vector_game_name}")
-                
-                # Mark RAG engine as initializing
-                self._rag_initializing = True
-                self._target_vector_game = vector_game_name
             else:
                 logger.warning(f"⚠️ API key is missing, cannot initialize RAG engine (Gemini: {bool(gemini_api_key)})")
                 
         except Exception as e:
             logger.error(f"RAG engine reinitialization failed: {e}")
-            self._rag_initializing = False
             
     def on_wiki_page_found(self, real_url: str, real_title: str = None):
         """Called when JavaScript in webview finds real wiki page"""
