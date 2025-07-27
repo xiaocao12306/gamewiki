@@ -1823,6 +1823,7 @@ class ChatView(QScrollArea):
             raise
     
     def add_interactive_button(self, button_text: str, callback) -> InteractiveButtonWidget:
+        logger = logging.getLogger(__name__)
         """Add an interactive button to the chat"""
         logger.info(f"🔘 Adding interactive button: {button_text}")
         
@@ -4977,6 +4978,7 @@ class AssistantController:
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"🎮 Recording game window: '{game_window_title}'\n ")
+
     def precreate_chat_window(self):
         """Pre-create chat window for faster first-time response"""
         import logging
@@ -5141,32 +5143,6 @@ class AssistantController:
         
         logger.info("expand_to_chat() completed")
         
-    def _try_set_immediate_focus(self):
-        """Try to set input focus immediately (backup method)"""
-        if self.main_window and hasattr(self.main_window, 'input_field'):
-            try:
-                # Ensure window is active
-                self.main_window.activateWindow()
-                self.main_window.raise_()
-                # Set focus to input field
-                self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
-                logger.info("Immediate input focus set successfully")
-            except Exception as e:
-                logger.warning(f"Failed to set immediate input focus: {e}")
-                
-    def _set_input_focus_after_animation(self):
-        """Set input focus after fade-in animation completes"""
-        if self.main_window and hasattr(self.main_window, 'input_field'):
-            try:
-                # Force focus with Qt.FocusReason.ShortcutFocusReason
-                self.main_window.input_field.setFocus(Qt.FocusReason.ShortcutFocusReason)
-                # Also ensure cursor is visible
-                self.main_window.input_field.selectAll()  # Select all text (if any)
-                self.main_window.input_field.deselect()  # Then deselect to place cursor at end
-                logger.info("Input field focus set successfully after animation")
-            except Exception as e:
-                logger.warning(f"Failed to set input focus after animation: {e}")
-        
     def handle_wiki_page_found(self, url: str, title: str):
         """Handle signal when real wiki page is found (basic implementation, subclasses can override)"""
         import logging
@@ -5192,125 +5168,7 @@ class AssistantController:
         
         # Show initial processing status
         self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)
-        
-        # TODO: Implement actual query processing
-        # For now, just show a trial_proto response with shorter delay
-        QTimer.singleShot(500, lambda: self.demo_response(query))
-        
-    def demo_response(self, query: str):
-        """Demo response for testing"""
-        if "wiki" in query.lower():
-            # Simulate wiki response with status updates
-            self.simulate_wiki_process()
-        else:
-            # Simulate guide response with detailed status flow
-            self.simulate_guide_process(query)
-            
-    def simulate_wiki_process(self):
-        """Simulate Wiki search process"""
-        chat_view = self.main_window.chat_view
-        
-        # Simplified Wiki search process, total time 1.5 seconds
-        QTimer.singleShot(300, lambda: chat_view.update_status(TransitionMessages.WIKI_SEARCHING))
-        QTimer.singleShot(1500, lambda: self.show_wiki_result())
-        
-    def simulate_guide_process(self, query: str):
-        """Simulate complete guide query process"""
-        chat_view = self.main_window.chat_view
-        
-        # Simplified status switch sequence (only keep 2-3 key states)
-        status_updates = [
-            (0, TransitionMessages.DB_SEARCHING),      # Retrieval phase
-            (1500, TransitionMessages.AI_SUMMARIZING), # AI processing phase
-        ]
-        
-        # Set status updates sequentially
-        def create_status_updater(status_msg):
-            def updater():
-                print(f"[STATUS] Update status: {status_msg}")
-                chat_view.update_status(status_msg)
-            return updater
-        
-        for delay, status in status_updates:
-            QTimer.singleShot(delay, create_status_updater(status))
-        
-        # Shorten total time to 3 seconds
-        QTimer.singleShot(3000, lambda: self.show_guide_result())
-            
-    def show_wiki_result(self):
-        """Show wiki search result"""
-        # Hide status information
-        self.main_window.chat_view.hide_status()
-        
-        # Show found Wiki page
-        self.main_window.chat_view.add_message(
-            MessageType.TRANSITION,
-            TransitionMessages.WIKI_FOUND
-        )
-        
-        self.main_window.chat_view.add_message(
-            MessageType.WIKI_LINK,
-            "Helldivers 2 - 武器指南",
-            {"url": "https://duckduckgo.com/?q=!ducky+Helldivers+2+weapons+site:helldivers.wiki.gg"}
-        )
-        
-        # Show wiki page in the unified window (this will trigger page loading and URL update)
-        self.main_window.show_wiki_page(
-            "https://duckduckgo.com/?q=!ducky+Helldivers+2+weapons+site:helldivers.wiki.gg", 
-            "Helldivers 2 - 武器指南"
-        )
-        
-    def show_guide_result(self):
-        """Show guide result with streaming"""
-        # Hide status information
-        self.main_window.chat_view.hide_status()
-        
-        # Show completion status
-        completion_msg = self.main_window.chat_view.add_message(
-            MessageType.TRANSITION,
-            TransitionMessages.COMPLETED
-        )
-        
-        # Show completion status briefly, then start streaming
-        QTimer.singleShot(500, lambda: self.start_streaming_response(completion_msg))
-        
-    def start_streaming_response(self, completion_widget):
-        """Start streaming response"""
-        # Hide completion status
-        completion_widget.hide()
-        
-        streaming_msg = self.main_window.chat_view.add_streaming_message()
-        
-        # Simulate streaming response with markdown formatting
-        demo_text = """## 🎮 游戏攻略指南
 
-根据您的问题，我为您整理了以下攻略内容：
-
-### 📋 基础要点
-1. **首先**，您需要了解基础机制
-2. **其次**，掌握核心技巧  
-3. **最后**，通过实践提升水平
-
-### 🛠️ 推荐配装
-- 主武器：*高伤害输出*
-- 副武器：`快速清兵`
-- 装备：**防护为主**
-
-### 💡 高级技巧
-> 记住：*熟能生巧*是提升的关键！
-
-希望这些信息对您有帮助！ 😊"""
-        
-            # Adjust chunk size and speed, for better observation of markdown rendering
-        chunks = [demo_text[i:i+15] for i in range(0, len(demo_text), 15)]
-        
-        def send_chunk(index=0):
-            if index < len(chunks):
-                streaming_msg.append_chunk(chunks[index])
-                QTimer.singleShot(120, lambda: send_chunk(index + 1))
-                
-        send_chunk()
-        
     def show_processing_status(self, status_message: str, delay_ms: int = 0):
         """
         Show processing status information
