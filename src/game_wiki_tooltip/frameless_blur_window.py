@@ -305,19 +305,14 @@ class FramelessBlurWindow(QMainWindow):
         layout.addWidget(self.title_label)
         
         layout.addStretch()
-        
-        # 窗口控制按钮
-        minimize_btn = QPushButton("─")
-        minimize_btn.setObjectName("minimizeBtn")
-        minimize_btn.setFixedSize(30, 25)
-        minimize_btn.clicked.connect(self.showMinimized)
+
         
         close_btn = QPushButton("×")
         close_btn.setObjectName("closeBtn")
         close_btn.setFixedSize(30, 25)
         close_btn.clicked.connect(self.close)
         
-        layout.addWidget(minimize_btn)
+
         layout.addWidget(close_btn)
         
         return title_bar
@@ -787,16 +782,12 @@ class FramelessBlurWindow(QMainWindow):
             font-weight: bold;
         }
         
-        #minimizeBtn, #closeBtn {
+        #closeBtn {
             background: rgba(255, 255, 255, 150);
             border: none;
             border-radius: 5px;
             color: #111111;
             font-weight: bold;
-        }
-        
-        #minimizeBtn:hover {
-            background: rgba(255, 255, 255, 180);
         }
         
         #closeBtn:hover {

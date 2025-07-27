@@ -78,6 +78,30 @@ if USE_WEBVIEW2:
 else:
     WEBVIEW2_AVAILABLE = False
 
+# Try to import BlurWindow
+try:
+    from BlurWindow.blurWindow import GlobalBlur
+    BLUR_WINDOW_AVAILABLE = True
+    print("✅ BlurWindow module loaded successfully")
+except ImportError:
+    print("Warning: BlurWindow module not found, will use default transparency effect")
+    BLUR_WINDOW_AVAILABLE = False
+
+# Windows version detection
+def get_windows_version():
+    """Get Windows version info"""
+    try:
+        import platform
+        version = platform.version()
+        if "10.0" in version:
+            return "Windows 10"
+        elif "11.0" in version:
+            return "Windows 11"
+        else:
+            return f"Windows {version}"
+    except:
+        return "Unknown"
+
 
 def _get_scale() -> float:
     """Get display scaling factor (Windows only)"""
@@ -93,6 +117,155 @@ def _get_scale() -> float:
     except Exception:
         pass
     return 1.0
+
+
+def load_svg_icon(svg_path, color="#666666", size=16):
+    """Load SVG icon and set color"""
+    try:
+        import os
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+        
+        # Check if file exists
+        if not os.path.exists(svg_path):
+            print(f"SVG file not found: {svg_path}")
+            return QIcon()
+        
+        # Read SVG file
+        with open(svg_path, 'r', encoding='utf-8') as f:
+            svg_content = f.read()
+        
+        # Replace color
+        svg_content = svg_content.replace('stroke="#000000"', f'stroke="{color}"')
+        svg_content = svg_content.replace('fill="#000000"', f'fill="{color}"')
+        
+        # Create icon
+        icon = QIcon()
+        renderer = QSvgRenderer(QByteArray(svg_content.encode()))
+        
+        # Create pixmaps for different sizes
+        for s in [size, size*2]:  # Support high DPI
+            pixmap = QPixmap(s, s)
+            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+            icon.addPixmap(pixmap)
+        
+        return icon
+    except ImportError:
+        print("PyQt6-SVG not installed, using fallback icon")
+        return QIcon()
+    except Exception as e:
+        print(f"Failed to load SVG icon: {e}")
+        return QIcon()
+
+
+def create_fallback_icon(text, color="#666666"):
+    """Create fallback text icon"""
+    icon = QIcon()
+    pixmap = QPixmap(16, 16)
+    pixmap.fill(QColor(0, 0, 0, 0))
+    
+    painter = QPainter(pixmap)
+    painter.setPen(QColor(color))
+    painter.setFont(QFont("Segoe UI", 8))
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
+    painter.end()
+    
+    icon.addPixmap(pixmap)
+    return icon
+
+
+class QuickAccessPopup(QWidget):
+    """Horizontal popup widget for quick access shortcuts"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool |
+            Qt.WindowType.WindowDoesNotAcceptFocus
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        
+        # Main container
+        self.container = QFrame()
+        self.container.setObjectName("quickAccessPopup")
+        
+        # Layout
+        container_layout = QVBoxLayout(self)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.addWidget(self.container)
+        
+        # Shortcuts layout
+        self.shortcuts_layout = QHBoxLayout(self.container)
+        self.shortcuts_layout.setContentsMargins(10, 5, 10, 5)
+        self.shortcuts_layout.setSpacing(8)
+        
+        # Hide timer
+        self.hide_timer = QTimer()
+        self.hide_timer.setSingleShot(True)
+        self.hide_timer.timeout.connect(self.hide)
+        
+        # Track if mouse is over popup
+        self.mouse_over = False
+        self.setMouseTracking(True)
+        self.container.setMouseTracking(True)
+        
+    def add_shortcut(self, button: 'ExpandableIconButton'):
+        """Add a shortcut button to the popup"""
+        self.shortcuts_layout.addWidget(button)
+        
+    def clear_shortcuts(self):
+        """Clear all shortcuts"""
+        while self.shortcuts_layout.count() > 0:
+            item = self.shortcuts_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+                
+    def show_at(self, parent_widget: QWidget):
+        """Show popup above the parent widget"""
+        # Calculate position
+        parent_pos = parent_widget.mapToGlobal(QPoint(0, 0))
+        
+        # Show first to get correct size
+        self.show()
+        self.adjustSize()
+        
+        # Position above parent with left alignment
+        x = parent_pos.x()  # Align left edge with parent button
+        y = parent_pos.y() - self.height() - 5
+        
+        # Ensure popup stays within screen bounds
+        screen = QApplication.primaryScreen().geometry()
+        if x < 0:
+            x = 0
+        elif x + self.width() > screen.width():
+            x = screen.width() - self.width()
+            
+        if y < 0:
+            # Show below if no space above
+            y = parent_pos.y() + parent_widget.height() + 5
+            
+        self.move(x, y)
+        
+        # Don't auto-hide on hover show
+        self.hide_timer.stop()
+        
+    def enterEvent(self, event):
+        """Mouse entered popup"""
+        self.mouse_over = True
+        self.hide_timer.stop()
+        super().enterEvent(event)
+        
+    def leaveEvent(self, event):
+        """Mouse left popup"""
+        self.mouse_over = False
+        self.hide_timer.start(500)  # Hide after 500ms
+        super().leaveEvent(event)
 
 
 class ExpandableIconButton(QPushButton):
@@ -465,7 +638,7 @@ def convert_markdown_to_html(text: str) -> str:
                 # Apply style wrapper
                 styled_html = f"""
                 <div style="
-                    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+                    font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
                     line-height: 1.6;
                     color: #333;
                     max-width: 100%;
@@ -483,7 +656,7 @@ def convert_markdown_to_html(text: str) -> str:
                 
                 styled_html = f"""
                 <div style="
-                    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+                    font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
                     line-height: 1.6;
                     color: #333;
                     max-width: 100%;
@@ -534,7 +707,7 @@ def convert_markdown_to_html(text: str) -> str:
         # Add some basic styles to make HTML display better
         styled_html = f"""
         <div style="
-            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
             line-height: 1.6;
             color: #333;
             max-width: 100%;
@@ -738,7 +911,7 @@ class StatusMessageWidget(QFrame):
             QLabel {
                 font-size: 14px;
                 line-height: 1.5;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                font-family: "Segoe UI", "Microsoft YaHei", Arial;
                 background-color: transparent;
                 border: none;
                 padding: 0;
@@ -750,8 +923,8 @@ class StatusMessageWidget(QFrame):
         # Set bubble style
         bubble.setStyleSheet("""
             QFrame#statusBubble {
-                background-color: #f0f8ff;
-                border: 1px solid #e0e8f0;
+                background-color: rgba(240, 248, 255, 200);
+                border: 1px solid rgba(224, 232, 240, 150);
                 border-radius: 18px;
                 padding: 4px;
             }
@@ -876,7 +1049,7 @@ class MessageWidget(QFrame):
                 QLabel {
                     font-size: 16px;
                     line-height: 1.5;
-                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                    font-family: "Segoe UI", "Microsoft YaHei", Arial;
                     background-color: transparent;
                     border: none;
                     padding: 0;
@@ -888,7 +1061,7 @@ class MessageWidget(QFrame):
                 QLabel {
                     font-size: 16px;
                     line-height: 1.5;
-                    font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                    font-family: "Segoe UI", "Microsoft YaHei", Arial;
                     background-color: transparent;
                     border: none;
                     padding: 0;
@@ -902,10 +1075,11 @@ class MessageWidget(QFrame):
             layout.addStretch()
             bubble.setStyleSheet("""
                 QFrame#messageBubble {
-                    background-color: #4096ff;
+                    background-color: rgba(64, 150, 255, 220);
                     border-radius: 18px;
                     color: white;
                     padding: 4px;
+                    border: 1px solid rgba(64, 150, 255, 100);
                 }
             """)
             # Style is already set above for QTextEdit
@@ -915,9 +1089,10 @@ class MessageWidget(QFrame):
             
             bubble.setStyleSheet("""
                 QFrame#messageBubble {
-                    background-color: #f5f5f5;
+                    background-color: rgba(255, 255, 255, 200);
                     border-radius: 18px;
                     padding: 4px;
+                    border: 1px solid rgba(224, 224, 224, 150);
                 }
             """)
             layout.addWidget(bubble)
@@ -1029,19 +1204,19 @@ class InteractiveButtonWidget(QWidget):
         # Style the button
         self.button.setStyleSheet("""
             QPushButton {
-                background-color: #4096ff;
+                background-color: rgba(64, 150, 255, 220);
                 color: white;
                 border-radius: 20px;
                 padding: 10px 20px;
                 font-size: 14px;
                 font-weight: bold;
-                border: none;
+                border: 1px solid rgba(64, 150, 255, 100);
             }
             QPushButton:hover {
-                background-color: #3080ff;
+                background-color: rgba(48, 128, 255, 230);
             }
             QPushButton:pressed {
-                background-color: #2060df;
+                background-color: rgba(32, 96, 223, 240);
             }
         """)
         
@@ -1684,11 +1859,15 @@ class ChatView(QScrollArea):
         
         self.setWidget(self.container)
         
-        # Styling
+        # Styling - transparent background to blend with main window
         self.setStyleSheet("""
             QScrollArea {
-                background-color: white;
+                background: rgba(248, 249, 250, 120);
                 border: none;
+                border-radius: 8px;
+            }
+            QScrollArea::corner {
+                background: transparent;
             }
         """)
         
@@ -2833,7 +3012,7 @@ class WikiView(QWidget):
             QTextEdit {
                 background-color: white;
                 border: none;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                font-family: "Segoe UI", "Microsoft YaHei", Arial;
                 font-size: 14px;
                 line-height: 1.6;
             }
@@ -3273,6 +3452,31 @@ class UnifiedAssistantWindow(QMainWindow):
 
     def __init__(self, settings_manager=None):
         super().__init__()
+        
+        # Set frameless window flags and transparency
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | 
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        
+        # Create quick access popup
+        self.quick_access_popup = QuickAccessPopup()
+        
+        # Window properties for drag and resize
+        self.dragging = False
+        self.resizing = False
+        self.resize_edge = None
+        self.drag_position = QPoint()
+        self.resize_start_pos = QPoint()
+        self.resize_start_geometry = QRect()
+        
+        # Enable mouse tracking for resize
+        self.setMouseTracking(True)
+        
+        # Keep all existing properties
         self.settings_manager = settings_manager
         self.current_mode = "auto"
         self.is_generating = False
@@ -3288,10 +3492,87 @@ class UnifiedAssistantWindow(QMainWindow):
         self._last_recorded_url = None  # Last URL added to history
         
         self.init_ui()
+        
+        # Apply BlurWindow effect
+        self.apply_blur_effect()
+        
         self.restore_geometry()
         
         # Debug: print size after initialization
         print(f"🏠 UnifiedAssistantWindow initialized, size: {self.size()}")
+    
+    def apply_blur_effect(self):
+        """Apply BlurWindow transparency effect"""
+        if BLUR_WINDOW_AVAILABLE:
+            try:
+                windows_version = get_windows_version()
+                print(f"Detected system version: {windows_version}")
+                
+                # Set window rounded corners
+                self.set_window_rounded_corners()
+                
+                # Apply blur effect based on Windows version
+                if "Windows 11" in windows_version:
+                    GlobalBlur(
+                        int(self.winId()), 
+                        Acrylic=True,    # Win11 Acrylic effect
+                        Dark=False,      # Light theme
+                        QWidget=self
+                    )
+                    print("✅ Win11 Acrylic effect applied")
+                elif "Windows 10" in windows_version:
+                    GlobalBlur(
+                        int(self.winId()), 
+                        Acrylic=False,   # Win10 Aero effect
+                        Dark=False,      # Light theme
+                        QWidget=self
+                    )
+                    print("✅ Win10 Aero effect applied")
+                else:
+                    GlobalBlur(
+                        int(self.winId()), 
+                        Acrylic=False,   # Generic effect
+                        Dark=False,      # Light theme
+                        QWidget=self
+                    )
+                    print(f"✅ Generic transparency effect applied ({windows_version})")
+                    
+            except Exception as e:
+                print(f"❌ BlurWindow application failed: {e}")
+                print("Will use default transparency effect")
+        else:
+            print("⚠️ BlurWindow not available, using default transparency effect")
+            
+    def set_window_rounded_corners(self):
+        """Set window rounded corners"""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            
+            # Windows API constants
+            DWM_WINDOW_CORNER_PREFERENCE = 33
+            DWMWCP_ROUND = 2
+            
+            # Get window handle
+            hwnd = int(self.winId())
+            
+            # Call DwmSetWindowAttribute to set rounded corners
+            dwmapi = ctypes.windll.dwmapi
+            corner_preference = wintypes.DWORD(DWMWCP_ROUND)
+            result = dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWM_WINDOW_CORNER_PREFERENCE,
+                ctypes.byref(corner_preference),
+                ctypes.sizeof(corner_preference)
+            )
+            
+            if result == 0:
+                print("✅ Window rounded corners set successfully")
+            else:
+                print(f"⚠️ Window rounded corners setting failed: {result}")
+                
+        except Exception as e:
+            print(f"❌ Failed to set window rounded corners: {e}")
         
     def _ensure_history_manager(self):
         """Ensure history manager is initialized"""
@@ -3303,23 +3584,37 @@ class UnifiedAssistantWindow(QMainWindow):
     def init_ui(self):
         """Initialize the main window UI"""
         self.setWindowTitle("GameWiki Assistant")
-        # Use standard window frame with always-on-top
-        self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint
-        )
         
         # Ensure the window can be freely resized, remove any size restrictions
         self.setMinimumSize(300, 200)  # Set a reasonable Minimum size
         self.setMaximumSize(16777215, 16777215)  # Remove Maximum size restrictions
         
-        # Central widget
-        central = QWidget()
-        self.setCentralWidget(central)
+        # Create central widget
+        central_widget = QWidget()
+        central_widget.setMouseTracking(True)
+        self.setCentralWidget(central_widget)
         
-        # Main layout
-        main_layout = QVBoxLayout(central)
+        # Create main container frame (consistent with BlurWindow layer size)
+        main_container = QFrame()
+        main_container.setObjectName("mainContainer")
+        main_container.setMouseTracking(True)
+        
+        # Save main_container reference for later adjustments
+        self.main_container = main_container
+        
+        # Central widget layout (only contains main container)
+        central_layout = QVBoxLayout(central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(main_container)
+        
+        # Main container layout
+        main_layout = QVBoxLayout(main_container)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        
+        # Create custom title bar
+        self.title_bar = self.create_title_bar()
+        main_layout.addWidget(self.title_bar)
         
         # Content area (chat/wiki switcher)
         self.content_stack = QStackedWidget()
@@ -3353,13 +3648,8 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Shortcuts container (above input area)
         self.shortcut_container = QFrame()
+        self.shortcut_container.setObjectName("shortcutContainer")
         self.shortcut_container.setFixedHeight(35)
-        self.shortcut_container.setStyleSheet("""
-            QFrame {
-                background-color: #f8f9fa;
-                border-bottom: 1px solid #e0e0e0;
-            }
-        """)
         
         self.shortcut_layout = QHBoxLayout(self.shortcut_container)
         self.shortcut_layout.setContentsMargins(10, 4, 10, 4)
@@ -3368,199 +3658,419 @@ class UnifiedAssistantWindow(QMainWindow):
         # Don't load shortcuts immediately - defer to after window is shown
         self.shortcuts_loaded = False
         
-        # Input area
+        # Input area - create integrated search bar following frameless_blur_window design
         self.input_container = QFrame()
-        self.input_container.setFixedHeight(60)
-        self.input_container.setStyleSheet("""
-            QFrame {
-                background-color: #f8f9fa;
-                border-top: 1px solid #e0e0e0;
-            }
-        """)
+        self.input_container.setObjectName("inputContainer")
+        self.input_container.setFixedHeight(115)  # Adjusted height for two-row design
         
-        input_layout = QHBoxLayout(self.input_container)
+        input_layout = QVBoxLayout(self.input_container)
         input_layout.setContentsMargins(10, 10, 10, 10)
+        input_layout.setSpacing(0)
         
-        # Mode selection button
-        self.mode_button = QToolButton()
-        self.mode_button.setText("Search info")
-        self.mode_button.setFixedSize(160, 45)
-        self.mode_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.mode_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.mode_button.setArrowType(Qt.ArrowType.NoArrow)  # We'll use custom arrow
-        self.mode_button.setStyleSheet("""
-            QToolButton {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 22px;
-                padding: 0 15px;
-                font-size: 14px;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
-            }
-            QToolButton:hover {
-                border-color: #4096ff;
-            }
-            QToolButton::menu-indicator {
-                image: none;
-                subcontrol-position: right center;
-                subcontrol-origin: padding;
-                width: 16px;
-            }
-        """)
+        # Integrated search container (two rows)
+        search_container = QFrame()
+        search_container.setObjectName("searchContainer")
+        search_container.setFixedHeight(90)
         
-        # Create menu for mode selection
-        mode_menu = QMenu(self.mode_button)
-        mode_menu.setStyleSheet("""
-            QMenu {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                padding: 4px;
-            }
-            QMenu::item {
-                padding: 8px 20px;
-                border-radius: 4px;
-            }
-            QMenu::item:hover {
-                background-color: #f0f0f0;
-            }
-        """)
+        # Search container internal layout
+        container_layout = QVBoxLayout(search_container)
+        container_layout.setContentsMargins(12, 8, 12, 8)
+        container_layout.setSpacing(6)
         
-        # Add mode options
-        from src.game_wiki_tooltip.i18n import t
+        # Top row: Search input only
+        search_input_row = QFrame()
+        search_input_row.setObjectName("searchInputRow")
         
-        auto_action = mode_menu.addAction(t("search_mode_auto"))
-        auto_action.triggered.connect(lambda: self.set_mode("auto"))
+        input_row_layout = QHBoxLayout(search_input_row)
+        input_row_layout.setContentsMargins(0, 0, 0, 0)
+        input_row_layout.setSpacing(8)
         
-        wiki_action = mode_menu.addAction(t("search_mode_wiki"))
-        wiki_action.triggered.connect(lambda: self.set_mode("wiki"))
-        
-        ai_action = mode_menu.addAction(t("search_mode_ai"))
-        ai_action.triggered.connect(lambda: self.set_mode("ai"))
-        
-        mode_menu.addSeparator()
-        
-        url_action = mode_menu.addAction(t("search_mode_url"))
-        url_action.triggered.connect(lambda: self.set_mode("url"))
-        
-        self.mode_button.setMenu(mode_menu)
-        
-        # Update button text to include arrow
-        self.mode_button.setText(t("search_mode_auto") + " ▼")
-        
-        # Input field - use QLineEdit for single line input
+        # Search input field
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Enter message...")
-        self.input_field.setFixedHeight(45)
-        self.input_field.setStyleSheet("""
-            QLineEdit {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 22px;
-                padding: 10px 20px;
-                font-size: 16px;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
-            }
-            QLineEdit:focus {
-                border-color: #4096ff;
-                outline: none;
-            }
-        """)
-        # Connect Enter key - will be handled based on mode
+        self.input_field.setObjectName("searchInput")
+        self.input_field.setPlaceholderText("Recommend content / Search game content")
         self.input_field.returnPressed.connect(self.on_input_return_pressed)
         
-        # Send button
-        self.send_button = QPushButton("Send")
-        self.send_button.setFixedSize(80, 45)
-        self.send_button.setStyleSheet("""
-            QPushButton {
-                background-color: #4096ff;
-                color: white;
-                border: none;
-                border-radius: 22px;
-                font-weight: bold;
-                font-size: 16px;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
-            }
-            QPushButton:hover {
-                background-color: #2d7ff9;
-            }
-            QPushButton:pressed {
-                background-color: #1668dc;
-            }
-            QPushButton[stop_mode="true"] {
-                background-color: #ff4d4f;
-            }
-            QPushButton[stop_mode="true"]:hover {
-                background-color: #ff7875;
-            }
-            QPushButton[stop_mode="true"]:pressed {
-                background-color: #d32f2f;
-            }
-        """)
-        self.send_button.clicked.connect(self.on_send_clicked)
+        input_row_layout.addWidget(self.input_field)
+        
+        # Bottom row: Quick access buttons
+        quick_access_row = QFrame()
+        quick_access_row.setObjectName("quickAccessRow")
+        
+        access_layout = QHBoxLayout(quick_access_row)
+        access_layout.setContentsMargins(0, 0, 0, 0)
+        access_layout.setSpacing(8)
         
         # History button
-        self.history_button = QToolButton()
-        self.history_button.setFixedSize(45, 45)
-        self.history_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.history_button.setToolTip("View browsing history")
-        self.history_button.setStyleSheet("""
-            QToolButton {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 22px;
-                font-size: 20px;
-            }
-            QToolButton:hover {
-                background-color: #f0f0f0;
-                border-color: #4096ff;
-            }
-            QToolButton:pressed {
-                background-color: #e0e0e0;
-            }
-        """)
-        self.history_button.setText("📜")  # History icon
+        self.history_button = QPushButton()
+        self.history_button.setObjectName("historyBtn")
+        self.history_button.setFixedSize(32, 32)
+        self.history_button.setToolTip("History")
         self.history_button.clicked.connect(self.show_history_menu)
+        
+        # Load history icon
+        import pathlib
+        base_path = pathlib.Path(__file__).parent.parent.parent  # Go up to project root
+        history_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "refresh-ccw-clock-svgrepo-com.svg")
+        history_icon = load_svg_icon(history_icon_path, color="#111111", size=20)
+        if history_icon.isNull():
+            self.history_button.setText("⏱")
+        else:
+            self.history_button.setIcon(history_icon)
+            self.history_button.setIconSize(QSize(20, 20))
+        
+        # Quick Access button (replaces external website button)
+        self.quick_access_button = QPushButton()
+        self.quick_access_button.setObjectName("externalBtn")
+        self.quick_access_button.setFixedSize(32, 32)
+        self.quick_access_button.setToolTip("Quick Access")
+        # Enable mouse tracking for hover detection
+        self.quick_access_button.setMouseTracking(True)
+        self.quick_access_button.installEventFilter(self)
+        
+        # Load quick access icon
+        external_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "globe-alt-1-svgrepo-com.svg")
+        external_icon = load_svg_icon(external_icon_path, color="#111111", size=20)
+        if external_icon.isNull():
+            self.quick_access_button.setText("▼")
+        else:
+            self.quick_access_button.setIcon(external_icon)
+            self.quick_access_button.setIconSize(QSize(20, 20))
+        
+        # Search mode button
+        self.mode_button = QPushButton()
+        self.mode_button.setObjectName("searchBtn")
+        self.mode_button.setFixedSize(32, 32)
+        self.mode_button.setToolTip("Search Mode")
+        self.mode_button.clicked.connect(self.show_mode_menu)
+        
+        # Load search icon
+        search_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "search-alt-1-svgrepo-com.svg")
+        search_icon = load_svg_icon(search_icon_path, color="#111111", size=20)
+        if search_icon.isNull():
+            self.mode_button.setText("🔍")
+        else:
+            self.mode_button.setIcon(search_icon)
+            self.mode_button.setIconSize(QSize(20, 20))
+        
+        # Send button
+        self.send_button = QPushButton()
+        self.send_button.setObjectName("sendBtn")
+        self.send_button.setFixedSize(32, 32)
+        self.send_button.clicked.connect(self.on_send_clicked)
+        
+        # Load send icon
+        send_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "arrow-circle-up-svgrepo-com.svg")
+        send_icon = load_svg_icon(send_icon_path, color="#111111", size=20)
+        if send_icon.isNull():
+            self.send_button.setText("↑")
+        else:
+            self.send_button.setIcon(send_icon)
+            self.send_button.setIconSize(QSize(20, 20))
+        
+        # Add buttons to bottom row
+        access_layout.addWidget(self.history_button)
+        access_layout.addWidget(self.quick_access_button)
+        access_layout.addWidget(self.mode_button)
+        
+        # Container for game task buttons
+        self.game_task_container = QWidget()
+        self.game_task_container.setFixedHeight(32)
+        self.game_task_layout = QHBoxLayout(self.game_task_container)
+        self.game_task_layout.setContentsMargins(0, 0, 0, 0)
+        self.game_task_layout.setSpacing(8)
+        access_layout.addWidget(self.game_task_container)
+        
+        # Create game task buttons
+        self._create_game_task_buttons()
+        
+        access_layout.addStretch()  # Space in middle
+        access_layout.addWidget(self.send_button)
+        
+        # Add rows to search container
+        container_layout.addWidget(search_input_row)
+        container_layout.addWidget(quick_access_row)
+        
+        # Add search container to input container
+        input_layout.addWidget(search_container)
         
         # Current mode
         self.current_mode = "auto"
         
-        input_layout.addWidget(self.mode_button)
-        input_layout.addWidget(self.history_button)
-        input_layout.addWidget(self.input_field)
-        input_layout.addWidget(self.send_button)
-        
         # Add to main layout with stretch factor
         main_layout.addWidget(self.content_stack, 1)  # Stretch factor 1, occupy all available space
-        main_layout.addWidget(self.shortcut_container, 0)  # Shortcut button bar
+        # Removed shortcut_container - shortcuts now in popup
         main_layout.addWidget(self.input_container, 0)     # Stretch factor 0, keep fixed height
         
-        # Window styling
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: white;
-                border-radius: 16px;
-            }
-            QWidget {
-                font-size: 14px;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
-            }
-        """)
+        # Apply transparent styles
+        self.setup_transparent_styles()
         
-        # Apply shadow effect
-        self.apply_shadow()
+        # Enable mouse tracking for all children
+        self.enable_mouse_tracking_for_children()
+    
+    def create_title_bar(self):
+        """Create custom title bar"""
+        title_bar = QFrame()
+        title_bar.setFixedHeight(40)
+        title_bar.setObjectName("titleBar")
+        title_bar.setMouseTracking(True)
+        
+        layout = QHBoxLayout(title_bar)
+        layout.setContentsMargins(10, 5, 10, 5)
+        
+        # Title
+        self.title_label = QLabel("GameWiki Assistant")
+        self.title_label.setObjectName("titleLabel")
+        layout.addWidget(self.title_label)
+        
+        layout.addStretch()
+        
+        # Minimize button
+        min_btn = QPushButton("−")
+        min_btn.setObjectName("minBtn")
+        min_btn.setFixedSize(30, 25)
+        min_btn.clicked.connect(self.showMinimized)
+        
+        # Close button
+        close_btn = QPushButton("×")
+        close_btn.setObjectName("closeBtn")
+        close_btn.setFixedSize(30, 25)
+        close_btn.clicked.connect(self.close)
+        
+        layout.addWidget(min_btn)
+        layout.addWidget(close_btn)
+        
+        return title_bar
+    
+    def enable_mouse_tracking_for_children(self):
+        """Enable mouse tracking for all child widgets recursively"""
+        def enable_tracking(widget):
+            widget.setMouseTracking(True)
+            for child in widget.findChildren(QWidget):
+                enable_tracking(child)
+        
+        enable_tracking(self)
         
     def reset_size_constraints(self):
         """Reset window size constraints, ensure free resizing"""
         self.setMinimumSize(300, 200)  # Keep reasonable Minimum size
         self.setMaximumSize(16777215, 16777215)  # Remove Maximum size restrictions
         
-    def apply_shadow(self):
-        """Apply shadow effect to window"""
-        # This would require platform-specific implementation
-        # For now, using basic window flags
-        pass
+    def setup_transparent_styles(self):
+        """Set up styles with blur effect"""
+        style_sheet = """
+        QMainWindow {
+            background: transparent;
+        }
+        
+        #mainContainer {
+            background: rgba(255, 255, 255, 115);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 40);
+        }
+        
+        #titleBar {
+            background: rgba(255, 255, 255, 115);
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        
+        #titleLabel {
+            color: #111111;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: "Segoe UI", "Microsoft YaHei", Arial;
+        }
+        
+        #minBtn, #closeBtn {
+            background: rgba(255, 255, 255, 150);
+            border: none;
+            border-radius: 5px;
+            color: #111111;
+            font-weight: bold;
+            font-family: "Segoe UI", "Microsoft YaHei", Arial;
+        }
+        
+        #minBtn:hover, #closeBtn:hover {
+            background: rgba(220, 220, 220, 180);
+        }
+        
+        #closeBtn:hover {
+            background: rgba(220, 60, 60, 180);
+            color: white;
+        }
+        
+        /* Shortcut container - hidden by default */
+        #shortcutContainer {
+            background: rgba(255, 255, 255, 115);
+        }
+        
+        /* Input container - updated background */
+        #inputContainer {
+            background: rgba(255, 255, 255, 115);
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        
+        /* Search container - integrated two-row design */
+        #searchContainer {
+            background: rgba(0, 0, 0, 10);
+            border: 1px solid rgba(200, 200, 200, 150);
+            border-radius: 10px;
+        }
+        
+        #searchInputRow, #quickAccessRow {
+            background: transparent;
+            border: none;
+        }
+        
+        /* Search input field */
+        #searchInput {
+            background: transparent;
+            border: none;
+            color: #111111;
+            font-size: 14px;
+            font-family: "Segoe UI", "Microsoft YaHei", Arial;
+            padding: 0 5px;
+        }
+        
+        #searchInput:focus {
+            background: transparent;
+            border: none;
+            outline: none;
+        }
+        
+        /* Button styles for the bottom row */
+        #historyBtn, #externalBtn, #searchBtn, #sendBtn {
+            background: transparent;
+            border: none;
+            color: #111111;
+            font-size: 12px;
+            font-weight: normal;
+        }
+        
+        #historyBtn:hover, #externalBtn:hover, #searchBtn:hover {
+            background: rgba(220, 220, 220, 120);
+            border-radius: 4px;
+        }
+        
+        #sendBtn:hover {
+            background: rgba(220, 220, 220, 120);
+            border-radius: 4px;
+        }
+        
+        /* Send button special states */
+        #sendBtn[stop_mode="true"] {
+            background-color: rgba(255, 77, 79, 200);
+            border-radius: 4px;
+        }
+        
+        #sendBtn[stop_mode="true"]:hover {
+            background-color: rgba(255, 120, 117, 200);
+        }
+        
+        /* Quick access popup */
+        #quickAccessPopup {
+            background: rgba(255, 255, 255, 240);
+            border: 1px solid rgba(224, 224, 224, 150);
+            border-radius: 8px;
+            padding: 5px;
+        }
+        
+        /* Chat view styles - updated background */
+        ChatView {
+            background: rgba(255, 255, 255, 115);
+            border: none;
+            border-radius: 0px;  /* Remove rounded corners from chat content */
+        }
+        
+        /* Chat container widget */
+        ChatView QWidget {
+            background: transparent;
+        }
+        
+        /* Chat scrollbar */
+        ChatView QScrollBar:vertical {
+            background: rgba(240, 240, 240, 150);
+            width: 12px;
+            border-radius: 6px;
+        }
+        
+        ChatView QScrollBar::handle:vertical {
+            background: rgba(180, 180, 180, 200);
+            border-radius: 6px;
+            min-height: 20px;
+        }
+        
+        ChatView QScrollBar::handle:vertical:hover {
+            background: rgba(150, 150, 150, 220);
+        }
+        
+        MessageWidget {
+            background: transparent;
+        }
+        
+        /* Message bubble enhanced styles */
+        QFrame#messageBubble {
+            border-radius: 18px;
+            padding: 4px;
+        }
+        
+        /* Welcome message styles */
+        QLabel[messageType="welcome"] {
+            background: rgba(255, 255, 255, 180);
+            border: 1px solid rgba(224, 224, 224, 120);
+            border-radius: 12px;
+            padding: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Status message styles */
+        QFrame#statusBubble {
+            background-color: rgba(240, 248, 255, 200);
+            border: 1px solid rgba(224, 232, 240, 150);
+            border-radius: 18px;
+            padding: 4px;
+        }
+        
+        /* Interactive button styles */
+        InteractiveButtonWidget QPushButton {
+            background-color: rgba(64, 150, 255, 220);
+            color: white;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid rgba(64, 150, 255, 100);
+        }
+        
+        InteractiveButtonWidget QPushButton:hover {
+            background-color: rgba(48, 128, 255, 230);
+        }
+        
+        InteractiveButtonWidget QPushButton:pressed {
+            background-color: rgba(32, 96, 223, 240);
+        }
+        
+        /* Menu styles */
+        QMenu {
+            background-color: rgba(255, 255, 255, 240);
+            border: 1px solid rgba(224, 224, 224, 150);
+            border-radius: 8px;
+            padding: 4px;
+        }
+        
+        QMenu::item {
+            padding: 8px 20px;
+            border-radius: 4px;
+        }
+        
+        QMenu::item:hover {
+            background-color: rgba(240, 240, 240, 180);
+        }
+        """
+        self.setStyleSheet(style_sheet)
         
     def restore_geometry(self):
         """Restore window geometry from settings with enhanced screen compatibility"""
@@ -3798,8 +4308,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Show input area and shortcuts in chat mode
         if hasattr(self, 'input_container'):
             self.input_container.show()
-        if hasattr(self, 'shortcut_container'):
-            self.shortcut_container.show()
+        # Shortcut container is now hidden - shortcuts are in popup
         # Reset size constraints when switching to chat view
         self.reset_size_constraints()
         # Ensure message width is correct and trigger full layout update
@@ -3905,8 +4414,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Hide input area and shortcuts in wiki mode
         if hasattr(self, 'input_container'):
             self.input_container.hide()
-        if hasattr(self, 'shortcut_container'):
-            self.shortcut_container.hide()
+        # Shortcut container is now hidden - shortcuts are in popup
         # Reset size constraints when switching to Wiki view
         self.reset_size_constraints()
         logger.info(f"✅ Switched to Wiki view and loaded page")
@@ -4001,8 +4509,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Hide input area and shortcuts in wiki mode
         if hasattr(self, 'input_container'):
             self.input_container.hide()
-        if hasattr(self, 'shortcut_container'):
-            self.shortcut_container.hide()
+        # Shortcut container is now hidden - shortcuts are in popup
         # Reset size constraints when switching to Wiki view
         self.reset_size_constraints()
         
@@ -4012,11 +4519,8 @@ class UnifiedAssistantWindow(QMainWindow):
     def load_shortcuts(self):
         """Load shortcut buttons from settings"""
         try:
-            # Clear existing buttons
-            while self.shortcut_layout.count() > 0:
-                item = self.shortcut_layout.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
+            # Clear existing buttons in popup
+            self.quick_access_popup.clear_shortcuts()
             
             # Get shortcuts from settings
             shortcuts = []
@@ -4030,12 +4534,9 @@ class UnifiedAssistantWindow(QMainWindow):
             # Filter out hidden shortcuts
             visible_shortcuts = [s for s in shortcuts if s.get('visible', True)]
             
-            # Hide container if no visible shortcuts
-            if not visible_shortcuts:
+            # Hide shortcut container - shortcuts are now in popup
+            if hasattr(self, 'shortcut_container'):
                 self.shortcut_container.hide()
-                return
-            
-            self.shortcut_container.show()
             
             # Create buttons for visible shortcuts only
             for shortcut in visible_shortcuts:
@@ -4094,19 +4595,94 @@ class UnifiedAssistantWindow(QMainWindow):
                         name  # Pass the name for text display
                     )
                     btn.clicked.connect(lambda checked, url=shortcut.get('url', ''): self.open_url(url))
-                    self.shortcut_layout.addWidget(btn)
+                    # Add to popup instead of shortcut_layout
+                    self.quick_access_popup.add_shortcut(btn)
                 except Exception as e:
                     print(f"Failed to create shortcut button: {e}")
             
-            # Add DST task flow button (conditionally visible)
-            self._create_dst_task_button()
+            # Add game task flow buttons to popup
+            self._create_game_task_buttons_for_popup()
             
-            # Add stretch at the end
-            self.shortcut_layout.addStretch()
+            # Mark shortcuts as loaded
+            self.shortcuts_loaded = True
+            
         except Exception as e:
             print(f"Error in load_shortcuts: {e}")
-            # Hide the container if there's an error
-            self.shortcut_container.hide()
+    
+    def _create_game_task_buttons_for_popup(self):
+        """Create game task flow buttons for popup"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Define games that support task flow
+        game_configs = [
+            {
+                'game_name': 'dst',
+                'display_name': t('dst_task_button'),
+                'window_titles': ["don't starve together", "dst"],
+                'html_files': {'en': 'dst_en.html', 'zh': 'dst_zh.html'},
+                'button_color': '#4CAF50'
+            },
+            {
+                'game_name': 'helldiver2',
+                'display_name': t('helldiver2_task_button'),
+                'window_titles': ["helldivers™ 2", "helldivers 2"],
+                'html_files': {'en': 'helldiver2_en.html', 'zh': 'helldiver2_zh.html'},
+                'button_color': '#111827'
+            },
+            {
+                'game_name': 'civilization6',
+                'display_name': t('civ6_task_button') if hasattr(self, '_t') and callable(getattr(self, '_t', None)) else 'Civilization VI Guide',
+                'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"],
+                'html_files': {'en': 'civilization6_en.html', 'zh': 'civilization6_zh.html'},
+                'button_color': '#FFB300'
+            }
+        ]
+        
+        # Create task buttons and add to popup
+        for config in game_configs:
+            try:
+                # Use ExpandableIconButton style for consistency
+                btn = ExpandableIconButton(
+                    "",  # No icon for game buttons
+                    config['display_name'],
+                    "",  # No URL, handled by click
+                    config['display_name']
+                )
+                
+                # Connect to game task handler
+                game_name = config['game_name']
+                btn.clicked.connect(lambda checked, g=game_name: self._on_game_task_clicked(g))
+                
+                # Add to popup
+                self.quick_access_popup.add_shortcut(btn)
+                
+                # Store reference for visibility updates
+                if not hasattr(self, 'game_task_buttons'):
+                    self.game_task_buttons = {}
+                self.game_task_buttons[game_name] = btn
+                
+            except Exception as e:
+                logger.error(f"Failed to create task button for {config['game_name']}: {e}")
+    
+    def _on_game_task_clicked(self, game_name):
+        """Handle game task button click"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Game task button clicked: {game_name}")
+        
+        # Find the appropriate handler based on game_name
+        handlers = {
+            'dst': lambda: self._show_task_flow_html('dst'),
+            'helldiver2': lambda: self._show_task_flow_html('helldiver2'),
+            'civilization6': lambda: self._show_task_flow_html('civilization6')
+        }
+        
+        handler = handlers.get(game_name)
+        if handler:
+            handler()
+        else:
+            logger.warning(f"No handler found for game: {game_name}")
     
     def _create_dst_task_button(self):
         """Create game task flow button (compatible with old code)"""
@@ -4204,7 +4780,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 padding: 4px 12px;
                 font-size: 12px;
                 font-weight: bold;
-                font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                font-family: "Segoe UI", "Microsoft YaHei", Arial;
             }}
             QPushButton:hover {{
                 background-color: {self._darken_color(config['button_color'], 0.1)};
@@ -4316,7 +4892,8 @@ class UnifiedAssistantWindow(QMainWindow):
         try:
             # Switch to Wiki view
             self.content_stack.setCurrentWidget(self.wiki_view)
-            self.shortcut_container.hide()
+            if hasattr(self, 'shortcut_container'):
+                self.shortcut_container.hide()
             self.input_container.hide()
             
             # Set title
@@ -4333,7 +4910,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 <title>{title}</title>
                 <style>
                     body {{
-                        font-family: "Microsoft YaHei", "Segoe UI", Arial;
+                        font-family: "Segoe UI", "Microsoft YaHei", Arial;
                         margin: 20px;
                         line-height: 1.6;
                         background-color: #f5f5f5;
@@ -4381,7 +4958,8 @@ class UnifiedAssistantWindow(QMainWindow):
         try:
             # Switch to Wiki view
             self.content_stack.setCurrentWidget(self.wiki_view)
-            self.shortcut_container.hide()
+            if hasattr(self, 'shortcut_container'):
+                self.shortcut_container.hide()
             self.input_container.hide()
             
             # Set title
@@ -4427,7 +5005,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 <title>Error</title>
                 <style>
                     body {{ 
-                        font-family: "Microsoft YaHei", "Segoe UI", Arial; 
+                        font-family: "Segoe UI", "Microsoft YaHei", Arial; 
                         margin: 20px; 
                         background-color: #f5f5f5;
                     }}
@@ -4567,6 +5145,296 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
         QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
     
+    def _create_game_task_buttons(self):
+        """Create task flow buttons for all games"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Debug: Log method entry
+        logger.info(f"🏗️ [DEBUG] _create_game_task_buttons called")
+        
+        # Define games that support task flow
+        game_configs = [
+            {
+                'game_name': 'dst',
+                'display_name': 'DST',
+                'window_titles': ['don\'t starve together', 'dst'],
+                'background_color': '#4A4A4A',
+                'icon': '🎮'
+            },
+            # Add more games here in the future
+        ]
+        
+        # Clear existing buttons
+        existing_button_count = len(self.game_task_buttons)
+        logger.info(f"🧹 [DEBUG] Clearing {existing_button_count} existing task buttons")
+        for game_name, btn in self.game_task_buttons.items():
+            if btn:
+                logger.debug(f"    🗑️ [DEBUG] Removing {game_name} button from layout")
+                self.game_task_layout.removeWidget(btn)
+                btn.deleteLater()
+        self.game_task_buttons.clear()
+        logger.info(f"✅ [DEBUG] Existing task buttons cleared")
+        
+        # Create new buttons
+        created_count = 0
+        failed_count = 0
+        
+        for config in game_configs:
+            game_name = config['game_name']
+            try:
+                button = self._create_single_game_button(config)
+                if button:
+                    self.game_task_buttons[game_name] = button
+                    self.game_task_layout.addWidget(button)
+                    button.hide()  # Initially hidden
+                    created_count += 1
+                    logger.debug(f"    ✅ [DEBUG] {game_name} task button created and added to layout (initially hidden)")
+                else:
+                    failed_count += 1
+                    logger.warning(f"    ❌ [DEBUG] Failed to create {game_name} task button")
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"    ❌ [DEBUG] Exception creating {game_name} task button: {e}")
+        
+        # Log summary
+        logger.info(f"📊 [DEBUG] Task button creation summary:")
+        logger.info(f"    ✅ Created: {created_count}")
+        logger.info(f"    ❌ Failed: {failed_count}")
+        logger.info(f"    📋 Total buttons in dict: {len(self.game_task_buttons)}")
+        logger.info(f"    🔍 Button names: {list(self.game_task_buttons.keys())}")
+    
+    def _create_single_game_button(self, config):
+        """Create single game task flow button"""
+        button = QPushButton(config['display_name'])
+        button.setFixedHeight(32)
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {config['background_color']};
+                color: white;
+                border: none;
+                border-radius: 16px;
+                padding: 4px 12px;
+                font-weight: bold;
+                font-size: 12px;
+                font-family: "Segoe UI", "Microsoft YaHei", Arial;
+            }}
+            QPushButton:hover {{
+                background-color: {self._darken_color(config['background_color'], 0.8)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self._darken_color(config['background_color'], 0.6)};
+            }}
+        """)
+        
+        # Add tooltip
+        button.setToolTip(f"Open {config['display_name']} Task Flow")
+        
+        # Connect click event
+        button.clicked.connect(lambda: self._open_game_task_flow(config))
+        return button
+    
+    def _darken_color(self, hex_color, factor):
+        """Darken color helper function"""
+        # Remove #
+        hex_color = hex_color.lstrip('#')
+        # Convert to RGB
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        # Darken
+        r = int(r * factor)
+        g = int(g * factor)
+        b = int(b * factor)
+        # Convert back to hex
+        return f'#{r:02x}{g:02x}{b:02x}'
+    
+    def _open_game_task_flow(self, config):
+        """Open game task flow HTML file"""
+        try:
+            # Get current language setting
+            current_language = 'en'
+            if self.settings_manager:
+                settings = self.settings_manager.get()
+                current_language = settings.get('language', 'en')
+            
+            # Determine task flow HTML file path
+            game_name = config['game_name']
+            task_flow_filename = f"{game_name}_task_flow_{current_language}.html"
+            
+            import os
+            from pathlib import Path
+            
+            # Get assets path
+            assets_path = Path(__file__).parent / "assets" / "task_flows"
+            html_path = assets_path / task_flow_filename
+            
+            if os.path.exists(html_path):
+                # Display directly in the application, same as wiki link logic
+                try:
+                    from src.game_wiki_tooltip.i18n import t
+                    title = t(f"{game_name}_task_flow_title")
+                    
+                    # Use the same display logic as wiki link
+                    self._load_local_html_in_wiki_view(html_path, title)
+                    
+                except Exception as html_error:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"❌ [DEBUG] Failed to display HTML file: {html_error}")
+                    # Fallback handling
+                    self._show_task_flow_fallback(config, current_language)
+            else:
+                # File doesn't exist, use fallback
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"⚠️ [DEBUG] Task flow file not found: {html_path}")
+                self._show_task_flow_fallback(config, current_language)
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ [DEBUG] Failed to open game task flow: {e}")
+            # Display error message
+            self.chat_view.add_message(
+                MessageType.STATUS,
+                f"Unable to open {config['display_name']} task flow"
+            )
+    
+    def _show_task_flow_fallback(self, config, language):
+        """Show task flow fallback content"""
+        from src.game_wiki_tooltip.i18n import t
+        title = t(f"{config['game_name']}_task_flow_title")
+        
+        # For now, just show a message
+        self.chat_view.add_message(
+            MessageType.STATUS,
+            f"{title} - Coming Soon"
+        )
+    
+    def _load_local_html_in_wiki_view(self, html_path, title):
+        """Load local HTML file in wiki view"""
+        try:
+            # Read HTML content
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            
+            # Switch to wiki view
+            self.content_stack.setCurrentWidget(self.wiki_view)
+            
+            # Update wiki view title
+            self.wiki_view.title_label.setText(title)
+            self.wiki_view.current_title = title
+            self.wiki_view.current_url = f"local://{html_path.name}"
+            
+            # Display HTML content
+            if hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view is not None:
+                self.wiki_view._display_with_webview2(html_content)
+            else:
+                # Fallback for non-WebView2
+                self.wiki_view._display_local_html(html_content)
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to load local HTML: {e}")
+            raise
+    
+    def _update_game_task_buttons_visibility(self):
+        """Update visibility of all game task buttons based on current game window"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Debug: Log method entry with current state
+            logger.info(f"🔍 [DEBUG] _update_game_task_buttons_visibility called")
+            logger.info(f"📋 [DEBUG] Current game window: '{self.current_game_window}'")
+            logger.info(f"📋 [DEBUG] Available task buttons: {list(self.game_task_buttons.keys())}")
+            
+            # Debug: Log each button's current state
+            for game_name, button in self.game_task_buttons.items():
+                if button:
+                    is_visible = button.isVisible()
+                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=True, visible={is_visible}")
+                else:
+                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=False")
+            
+            # If no game window is set, hide all buttons
+            if not self.current_game_window:
+                logger.info(f"⚠️ [DEBUG] No current game window, hiding all task buttons")
+                hidden_count = 0
+                for game_name, button in self.game_task_buttons.items():
+                    if button:
+                        was_visible = button.isVisible()
+                        button.hide()
+                        if was_visible:
+                            hidden_count += 1
+                            logger.debug(f"    🙈 [DEBUG] {game_name} task button hidden")
+                logger.info(f"📊 [DEBUG] Hidden {hidden_count} task buttons")
+                return
+            
+            # Get normalized window title for comparison
+            current_window_lower = self.current_game_window.lower()
+            logger.debug(f"🔍 [DEBUG] Normalized current window: '{current_window_lower}'")
+            
+            # Define games that support task flow (same as in _create_game_task_buttons)
+            game_configs = [
+                {
+                    'game_name': 'dst',
+                    'display_name': 'DST',
+                    'window_titles': ['don\'t starve together', 'dst'],
+                    'background_color': '#4A4A4A',
+                    'icon': '🎮'
+                },
+                # Add more games here in the future
+            ]
+            
+            # Update button visibility based on current game
+            buttons_shown = 0
+            buttons_hidden = 0
+            
+            for config in game_configs:
+                game_name = config['game_name']
+                window_titles = config['window_titles']
+                button = self.game_task_buttons.get(game_name)
+                
+                logger.debug(f"🔍 [DEBUG] Processing {game_name} task button...")
+                
+                if button:
+                    was_visible = button.isVisible()
+                    
+                    # Check if current window matches any of the game's window titles
+                    matches = any(title in current_window_lower for title in window_titles)
+                    logger.debug(f"    🎯 [DEBUG] Window title match: {matches}")
+                    logger.debug(f"    📋 [DEBUG] Checking against titles: {window_titles}")
+                    
+                    if matches:
+                        button.show()
+                        if not was_visible:
+                            buttons_shown += 1
+                            logger.info(f"✅ [DEBUG] {game_name} task button shown")
+                        else:
+                            logger.debug(f"👀 [DEBUG] {game_name} task button already visible")
+                    else:
+                        button.hide()
+                        if was_visible:
+                            buttons_hidden += 1
+                            logger.info(f"🙈 [DEBUG] {game_name} task button hidden")
+                        else:
+                            logger.debug(f"🙈 [DEBUG] {game_name} task button hidden (no match)")
+                else:
+                    logger.warning(f"⚠️ [DEBUG] {game_name} task button not found in game_task_buttons dict")
+            
+            # Debug: Summary of changes
+            logger.info(f"📊 [DEBUG] Task button visibility update completed:")
+            logger.info(f"    ✅ Buttons shown: {buttons_shown}")
+            logger.info(f"    🙈 Buttons hidden: {buttons_hidden}")
+            
+        except Exception as e:
+            logger.error(f"❌ [DEBUG] Error updating task button visibility: {e}")
+            import traceback
+            logger.error(f"❌ [DEBUG] Traceback: {traceback.format_exc()}")
+    
     def set_current_game_window(self, game_window_title: str):
         """Set current game window title and update DST button visibility"""
         import logging
@@ -4591,13 +5459,13 @@ class UnifiedAssistantWindow(QMainWindow):
         # Critical fix: Ensure task buttons are created before trying to update visibility
         if button_count == 0:
             logger.warning(f"⚠️ [DEBUG] Task buttons not created yet, creating them first")
-            if hasattr(self, 'shortcut_layout'):
-                logger.info(f"🔧 [DEBUG] Shortcut layout exists, creating task buttons")
+            if hasattr(self, 'game_task_layout'):
+                logger.info(f"🔧 [DEBUG] Game task layout exists, creating task buttons")
                 self._create_game_task_buttons()
                 new_button_count = len(getattr(self, 'game_task_buttons', {}))
                 logger.info(f"✅ [DEBUG] Task buttons created: {new_button_count}")
             else:
-                logger.warning(f"⚠️ [DEBUG] Shortcut layout not available, buttons will be created later")
+                logger.warning(f"⚠️ [DEBUG] Game task layout not available, buttons will be created later")
         
         # Set the new game window
         self.current_game_window = game_window_title
@@ -4717,6 +5585,71 @@ class UnifiedAssistantWindow(QMainWindow):
             logger.error(f"❌ [DEBUG] Failed to update game task buttons visibility: {e}")
             import traceback
             logger.error(f"❌ [DEBUG] Exception traceback:\n{traceback.format_exc()}")
+    
+    def on_quick_access_clicked(self):
+        """Show quick access popup"""
+        # Load shortcuts if not loaded
+        if not self.shortcuts_loaded:
+            self.load_shortcuts()
+            
+        # Show popup above the button
+        self.quick_access_popup.show_at(self.quick_access_button)
+        
+    def eventFilter(self, obj, event):
+        """Event filter to handle hover events"""
+        from PyQt6.QtCore import QEvent
+        
+        if obj == self.quick_access_button:
+            if event.type() == QEvent.Type.Enter:
+                # Mouse entered the button
+                if not self.shortcuts_loaded:
+                    self.load_shortcuts()
+                self.quick_access_popup.show_at(self.quick_access_button)
+            elif event.type() == QEvent.Type.Leave:
+                # Mouse left the button, start hide timer
+                if not self.quick_access_popup.mouse_over:
+                    self.quick_access_popup.hide_timer.start(300)  # Hide after 300ms
+                    
+        return super().eventFilter(obj, event)
+        
+    def show_mode_menu(self):
+        """Show search mode menu"""
+        mode_menu = QMenu(self)
+        mode_menu.setStyleSheet("""
+            QMenu {
+                background-color: rgba(255, 255, 255, 240);
+                border: 1px solid rgba(224, 224, 224, 150);
+                border-radius: 8px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                border-radius: 4px;
+            }
+            QMenu::item:hover {
+                background-color: rgba(240, 240, 240, 180);
+            }
+        """)
+        
+        from src.game_wiki_tooltip.i18n import t
+        
+        auto_action = mode_menu.addAction(t("search_mode_auto"))
+        auto_action.triggered.connect(lambda: self.set_mode("auto"))
+        
+        wiki_action = mode_menu.addAction(t("search_mode_wiki"))
+        wiki_action.triggered.connect(lambda: self.set_mode("wiki"))
+        
+        ai_action = mode_menu.addAction(t("search_mode_ai"))
+        ai_action.triggered.connect(lambda: self.set_mode("ai"))
+        
+        mode_menu.addSeparator()
+        
+        url_action = mode_menu.addAction(t("search_mode_url"))
+        url_action.triggered.connect(lambda: self.set_mode("url"))
+        
+        # Show menu below the button
+        button_pos = self.mode_button.mapToGlobal(QPoint(0, self.mode_button.height()))
+        mode_menu.exec(button_pos)
 
     def on_send_clicked(self):
         """Handle send button click"""
@@ -4901,7 +5834,135 @@ class UnifiedAssistantWindow(QMainWindow):
                 ))
         super().changeEvent(event)
     
-
+    # Mouse event handlers for drag and resize
+    def get_resize_edge(self, pos):
+        """Check if mouse position is at window edge, return edge type"""
+        margin = 10
+        rect = self.rect()
+        
+        left = pos.x() <= margin
+        right = pos.x() >= rect.width() - margin
+        top = pos.y() <= margin
+        bottom = pos.y() >= rect.height() - margin
+        
+        if top and left:
+            return 'top-left'
+        elif top and right:
+            return 'top-right'
+        elif bottom and left:
+            return 'bottom-left'
+        elif bottom and right:
+            return 'bottom-right'
+        elif top:
+            return 'top'
+        elif bottom:
+            return 'bottom'
+        elif left:
+            return 'left'
+        elif right:
+            return 'right'
+        else:
+            return None
+    
+    def set_resize_cursor(self, edge):
+        """Set mouse cursor based on edge type"""
+        if edge == 'top' or edge == 'bottom':
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif edge == 'left' or edge == 'right':
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif edge == 'top-left' or edge == 'bottom-right':
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif edge == 'top-right' or edge == 'bottom-left':
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            
+    def mousePressEvent(self, event):
+        """Mouse press event"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            edge = self.get_resize_edge(pos)
+            
+            if edge:
+                # Start resizing
+                self.resizing = True
+                self.resize_edge = edge
+                self.resize_start_pos = event.globalPosition().toPoint()
+                self.resize_start_geometry = self.geometry()
+            elif hasattr(self, 'title_bar') and self.title_bar.geometry().contains(pos):
+                # Start dragging only if clicked on title bar
+                self.dragging = True
+                self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+            
+    def mouseMoveEvent(self, event):
+        """Mouse move event"""
+        pos = event.position().toPoint()
+        
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.resizing and self.resize_edge:
+                # Resize window
+                self.resize_window(event.globalPosition().toPoint())
+            elif self.dragging:
+                # Move window
+                self.move(event.globalPosition().toPoint() - self.drag_position)
+        else:
+            # Check if mouse is at edge, set cursor
+            edge = self.get_resize_edge(pos)
+            self.set_resize_cursor(edge)
+        
+        event.accept()
+            
+    def mouseReleaseEvent(self, event):
+        """Mouse release event"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            self.resize_edge = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+    
+    def resize_window(self, global_pos):
+        """Resize window"""
+        if not self.resize_edge:
+            return
+            
+        delta = global_pos - self.resize_start_pos
+        geometry = QRect(self.resize_start_geometry)
+        
+        # Set minimum window size
+        min_width = 400
+        min_height = 300
+        
+        # Handle horizontal resize
+        if 'left' in self.resize_edge:
+            new_width = geometry.width() - delta.x()
+            if new_width >= min_width:
+                geometry.setLeft(geometry.left() + delta.x())
+            else:
+                geometry.setLeft(geometry.right() - min_width)
+        elif 'right' in self.resize_edge:
+            new_width = geometry.width() + delta.x()
+            if new_width >= min_width:
+                geometry.setWidth(new_width)
+            else:
+                geometry.setWidth(min_width)
+                
+        # Handle vertical resize
+        if 'top' in self.resize_edge:
+            new_height = geometry.height() - delta.y()
+            if new_height >= min_height:
+                geometry.setTop(geometry.top() + delta.y())
+            else:
+                geometry.setTop(geometry.bottom() - min_height)
+        elif 'bottom' in self.resize_edge:
+            new_height = geometry.height() + delta.y()
+            if new_height >= min_height:
+                geometry.setHeight(new_height)
+            else:
+                geometry.setHeight(min_height)
+        
+        self.setGeometry(geometry)
 
 
 class AssistantController:
