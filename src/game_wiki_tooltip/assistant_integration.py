@@ -1682,21 +1682,6 @@ class IntegratedAssistantController(AssistantController):
             logger.error(f"❌ Update wiki link failed: {e}")
             
     def _on_streaming_chunk(self, chunk: str):
-        """Handle streaming chunk from RAG"""
-        print(f"🌊 [STREAMING-DEBUG] Received content chunk: '{chunk[:100]}...' (length: {len(chunk)})")
-        print(f"🌊 [STREAMING-DEBUG] Waiting for RAG output status: {getattr(self, '_waiting_for_rag_output', 'undefined')}")
-        print(f"🌊 [STREAMING-DEBUG] Current streaming message component: {hasattr(self, '_current_streaming_msg') and self._current_streaming_msg is not None}")
-        
-        # Check for insufficient knowledge marker
-        if "[INSUFFICIENT_KNOWLEDGE_MARKER]" in chunk:
-            print(f"🔍 [STREAMING-DEBUG] Detected insufficient knowledge marker")
-            self._knowledge_insufficient = True
-            # Remove the marker from chunk
-            chunk = chunk.replace("[INSUFFICIENT_KNOWLEDGE_MARKER]", "")
-            # If chunk is now empty, return
-            if not chunk.strip():
-                return
-        
         # If waiting for RAG output and this is the first content chunk, create streaming message component
         if getattr(self, '_waiting_for_rag_output', False) and chunk.strip():
             logger.info("🔄 Received first RAG output chunk, create streaming message component")

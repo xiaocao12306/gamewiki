@@ -1200,68 +1200,6 @@ class MessageWidget(QFrame):
         self.content_label.adjustSize()
         self.adjustSize()
 
-
-class InteractiveButtonWidget(QWidget):
-    """Interactive button widget for chat messages"""
-    
-    def __init__(self, button_text: str, callback, parent=None):
-        super().__init__(parent)
-        self.callback = callback
-        self.init_ui(button_text)
-        
-    def init_ui(self, button_text: str):
-        """Initialize button UI"""
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(20, 10, 20, 10)
-        
-        # Create button
-        self.button = QPushButton(button_text)
-        self.button.clicked.connect(self._on_click)
-        
-        # Style the button
-        self.button.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(64, 150, 255, 220);
-                color: white;
-                border-radius: 20px;
-                padding: 10px 20px;
-                font-size: 14px;
-                font-weight: bold;
-                border: 1px solid rgba(64, 150, 255, 100);
-            }
-            QPushButton:hover {
-                background-color: rgba(48, 128, 255, 230);
-            }
-            QPushButton:pressed {
-                background-color: rgba(32, 96, 223, 240);
-            }
-        """)
-        
-        # Center the button
-        layout.addStretch()
-        layout.addWidget(self.button)
-        layout.addStretch()
-        
-    def _on_click(self):
-        """Handle button click"""
-        logger = logging.getLogger(__name__)
-        logger.info(f"🔘 Interactive button clicked: {self.button.text()}")
-        
-        # Disable button to prevent multiple clicks
-        self.button.setEnabled(False)
-        self.button.setText("处理中..." if "搜索" in self.button.text() else "Processing...")
-        
-        # Call the callback
-        if self.callback:
-            try:
-                self.callback()
-            except Exception as e:
-                logger.error(f"Error in button callback: {e}")
-                # Re-enable button on error
-                self.button.setEnabled(True)
-                self.button.setText("重试" if "处理中" in self.button.text() else "Retry")
-
-
 class StreamingMessageWidget(MessageWidget):
     """Message widget with streaming/typing animation support"""
     
@@ -2017,31 +1955,7 @@ class ChatView(QScrollArea):
         except Exception as e:
             print(f"❌ [UI-DEBUG] Failed to create streaming message component: {e}")
             raise
-    
-    def add_interactive_button(self, button_text: str, callback) -> InteractiveButtonWidget:
-        logger = logging.getLogger(__name__)
-        """Add an interactive button to the chat"""
-        logger.info(f"🔘 Adding interactive button: {button_text}")
-        
-        # Check and fix ChatView width
-        self._check_and_fix_width()
-        
-        # Create button widget
-        button_widget = InteractiveButtonWidget(button_text, callback, self)
-        
-        # Add to layout
-        self.layout.insertWidget(self.layout.count() - 1, button_widget)
-        self.messages.append(button_widget)
-        
-        # Update layout
-        button_widget.updateGeometry()
-        self.container.updateGeometry()
-        
-        # Request auto scroll
-        self.request_auto_scroll()
-        
-        return button_widget
-        
+
     def show_status(self, message: str) -> StatusMessageWidget:
         """Display status information"""
         # Check and fix ChatView width exception
@@ -4024,42 +3938,6 @@ class UnifiedAssistantWindow(QMainWindow):
             border-radius: 18px;
             padding: 4px;
         }
-        
-        /* Interactive button styles */
-        InteractiveButtonWidget QPushButton {
-            background-color: rgba(64, 150, 255, 220);
-            color: white;
-            border-radius: 20px;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border: 1px solid rgba(64, 150, 255, 100);
-        }
-        
-        InteractiveButtonWidget QPushButton:hover {
-            background-color: rgba(48, 128, 255, 230);
-        }
-        
-        InteractiveButtonWidget QPushButton:pressed {
-            background-color: rgba(32, 96, 223, 240);
-        }
-        
-        /* Menu styles */
-        QMenu {
-            background-color: rgba(255, 255, 255, 240);
-            border: 1px solid rgba(224, 224, 224, 150);
-            border-radius: 8px;
-            padding: 4px;
-        }
-        
-        QMenu::item {
-            padding: 8px 20px;
-            border-radius: 4px;
-        }
-        
-        QMenu::item:hover {
-            background-color: rgba(240, 240, 240, 180);
-        }
         """
         self.setStyleSheet(style_sheet)
         
@@ -4656,9 +4534,9 @@ class UnifiedAssistantWindow(QMainWindow):
         history_menu = QMenu(None)  # No parent to avoid blur inheritance
         # Ensure menu has its own rendering context without shadow
         history_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
-        history_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        history_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        history_menu.setAutoFillBackground(True)
+        history_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        history_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
+        history_menu.setAutoFillBackground(False)
         history_menu.setStyleSheet("""
             QMenu {
                 background-color: rgb(255, 255, 255);
@@ -4912,9 +4790,9 @@ class UnifiedAssistantWindow(QMainWindow):
         mode_menu = QMenu(None)  # No parent to avoid blur inheritance
         # Ensure menu has its own rendering context without shadow
         mode_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
-        mode_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        mode_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        mode_menu.setAutoFillBackground(True)
+        mode_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        mode_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
+        mode_menu.setAutoFillBackground(False)
         mode_menu.setStyleSheet("""
             QMenu {
                 background-color: rgb(0, 0, 0, 100);
