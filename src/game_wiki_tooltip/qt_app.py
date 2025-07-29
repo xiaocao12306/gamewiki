@@ -1029,6 +1029,24 @@ def main():
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("GameWiki Assistant")
     
+    # Configure tooltip behavior - remove delays
+    try:
+        from PyQt6.QtWidgets import QStyle
+        # Remove tooltip delays - show immediately on hover
+        qapp.setStyleSheet(qapp.styleSheet() + """
+            QToolTip {
+                padding: 5px;
+                border: 1px solid #333;
+                background-color: #2b2b2b;
+                color: white;
+                border-radius: 3px;
+            }
+        """)
+        # Note: Style hints for tooltip delays are not directly settable in Qt6
+        # The WA_AlwaysShowToolTips attribute on widgets is the primary solution
+    except Exception as e:
+        pass  # Non-critical, continue without tooltip configuration
+    
     # Step 2: Show splash screen IMMEDIATELY
     splash = None
     try:

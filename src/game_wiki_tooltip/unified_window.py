@@ -34,7 +34,6 @@ except ImportError:
     print("Warning: markdown library not available. Markdown content will be displayed as plain text.")
     MARKDOWN_AVAILABLE = False
 
-# Try PyQt6 first, fall back to PyQt5
 try:
     from PyQt6.QtCore import (
         Qt, QTimer, QPropertyAnimation, QRect, QSize, QPoint,
@@ -141,9 +140,6 @@ def load_svg_icon(svg_path, color="#666666", size=16):
             icon.addPixmap(pixmap)
         
         return icon
-    except ImportError:
-        print("PyQt6-SVG not installed, using fallback icon")
-        return QIcon()
     except Exception as e:
         print(f"Failed to load SVG icon: {e}")
         return QIcon()
@@ -157,14 +153,29 @@ class QuickAccessPopup(QWidget):
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
             Qt.WindowType.Tool |
-            Qt.WindowType.WindowDoesNotAcceptFocus
+            Qt.WindowType.WindowDoesNotAcceptFocus |
+            Qt.WindowType.Popup  # Add popup flag for auto-close behavior
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        
+        self.setStyleSheet("""
+                    #QuickAccessPopup {
+                        background-color: transparent;
+                    }
+                """)
+
         # Main container
         self.container = QFrame()
         self.container.setObjectName("quickAccessPopup")
+        # Container should be transparent since parent has the background
+        self.container.setStyleSheet("""
+            #quickAccessPopup {
+                background-color: rgb(255, 255, 255);
+                border: 1px solid rgb(224, 224, 224);
+                border-radius: 10px;
+                padding: 5px;
+            }
+        """)
         
         # Layout
         container_layout = QVBoxLayout(self)
@@ -174,7 +185,7 @@ class QuickAccessPopup(QWidget):
         # Shortcuts layout
         self.shortcuts_layout = QHBoxLayout(self.container)
         self.shortcuts_layout.setContentsMargins(10, 5, 10, 5)
-        self.shortcuts_layout.setSpacing(8)
+        self.shortcuts_layout.setSpacing(0)
         
         # Hide timer
         self.hide_timer = QTimer()
@@ -237,6 +248,41 @@ class QuickAccessPopup(QWidget):
         self.mouse_over = False
         self.hide_timer.start(500)  # Hide after 500ms
         super().leaveEvent(event)
+    
+    def eventFilter(self, obj, event):
+        """Filter events to detect clicks outside popup"""
+        from PyQt6.QtCore import QEvent
+        
+        # Handle mouse press events
+        if event.type() == QEvent.Type.MouseButtonPress:
+            # Check if click is outside the popup
+            if self.isVisible() and not self.geometry().contains(event.globalPosition().toPoint()):
+                # Get the widget at the click position
+                click_pos = event.globalPosition().toPoint()
+                widget_at_pos = QApplication.widgetAt(click_pos)
+                
+                # If clicking on a button (history, mode, etc), hide popup but don't consume event
+                # This allows the button's click handler to execute
+                if widget_at_pos and isinstance(widget_at_pos, QPushButton):
+                    self.hide()
+                    return False  # Don't consume event, let button handle it
+                else:
+                    self.hide()
+                    return True  # Consume event for other clicks
+        
+        return super().eventFilter(obj, event)
+    
+    def showEvent(self, event):
+        """Install event filter when showing"""
+        super().showEvent(event)
+        # Install event filter on application to detect clicks
+        QApplication.instance().installEventFilter(self)
+    
+    def hideEvent(self, event):
+        """Remove event filter when hiding"""
+        super().hideEvent(event)
+        # Remove event filter
+        QApplication.instance().removeEventFilter(self)
 
 
 class ExpandableIconButton(QPushButton):
@@ -2859,35 +2905,81 @@ class WikiView(QWidget):
         # Method 1: Try JavaScript
         if hasattr(self.web_view, 'page') and callable(self.web_view.page):
             try:
+                # More comprehensive title extraction script
+                script = """
+                (function() {
+                    // First try document.title
+                    var title = document.title;
+                    if (title && title !== '' && title !== 'undefined') {
+                        // Return title as-is without modification
+                        return title;
+                    }
+                    // Fallback to h1
+                    var h1 = document.querySelector('h1');
+                    if (h1 && h1.innerText) {
+                        return h1.innerText.trim();
+                    }
+                    // Fallback to first heading
+                    var heading = document.querySelector('h1, h2, h3');
+                    if (heading && heading.innerText) {
+                        return heading.innerText.trim();
+                    }
+                    return '';
+                })();
+                """
                 self.web_view.page().runJavaScript(
-                    "document.title || document.querySelector('h1')?.innerText || ''",
+                    script,
                     lambda title: self._on_title_extracted(url, title)
                 )
                 return
             except Exception as e:
                 print(f"❌ JavaScript title extraction failed: {e}")
         
-        # Method 2: Use URL as fallback
-        try:
-            from urllib.parse import unquote, urlparse
-            path = urlparse(url).path
-            if path:
-                # Extract last part of path
-                title = path.rstrip('/').split('/')[-1]
-                title = unquote(title).replace('_', ' ')
-                if title:
-                    print(f"📋 Using URL-based title: {title}")
-                    self._emit_wiki_found(url, title)
-        except Exception as e:
-            print(f"❌ URL-based title extraction failed: {e}")
+        # Method 2: For WebView2Widget
+        elif hasattr(self.web_view, 'runJavaScript'):
+            try:
+                script = """
+                (function() {
+                    var title = document.title;
+                    if (title && title !== '' && title !== 'undefined') {
+                        // Return title as-is without modification
+                        return title;
+                    }
+                    var h1 = document.querySelector('h1');
+                    if (h1 && h1.innerText) {
+                        return h1.innerText.trim();
+                    }
+                    return '';
+                })();
+                """
+                self.web_view.runJavaScript(script, lambda title: self._on_title_extracted(url, title))
+                return
+            except Exception as e:
+                print(f"❌ WebView2 JavaScript title extraction failed: {e}")
             
     def _on_title_extracted(self, url, title):
         """Handle extracted title"""
-        if title and title.strip():
+        if title and title.strip() and title != "null" and title != "undefined":
             print(f"✅ Successfully extracted title: {title}")
             self._emit_wiki_found(url, title)
         else:
-            print(f"⚠️ Empty or invalid title extracted")
+            print(f"⚠️ Empty or invalid title extracted, trying fallback")
+            # Fallback: use the last part of the URL as title
+            try:
+                from urllib.parse import urlparse, unquote
+                parsed = urlparse(url)
+                path_parts = parsed.path.strip('/').split('/')
+                if path_parts and path_parts[-1]:
+                    fallback_title = unquote(path_parts[-1]).replace('_', ' ')
+                    print(f"📝 Using URL-based fallback title: {fallback_title}")
+                    self._emit_wiki_found(url, fallback_title)
+                else:
+                    # Last resort: emit with a generic title
+                    self._emit_wiki_found(url, "Wiki Page")
+            except Exception as e:
+                print(f"❌ Fallback title extraction failed: {e}")
+                # Still emit with a generic title
+                self._emit_wiki_found(url, "Wiki Page")
             
     def _is_real_wiki_page(self, url: str) -> bool:
         """Determine if it is a real wiki page (not a search page)"""
@@ -2925,17 +3017,6 @@ class WikiView(QWidget):
                 
         # If the URL is different from the initial search URL and is not a search engine, it is considered a real page
         return url != self.current_search_url
-        
-    def _on_title_received(self, title):
-        """Callback when page title is received (kept for compatibility)"""
-        if not title or not self.web_view:
-            return
-            
-        try:
-            current_url = self.web_view.url().toString()
-            self._process_page_info(current_url, title)
-        except Exception as e:
-            print(f"Failed to process page title: {e}")
     
     def _start_wiki_monitoring(self, search_url: str):
         """Start monitoring for wiki page navigation"""
@@ -2962,33 +3043,11 @@ class WikiView(QWidget):
                 print(f"🎆 Detected navigation to wiki page: {current_url}")
                 self._stop_wiki_monitoring()
                 
-                # First emit with URL only (use URL as temporary title)
-                self._emit_wiki_found(current_url, current_url)
-                
-                # Then try to extract proper title
-                QTimer.singleShot(500, lambda: self._extract_page_info_for_url(current_url))
+                # Extract title first, don't emit with URL as title
+                # Wait a bit for page to load then extract proper title
+                QTimer.singleShot(1000, lambda: self._extract_page_info_for_url(current_url))
         except Exception as e:
             print(f"Error in wiki navigation monitoring: {e}")
-    
-    def _create_fallback_text_view(self):
-        """Create fallback text view"""
-        text_view = QTextEdit()
-        text_view.setReadOnly(True)
-        text_view.setMinimumSize(100, 100)  # Reduce minimum size to avoid affecting layout
-        text_view.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding
-        )
-        text_view.setStyleSheet("""
-            QTextEdit {
-                background-color: white;
-                border: none;
-                font-family: "Segoe UI", "Microsoft YaHei", Arial;
-                font-size: 14px;
-                line-height: 1.6;
-            }
-        """)
-        return text_view
     
     def _initialize_webview_async(self):
         """Initialize WebView2 asynchronously"""
@@ -3010,10 +3069,8 @@ class WikiView(QWidget):
                     self._apply_webview(web_view)
                 else:
                     print("⚠️ WebView2 not available")
-                    self._apply_fallback_view()
             except Exception as e:
                 print(f"❌ WebView2 creation failed: {e}")
-                self._apply_fallback_view()
         
         # Defer to next event loop iteration to avoid blocking
         QTimer.singleShot(10, create_webview)
@@ -3050,26 +3107,6 @@ class WikiView(QWidget):
                 
         except Exception as e:
             print(f"❌ Failed to apply WebView2: {e}")
-            self._apply_fallback_view()
-            
-    def _apply_fallback_view(self):
-        """Apply fallback text view"""
-        if self._webview_initialized:
-            return
-            
-        # Remove placeholder
-        layout = self.layout()
-        layout.removeWidget(self.placeholder_widget)
-        self.placeholder_widget.deleteLater()
-        
-        # Apply fallback view
-        self.web_view = None
-        self.content_widget = self._create_fallback_text_view()
-        layout.addWidget(self.content_widget)
-        
-        self._webview_initialized = True
-        self._webview_initializing = False
-        print("⚠️ Using fallback text view")
     
     def _delayed_webview_creation(self):
         """Delayed WebView creation, executed after Qt application is fully initialized"""
@@ -3128,7 +3165,6 @@ class WikiView(QWidget):
                 
         except Exception as e:
             print(f"❌ Delayed WebView creation process failed: {e}")
-            print("Continuing to use text view as fallback solution")
     
         
     def load_wiki(self, url: str, title: str):
@@ -3432,6 +3468,7 @@ class UnifiedAssistantWindow(QMainWindow):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)  # Enable tooltips without focus
         
         # Create quick access popup
         self.quick_access_popup = QuickAccessPopup()
@@ -3483,31 +3520,14 @@ class UnifiedAssistantWindow(QMainWindow):
                 # Set window rounded corners
                 self.set_window_rounded_corners()
                 
-                # Apply blur effect based on Windows version
-                if "Windows 11" in windows_version:
-                    GlobalBlur(
-                        int(self.winId()), 
-                        Acrylic=True,    # Win11 Acrylic effect
-                        Dark=False,      # Light theme
-                        QWidget=self
-                    )
-                    print("✅ Win11 Acrylic effect applied")
-                elif "Windows 10" in windows_version:
-                    GlobalBlur(
-                        int(self.winId()), 
-                        Acrylic=False,   # Win10 Aero effect
-                        Dark=False,      # Light theme
-                        QWidget=self
-                    )
-                    print("✅ Win10 Aero effect applied")
-                else:
-                    GlobalBlur(
-                        int(self.winId()), 
-                        Acrylic=False,   # Generic effect
-                        Dark=False,      # Light theme
-                        QWidget=self
-                    )
-                    print(f"✅ Generic transparency effect applied ({windows_version})")
+                # Always use Win10 Aero effect
+                GlobalBlur(
+                    int(self.winId()), 
+                    Acrylic=False,   # Win10 Aero effect
+                    Dark=False,      # Light theme
+                    QWidget=self
+                )
+                print("✅ Win10 Aero effect applied")
                     
             except Exception as e:
                 print(f"❌ BlurWindow application failed: {e}")
@@ -3685,20 +3705,16 @@ class UnifiedAssistantWindow(QMainWindow):
         base_path = pathlib.Path(__file__).parent.parent.parent  # Go up to project root
         history_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "refresh-ccw-clock-svgrepo-com.svg")
         history_icon = load_svg_icon(history_icon_path, color="#111111", size=20)
-        if history_icon.isNull():
-            self.history_button.setText("⏱")
-        else:
-            self.history_button.setIcon(history_icon)
-            self.history_button.setIconSize(QSize(20, 20))
+        self.history_button.setIcon(history_icon)
+        self.history_button.setIconSize(QSize(20, 20))
         
         # Quick Access button (replaces external website button)
         self.quick_access_button = QPushButton()
         self.quick_access_button.setObjectName("externalBtn")
         self.quick_access_button.setFixedSize(32, 32)
         self.quick_access_button.setToolTip("Go to external website")
-        # Enable mouse tracking for hover detection
-        self.quick_access_button.setMouseTracking(True)
-        self.quick_access_button.installEventFilter(self)
+        # Connect click handler
+        self.quick_access_button.clicked.connect(self.on_quick_access_clicked)
         
         # Load quick access icon
         external_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "globe-alt-1-svgrepo-com.svg")
@@ -3950,14 +3966,6 @@ class UnifiedAssistantWindow(QMainWindow):
         
         #sendBtn[stop_mode="true"]:hover {
             background-color: rgba(255, 120, 117, 200);
-        }
-        
-        /* Quick access popup */
-        #quickAccessPopup {
-            background: rgba(255, 255, 255, 0);
-            border: 1px solid rgba(224, 224, 224, 150);
-            border-radius: 10px;
-            padding: 5px;
         }
         
         /* Chat view styles - updated background */
@@ -4414,9 +4422,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         self.current_mode = mode
         if mode == "url":
-            self.mode_button.setText(t("search_mode_url") + " ▼")
             self.input_field.setPlaceholderText("Enter URL...")
-            self.send_button.setText("Open")
             # Disconnect and reconnect send button
             try:
                 self.send_button.clicked.disconnect()
@@ -4424,9 +4430,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 pass
             self.send_button.clicked.connect(self.on_open_url_clicked)
         elif mode == "wiki":
-            self.mode_button.setText(t("search_mode_wiki") + " ▼")
             self.input_field.setPlaceholderText("Enter search query...")
-            self.send_button.setText("Send")
             # Disconnect and reconnect send button
             try:
                 self.send_button.clicked.disconnect()
@@ -4434,9 +4438,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 pass
             self.send_button.clicked.connect(self.on_send_clicked)
         elif mode == "ai":
-            self.mode_button.setText(t("search_mode_ai") + " ▼")
             self.input_field.setPlaceholderText("Enter question...")
-            self.send_button.setText("Send")
             # Disconnect and reconnect send button
             try:
                 self.send_button.clicked.disconnect()
@@ -4444,9 +4446,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 pass
             self.send_button.clicked.connect(self.on_send_clicked)
         else:  # auto mode
-            self.mode_button.setText(t("search_mode_auto") + " ▼")
             self.input_field.setPlaceholderText("Enter message...")
-            self.send_button.setText("Send")
             # Disconnect and reconnect send button
             try:
                 self.send_button.clicked.disconnect()
@@ -4590,166 +4590,7 @@ class UnifiedAssistantWindow(QMainWindow):
             
         except Exception as e:
             print(f"Error in load_shortcuts: {e}")
-    
-    def _create_game_task_buttons_for_popup(self):
-        """Create game task flow buttons for popup"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        # Define games that support task flow
-        game_configs = [
-            {
-                'game_name': 'dst',
-                'display_name': t('dst_task_button'),
-                'window_titles': ["don't starve together", "dst"],
-                'html_files': {'en': 'dst_en.html', 'zh': 'dst_zh.html'},
-                'button_color': '#4CAF50'
-            },
-            {
-                'game_name': 'helldiver2',
-                'display_name': t('helldiver2_task_button'),
-                'window_titles': ["helldivers™ 2", "helldivers 2"],
-                'html_files': {'en': 'helldiver2_en.html', 'zh': 'helldiver2_zh.html'},
-                'button_color': '#111827'
-            },
-            {
-                'game_name': 'civilization6',
-                'display_name': t('civ6_task_button') if hasattr(self, '_t') and callable(getattr(self, '_t', None)) else 'Civilization VI Guide',
-                'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"],
-                'html_files': {'en': 'civilization6_en.html', 'zh': 'civilization6_zh.html'},
-                'button_color': '#FFB300'
-            }
-        ]
-        
-        # Create task buttons and add to popup
-        for config in game_configs:
-            try:
-                # Use ExpandableIconButton style for consistency
-                btn = ExpandableIconButton(
-                    "",  # No icon for game buttons
-                    config['display_name'],
-                    "",  # No URL, handled by click
-                    config['display_name']
-                )
-                
-                # Connect to game task handler
-                game_name = config['game_name']
-                btn.clicked.connect(lambda checked, g=game_name: self._on_game_task_clicked(g))
-                
-                # Add to popup
-                self.quick_access_popup.add_shortcut(btn)
-                
-                # Store reference for visibility updates
-                if not hasattr(self, 'game_task_buttons'):
-                    self.game_task_buttons = {}
-                self.game_task_buttons[game_name] = btn
-                
-            except Exception as e:
-                logger.error(f"Failed to create task button for {config['game_name']}: {e}")
-    
-    def _on_game_task_clicked(self, game_name):
-        """Handle game task button click"""
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Game task button clicked: {game_name}")
-        
-        # Find the appropriate handler based on game_name
-        handlers = {
-            'dst': lambda: self._show_task_flow_html('dst'),
-            'helldiver2': lambda: self._show_task_flow_html('helldiver2'),
-            'civilization6': lambda: self._show_task_flow_html('civilization6')
-        }
-        
-        handler = handlers.get(game_name)
-        if handler:
-            handler()
-        else:
-            logger.warning(f"No handler found for game: {game_name}")
-    
-    def _create_dst_task_button(self):
-        """Create game task flow button (compatible with old code)"""
-        # Task flow button is now a single button in the main button row
-        pass
-    
-    def _create_game_task_buttons(self):
-        """Create task flow buttons for all games"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        # Debug: Log method entry
-        logger.info(f"🏗️ [DEBUG] _create_game_task_buttons called")
-        
-        # Define games that support task flow
-        game_configs = [
-            {
-                'game_name': 'dst',
-                'display_name': t('dst_task_button'),
-                'window_titles': ["don't starve together", "dst"],
-                'html_files': {'en': 'dst_en.html', 'zh': 'dst_zh.html'},
-                'button_color': '#4CAF50'
-            },
-            {
-                'game_name': 'helldiver2',
-                'display_name': t('helldiver2_task_button'),
-                'window_titles': ["helldivers™ 2", "helldivers 2"],
-                'html_files': {'en': 'helldiver2_en.html', 'zh': 'helldiver2_zh.html'},
-                'button_color': '#111827'
-            },
-            {
-                'game_name': 'civilization6',
-                'display_name': t('civ6_task_button') if hasattr(self, '_t') and callable(getattr(self, '_t', None)) else 'Civilization VI Guide',
-                'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"],
-                'html_files': {'en': 'civilization6_en.html', 'zh': 'civilization6_zh.html'},
-                'button_color': '#FFB300'
-            }
-        ]
-        
-        # Debug: Log game configurations
-        logger.info(f"🎮 [DEBUG] Creating task buttons for {len(game_configs)} games:")
-        for config in game_configs:
-            logger.debug(f"    📋 [DEBUG] {config['game_name']}: '{config['display_name']}' (matches: {config['window_titles']})")
-        
-        # Clear existing buttons
-        existing_button_count = len(self.game_task_buttons)
-        logger.info(f"🧹 [DEBUG] Clearing {existing_button_count} existing task buttons")
-        for game_name, btn in self.game_task_buttons.items():
-            if btn:
-                logger.debug(f"    🗑️ [DEBUG] Removing {game_name} button from layout")
-                self.shortcut_layout.removeWidget(btn)
-                btn.deleteLater()
-        self.game_task_buttons.clear()
-        logger.info(f"✅ [DEBUG] Existing task buttons cleared")
-        
-        # Create new buttons
-        created_count = 0
-        failed_count = 0
-        for config in game_configs:
-            game_name = config['game_name']
-            try:
-                logger.debug(f"🔨 [DEBUG] Creating task button for {game_name}...")
-                button = self._create_single_game_button(config)
-                if button:
-                    self.game_task_buttons[game_name] = button
-                    self.shortcut_layout.addWidget(button)
-                    button.hide()  # Initially hidden
-                    created_count += 1
-                    logger.debug(f"    ✅ [DEBUG] {game_name} task button created and added to layout (initially hidden)")
-                else:
-                    failed_count += 1
-                    logger.warning(f"    ❌ [DEBUG] Failed to create {game_name} task button (returned None)")
-            except Exception as e:
-                failed_count += 1
-                logger.error(f"    ❌ [DEBUG] Failed to create task button for {game_name}: {e}")
-                import traceback
-                logger.debug(f"    📋 [DEBUG] Exception details:\n{traceback.format_exc()}")
-        
-        # Debug: Summary
-        logger.info(f"📊 [DEBUG] Task button creation completed:")
-        logger.info(f"    ✅ Created: {created_count}")
-        logger.info(f"    ❌ Failed: {failed_count}")
-        logger.info(f"    📋 Total buttons in dict: {len(self.game_task_buttons)}")
-        logger.info(f"    🔍 Button names: {list(self.game_task_buttons.keys())}")
-    
+
     def _create_single_game_button(self, config):
         """Create single game task flow button"""
         button = QPushButton(config['display_name'])
@@ -4818,21 +4659,14 @@ class UnifiedAssistantWindow(QMainWindow):
                 # Display directly in the application, same as wiki link logic
                 try:
                     title = t("dst_task_flow_title")
-                    
-                    # Check if wiki view exists
-                    if not hasattr(self, 'wiki_view') or self.wiki_view is None:
-                        print("Wiki view not initialized, creating fallback display")
-                        self._show_simple_dst_info(current_language)
-                    else:
-                        # Use the same display logic as wiki link
-                        self._load_local_html_in_wiki_view(html_path, title)
+
+                    # Use the same display logic as wiki link
+                    self._load_local_html_in_wiki_view(html_path, title)
                     
                 except Exception as html_error:
                     print(f"Failed to load HTML content: {html_error}")
-                    self._show_simple_dst_info(current_language)
             else:
                 print(f"DST task flow file not found: {html_path}")
-                self._show_simple_dst_info(current_language)
                 
         except Exception as e:
             print(f"Failed to open DST task flow: {e}")
@@ -4854,231 +4688,37 @@ class UnifiedAssistantWindow(QMainWindow):
             
         except Exception as e:
             print(f"Failed to load local HTML in wiki view: {e}")
-            # Fallback to simplified display
-            self._show_simple_dst_info('zh' if '任务流程' in title else 'en')
-    
-    def _show_simple_dst_info(self, language: str):
-        """Show simplified DST information as fallback"""
-        try:
-            title = t("dst_task_flow_title")
-            # Determine Wiki link based on current language
-            wiki_url = "https://dontstarve.fandom.com/zh/wiki/" if language == 'zh' else "https://dontstarve.fandom.com/wiki/"
-            
-            content = f"""
-            <h1>{t("dst_survival_guide_title")}</h1>
-            <p>{t("dst_technical_error")}</p>
-            <p>{t("dst_recommended_resources")}</p>
-            <ul>
-                <li><a href="{wiki_url}">{t("dst_official_wiki")}</a></li>
-                <li>{t("dst_basic_survival")}</li>
-                <li>{t("dst_food_gathering")}</li>
-                <li>{t("dst_base_building")}</li>
-                <li>{t("dst_winter_preparation")}</li>
-            </ul>
-            """
-            
-            # Directly use simple HTML display
-            self._show_simple_content(content, title)
-            
-        except Exception as e:
-            print(f"Failed to show simple DST info: {e}")
-    
-    def _show_simple_content(self, content: str, title: str):
-        """Safe method to display simple content"""
-        try:
-            # Switch to Wiki view
-            self.content_stack.setCurrentWidget(self.wiki_view)
-            if hasattr(self, 'shortcut_container'):
-                self.shortcut_container.hide()
-            self.input_container.hide()
-            
-            # Set title
-            self.wiki_view.title_label.setText(title)
-            self.wiki_view.current_title = title
-            self.wiki_view.current_url = "local://simple_content.html"
-            
-            # Create complete HTML
-            full_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>{title}</title>
-                <style>
-                    body {{
-                        font-family: "Segoe UI", "Microsoft YaHei", Arial;
-                        margin: 20px;
-                        line-height: 1.6;
-                        background-color: #f5f5f5;
-                    }}
-                    .container {{
-                        background-color: white;
-                        padding: 30px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }}
-                    h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-                    a {{ color: #3498db; text-decoration: none; }}
-                    a:hover {{ text-decoration: underline; }}
-                    ul {{ padding-left: 20px; }}
-                    li {{ margin: 8px 0; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    {content}
-                </div>
-            </body>
-            </html>
-            """
-            
-            # Use text view display only
-            if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
-                self.wiki_view.content_widget.setHtml(full_html)
-                print("✅ Simple content loaded in text view")
-            else:
-                print("❌ No content widget available for simple content")
-                
-        except Exception as e:
-            print(f"Failed to show simple content: {e}")
-            # Final fallback: only update title
-            try:
-                self.wiki_view.title_label.setText(f"Error: Unable to display content")
-            except:
-                pass
-    
-    def _show_html_content(self, html_content: str, title: str):
-        """Display HTML content directly in WikiView"""
-        try:
-            # Switch to Wiki view
-            self.content_stack.setCurrentWidget(self.wiki_view)
-            if hasattr(self, 'shortcut_container'):
-                self.shortcut_container.hide()
-            self.input_container.hide()
-            
-            # Set title
-            self.wiki_view.title_label.setText(title)
-            self.wiki_view.current_title = title
-            self.wiki_view.current_url = "local://dst_task_flow.html"
-            
-            # Check if WebView2 is available and created
-            if hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view is not None:
-                try:
-                    self.wiki_view._display_with_webview2(html_content)
-                    print("✅ HTML content loaded in WebView2")
-                    return
-                except Exception as web_error:
-                    print(f"⚠️ WebView2 loading failed: {web_error}")
-                    # Continue to fallback solution
-            
-            # Fallback to text view - this should always be available
-            if hasattr(self.wiki_view, 'content_widget') and self.wiki_view.content_widget:
-                try:
-                    self.wiki_view.content_widget.setHtml(html_content)
-                    print("✅ HTML content loaded in text view")
-                    return
-                except Exception as text_error:
-                    print(f"⚠️ Text view loading failed: {text_error}")
-            
-            # If all fail, display error information
-            print("❌ No content widget available")
-            self._show_error_message(title, "Unable to find available display component")
-                    
-        except Exception as e:
-            print(f"Failed to show HTML content: {e}")
-            import traceback
-            traceback.print_exc()
-            self._show_error_message(title, str(e))
-    
-    def _show_error_message(self, title: str, error_msg: str):
-        """Safe method to display error information"""
-        try:
-            error_html = f"""
-            <html>
-            <head>
-                <title>Error</title>
-                <style>
-                    body {{ 
-                        font-family: "Segoe UI", "Microsoft YaHei", Arial; 
-                        margin: 20px; 
-                        background-color: #f5f5f5;
-                    }}
-                    .error-container {{ 
-                        background-color: white; 
-                        padding: 20px; 
-                        border-radius: 8px; 
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }}
-                    h2 {{ color: #d32f2f; }}
-                    .error-msg {{ 
-                        background-color: #ffebee; 
-                        padding: 10px; 
-                        border-left: 4px solid #d32f2f; 
-                        margin: 10px 0;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="error-container">
-                    <h2>Unable to display {title}</h2>
-                    <div class="error-msg">
-                        <strong>Error information:</strong> {error_msg}
-                    </div>
-                    <p>Suggested solutions:</p>
-                    <ul>
-                        <li>Ensure HTML file exists and is correctly formatted</li>
-                        <li>Restart the application</li>
-                        <li>Check if WebView2 component is properly installed</li>
-                    </ul>
-                </div>
-            </body>
-            </html>
-            """
-            
-            # Try to display error information in any available component
-            if (hasattr(self.wiki_view, 'web_view') and 
-                self.wiki_view.web_view is not None):
-                self.wiki_view.web_view.setHtml(error_html)
-            elif (hasattr(self.wiki_view, 'content_widget') and 
-                  self.wiki_view.content_widget):
-                self.wiki_view.content_widget.setHtml(error_html)
-            else:
-                # Final fallback: display error in title
-                self.wiki_view.title_label.setText(f"Error: {error_msg}")
-                
-        except Exception as final_error:
-            print(f"Even error information cannot be displayed: {final_error}")
-            # Final fallback: only update title
-            try:
-                self.wiki_view.title_label.setText("Loading failed")
-            except:
-                pass
     
     def show_history_menu(self):
         """Show history menu"""
         self._ensure_history_manager()
             
-        history_menu = QMenu(self)
+        history_menu = QMenu(None)  # No parent to avoid blur inheritance
+        # Ensure menu has its own rendering context without shadow
+        history_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        history_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        history_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        history_menu.setAutoFillBackground(True)
         history_menu.setStyleSheet("""
             QMenu {
-                background-color: rgba(255, 255, 255, 255);
-                border: 1px solid rgba(224, 224, 224, 150);
+                background-color: rgb(255, 255, 255);
+                border: 1px solid rgb(224, 224, 224);
                 border-radius: 10px;
                 padding: 5px;
                 min-width: 350px;
+                box-shadow: none;   
             }
             QMenu::item {
                 padding: 8px 12px;
                 border-radius: 4px;
+                background-color: transparent;
             }
             QMenu::item:hover {
-                background-color: rgba(240, 240, 240, 180);
+                background-color: rgb(240, 240, 240);
             }
             QMenu::separator {
                 height: 1px;
-                background-color: rgba(224, 224, 224, 150);
+                background-color: rgb(224, 224, 224);
                 margin: 4px 0;
             }
         """)
@@ -5143,96 +4783,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Show notification
         QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
         QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
-    
-    def _create_game_task_buttons(self):
-        """Create task flow buttons for all games"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        # Debug: Log method entry
-        logger.info(f"🏗️ [DEBUG] _create_game_task_buttons called")
-        
-        # Define games that support task flow
-        game_configs = [
-            {
-                'game_name': 'dst',
-                'display_name': 'DST',
-                'window_titles': ['don\'t starve together', 'dst'],
-                'background_color': '#4A4A4A',
-                'icon': '🎮'
-            },
-            # Add more games here in the future
-        ]
-        
-        # Clear existing buttons
-        existing_button_count = len(self.game_task_buttons)
-        logger.info(f"🧹 [DEBUG] Clearing {existing_button_count} existing task buttons")
-        for game_name, btn in self.game_task_buttons.items():
-            if btn:
-                logger.debug(f"    🗑️ [DEBUG] Removing {game_name} button from layout")
-                self.game_task_layout.removeWidget(btn)
-                btn.deleteLater()
-        self.game_task_buttons.clear()
-        logger.info(f"✅ [DEBUG] Existing task buttons cleared")
-        
-        # Create new buttons
-        created_count = 0
-        failed_count = 0
-        
-        for config in game_configs:
-            game_name = config['game_name']
-            try:
-                button = self._create_single_game_button(config)
-                if button:
-                    self.game_task_buttons[game_name] = button
-                    self.game_task_layout.addWidget(button)
-                    button.hide()  # Initially hidden
-                    created_count += 1
-                    logger.debug(f"    ✅ [DEBUG] {game_name} task button created and added to layout (initially hidden)")
-                else:
-                    failed_count += 1
-                    logger.warning(f"    ❌ [DEBUG] Failed to create {game_name} task button")
-            except Exception as e:
-                failed_count += 1
-                logger.error(f"    ❌ [DEBUG] Exception creating {game_name} task button: {e}")
-        
-        # Log summary
-        logger.info(f"📊 [DEBUG] Task button creation summary:")
-        logger.info(f"    ✅ Created: {created_count}")
-        logger.info(f"    ❌ Failed: {failed_count}")
-        logger.info(f"    📋 Total buttons in dict: {len(self.game_task_buttons)}")
-        logger.info(f"    🔍 Button names: {list(self.game_task_buttons.keys())}")
-    
-    def _create_single_game_button(self, config):
-        """Create single game task flow button"""
-        button = QPushButton(config['display_name'])
-        button.setFixedHeight(32)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {config['background_color']};
-                color: white;
-                border: none;
-                border-radius: 16px;
-                padding: 4px 12px;
-                font-weight: bold;
-                font-size: 12px;
-                font-family: "Segoe UI", "Microsoft YaHei", Arial;
-            }}
-            QPushButton:hover {{
-                background-color: {self._darken_color(config['background_color'], 0.8)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self._darken_color(config['background_color'], 0.6)};
-            }}
-        """)
-        
-        # Add tooltip
-        button.setToolTip(f"Open {config['display_name']} Task Flow")
-        
-        # Connect click event
-        button.clicked.connect(lambda: self._open_game_task_flow(config))
-        return button
-    
+
     def _darken_color(self, hex_color, factor):
         """Darken color helper function"""
         # Remove #
@@ -5249,140 +4800,38 @@ class UnifiedAssistantWindow(QMainWindow):
         return f'#{r:02x}{g:02x}{b:02x}'
     
     
-    def _show_task_flow_fallback(self, config, language):
-        """Show task flow fallback content"""
-        from src.game_wiki_tooltip.i18n import t
-        title = t(f"{config['game_name']}_task_flow_title")
-        
-        # For now, just show a message
-        self.chat_view.add_message(
-            MessageType.STATUS,
-            f"{title} - Coming Soon"
-        )
-    
-    def _load_local_html_in_wiki_view(self, html_path, title):
-        """Load local HTML file in wiki view"""
+    def _show_task_flow_html(self, game_name):
+        """Show task flow HTML for a specific game"""
         try:
-            # Read HTML content
-            with open(html_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
+            # Get current language setting
+            current_language = 'en'
+            if self.settings_manager:
+                settings = self.settings_manager.get()
+                current_language = settings.get('language', 'en')
             
-            # Switch to wiki view
-            self.content_stack.setCurrentWidget(self.wiki_view)
+            # Build config for the game
+            config = {
+                'game_name': game_name,
+                'display_name': t(f'{game_name}_task_button'),
+                'html_files': {
+                    'en': f'{game_name}_en.html',
+                    'zh': f'{game_name}_zh.html'
+                }
+            }
             
-            # Update wiki view title
-            self.wiki_view.title_label.setText(title)
-            self.wiki_view.current_title = title
-            self.wiki_view.current_url = f"local://{html_path.name}"
+            # Call existing method
+            self._open_game_task_flow(config)
             
-            # Display HTML content
-            if hasattr(self.wiki_view, 'web_view') and self.wiki_view.web_view is not None:
-                self.wiki_view._display_with_webview2(html_content)
-            else:
-                # Fallback for non-WebView2
-                self.wiki_view._display_local_html(html_content)
-                
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"Failed to load local HTML: {e}")
-            raise
-    
-    def _update_game_task_buttons_visibility(self):
-        """Update visibility of all game task buttons based on current game window"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        try:
-            # Debug: Log method entry with current state
-            logger.info(f"🔍 [DEBUG] _update_game_task_buttons_visibility called")
-            logger.info(f"📋 [DEBUG] Current game window: '{self.current_game_window}'")
-            logger.info(f"📋 [DEBUG] Available task buttons: {list(self.game_task_buttons.keys())}")
-            
-            # Debug: Log each button's current state
-            for game_name, button in self.game_task_buttons.items():
-                if button:
-                    is_visible = button.isVisible()
-                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=True, visible={is_visible}")
-                else:
-                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=False")
-            
-            # If no game window is set, hide all buttons
-            if not self.current_game_window:
-                logger.info(f"⚠️ [DEBUG] No current game window, hiding all task buttons")
-                hidden_count = 0
-                for game_name, button in self.game_task_buttons.items():
-                    if button:
-                        was_visible = button.isVisible()
-                        button.hide()
-                        if was_visible:
-                            hidden_count += 1
-                            logger.debug(f"    🙈 [DEBUG] {game_name} task button hidden")
-                logger.info(f"📊 [DEBUG] Hidden {hidden_count} task buttons")
-                return
-            
-            # Get normalized window title for comparison
-            current_window_lower = self.current_game_window.lower()
-            logger.debug(f"🔍 [DEBUG] Normalized current window: '{current_window_lower}'")
-            
-            # Define games that support task flow (same as in _create_game_task_buttons)
-            game_configs = [
-                {
-                    'game_name': 'dst',
-                    'display_name': 'DST',
-                    'window_titles': ['don\'t starve together', 'dst'],
-                    'background_color': '#4A4A4A',
-                    'icon': '🎮'
-                },
-                # Add more games here in the future
-            ]
-            
-            # Update button visibility based on current game
-            buttons_shown = 0
-            buttons_hidden = 0
-            
-            for config in game_configs:
-                game_name = config['game_name']
-                window_titles = config['window_titles']
-                button = self.game_task_buttons.get(game_name)
-                
-                logger.debug(f"🔍 [DEBUG] Processing {game_name} task button...")
-                
-                if button:
-                    was_visible = button.isVisible()
-                    
-                    # Check if current window matches any of the game's window titles
-                    matches = any(title in current_window_lower for title in window_titles)
-                    logger.debug(f"    🎯 [DEBUG] Window title match: {matches}")
-                    logger.debug(f"    📋 [DEBUG] Checking against titles: {window_titles}")
-                    
-                    if matches:
-                        button.show()
-                        if not was_visible:
-                            buttons_shown += 1
-                            logger.info(f"✅ [DEBUG] {game_name} task button shown")
-                        else:
-                            logger.debug(f"👀 [DEBUG] {game_name} task button already visible")
-                    else:
-                        button.hide()
-                        if was_visible:
-                            buttons_hidden += 1
-                            logger.info(f"🙈 [DEBUG] {game_name} task button hidden")
-                        else:
-                            logger.debug(f"🙈 [DEBUG] {game_name} task button hidden (no match)")
-                else:
-                    logger.warning(f"⚠️ [DEBUG] {game_name} task button not found in game_task_buttons dict")
-            
-            # Debug: Summary of changes
-            logger.info(f"📊 [DEBUG] Task button visibility update completed:")
-            logger.info(f"    ✅ Buttons shown: {buttons_shown}")
-            logger.info(f"    🙈 Buttons hidden: {buttons_hidden}")
-            
-        except Exception as e:
-            logger.error(f"❌ [DEBUG] Error updating task button visibility: {e}")
-            import traceback
-            logger.error(f"❌ [DEBUG] Traceback: {traceback.format_exc()}")
-    
+            logger.error(f"Failed to show task flow HTML for {game_name}: {e}")
+            # Show error message
+            self.chat_view.add_message(
+                MessageType.STATUS,
+                f"Unable to open {game_name} task flow"
+            )
+
     def set_current_game_window(self, game_window_title: str):
         """Set current game window title and update task flow button visibility"""
         import logging
@@ -5407,13 +4856,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Critical fix: Ensure task buttons are created before trying to update visibility
         if button_count == 0:
             logger.warning(f"⚠️ [DEBUG] Task buttons not created yet, creating them first")
-            if hasattr(self, 'game_task_layout'):
-                logger.info(f"🔧 [DEBUG] Game task layout exists, creating task buttons")
-                self._create_game_task_buttons()
-                new_button_count = len(getattr(self, 'game_task_buttons', {}))
-                logger.info(f"✅ [DEBUG] Task buttons created: {new_button_count}")
-            else:
-                logger.warning(f"⚠️ [DEBUG] Game task layout not available, buttons will be created later")
+            logger.warning(f"⚠️ [DEBUG] Game task layout not available, buttons will be created later")
         
         # Set the new game window
         self.current_game_window = game_window_title
@@ -5490,109 +4933,6 @@ class UnifiedAssistantWindow(QMainWindow):
             self.current_task_flow_game = None
             logger.info(f"⚠️ No task flow available for current window: {self.current_game_window}")
     
-    def _update_game_task_buttons_visibility(self):
-        """Update visibility of all game task buttons based on current game window"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        try:
-            # Debug: Log method entry with current state
-            logger.info(f"🔍 [DEBUG] _update_game_task_buttons_visibility called")
-            logger.info(f"📋 [DEBUG] Current game window: '{self.current_game_window}'")
-            logger.info(f"📋 [DEBUG] Available task buttons: {list(self.game_task_buttons.keys())}")
-            
-            # Debug: Log each button's current state
-            for game_name, button in self.game_task_buttons.items():
-                if button:
-                    is_visible = button.isVisible()
-                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=True, visible={is_visible}")
-                else:
-                    logger.debug(f"    🎯 [DEBUG] {game_name} button: exists=False")
-            
-            if not self.current_game_window:
-                # Hide all buttons if no game window
-                logger.info(f"⚠️ [DEBUG] No current game window, hiding all task buttons")
-                hidden_count = 0
-                for game_name, button in self.game_task_buttons.items():
-                    if button:
-                        was_visible = button.isVisible()
-                        button.hide()
-                        if was_visible:
-                            hidden_count += 1
-                            logger.debug(f"    🙈 [DEBUG] Hidden {game_name} task button")
-                logger.info(f"🙈 [DEBUG] Hidden {hidden_count} task buttons due to no game window")
-                return
-            
-            game_title_lower = self.current_game_window.lower()
-            logger.info(f"🔤 [DEBUG] Game title for matching (lowercase): '{game_title_lower}'")
-            
-            # Define game configurations (same as when creating buttons)
-            game_configs = [
-                {
-                    'game_name': 'dst',
-                    'window_titles': ["don't starve together", "dst"]
-                },
-                {
-                    'game_name': 'helldiver2',
-                    'window_titles': ["helldivers™ 2", "helldivers 2"]
-                },
-                {
-                    'game_name': 'civilization6',
-                    'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6", "civ 6"]
-                }
-            ]
-            
-            # Debug: Log game configurations
-            logger.debug(f"🎮 [DEBUG] Checking against {len(game_configs)} game configurations:")
-            for config in game_configs:
-                logger.debug(f"    🎯 [DEBUG] {config['game_name']}: {config['window_titles']}")
-            
-            # Check each game and update button visibility
-            buttons_shown = 0
-            buttons_hidden = 0
-            for config in game_configs:
-                game_name = config['game_name']
-                window_titles = config['window_titles']
-                button = self.game_task_buttons.get(game_name)
-                
-                logger.debug(f"🔍 [DEBUG] Processing {game_name} task button...")
-                
-                if button:
-                    was_visible = button.isVisible()
-                    
-                    # Check if current window matches this game
-                    matched_titles = [title for title in window_titles if title in game_title_lower]
-                    is_matched = len(matched_titles) > 0
-                    
-                    logger.debug(f"    🎯 [DEBUG] Matching check for {game_name}:")
-                    logger.debug(f"        Window titles to check: {window_titles}")
-                    logger.debug(f"        Matched titles: {matched_titles}")
-                    logger.debug(f"        Is matched: {is_matched}")
-                    logger.debug(f"        Button was visible: {was_visible}")
-                    
-                    if is_matched:
-                        button.show()
-                        if not was_visible:
-                            buttons_shown += 1
-                        logger.info(f"✅ [DEBUG] {game_name} task button SHOWN for game: '{self.current_game_window}' (matched: {matched_titles})")
-                    else:
-                        button.hide()
-                        if was_visible:
-                            buttons_hidden += 1
-                        logger.debug(f"🙈 [DEBUG] {game_name} task button hidden (no match)")
-                else:
-                    logger.warning(f"⚠️ [DEBUG] {game_name} task button not found in game_task_buttons dict")
-            
-            # Debug: Summary of changes
-            logger.info(f"📊 [DEBUG] Task button visibility update completed:")
-            logger.info(f"    ✅ Buttons shown: {buttons_shown}")
-            logger.info(f"    🙈 Buttons hidden: {buttons_hidden}")
-                    
-        except Exception as e:
-            logger.error(f"❌ [DEBUG] Failed to update game task buttons visibility: {e}")
-            import traceback
-            logger.error(f"❌ [DEBUG] Exception traceback:\n{traceback.format_exc()}")
-    
     def on_quick_access_clicked(self):
         """Show quick access popup"""
         # Load shortcuts if not loaded
@@ -5603,38 +4943,32 @@ class UnifiedAssistantWindow(QMainWindow):
         self.quick_access_popup.show_at(self.quick_access_button)
         
     def eventFilter(self, obj, event):
-        """Event filter to handle hover events"""
-        from PyQt6.QtCore import QEvent
-        
-        if obj == self.quick_access_button:
-            if event.type() == QEvent.Type.Enter:
-                # Mouse entered the button
-                if not self.shortcuts_loaded:
-                    self.load_shortcuts()
-                self.quick_access_popup.show_at(self.quick_access_button)
-            elif event.type() == QEvent.Type.Leave:
-                # Mouse left the button, start hide timer
-                if not self.quick_access_popup.mouse_over:
-                    self.quick_access_popup.hide_timer.start(300)  # Hide after 300ms
-                    
+        """Event filter to handle events"""
+        # Remove hover behavior for quick access button
         return super().eventFilter(obj, event)
         
     def show_mode_menu(self):
         """Show search mode menu"""
-        mode_menu = QMenu(self)
+        mode_menu = QMenu(None)  # No parent to avoid blur inheritance
+        # Ensure menu has its own rendering context without shadow
+        mode_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        mode_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        mode_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        mode_menu.setAutoFillBackground(True)
         mode_menu.setStyleSheet("""
             QMenu {
-                background-color: rgba(255, 255, 255, 255);
-                border: 1px solid rgba(224, 224, 224, 150);
+                background-color: rgb(255, 255, 255);
+                border: 1px solid rgb(224, 224, 224);
                 border-radius: 10px;
                 padding: 5px;
             }
             QMenu::item {
                 padding: 8px 20px;
                 border-radius: 4px;
+                background-color: transparent;
             }
             QMenu::item:hover {
-                background-color: rgba(240, 240, 240, 180);
+                background-color: rgb(240, 240, 240);
             }
         """)
         
@@ -5681,18 +5015,27 @@ class UnifiedAssistantWindow(QMainWindow):
         self.is_generating = is_generating
         self.streaming_widget = streaming_msg
         
+        # Get icon paths
+        import pathlib
+        base_path = pathlib.Path(__file__).parent.parent.parent
+        pause_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "pause-circle-svgrepo-com.svg")
+        send_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "arrow-circle-up-svgrepo-com.svg")
+        
         if is_generating:
-            # Switch to stop mode
-            self.send_button.setText("Stop")
+            # Switch to stop mode with pause icon
+            pause_icon = load_svg_icon(pause_icon_path, color="#ffffff", size=20)
+            self.send_button.setIcon(pause_icon)
             self.send_button.setProperty("stop_mode", "true")
             self.input_field.setPlaceholderText("Click Stop to cancel generation...")
             self.input_field.setEnabled(False)  # Disable input field
         else:
-            # Switch back to send mode
+            # Switch back to send mode with arrow icon
+            send_icon = load_svg_icon(send_icon_path, color="#111111", size=20)
+            self.send_button.setIcon(send_icon)
             if self.current_mode == "url":
                 self.send_button.setText("Open")
             else:
-                self.send_button.setText("Send")
+                self.send_button.setText("")  # No text, icon only
             self.send_button.setProperty("stop_mode", "false")
             self.input_field.setPlaceholderText("Enter message..." if self.current_mode != "url" else "Enter URL...")
             self.input_field.setEnabled(True)  # Enable input field
@@ -6096,20 +5439,20 @@ class AssistantController:
             logger.error(f"Failed to pre-create chat window: {e}")
             self.main_window = None
             self._precreated = False
-        
+
     def expand_to_chat(self):
         """Expand from mini to chat window with animation"""
         import logging
         logger = logging.getLogger(__name__)
         logger.info("expand_to_chat() called")
-        
+
         # Record hidden state before hotkey
         self._was_hidden_before_hotkey = self._is_manually_hidden
         logger.info(f"Recording hidden state before hotkey: {self._was_hidden_before_hotkey}")
-        
+
         # User manually expanded window, clear manually hidden flag
         self._is_manually_hidden = False
-        
+
         # Check if window is created but hidden
         if not self.main_window:
             logger.info("Creating new UnifiedAssistantWindow")
@@ -6119,7 +5462,7 @@ class AssistantController:
             self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             self.main_window.visibility_changed.connect(self._on_main_window_visibility_changed)
-            
+
             # CRITICAL FIX: Always set current game window for new window (ignore the flag)
             if self.current_game_window:
                 logger.info(f"🎮 [DEBUG] Setting game window on NEW main window: '{self.current_game_window}'")
@@ -6127,7 +5470,7 @@ class AssistantController:
                 logger.info(f"✅ [DEBUG] Game window set and task buttons should be visible now")
             else:
                 logger.info(f"⚠️ [DEBUG] No current game window to set on new window")
-            
+
             logger.info("UnifiedAssistantWindow created and signals connected")
         else:
             logger.info("Reusing existing UnifiedAssistantWindow")
@@ -6138,79 +5481,64 @@ class AssistantController:
                 logger.info(f"✅ [DEBUG] Game window updated and task buttons should be visible now")
             else:
                 logger.info(f"⚠️ [DEBUG] No current game window to set on existing window")
-        
+
         # Set window initial opacity to 0 (prepare fade-in animation)
         self.main_window.setWindowOpacity(0.0)
-        
+
         # Ensure window is visible and focused
         logger.info("Showing main window with fade-in animation")
         self.main_window.show()
         self.main_window.raise_()
         self.main_window.activateWindow()
-        
+
         # Debug: Check if input field exists
         if hasattr(self.main_window, 'input_field'):
             logger.info(f"Input field found: {self.main_window.input_field}")
         else:
             logger.warning("Input field not found in main window!")
-        
+
         # Create fade-in animation
         self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
         self._fade_in_animation.setDuration(100)  # 100ms fade-in animation (faster)
         self._fade_in_animation.setStartValue(0.0)
         self._fade_in_animation.setEndValue(1.0)
         self._fade_in_animation.setEasingCurve(QEasingCurve.Type.OutQuad)  # Faster curve
-        
-        # After animation, focus on input field and update message width
-        def on_fade_in_finished():
-            logger.info("Fade-in animation completed")
-            # Update all message width
-            if hasattr(self.main_window, 'chat_view'):
-                self.main_window.chat_view.update_all_message_widths()
-            # Use unified focus setting method
-            if hasattr(self.main_window, '_set_chat_input_focus'):
-                logger.info("Using unified focus setting method after animation")
-                self.main_window._set_chat_input_focus()
-            else:
-                logger.warning("Unified focus method not found")
-                
-        self._fade_in_animation.finished.connect(on_fade_in_finished)
         self._fade_in_animation.start()
-        
+
         if self.mini_window:
             logger.info("Mini window exists, hiding it")
             # Hide mini window
             self.mini_window.hide()
-            
+
             # Restore main window to previous saved position and size
             self.main_window.restore_geometry()
-            
+
             # Ensure window is within screen range
             screen = QApplication.primaryScreen().geometry()
             window_rect = self.main_window.geometry()
-            
+
             # Adjust position to ensure window is visible
             x = max(10, min(window_rect.x(), screen.width() - window_rect.width() - 10))
             y = max(30, min(window_rect.y(), screen.height() - window_rect.height() - 40))
-            
+
             if x != window_rect.x() or y != window_rect.y():
                 self.main_window.move(x, y)
                 logger.info(f"Adjusted window position to ensure visibility: ({x}, {y})")
-            
+
             # Message width update and input field focus setting will be done after animation
-            
+
             logger.info("Window position adjusted, fade-in animation in progress")
         else:
             logger.info("No mini window, showing main window with fade-in animation")
             # Use restore_geometry to restore previous window position and size
             self.main_window.restore_geometry()
-            
+
             # During window animation, message width does not need to be updated (will be updated after animation)
-            
+
         self.current_mode = WindowMode.CHAT
-        
+
         # After animation, input field will be automatically focused, no additional processing needed
-        
+
         logger.info("expand_to_chat() completed")
         
     def handle_wiki_page_found(self, url: str, title: str):
@@ -6238,25 +5566,6 @@ class AssistantController:
         
         # Show initial processing status
         self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)
-
-    def show_processing_status(self, status_message: str, delay_ms: int = 0):
-        """
-        Show processing status information
-        
-        Args:
-            status_message: Status information
-            delay_ms: Delay in milliseconds
-        """
-        if self.main_window and self.main_window.chat_view:
-            if delay_ms > 0:
-                QTimer.singleShot(delay_ms, lambda: self.main_window.chat_view.update_status(status_message))
-            else:
-                self.main_window.chat_view.update_status(status_message)
-                
-    def hide_processing_status(self):
-        """Hide processing status information"""
-        if self.main_window and self.main_window.chat_view:
-            self.main_window.chat_view.hide_status()
             
     def hide_all(self):
         """Hide all windows"""
@@ -6320,7 +5629,6 @@ class AssistantController:
             self._is_manually_hidden = True
         if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
             self.visibility_changed(is_visible)
-
 
 # Demo/Testing
 if __name__ == "__main__":

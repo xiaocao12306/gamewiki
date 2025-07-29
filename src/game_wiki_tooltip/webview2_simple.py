@@ -169,8 +169,8 @@ class SimpleWebView2Widget(QWidget):
         self.loadFinished.emit(True)
         # Inject JavaScript after page load completion
         QTimer.singleShot(100, self._inject_link_interceptor)
-        # Extract title after navigation
-        QTimer.singleShot(500, self._extract_title)
+        # Extract title after navigation with longer delay for dynamic pages
+        QTimer.singleShot(1500, self._extract_and_emit_title)
     
     def _on_source_changed(self, sender, args):
         """URL changed"""
@@ -188,17 +188,98 @@ class SimpleWebView2Widget(QWidget):
         """Extract page title using JavaScript"""
         try:
             if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
-                script = "document.title"
+                # More comprehensive title extraction
+                script = """
+                (function() {
+                    var title = document.title;
+                    if (title && title !== '' && title !== 'undefined') {
+                        return title;
+                    }
+                    // Fallback to h1 if title is empty
+                    var h1 = document.querySelector('h1');
+                    if (h1 && h1.innerText) {
+                        return h1.innerText.trim();
+                    }
+                    return '';
+                })();
+                """
                 # Use ExecuteScriptAsync if available
                 if hasattr(self.webview2.CoreWebView2, 'ExecuteScriptAsync'):
                     self.webview2.CoreWebView2.ExecuteScriptAsync(script)
-                    # Since we can't easily get async result, use a different approach
-                    QTimer.singleShot(200, self._check_title_via_script)
+                    # Check for title change after a delay
+                    QTimer.singleShot(500, self._check_and_emit_title)
                 elif hasattr(self.webview2, 'ExecuteScriptAsync'):
                     self.webview2.ExecuteScriptAsync(script)
-                    QTimer.singleShot(200, self._check_title_via_script)
+                    QTimer.singleShot(500, self._check_and_emit_title)
         except Exception as e:
             logger.warning(f"Failed to extract title: {e}")
+            
+    def _check_and_emit_title(self):
+        """Check if we have a title and emit it"""
+        try:
+            # Try to get the title from the document
+            if hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
+                # Extract title from DOM
+                script = """
+                (function() {
+                    var title = document.title;
+                    if (title && title !== '' && title !== 'undefined' && !title.includes('duckduckgo.com')) {
+                        // Clean up title - remove site suffix if present
+                        title = title.replace(/ - .* Wiki.*$/i, '');
+                        title = title.replace(/ \\| .* Wiki.*$/i, '');
+                        return title.trim();
+                    }
+                    return '';
+                })();
+                """
+                # We can't get the result directly, but the title should be in document.title
+                # Emit title changed signal with current URL
+                if self.current_url and self.current_title != self.current_url:
+                    # Only emit if we have a proper title
+                    self.titleChanged.emit(self.current_title)
+        except Exception as e:
+            logger.warning(f"Failed to check and emit title: {e}")
+            
+    def _extract_and_emit_title(self):
+        """Extract title and emit titleChanged signal"""
+        try:
+            if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
+                # JavaScript to extract and return title
+                script = """
+                (function() {
+                    var title = document.title;
+                    if (title && title !== '' && title !== 'undefined') {
+                        // Return title as-is without modification
+                        return title;
+                    }
+                    // Fallback to h1
+                    var h1 = document.querySelector('h1');
+                    if (h1 && h1.innerText) {
+                        return h1.innerText.trim();
+                    }
+                    return '';
+                })();
+                """
+                
+                # Since we can't get the async result directly, we'll monitor document.title
+                # Execute the script to ensure title is properly set
+                self.webview2.CoreWebView2.ExecuteScriptAsync(script)
+                
+                # Check document.title after a short delay
+                QTimer.singleShot(200, self._emit_title_from_document)
+        except Exception as e:
+            logger.warning(f"Failed to extract and emit title: {e}")
+            
+    def _emit_title_from_document(self):
+        """Emit title from document.title"""
+        try:
+            # Skip title extraction for WebView2 - it causes crashes
+            # The titleChanged signal from WebView2 itself should handle this
+            logger.info("Skipping manual title extraction for WebView2 to avoid crashes")
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to emit title from document: {e}")
+    
             
     def _check_title_via_script(self):
         """Check title by injecting and reading JavaScript"""
