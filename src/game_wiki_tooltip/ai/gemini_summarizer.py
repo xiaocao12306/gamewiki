@@ -6,6 +6,7 @@ import json
 import logging
 from typing import List, Dict, Optional, Any, AsyncGenerator
 import google.generativeai as genai
+import google.generativeai.types as types
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -24,7 +25,7 @@ class SummarizationConfig:
     temperature: float = 0.3
     include_sources: bool = True
     language: str = "auto"  # auto, zh, en
-    check_sufficiency: bool = True  # Check if knowledge is sufficient
+    enable_google_search: bool = True  # Enable Google search tool
 
 
 class GeminiSummarizer:
@@ -96,38 +97,53 @@ class GeminiSummarizer:
             
             # Use new Client API for streaming calls
             import google.generativeai as genai
-            from google import genai as new_genai
-            
             try:
-                # Try to use new Client API (recommended way)
-                client = new_genai.Client(api_key=self.config.api_key)
-                
-                # Stream content generation
-                response = client.models.generate_content_stream(
-                    model=self.config.model_name,
-                    contents=[prompt]
-                )
-                
-                print(f"✅ [STREAM-DEBUG] Started receiving streaming response (new Client API)")
-                
-                # Real-time streaming content output
-                for chunk in response:
-                    if chunk.text:
-                        print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
-                        complete_response += chunk.text
-                        yield chunk.text
+                from google import genai as new_genai
+                from google.genai import types as new_types
+                NEW_GENAI_AVAILABLE = True
+            except ImportError:
+                NEW_GENAI_AVAILABLE = False
+            
+            if NEW_GENAI_AVAILABLE:
+                try:
+                    # Try to use new Client API (recommended way)
+                    client = new_genai.Client(api_key=self.config.api_key)
                     
-                print(f"🎉 [STREAM-DEBUG] Streaming response completed (new Client API)")
+                    # Configure Google Search tool if enabled
+                    config = None
+                    if self.config.enable_google_search:
+                        print(f"🔍 [STREAM-DEBUG] Enabling Google Search tool (new API)")
+                        grounding_tool = new_types.Tool(
+                            google_search=new_types.GoogleSearch()
+                        )
+                        config = new_types.GenerateContentConfig(
+                            tools=[grounding_tool]
+                        )
+                    
+                    # Stream content generation
+                    response = client.models.generate_content_stream(
+                        model=self.config.model_name,
+                        contents=[prompt],
+                        config=config
+                    )
                 
-                # Check knowledge sufficiency and notify if insufficient
-                if self.config.check_sufficiency:
-                    is_sufficient = self._check_knowledge_sufficiency(complete_response)
-                    if not is_sufficient:
-                        yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
-                
-            except (ImportError, AttributeError) as e:
+                    print(f"✅ [STREAM-DEBUG] Started receiving streaming response (new Client API)")
+                    
+                    # Real-time streaming content output
+                    for chunk in response:
+                        if chunk.text:
+                            print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
+                            complete_response += chunk.text
+                            yield chunk.text
+                        
+                    print(f"🎉 [STREAM-DEBUG] Streaming response completed (new Client API)")
+                    
+                except Exception as e:
+                    print(f"❌ [STREAM-DEBUG] New Client API failed: {e}")
+                    raise e
+            else:
                 # If new API is not available, fallback to old API
-                print(f"⚠️ [STREAM-DEBUG] New Client API not available({e}), trying old API method")
+                print(f"⚠️ [STREAM-DEBUG] New Client API not available, trying old API method")
                 
                 # Configure generation parameters
                 generation_config = genai.types.GenerationConfig(
@@ -135,10 +151,18 @@ class GeminiSummarizer:
                     max_output_tokens=8192,
                 )
                 
+                # Configure Google Search tool if enabled  
+                tools = []
+                if self.config.enable_google_search:
+                    print(f"🔍 [STREAM-DEBUG] Google Search not supported in old API, using knowledge base only")
+                    # Note: Old API may not support Google Search in the same way
+                    tools = []
+                
                 # Use old GenerativeModel API
                 model = genai.GenerativeModel(
                     model_name=self.config.model_name,
                     generation_config=generation_config,
+                    tools=tools if tools else None
                 )
                 
                 # Check if streaming method exists
@@ -152,11 +176,6 @@ class GeminiSummarizer:
                             complete_response += chunk.text
                             yield chunk.text
                     
-                    # Check knowledge sufficiency
-                    if self.config.check_sufficiency:
-                        is_sufficient = self._check_knowledge_sufficiency(complete_response)
-                        if not is_sufficient:
-                            yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
                 else:
                     print(f"❌ [STREAM-DEBUG] Old API doesn't support streaming, fallback to sync method")
                     # Complete fallback to sync method
@@ -165,11 +184,6 @@ class GeminiSummarizer:
                         complete_response = response.text
                         yield response.text
                         
-                        # Check knowledge sufficiency
-                        if self.config.check_sufficiency:
-                            is_sufficient = self._check_knowledge_sufficiency(complete_response)
-                            if not is_sufficient:
-                                yield "\n\n[INSUFFICIENT_KNOWLEDGE_MARKER]"
             
             # After streaming output completes, add video source information
             print(f"🎬 [STREAM-DEBUG] Streaming output completed, starting video source extraction")
@@ -253,9 +267,6 @@ class GeminiSummarizer:
 • 基于JSON中的实际数据，不要编造信息
 • 如果信息不相关或不足，请明确说明
 
-重要：在回答的最后，添加一个特殊标记来指示知识是否充足：
-• 如果知识充足以完整回答问题：添加 [KNOWLEDGE_SUFFICIENT]
-• 如果知识不足，需要网络搜索补充：添加 [KNOWLEDGE_INSUFFICIENT]
 
 你的回答："""
         else:
@@ -297,9 +308,6 @@ Format requirements:
 • Base on actual data from JSON, don't fabricate information
 • If information is irrelevant or insufficient, clearly state so
 
-Important: At the end of your response, add a special marker to indicate knowledge sufficiency:
-• If knowledge is sufficient to fully answer the question: add [KNOWLEDGE_SUFFICIENT]
-• If knowledge is insufficient and web search is needed: add [KNOWLEDGE_INSUFFICIENT]
 
 Your response:"""
         
@@ -379,15 +387,12 @@ Your response:"""
         else:
             print(f"❌ [FORMAT-DEBUG] No video sources returned")
         
-        # Clean response from markers
-        cleaned_summary = self._clean_response(summary_text)
-        
         return {
-            "summary": cleaned_summary.strip(),
+            "summary": summary_text.strip(),
             "chunks_used": len(chunks),
             "sources": sources,
             "model": self.config.model_name,
-            "language": self._detect_language(cleaned_summary)
+            "language": self._detect_language(summary_text)
         }
     
     def _fallback_summary(
@@ -566,32 +571,14 @@ Your response:"""
         else:
             return "en"
     
-    def _check_knowledge_sufficiency(self, response_text: str) -> bool:
-        """
-        Check if the knowledge is sufficient based on response markers
-        
-        Returns:
-            True if knowledge is sufficient, False otherwise
-        """
-        # Remove the markers from the response
-        if "[KNOWLEDGE_SUFFICIENT]" in response_text:
-            return True
-        elif "[KNOWLEDGE_INSUFFICIENT]" in response_text:
-            return False
-        else:
-            # Default to sufficient if no marker found
-            return True
     
-    def _clean_response(self, response_text: str) -> str:
-        """Remove knowledge sufficiency markers from response"""
-        cleaned = response_text.replace("[KNOWLEDGE_SUFFICIENT]", "").replace("[KNOWLEDGE_INSUFFICIENT]", "")
-        return cleaned.strip()
 
 
 # Convenience function for creating summarizer
 def create_gemini_summarizer(
     api_key: Optional[str] = None,
     model_name: str = "gemini-2.5-flash-lite",
+    enable_google_search: bool = True,
     **kwargs
 ) -> GeminiSummarizer:
     """
@@ -600,6 +587,7 @@ def create_gemini_summarizer(
     Args:
         api_key: Gemini API key (defaults to env var GEMINI_API_KEY)
         model_name: Model to use
+        enable_google_search: Enable Google search tool (default: True)
         **kwargs: Additional config parameters
         
     Returns:
@@ -613,6 +601,7 @@ def create_gemini_summarizer(
     config = SummarizationConfig(
         api_key=api_key,
         model_name=model_name,
+        enable_google_search=enable_google_search,
         **kwargs
     )
     

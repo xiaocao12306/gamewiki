@@ -460,7 +460,8 @@ class EnhancedRagQuery:
                 model_name=config.model_name,
                 temperature=config.temperature,
                 include_sources=config.include_sources,
-                language=config.language
+                language=config.language,
+                enable_google_search=self.summarization_config.get("enable_google_search", True)
             )
             
             logger.info(f"Gemini summarizer initialized successfully: {config.model_name}")

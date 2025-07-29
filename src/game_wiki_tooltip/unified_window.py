@@ -4591,46 +4591,6 @@ class UnifiedAssistantWindow(QMainWindow):
         except Exception as e:
             print(f"Error in load_shortcuts: {e}")
 
-    def _create_single_game_button(self, config):
-        """Create single game task flow button"""
-        button = QPushButton(config['display_name'])
-        button.setFixedHeight(27)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {config['button_color']};
-                color: white;
-                border: none;
-                border-radius: 13px;
-                padding: 4px 12px;
-                font-size: 12px;
-                font-weight: bold;
-                font-family: "Segoe UI", "Microsoft YaHei", Arial;
-            }}
-            QPushButton:hover {{
-                background-color: {self._darken_color(config['button_color'], 0.1)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self._darken_color(config['button_color'], 0.2)};
-            }}
-        """)
-        
-        # Connect click event
-        button.clicked.connect(lambda: self._open_game_task_flow(config))
-        return button
-    
-    def _darken_color(self, hex_color, factor):
-        """Darken color helper function"""
-        # Remove #
-        hex_color = hex_color.lstrip('#')
-        # Convert to RGB
-        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-        # Darken
-        r = int(r * (1 - factor))
-        g = int(g * (1 - factor))
-        b = int(b * (1 - factor))
-        # Convert back to hexadecimal
-        return f'#{r:02x}{g:02x}{b:02x}'
-    
     def _open_game_task_flow(self, config):
         """Open game task flow HTML file"""
         try:
@@ -4654,7 +4614,7 @@ class UnifiedAssistantWindow(QMainWindow):
             html_path = base_path / "assets" / "html" / html_filename
             
             if html_path.exists():
-                print(f"Loading DST task flow from: {html_path}")
+                print(f"Loading task flow from: {html_path}")
                 
                 # Display directly in the application, same as wiki link logic
                 try:
@@ -4957,7 +4917,7 @@ class UnifiedAssistantWindow(QMainWindow):
         mode_menu.setAutoFillBackground(True)
         mode_menu.setStyleSheet("""
             QMenu {
-                background-color: rgb(255, 255, 255);
+                background-color: rgb(0, 0, 0, 100);
                 border: 1px solid rgb(224, 224, 224);
                 border-radius: 10px;
                 padding: 5px;
