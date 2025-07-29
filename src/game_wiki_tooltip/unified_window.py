@@ -87,20 +87,8 @@ except ImportError:
     print("Warning: BlurWindow module not found, will use default transparency effect")
     BLUR_WINDOW_AVAILABLE = False
 
-# Windows version detection
-def get_windows_version():
-    """Get Windows version info"""
-    try:
-        import platform
-        version = platform.version()
-        if "10.0" in version:
-            return "Windows 10"
-        elif "11.0" in version:
-            return "Windows 11"
-        else:
-            return f"Windows {version}"
-    except:
-        return "Unknown"
+# Import graphics compatibility for Windows version detection
+from src.game_wiki_tooltip.graphics_compatibility import WindowsGraphicsCompatibility
 
 
 def _get_scale() -> float:
@@ -159,23 +147,6 @@ def load_svg_icon(svg_path, color="#666666", size=16):
     except Exception as e:
         print(f"Failed to load SVG icon: {e}")
         return QIcon()
-
-
-def create_fallback_icon(text, color="#666666"):
-    """Create fallback text icon"""
-    icon = QIcon()
-    pixmap = QPixmap(16, 16)
-    pixmap.fill(QColor(0, 0, 0, 0))
-    
-    painter = QPainter(pixmap)
-    painter.setPen(QColor(color))
-    painter.setFont(QFont("Segoe UI", 8))
-    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
-    painter.end()
-    
-    icon.addPixmap(pixmap)
-    return icon
-
 
 class QuickAccessPopup(QWidget):
     """Horizontal popup widget for quick access shortcuts"""
@@ -3482,7 +3453,6 @@ class UnifiedAssistantWindow(QMainWindow):
         self.is_generating = False
         self.streaming_widget = None
         self.current_game_window = None  # Record current game window title
-        self.game_task_buttons = {}  # Store all game task flow buttons
         
         # History manager will be initialized lazily
         self.history_manager = None
@@ -3505,7 +3475,9 @@ class UnifiedAssistantWindow(QMainWindow):
         """Apply BlurWindow transparency effect"""
         if BLUR_WINDOW_AVAILABLE:
             try:
-                windows_version = get_windows_version()
+                # Use the proper Windows version detection from graphics_compatibility
+                graphics_compat = WindowsGraphicsCompatibility()
+                windows_version = graphics_compat._get_windows_version()
                 print(f"Detected system version: {windows_version}")
                 
                 # Set window rounded corners
@@ -3665,7 +3637,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         input_layout = QVBoxLayout(self.input_container)
         input_layout.setContentsMargins(10, 10, 10, 10)
-        input_layout.setSpacing(0)
+        input_layout.setSpacing(10)
         
         # Integrated search container (two rows)
         search_container = QFrame()
@@ -3699,7 +3671,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         access_layout = QHBoxLayout(quick_access_row)
         access_layout.setContentsMargins(0, 0, 0, 0)
-        access_layout.setSpacing(8)
+        access_layout.setSpacing(0)
         
         # History button
         self.history_button = QPushButton()
@@ -3723,7 +3695,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.quick_access_button = QPushButton()
         self.quick_access_button.setObjectName("externalBtn")
         self.quick_access_button.setFixedSize(32, 32)
-        self.quick_access_button.setToolTip("Quick Access")
+        self.quick_access_button.setToolTip("Go to external website")
         # Enable mouse tracking for hover detection
         self.quick_access_button.setMouseTracking(True)
         self.quick_access_button.installEventFilter(self)
@@ -3731,11 +3703,8 @@ class UnifiedAssistantWindow(QMainWindow):
         # Load quick access icon
         external_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "globe-alt-1-svgrepo-com.svg")
         external_icon = load_svg_icon(external_icon_path, color="#111111", size=20)
-        if external_icon.isNull():
-            self.quick_access_button.setText("▼")
-        else:
-            self.quick_access_button.setIcon(external_icon)
-            self.quick_access_button.setIconSize(QSize(20, 20))
+        self.quick_access_button.setIcon(external_icon)
+        self.quick_access_button.setIconSize(QSize(20, 20))
         
         # Search mode button
         self.mode_button = QPushButton()
@@ -3747,11 +3716,8 @@ class UnifiedAssistantWindow(QMainWindow):
         # Load search icon
         search_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "search-alt-1-svgrepo-com.svg")
         search_icon = load_svg_icon(search_icon_path, color="#111111", size=20)
-        if search_icon.isNull():
-            self.mode_button.setText("🔍")
-        else:
-            self.mode_button.setIcon(search_icon)
-            self.mode_button.setIconSize(QSize(20, 20))
+        self.mode_button.setIcon(search_icon)
+        self.mode_button.setIconSize(QSize(20, 20))
         
         # Send button
         self.send_button = QPushButton()
@@ -3762,27 +3728,33 @@ class UnifiedAssistantWindow(QMainWindow):
         # Load send icon
         send_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "arrow-circle-up-svgrepo-com.svg")
         send_icon = load_svg_icon(send_icon_path, color="#111111", size=20)
-        if send_icon.isNull():
-            self.send_button.setText("↑")
-        else:
-            self.send_button.setIcon(send_icon)
-            self.send_button.setIconSize(QSize(20, 20))
+        self.send_button.setIcon(send_icon)
+        self.send_button.setIconSize(QSize(20, 20))
         
         # Add buttons to bottom row
         access_layout.addWidget(self.history_button)
         access_layout.addWidget(self.quick_access_button)
         access_layout.addWidget(self.mode_button)
         
-        # Container for game task buttons
-        self.game_task_container = QWidget()
-        self.game_task_container.setFixedHeight(32)
-        self.game_task_layout = QHBoxLayout(self.game_task_container)
-        self.game_task_layout.setContentsMargins(0, 0, 0, 0)
-        self.game_task_layout.setSpacing(8)
-        access_layout.addWidget(self.game_task_container)
+        # Single task flow button (will change based on current game)
+        self.task_flow_button = QPushButton()
+        self.task_flow_button.setObjectName("taskFlowBtn")
+        # Dynamic sizing based on content
+        self.task_flow_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        self.task_flow_button.setMinimumHeight(32)
+        self.task_flow_button.setToolTip(t("task_flow"))
+        self.task_flow_button.hide()  # Initially hidden
         
-        # Create game task buttons
-        self._create_game_task_buttons()
+        # Load task flow icon
+        task_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "layers-svgrepo-com.svg")
+        task_icon = load_svg_icon(task_icon_path, color="#111111", size=20)
+        self.task_flow_button.setIcon(task_icon)
+        self.task_flow_button.setIconSize(QSize(20, 20))
+        
+        access_layout.addWidget(self.task_flow_button)
+        
+        # Initialize current task flow game
+        self.current_task_flow_game = None
         
         access_layout.addStretch()  # Space in middle
         access_layout.addWidget(self.send_button)
@@ -3865,14 +3837,14 @@ class UnifiedAssistantWindow(QMainWindow):
         
         #mainContainer {
             background: rgba(255, 255, 255, 115);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 40);
+            border-radius: 0px;  /* Remove rounded corners from main container */
+            border: none;
         }
         
         #titleBar {
             background: rgba(255, 255, 255, 115);
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
+            border-top-left-radius: 0px;  /* Remove rounded corners */
+            border-top-right-radius: 0px;  /* Remove rounded corners */
         }
         
         #titleLabel {
@@ -3908,15 +3880,15 @@ class UnifiedAssistantWindow(QMainWindow):
         /* Input container - updated background */
         #inputContainer {
             background: rgba(255, 255, 255, 115);
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
+            border-bottom-left-radius: 0px;  /* Remove rounded corners */
+            border-bottom-right-radius: 0px;  /* Remove rounded corners */
         }
         
         /* Search container - integrated two-row design */
         #searchContainer {
             background: rgba(0, 0, 0, 10);
             border: 1px solid rgba(200, 200, 200, 150);
-            border-radius: 10px;
+            border-radius: 10px;  
         }
         
         #searchInputRow, #quickAccessRow {
@@ -3949,7 +3921,18 @@ class UnifiedAssistantWindow(QMainWindow):
             font-weight: normal;
         }
         
-        #historyBtn:hover, #externalBtn:hover, #searchBtn:hover {
+        /* Task flow button with dynamic sizing */
+        #taskFlowBtn {
+            background: transparent;
+            border: none;
+            color: #111111;
+            font-size: 12px;
+            font-weight: normal;
+            padding: 6px 12px;
+            min-width: auto;
+        }
+        
+        #historyBtn:hover, #externalBtn:hover, #searchBtn:hover, #taskFlowBtn:hover {
             background: rgba(220, 220, 220, 120);
             border-radius: 4px;
         }
@@ -3971,9 +3954,9 @@ class UnifiedAssistantWindow(QMainWindow):
         
         /* Quick access popup */
         #quickAccessPopup {
-            background: rgba(255, 255, 255, 240);
+            background: rgba(255, 255, 255, 0);
             border: 1px solid rgba(224, 224, 224, 150);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 5px;
         }
         
@@ -4600,8 +4583,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 except Exception as e:
                     print(f"Failed to create shortcut button: {e}")
             
-            # Add game task flow buttons to popup
-            self._create_game_task_buttons_for_popup()
+            # Note: Task flow buttons are now in the main button row, not in popup
             
             # Mark shortcuts as loaded
             self.shortcuts_loaded = True
@@ -4686,7 +4668,8 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def _create_dst_task_button(self):
         """Create game task flow button (compatible with old code)"""
-        self._create_game_task_buttons()
+        # Task flow button is now a single button in the main button row
+        pass
     
     def _create_game_task_buttons(self):
         """Create task flow buttons for all games"""
@@ -4810,6 +4793,11 @@ class UnifiedAssistantWindow(QMainWindow):
     def _open_game_task_flow(self, config):
         """Open game task flow HTML file"""
         try:
+            # Prevent multiple clicks
+            if hasattr(self, '_task_flow_loading') and self._task_flow_loading:
+                return
+            self._task_flow_loading = True
+            
             # Get current language setting
             current_language = 'en'
             if self.settings_manager:
@@ -4831,8 +4819,13 @@ class UnifiedAssistantWindow(QMainWindow):
                 try:
                     title = t("dst_task_flow_title")
                     
-                    # Use the same display logic as wiki link
-                    self._load_local_html_in_wiki_view(html_path, title)
+                    # Check if wiki view exists
+                    if not hasattr(self, 'wiki_view') or self.wiki_view is None:
+                        print("Wiki view not initialized, creating fallback display")
+                        self._show_simple_dst_info(current_language)
+                    else:
+                        # Use the same display logic as wiki link
+                        self._load_local_html_in_wiki_view(html_path, title)
                     
                 except Exception as html_error:
                     print(f"Failed to load HTML content: {html_error}")
@@ -4845,6 +4838,9 @@ class UnifiedAssistantWindow(QMainWindow):
             print(f"Failed to open DST task flow: {e}")
             import traceback
             traceback.print_exc()
+        finally:
+            # Reset loading flag
+            self._task_flow_loading = False
     
     def _load_local_html_in_wiki_view(self, html_path: pathlib.Path, title: str):
         """Load local HTML file with the same logic as wiki link"""
@@ -5067,10 +5063,10 @@ class UnifiedAssistantWindow(QMainWindow):
         history_menu = QMenu(self)
         history_menu.setStyleSheet("""
             QMenu {
-                background-color: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                padding: 4px;
+                background-color: rgba(255, 255, 255, 255);
+                border: 1px solid rgba(224, 224, 224, 150);
+                border-radius: 10px;
+                padding: 5px;
                 min-width: 350px;
             }
             QMenu::item {
@@ -5078,11 +5074,11 @@ class UnifiedAssistantWindow(QMainWindow):
                 border-radius: 4px;
             }
             QMenu::item:hover {
-                background-color: #f0f0f0;
+                background-color: rgba(240, 240, 240, 180);
             }
             QMenu::separator {
                 height: 1px;
-                background-color: #e0e0e0;
+                background-color: rgba(224, 224, 224, 150);
                 margin: 4px 0;
             }
         """)
@@ -5134,8 +5130,11 @@ class UnifiedAssistantWindow(QMainWindow):
             clear_action = history_menu.addAction("Clear History")
             clear_action.triggered.connect(self.clear_history)
         
-        # Show menu below the button
-        history_menu.exec(self.history_button.mapToGlobal(QPoint(0, self.history_button.height())))
+        # Show menu above the button (popup upward)
+        # Calculate position to show menu above the button
+        menu_height = history_menu.sizeHint().height()
+        button_pos = self.history_button.mapToGlobal(QPoint(0, -menu_height))
+        history_menu.exec(button_pos)
     
     def clear_history(self):
         """Clear browsing history"""
@@ -5249,57 +5248,6 @@ class UnifiedAssistantWindow(QMainWindow):
         # Convert back to hex
         return f'#{r:02x}{g:02x}{b:02x}'
     
-    def _open_game_task_flow(self, config):
-        """Open game task flow HTML file"""
-        try:
-            # Get current language setting
-            current_language = 'en'
-            if self.settings_manager:
-                settings = self.settings_manager.get()
-                current_language = settings.get('language', 'en')
-            
-            # Determine task flow HTML file path
-            game_name = config['game_name']
-            task_flow_filename = f"{game_name}_task_flow_{current_language}.html"
-            
-            import os
-            from pathlib import Path
-            
-            # Get assets path
-            assets_path = Path(__file__).parent / "assets" / "task_flows"
-            html_path = assets_path / task_flow_filename
-            
-            if os.path.exists(html_path):
-                # Display directly in the application, same as wiki link logic
-                try:
-                    from src.game_wiki_tooltip.i18n import t
-                    title = t(f"{game_name}_task_flow_title")
-                    
-                    # Use the same display logic as wiki link
-                    self._load_local_html_in_wiki_view(html_path, title)
-                    
-                except Exception as html_error:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"❌ [DEBUG] Failed to display HTML file: {html_error}")
-                    # Fallback handling
-                    self._show_task_flow_fallback(config, current_language)
-            else:
-                # File doesn't exist, use fallback
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"⚠️ [DEBUG] Task flow file not found: {html_path}")
-                self._show_task_flow_fallback(config, current_language)
-                
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"❌ [DEBUG] Failed to open game task flow: {e}")
-            # Display error message
-            self.chat_view.add_message(
-                MessageType.STATUS,
-                f"Unable to open {config['display_name']} task flow"
-            )
     
     def _show_task_flow_fallback(self, config, language):
         """Show task flow fallback content"""
@@ -5436,7 +5384,7 @@ class UnifiedAssistantWindow(QMainWindow):
             logger.error(f"❌ [DEBUG] Traceback: {traceback.format_exc()}")
     
     def set_current_game_window(self, game_window_title: str):
-        """Set current game window title and update DST button visibility"""
+        """Set current game window title and update task flow button visibility"""
         import logging
         import traceback
         logger = logging.getLogger(__name__)
@@ -5473,15 +5421,74 @@ class UnifiedAssistantWindow(QMainWindow):
         # Debug: Log before button visibility update
         logger.info(f"🎯 [DEBUG] About to update task button visibility for: '{game_window_title}'")
         
-        # Update button visibility
-        self._update_dst_button_visibility()
+        # Update task flow button based on current game
+        self._update_task_flow_button()
         
         # Debug: Log completion
         logger.info(f"✅ [DEBUG] set_current_game_window completed for: '{game_window_title}'")
     
-    def _update_dst_button_visibility(self):
-        """Update game task button visibility"""
-        self._update_game_task_buttons_visibility()
+    def _update_task_flow_button(self):
+        """Update task flow button visibility and functionality based on current game"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Define games that support task flow
+        game_configs = {
+            'dst': {
+                'display_name': t('dst_task_button'),
+                'window_titles': ["don't starve together", "dst"],
+                'handler': lambda: self._show_task_flow_html('dst')
+            },
+            'helldiver2': {
+                'display_name': t('helldiver2_task_button'),
+                'window_titles': ["helldivers™ 2", "helldivers 2"],
+                'handler': lambda: self._show_task_flow_html('helldiver2')
+            },
+            'civilization6': {
+                'display_name': t('civ6_task_button'),
+                'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6"],
+                'handler': lambda: self._show_task_flow_html('civilization6')
+            }
+        }
+        
+        if not self.current_game_window:
+            # No game window set, hide task flow button
+            self.task_flow_button.hide()
+            self.current_task_flow_game = None
+            return
+            
+        # Get normalized window title for comparison
+        current_window_lower = self.current_game_window.lower()
+        
+        # Find matching game
+        matched_game = None
+        for game_name, config in game_configs.items():
+            if any(title in current_window_lower for title in config['window_titles']):
+                matched_game = game_name
+                break
+                
+        if matched_game:
+            # Show and configure task flow button
+            config = game_configs[matched_game]
+            self.task_flow_button.setText(config['display_name'])
+            self.task_flow_button.show()
+            
+            # Disconnect previous handler if any
+            try:
+                self.task_flow_button.clicked.disconnect()
+            except:
+                pass
+                
+            # Connect new handler
+            self.task_flow_button.clicked.connect(config['handler'])
+            self.current_task_flow_game = matched_game
+            
+            logger.info(f"✅ Task flow button shown for {matched_game}")
+        else:
+            # No matching game, hide button
+            self.task_flow_button.hide()
+            self.current_task_flow_game = None
+            logger.info(f"⚠️ No task flow available for current window: {self.current_game_window}")
     
     def _update_game_task_buttons_visibility(self):
         """Update visibility of all game task buttons based on current game window"""
@@ -5617,10 +5624,10 @@ class UnifiedAssistantWindow(QMainWindow):
         mode_menu = QMenu(self)
         mode_menu.setStyleSheet("""
             QMenu {
-                background-color: rgba(255, 255, 255, 240);
+                background-color: rgba(255, 255, 255, 255);
                 border: 1px solid rgba(224, 224, 224, 150);
-                border-radius: 8px;
-                padding: 4px;
+                border-radius: 10px;
+                padding: 5px;
             }
             QMenu::item {
                 padding: 8px 20px;
@@ -5647,8 +5654,10 @@ class UnifiedAssistantWindow(QMainWindow):
         url_action = mode_menu.addAction(t("search_mode_url"))
         url_action.triggered.connect(lambda: self.set_mode("url"))
         
-        # Show menu below the button
-        button_pos = self.mode_button.mapToGlobal(QPoint(0, self.mode_button.height()))
+        # Show menu above the button (popup upward)
+        # Calculate position to show menu above the button
+        menu_height = mode_menu.sizeHint().height()
+        button_pos = self.mode_button.mapToGlobal(QPoint(0, -menu_height))
         mode_menu.exec(button_pos)
 
     def on_send_clicked(self):
