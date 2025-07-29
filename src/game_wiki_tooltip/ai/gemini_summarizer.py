@@ -48,116 +48,6 @@ class GeminiSummarizer:
         
         logger.info(f"Initialized GeminiSummarizer with model: {config.model_name}")
     
-    def summarize_chunks(
-        self, 
-        chunks: List[Dict[str, Any]], 
-        query: str,
-        original_query: Optional[str] = None,
-        context: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Summarize multiple knowledge chunks into a coherent answer
-        
-        Args:
-            chunks: List of retrieved chunks with content and metadata
-            query: Original user query
-            context: Optional game context
-            
-        Returns:
-            Dictionary with summary and metadata
-        """
-        print(f"📝 [SUMMARY-DEBUG] Start general Gemini summarization generation")
-        print(f"   - Retrieval query: '{query}'")
-        if original_query and original_query != query:
-            print(f"   - Original query: '{original_query}'")
-            print(f"   - Dual query mode: Enabled")
-        else:
-            print(f"   - Dual query mode: Disabled (original query is the same as retrieval query or not provided)")
-        print(f"   - Knowledge chunk count: {len(chunks)}")
-        print(f"   - Context: {context or 'None'}")
-        print(f"   - Model: {self.config.model_name}")
-        
-        # Store game context for video source extraction
-        if context:
-            self.current_game_name = context
-            print(f"🎮 [SUMMARY-DEBUG] Stored game name: {self.current_game_name}")
-        else:
-            print(f"⚠️ [SUMMARY-DEBUG] No context provided, game name not stored")
-        
-        if not chunks:
-            print(f"⚠️ [SUMMARY-DEBUG] No knowledge chunks available for summarization")
-            return {
-                "summary": "No relevant information found.",
-                "chunks_used": 0,
-                "sources": []
-            }
-        
-        # Display knowledge chunk information
-        print(f"📋 [SUMMARY-DEBUG] Input knowledge chunk details:")
-        for i, chunk in enumerate(chunks, 1):
-            print(f"   {i}. Topic: {chunk.get('topic', 'Unknown')}")
-            print(f"      Score: {chunk.get('score', 0):.4f}")
-            print(f"      Type: {chunk.get('type', 'General')}")
-            print(f"      Keywords: {chunk.get('keywords', [])}")
-            print(f"      Summary: {chunk.get('summary', '')[:100]}...")
-        
-        try:
-            # Detect language
-            language = self._detect_language(query) if self.config.language == "auto" else self.config.language
-            print(f"🌐 [SUMMARY-DEBUG] Detected language: {language}")
-            
-            # Build the summarization prompt
-            print(f"📝 [SUMMARY-DEBUG] Building general summarization prompt")
-            prompt = self._build_summarization_prompt(chunks, query, original_query, context)
-            print(f"   - Prompt length: {len(prompt)} characters")
-            print(f"   - Temperature setting: {self.config.temperature}")
-            print(f"   - No output length limit, let LLM decide")
-            
-            # Generate summary
-            print(f"🤖 [SUMMARY-DEBUG] Calling Gemini to generate summary")
-            response = self.model.generate_content(prompt)
-            
-            print(f"✅ [SUMMARY-DEBUG] Gemini response successful")
-            print(f"   - Response length: {len(response.text)} characters")
-            print(f"   - Complete response content:")
-            print(f"{response.text}")
-            print(f"   - [Response content end]")
-            
-            # Parse and format the response
-            formatted_response = self._format_summary_response(response.text, chunks)
-            
-            print(f"📊 [SUMMARY-DEBUG] Summary generation completed")
-            print(f"   - Knowledge chunks used: {formatted_response['chunks_used']}")
-            print(f"   - Sources count: {len(formatted_response['sources'])}")
-            print(f"   - Final summary length: {len(formatted_response['summary'])} characters")
-            
-            # Check if knowledge is sufficient (if enabled)
-            if self.config.check_sufficiency:
-                formatted_response['knowledge_sufficient'] = self._check_knowledge_sufficiency(response.text)
-            
-            return formatted_response
-            
-        except Exception as e:
-            print(f"❌ [SUMMARY-DEBUG] Summary generation failed: {e}")
-            logger.error(f"Error in summarization: {str(e)}")
-            
-            # Check if it's a rate limit error
-            error_str = str(e).lower()
-            if "quota" in error_str or "rate limit" in error_str or "429" in error_str:
-                logger.warning("⏱️ API rate limit detected")
-                # Re-raise with clear message
-                raise Exception("API_RATE_LIMIT: " + str(e))
-            
-            # Fallback to simple concatenation
-            print(f"🔄 [SUMMARY-DEBUG] Using fallback summary strategy")
-            fallback_result = self._fallback_summary(chunks, query, original_query)
-            
-            print(f"📊 [SUMMARY-DEBUG] Fallback summary completed")
-            print(f"   - Knowledge chunks used: {fallback_result['chunks_used']}")
-            print(f"   - Fallback summary length: {len(fallback_result['summary'])} characters")
-            
-            return fallback_result
-    
     async def summarize_chunks_stream(
         self,
         chunks: List[Dict[str, Any]],
@@ -304,14 +194,6 @@ class GeminiSummarizer:
                 print(f"🔑 [STREAM-DEBUG] Detected API key related error")
                 yield "❌ API key configuration issue, please check if Gemini API key is correctly configured.\n\n"
                 return
-            
-            # Fallback to original sync method
-            try:
-                result = self.summarize_chunks(chunks, query, original_query, context)
-                yield result.get('summary', str(result))
-            except Exception as sync_error:
-                print(f"❌ [STREAM-DEBUG] Sync method also failed: {sync_error}")
-                yield "Sorry, the AI summary service is temporarily unavailable, please try again later."
     
     def _build_summarization_prompt(
         self, 
