@@ -158,11 +158,16 @@ class QuickAccessPopup(QWidget):
         )
 
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setObjectName("QuickAccessPopup")  # Set object name for the main widget
         self.setStyleSheet("""
-                    #QuickAccessPopup {
-                        background-color: transparent;
-                    }
-                """)
+                #QuickAccessPopup {
+                    background-color: rgb( 0);
+                    border-radius: 50px !important;
+                    border: 1px ;
+                    padding: 0;
+                    margin: 0;
+                }
+            """)
 
         # Main container
         self.container = QFrame()
@@ -171,9 +176,10 @@ class QuickAccessPopup(QWidget):
         self.container.setStyleSheet("""
             #quickAccessPopup {
                 background-color: rgb(255, 255, 255);
-                border: 1px solid rgb(224, 224, 224);
                 border-radius: 10px;
                 padding: 5px;
+                border: none;
+                margin: 0;
             }
         """)
         
@@ -951,6 +957,10 @@ class StatusMessageWidget(QFrame):
         layout.addWidget(bubble)
         layout.addStretch()
         
+        # Override context menu for proper styling
+        self.status_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.status_label.customContextMenuRequested.connect(self._show_context_menu)
+        
         self.update_display()
         
     def update_status(self, new_message: str):
@@ -989,6 +999,22 @@ class StatusMessageWidget(QFrame):
         self.stop_animation()
         # Simple hide, can add fade out animation later
         self.hide()
+    
+    def _show_context_menu(self, pos):
+        """Show custom context menu for the label"""
+        # Create a new menu instead of using createStandardContextMenu
+        menu = QMenu(self)
+        
+        # Add standard actions manually
+        if self.status_label.selectedText():
+            copy_action = menu.addAction("Copy")
+            copy_action.triggered.connect(
+                lambda: QApplication.clipboard().setText(self.status_label.selectedText())
+            )
+        
+        # Show the menu
+        global_pos = self.status_label.mapToGlobal(pos)
+        menu.exec(global_pos)
 
 
 class MessageWidget(QFrame):
@@ -1117,6 +1143,10 @@ class MessageWidget(QFrame):
             
         bubble_layout.addWidget(self.content_label)
         
+        # Override context menu for proper styling
+        self.content_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.content_label.customContextMenuRequested.connect(self._show_context_menu)
+        
         if self.message.type == MessageType.USER_QUERY:
             layout.addWidget(bubble)
             
@@ -1199,6 +1229,22 @@ class MessageWidget(QFrame):
             
         self.content_label.adjustSize()
         self.adjustSize()
+    
+    def _show_context_menu(self, pos):
+        """Show custom context menu for the label"""
+        # Create a new menu instead of using createStandardContextMenu
+        menu = QMenu(self)
+        
+        # Add standard actions manually
+        if self.content_label.selectedText():
+            copy_action = menu.addAction("Copy")
+            copy_action.triggered.connect(
+                lambda: QApplication.clipboard().setText(self.content_label.selectedText())
+            )
+        
+        # Show the menu
+        global_pos = self.content_label.mapToGlobal(pos)
+        menu.exec(global_pos)
 
 class StreamingMessageWidget(MessageWidget):
     """Message widget with streaming/typing animation support"""
@@ -1819,7 +1865,7 @@ class ChatView(QScrollArea):
             QScrollArea {
                 background: rgba(248, 249, 250, 120);
                 border: none;
-                border-radius: 8px;
+                border-radius: 0px;
             }
             QScrollArea::corner {
                 background: transparent;
@@ -2185,6 +2231,17 @@ class ChatView(QScrollArea):
             scrollbar.setValue(0)
         else:
             super().keyPressEvent(event)
+    
+    def contextMenuEvent(self, event):
+        """Override context menu event to ensure proper styling"""
+        # Create a custom context menu
+        menu = QMenu(self)
+        
+        # The menu will inherit the global QMenu styling
+        # No need to add any actions for scrollbar - just show empty menu
+        # This prevents the default transparent context menu
+        
+        menu.exec(event.globalPos())
         
     def show_wiki(self, url: str, title: str):
         """Emit signal to show wiki page"""
@@ -3570,7 +3627,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.input_container.setFixedHeight(115)  # Adjusted height for two-row design
         
         input_layout = QVBoxLayout(self.input_container)
-        input_layout.setContentsMargins(10, 10, 10, 10)
+        input_layout.setContentsMargins(20, 10, 20, 10)
         input_layout.setSpacing(10)
         
         # Integrated search container (two rows)
@@ -3765,9 +3822,33 @@ class UnifiedAssistantWindow(QMainWindow):
             background: transparent;
         }
         
+        /* Global menu styling for consistent appearance */
+        QMenu {
+            background-color: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            padding: 5px;
+        }
+        
+        QMenu::item {
+            padding: 5px 20px;
+            background-color: transparent;
+            border-radius: 4px;
+        }
+        
+        QMenu::item:selected {
+            background-color: #f0f0f0;
+        }
+        
+        QMenu::separator {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 5px 10px;
+        }
+        
         #mainContainer {
             background: rgba(255, 255, 255, 115);
-            border-radius: 0px;  /* Remove rounded corners from main container */
+            border-radius: 10px;  /* Remove rounded corners from main container */
             border: none;
         }
         
@@ -4531,35 +4612,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Show history menu"""
         self._ensure_history_manager()
             
-        history_menu = QMenu(None)  # No parent to avoid blur inheritance
-        # Ensure menu has its own rendering context without shadow
-        history_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
-        history_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        history_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
-        history_menu.setAutoFillBackground(False)
-        history_menu.setStyleSheet("""
-            QMenu {
-                background-color: rgb(255, 255, 255);
-                border: 1px solid rgb(224, 224, 224);
-                border-radius: 10px;
-                padding: 5px;
-                min-width: 350px;
-                box-shadow: none;   
-            }
-            QMenu::item {
-                padding: 8px 12px;
-                border-radius: 4px;
-                background-color: transparent;
-            }
-            QMenu::item:hover {
-                background-color: rgb(240, 240, 240);
-            }
-            QMenu::separator {
-                height: 1px;
-                background-color: rgb(224, 224, 224);
-                margin: 4px 0;
-            }
-        """)
+        history_menu = QMenu(self)  # Use standard QMenu with parent
         
         # Get history
         history_items = self.history_manager.get_history(limit=20)
@@ -4622,22 +4675,6 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(100, lambda: self.history_button.setToolTip("History cleared"))
         QTimer.singleShot(2000, lambda: self.history_button.setToolTip("View browsing history"))
 
-    def _darken_color(self, hex_color, factor):
-        """Darken color helper function"""
-        # Remove #
-        hex_color = hex_color.lstrip('#')
-        # Convert to RGB
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        # Darken
-        r = int(r * factor)
-        g = int(g * factor)
-        b = int(b * factor)
-        # Convert back to hex
-        return f'#{r:02x}{g:02x}{b:02x}'
-    
-    
     def _show_task_flow_html(self, game_name):
         """Show task flow HTML for a specific game"""
         try:
@@ -4787,29 +4824,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
     def show_mode_menu(self):
         """Show search mode menu"""
-        mode_menu = QMenu(None)  # No parent to avoid blur inheritance
-        # Ensure menu has its own rendering context without shadow
-        mode_menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
-        mode_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        mode_menu.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
-        mode_menu.setAutoFillBackground(False)
-        mode_menu.setStyleSheet("""
-            QMenu {
-                background-color: rgb(0, 0, 0, 100);
-                border: 1px solid rgb(224, 224, 224);
-                border-radius: 10px;
-                padding: 5px;
-            }
-            QMenu::item {
-                padding: 8px 20px;
-                border-radius: 4px;
-                background-color: transparent;
-            }
-            QMenu::item:hover {
-                background-color: rgb(240, 240, 240);
-            }
-        """)
-        
+        mode_menu = QMenu(self)  # Use standard QMenu with parent
         from src.game_wiki_tooltip.i18n import t
         
         auto_action = mode_menu.addAction(t("search_mode_auto"))
