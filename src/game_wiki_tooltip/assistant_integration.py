@@ -2260,11 +2260,17 @@ class IntegratedAssistantController(AssistantController):
             self.main_window.raise_()
             self.main_window.activateWindow()
             
-            # 🔧 添加focus设置逻辑
-            logger.info("🎯 Setting focus for existing chat window")
-            # 确保切换到聊天视图并设置focus
-            self.main_window.show_chat_view()
-            
+            # 决定显示哪种形态
+            if not self.main_window.has_user_input:
+                # 如果用户没有输入过，显示CHAT_ONLY形态
+                logger.info("🎯 Switching to CHAT_ONLY mode (no user input yet)")
+                self.main_window.switch_to_chat_only()
+            else:
+                # 如果用户有输入历史，显示FULL_CONTENT形态
+                logger.info("🎯 Keeping FULL_CONTENT mode (user has input history)")
+                # 确保切换到聊天视图并设置focus
+                self.main_window.show_chat_view()
+                
         logger.info("💬 Chat window shown")
     
     def hide_chat_window(self):

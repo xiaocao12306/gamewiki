@@ -21,6 +21,12 @@ from dataclasses import dataclass, field
 from src.game_wiki_tooltip.i18n import t
 from src.game_wiki_tooltip.config import PopupConfig
 
+class WindowState(Enum):
+    """Window state enumeration"""
+    CHAT_ONLY = "chat_only"      # Only show input box
+    FULL_CONTENT = "full_content" # Show all content
+    WEBVIEW = "webview"          # WebView2 form
+
 # Import markdown support
 try:
     import markdown
@@ -1878,8 +1884,7 @@ class ChatView(QScrollArea):
         scrollbar.sliderPressed.connect(self._on_user_scroll_start)
         scrollbar.sliderReleased.connect(self._on_user_scroll_end)
         
-        # Add welcome message
-        self._add_welcome_message()
+        # Don't add welcome message anymore
         
     def _check_and_fix_width(self):
         """Check and fix ChatView width exception"""
@@ -3462,6 +3467,18 @@ class UnifiedAssistantWindow(QMainWindow):
         self.streaming_widget = None
         self.current_game_window = None  # Record current game window title
         
+        # Window state management
+        self.current_state = WindowState.FULL_CONTENT  # Default state
+        self.has_user_input = False  # Track if user has entered any input
+        
+        # Store geometry for different states
+        self._chat_only_size = QSize(380, 115)  # Input box only
+        self._full_content_geometry = None  # Full chat window geometry
+        self._webview_geometry = None  # WebView geometry
+        
+        # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
+        self._default_webview_size = None  # Will be calculated when needed
+        
         # History manager will be initialized lazily
         self.history_manager = None
         
@@ -3478,6 +3495,21 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Debug: print size after initialization
         print(f"🏠 UnifiedAssistantWindow initialized, size: {self.size()}")
+        
+    def _get_default_webview_size(self):
+        """Get default WebView size, calculating it if needed"""
+        if self._default_webview_size is None:
+            try:
+                screen = QApplication.primaryScreen().geometry()
+                self._default_webview_size = QSize(
+                    min(1200, int(screen.width() * 0.7)),  # 70% of screen width or 1200px
+                    min(800, int(screen.height() * 0.8))    # 80% of screen height or 800px
+                )
+            except Exception as e:
+                print(f"Failed to calculate default webview size: {e}")
+                # Fallback to reasonable defaults
+                self._default_webview_size = QSize(1200, 800)
+        return self._default_webview_size
     
     def apply_blur_effect(self):
         """Apply BlurWindow transparency effect"""
@@ -3629,7 +3661,7 @@ class UnifiedAssistantWindow(QMainWindow):
         input_layout = QVBoxLayout(self.input_container)
         input_layout.setContentsMargins(20, 10, 20, 10)
         input_layout.setSpacing(10)
-        
+
         # Integrated search container (two rows)
         search_container = QFrame()
         search_container.setObjectName("searchContainer")
@@ -3651,7 +3683,15 @@ class UnifiedAssistantWindow(QMainWindow):
         # Search input field
         self.input_field = QLineEdit()
         self.input_field.setObjectName("searchInput")
-        self.input_field.setPlaceholderText("Recommend content / Search game content")
+        # Set placeholder text with recommended query examples
+        placeholder_texts = [
+            "• " + t("query_example_1"),
+            "• " + t("query_example_2"),
+            "• " + t("query_example_3"),
+            "• " + t("query_example_4"),
+            "• " + t("query_example_5")
+        ]
+        self.input_field.setPlaceholderText(" | ".join(placeholder_texts[:3]))  # Show first 3 examples
         self.input_field.returnPressed.connect(self.on_input_return_pressed)
         
         input_row_layout.addWidget(self.input_field)
@@ -4246,6 +4286,149 @@ class UnifiedAssistantWindow(QMainWindow):
                 except Exception as fallback_error:
                     logging.error(f"Failed to save window geometry information using basic format: {fallback_error}")
     
+    def update_window_layout(self):
+        """Update window layout based on current state"""
+        # Get current bottom-right position before any changes
+        current_bottom_right = self.geometry().bottomRight()
+        
+        if self.current_state == WindowState.CHAT_ONLY:
+            # Hide title bar and content area, only show input container
+            self.title_bar.hide()
+            self.content_stack.hide()
+            self.input_container.show()
+            
+            # Set window to chat only size
+            self.setFixedSize(self._chat_only_size)
+
+            # Update main container style for full rounded corners
+            self.update_container_style(full_rounded=True)
+            
+        elif self.current_state == WindowState.FULL_CONTENT:
+            # Show all content
+            self.title_bar.show()
+            self.content_stack.show()
+            self.input_container.show()
+            
+            # Remove fixed size constraints
+            self.setMinimumSize(300, 200)
+            self.setMaximumSize(16777215, 16777215)
+            
+            # Restore saved full content geometry if available
+            if self._full_content_geometry:
+                self.resize(self._full_content_geometry.size())
+            else:
+                # Default size
+                self.resize(380, 600)
+
+            # Update main container style for standard rounded corners
+            self.update_container_style(full_rounded=False)
+            
+        elif self.current_state == WindowState.WEBVIEW:
+            # WebView state
+            self.title_bar.show()
+            self.content_stack.show()
+            self.input_container.show()
+            
+            # Remove fixed size constraints
+            self.setMinimumSize(300, 200)
+            self.setMaximumSize(16777215, 16777215)
+            
+            # Use saved webview geometry or default
+            if self._webview_geometry:
+                self.resize(self._webview_geometry.size())
+            else:
+                self.resize(self._get_default_webview_size())
+            
+            # Update main container style
+            self.update_container_style(full_rounded=False)
+        
+        # Reposition window to maintain bottom-right corner position
+        new_size = self.size()
+        new_x = current_bottom_right.x() - new_size.width()
+        new_y = current_bottom_right.y() - new_size.height()
+        
+        # Ensure window stays within screen bounds
+        screen = QApplication.primaryScreen().geometry()
+        new_x = max(0, min(new_x, screen.width() - new_size.width()))
+        new_y = max(0, min(new_y, screen.height() - new_size.height()))
+        
+        self.move(new_x, new_y)
+    
+    def switch_to_chat_only(self):
+        """Switch to chat only state (input box only)"""
+        # Save current state's geometry before switching
+        if self.current_state == WindowState.FULL_CONTENT:
+            self._full_content_geometry = self.geometry()
+        elif self.current_state == WindowState.WEBVIEW:
+            self._webview_geometry = self.geometry()
+
+        self.current_state = WindowState.CHAT_ONLY
+        self.update_window_layout()
+        
+    def switch_to_full_content(self):
+        """Switch to full content state"""
+        # Save current state's geometry before switching
+        if self.current_state == WindowState.WEBVIEW:
+            self._webview_geometry = self.geometry()
+            
+        self.current_state = WindowState.FULL_CONTENT
+        self.has_user_input = True
+        self.update_window_layout()
+        
+    def switch_to_webview(self):
+        """Switch to webview state"""
+        # Save current state's geometry before switching
+        if self.current_state == WindowState.FULL_CONTENT:
+            self._full_content_geometry = self.geometry()
+            
+        self.current_state = WindowState.WEBVIEW
+        self.update_window_layout()
+        
+    def position_chat_window(self):
+        """Position the search box at bottom right of screen"""
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+        window_geometry = self.geometry()
+        
+        # Position at right side leaving about 1/5 space
+        x = screen_geometry.width() - window_geometry.width() - int(screen_geometry.width() * 0.2)
+        # Near bottom but not touching, leave about 50px gap
+        y = screen_geometry.height() - window_geometry.height() - 50
+        
+        self.move(x, y)
+        
+    def center_window(self):
+        """Center window on screen"""
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+        window_geometry = self.geometry()
+        
+        x = (screen_geometry.width() - window_geometry.width()) // 2
+        y = (screen_geometry.height() - window_geometry.height()) // 2
+        
+        self.move(x, y)
+        
+    def update_container_style(self, full_rounded=False):
+        """Update main container rounded corner style"""
+        if full_rounded:
+            # CHAT_ONLY mode: full rounded corners
+            self.main_container.setStyleSheet("""
+                #mainContainer {
+                    background: rgba(255, 255, 255, 115);
+                    border-radius: 10px;
+                    border: none;
+                }
+            """)
+        else:
+            # Other modes: standard style
+            self.main_container.setStyleSheet("""
+                #mainContainer {
+                    background: rgba(255, 255, 255, 115);
+                    border-radius: 10px;
+                    border: 1px solid rgba(255, 255, 255, 40);
+                }
+            """)
+    
     def show_chat_view(self):
         """Switch to chat view"""
         # First stop media playback in WikiView (only pause when currently displaying WikiView)
@@ -4253,6 +4436,10 @@ class UnifiedAssistantWindow(QMainWindow):
             current_widget = self.content_stack.currentWidget()
             if current_widget == self.wiki_view:
                 self.wiki_view.pause_page()
+        
+        # If coming from WEBVIEW state, switch back to FULL_CONTENT
+        if self.current_state == WindowState.WEBVIEW:
+            self.switch_to_full_content()
             
         self.content_stack.setCurrentWidget(self.chat_view)
         # Show input area and shortcuts in chat mode
@@ -4323,6 +4510,9 @@ class UnifiedAssistantWindow(QMainWindow):
         """Switch to wiki view and load page"""
         logger = logging.getLogger(__name__)
         logger.info(f"🌐 UnifiedAssistantWindow.show_wiki_page called: URL={url}, Title={title}")
+        
+        # Switch to WEBVIEW state
+        self.switch_to_webview()
         
         # Only add to history if:
         # 1. Not a local file
@@ -4446,6 +4636,13 @@ class UnifiedAssistantWindow(QMainWindow):
         # Switch to wiki view and load URL (without recording history)
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
+        
+    def open_url_with_webview(self, url: str):
+        """Open URL in webview mode"""
+        # Switch to webview mode first
+        self.switch_to_webview()
+        # Then open the URL
+        self.open_url(url)
         self.wiki_view.resume_page()
         
         # Hide input area and shortcuts in wiki mode
@@ -4536,7 +4733,7 @@ class UnifiedAssistantWindow(QMainWindow):
                         shortcut.get('url', 'https://google.com'),
                         name  # Pass the name for text display
                     )
-                    btn.clicked.connect(lambda checked, url=shortcut.get('url', ''): self.open_url(url))
+                    btn.clicked.connect(lambda checked, url=shortcut.get('url', ''): self.open_url_with_webview(url))
                     # Add to popup instead of shortcut_layout
                     self.quick_access_popup.add_shortcut(btn)
                 except Exception as e:
@@ -4859,6 +5056,10 @@ class UnifiedAssistantWindow(QMainWindow):
                 # Check if need to stop current generation (if any)
                 if self.is_generating:
                     self.stop_generation()
+                
+                # If this is the first user input and we're in CHAT_ONLY mode, switch to FULL_CONTENT
+                if not self.has_user_input and self.current_state == WindowState.CHAT_ONLY:
+                    self.switch_to_full_content()
                     
                 self.input_field.clear()
                 self.query_submitted.emit(text, self.current_mode)
@@ -5275,11 +5476,17 @@ class AssistantController:
                 logger.info(f"✅ [DEBUG] Shortcuts loaded for pre-created window, task buttons: {button_count}")
             except Exception as e:
                 logger.error(f"❌ [DEBUG] Failed to load shortcuts for pre-created window: {e}")
+                # Don't fail completely, just log the error
+                import traceback
+                traceback.print_exc()
             
             # If we already have a game context, set it AFTER shortcuts are loaded
-            if self.current_game_window:
-                self.main_window.set_current_game_window(self.current_game_window)
-                logger.info(f"✅ [DEBUG] Set game context for pre-created window: {self.current_game_window}")
+            try:
+                if self.current_game_window:
+                    self.main_window.set_current_game_window(self.current_game_window)
+                    logger.info(f"✅ [DEBUG] Set game context for pre-created window: {self.current_game_window}")
+            except Exception as e:
+                logger.error(f"❌ [DEBUG] Failed to set game context for pre-created window: {e}")
             
             # Important: Keep window hidden
             self.main_window.hide()
@@ -5290,6 +5497,8 @@ class AssistantController:
             
         except Exception as e:
             logger.error(f"Failed to pre-create chat window: {e}")
+            import traceback
+            traceback.print_exc()
             self.main_window = None
             self._precreated = False
 
@@ -5325,6 +5534,10 @@ class AssistantController:
                 logger.info(f"⚠️ [DEBUG] No current game window to set on new window")
 
             logger.info("UnifiedAssistantWindow created and signals connected")
+            
+            # Set initial state to CHAT_ONLY for new windows
+            self.main_window.current_state = WindowState.CHAT_ONLY
+            self.main_window.has_user_input = False
         else:
             logger.info("Reusing existing UnifiedAssistantWindow")
             # For existing windows, always update game context to ensure task buttons are visible
@@ -5350,6 +5563,11 @@ class AssistantController:
         else:
             logger.warning("Input field not found in main window!")
 
+        # Apply window layout based on current state
+        if not self.main_window.has_user_input:
+            logger.info("Applying CHAT_ONLY layout for window with no user input")
+            self.main_window.update_window_layout()
+        
         # Create fade-in animation
         self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
         self._fade_in_animation.setDuration(100)  # 100ms fade-in animation (faster)
@@ -5363,8 +5581,11 @@ class AssistantController:
             # Hide mini window
             self.mini_window.hide()
 
-            # Restore main window to previous saved position and size
-            self.main_window.restore_geometry()
+            # Only restore geometry if not in CHAT_ONLY state
+            # CHAT_ONLY state should always position at bottom right
+            if self.main_window.current_state != WindowState.CHAT_ONLY:
+                # Restore main window to previous saved position and size
+                self.main_window.restore_geometry()
 
             # Ensure window is within screen range
             screen = QApplication.primaryScreen().geometry()

@@ -520,7 +520,7 @@ class GameWikiApp(QObject):
                 if hasattr(self.assistant_ctrl, 'main_window') and not self.assistant_ctrl.main_window:
                     # Temporarily create and hide the window
                     from .unified_window import UnifiedAssistantWindow
-                    self.assistant_ctrl.main_window = UnifiedAssistantWindow(self.assistant_ctrl)
+                    self.assistant_ctrl.main_window = UnifiedAssistantWindow(self.settings_mgr)
                     self.assistant_ctrl.main_window.hide()
                     logger.info("✅ Chat window pre-created via fallback method")
                     
