@@ -62,6 +62,37 @@ class HotkeyConfig:
 
 
 @dataclass
+class ChatOnlyGeometry:
+    """Geometry configuration for chat_only window state"""
+    left_percent: float = 0.65
+    top_percent: float = 0.85
+    width_percent: float = 0.22
+    height_percent: float = 0.30
+
+
+@dataclass
+class FullContentGeometry:
+    """Geometry configuration for full_content window state"""
+    width_percent: float = 0.25
+    height_percent: float = 0.5
+
+
+@dataclass
+class WebViewGeometry:
+    """Geometry configuration for webview window state"""
+    width_percent: float = 0.5
+    height_percent: float = 0.5
+
+
+@dataclass
+class WindowGeometryConfig:
+    """Container for all window state geometries"""
+    chat_only: ChatOnlyGeometry = field(default_factory=ChatOnlyGeometry)
+    full_content: FullContentGeometry = field(default_factory=FullContentGeometry)
+    webview: WebViewGeometry = field(default_factory=WebViewGeometry)
+
+
+@dataclass
 class PopupConfig:
     width: int = 600
     height: int = 500
@@ -271,6 +302,7 @@ class AppSettings:
     language: str = "en"
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
     popup: PopupConfig = field(default_factory=PopupConfig)
+    window_geometry: WindowGeometryConfig = field(default_factory=WindowGeometryConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
@@ -313,6 +345,15 @@ class SettingsManager:
         # Update popup settings
         if 'popup' in new_settings:
             self._settings.popup = PopupConfig(**new_settings['popup'])
+        # Update window geometry settings
+        if 'window_geometry' in new_settings:
+            geom = new_settings['window_geometry']
+            if 'chat_only' in geom:
+                self._settings.window_geometry.chat_only = ChatOnlyGeometry(**geom['chat_only'])
+            if 'full_content' in geom:
+                self._settings.window_geometry.full_content = FullContentGeometry(**geom['full_content'])
+            if 'webview' in geom:
+                self._settings.window_geometry.webview = WebViewGeometry(**geom['webview'])
         # Update API settings
         if 'api' in new_settings:
             self._settings.api = ApiConfig(**new_settings['api'])
@@ -372,10 +413,20 @@ class SettingsManager:
                 print(f"Settings file fields synchronized: {self.path}")
             
             # Create AppSettings instance from merged data
+            window_geometry_data = merged_data.get('window_geometry', {})
+            window_geometry = WindowGeometryConfig()
+            if 'chat_only' in window_geometry_data:
+                window_geometry.chat_only = ChatOnlyGeometry(**window_geometry_data['chat_only'])
+            if 'full_content' in window_geometry_data:
+                window_geometry.full_content = FullContentGeometry(**window_geometry_data['full_content'])
+            if 'webview' in window_geometry_data:
+                window_geometry.webview = WebViewGeometry(**window_geometry_data['webview'])
+                
             return AppSettings(
                 language=merged_data.get('language', 'en'),
                 hotkey=HotkeyConfig(**merged_data.get('hotkey', {})),
                 popup=PopupConfig(**merged_data.get('popup', {})),
+                window_geometry=window_geometry,
                 api=ApiConfig(**merged_data.get('api', {})),
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
                 shortcuts=merged_data.get('shortcuts', [])
@@ -384,11 +435,23 @@ class SettingsManager:
             print(f"Error processing settings file: {e}")
             # Use default settings on error
             default_data = json.loads(default_settings_path.read_text(encoding="utf-8"))
+            
+            window_geometry_data = default_data.get('window_geometry', {})
+            window_geometry = WindowGeometryConfig()
+            if 'chat_only' in window_geometry_data:
+                window_geometry.chat_only = ChatOnlyGeometry(**window_geometry_data['chat_only'])
+            if 'full_content' in window_geometry_data:
+                window_geometry.full_content = FullContentGeometry(**window_geometry_data['full_content'])
+            if 'webview' in window_geometry_data:
+                window_geometry.webview = WebViewGeometry(**window_geometry_data['webview'])
+                
             return AppSettings(
                 language=default_data.get('language', 'en'),
                 hotkey=HotkeyConfig(**default_data.get('hotkey', {})),
                 popup=PopupConfig(**default_data.get('popup', {})),
+                window_geometry=window_geometry,
                 api=ApiConfig(**default_data.get('api', {})),
+                dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
                 shortcuts=default_data.get('shortcuts', [])
             )
     

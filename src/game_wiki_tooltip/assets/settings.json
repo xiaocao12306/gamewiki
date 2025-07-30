@@ -16,10 +16,26 @@
         "height_percent": 0.65,
         "use_relative_size": true
     },
+    "window_geometry": {
+        "chat_only": {
+            "left_percent": 0.65,
+            "top_percent": 0.85,
+            "width_percent": 0.22,
+            "height_percent": 0.30
+        },
+        "full_content": {
+            "width_percent": 0.25,
+            "height_percent": 0.5
+        },
+        "webview": {
+            "width_percent": 0.5,
+            "height_percent": 0.5
+        }
+    },
     "summarization": {
         "enabled": true,
         "api_key": "",
-        "model_name": "gemini-2.0-flash",
+        "model_name": "gemini-2.5-flash",
         "max_summary_length": 300,
         "temperature": 0.3,
         "include_sources": true,

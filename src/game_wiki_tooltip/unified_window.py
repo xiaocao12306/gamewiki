@@ -19,7 +19,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 
 from src.game_wiki_tooltip.i18n import t
-from src.game_wiki_tooltip.config import PopupConfig
+from src.game_wiki_tooltip.config import PopupConfig, WindowGeometryConfig, ChatOnlyGeometry, FullContentGeometry, WebViewGeometry
 
 class WindowState(Enum):
     """Window state enumeration"""
@@ -3473,8 +3473,8 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Store geometry for different states
         self._chat_only_size = QSize(380, 115)  # Input box only
-        self._full_content_geometry = None  # Full chat window geometry
-        self._webview_geometry = None  # WebView geometry
+        self._pending_geometry_save = False  # Flag to track if geometry needs saving
+        self._is_precreating = False  # Flag to indicate if window is in precreation mode
         
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
         self._default_webview_size = None  # Will be calculated when needed
@@ -4063,68 +4063,72 @@ class UnifiedAssistantWindow(QMainWindow):
         self.setStyleSheet(style_sheet)
         
     def restore_geometry(self):
-        """Restore window geometry from settings with enhanced screen compatibility"""
-        if self.settings_manager:
-            try:
-                scale = _get_scale()  # Get DPI scaling factor
-                settings = self.settings_manager.get()
-                popup_dict = settings.get('popup', {})
-                
-                # Use availableGeometry to get the available screen area (excluding taskbars, etc.)
-                screen = QApplication.primaryScreen().availableGeometry()
-                
-                # Check if it is the first use or the configuration is incomplete
-                is_first_use = not popup_dict or len(popup_dict) < 4
-                
-                if is_first_use:
-                    # First use, create smart default configuration
-                    popup_config = PopupConfig.create_smart_default(screen)
-                    print(f"📍 First use, create smart default window configuration")
-                else:
-                    # Create PopupConfig instance from settings
-                    popup_config = PopupConfig(**popup_dict)
-                
-                # Get absolute coordinates (already includes screen adaptation and boundary checks)
-                phys_x, phys_y, phys_w, phys_h = popup_config.get_absolute_geometry(screen)
-                
-                # Apply DPI scaling
-                if scale != 1.0:
-                    # If using relative coordinates, no additional DPI scaling is needed (already handled in get_absolute_geometry)
-                    if not popup_config.use_relative_position:
-                        phys_x = int(phys_x * scale)
-                        phys_y = int(phys_y * scale)
-                    if not popup_config.use_relative_size:
-                        phys_w = int(phys_w * scale)
-                        phys_h = int(phys_h * scale)
-                
-                # Final boundary check (considering values after DPI scaling)
-                phys_x, phys_y, phys_w, phys_h = self._final_geometry_check(
-                    phys_x, phys_y, phys_w, phys_h, screen
-                )
-                
-                self.setGeometry(phys_x, phys_y, phys_w, phys_h)
-                
-                # Record detailed window restoration information
-                screen_info = f"{screen.width()}x{screen.height()}"
-                position_type = "Relative coordinates" if popup_config.use_relative_position else "Absolute coordinates"
-                size_type = "Relative size" if popup_config.use_relative_size else "Fixed size"
-                
-                logging.info(f"Restore window geometry: position({phys_x},{phys_y}) size({phys_w}x{phys_h}) "
-                           f"screen({screen_info}) DPI scaling({scale:.2f}) "
-                           f"configuration({position_type}+{size_type})")
-                
-                # After restoring geometry, reset size constraints to ensure free resizing
-                self.reset_size_constraints()
-                
-                # If it is the first use and a smart default configuration is created, save to settings
-                if is_first_use:
-                    self._save_initial_geometry_config(popup_config)
-                
-            except Exception as e:
-                logging.error(f"Failed to restore window geometry information: {e}")
-                # Use safe default values when failed
+        """Restore window geometry from settings based on current window state"""
+        if not self.settings_manager:
+            self._apply_safe_default_geometry()
+            return
+            
+        try:
+            # Get current screen information
+            screen = QApplication.primaryScreen()
+            if not screen:
                 self._apply_safe_default_geometry()
-        else:
+                return
+                
+            available_rect = screen.availableGeometry()
+            screen_width = available_rect.width()
+            screen_height = available_rect.height()
+            screen_x = available_rect.x()
+            screen_y = available_rect.y()
+            
+            # Get geometry config based on current state
+            try:
+                window_geom = self.settings_manager.settings.window_geometry
+            except AttributeError:
+                # If window_geometry doesn't exist, create default
+                window_geom = WindowGeometryConfig()
+                logging.warning("window_geometry not found in settings, using defaults")
+            
+            if self.current_state == WindowState.CHAT_ONLY:
+                # Chat only uses both position and size
+                geom = window_geom.chat_only
+                x = int(screen_x + screen_width * geom.left_percent)
+                y = int(screen_y + screen_height * geom.top_percent)
+                width = int(screen_width * geom.width_percent)
+                height = int(screen_height * geom.height_percent)
+                
+                # Ensure minimum size
+                width = max(300, min(width, 800))
+                height = max(100, min(height, 400))
+                
+                self.setGeometry(x, y, width, height)
+                
+            elif self.current_state == WindowState.FULL_CONTENT:
+                # Full content only uses size, position determined by search box
+                geom = window_geom.full_content
+                width = int(screen_width * geom.width_percent)
+                height = int(screen_height * geom.height_percent)
+                
+                # Ensure minimum size
+                width = max(400, min(width, 1200))
+                height = max(300, min(height, 900))
+                
+                self.resize(width, height)
+                
+            elif self.current_state == WindowState.WEBVIEW:
+                # WebView only uses size, position determined by search box
+                geom = window_geom.webview
+                width = int(screen_width * geom.width_percent)
+                height = int(screen_height * geom.height_percent)
+                
+                # Ensure minimum size
+                width = max(600, min(width, 1600))
+                height = max(400, min(height, 1200))
+                
+                self.resize(width, height)
+                
+        except Exception as e:
+            logging.error(f"Failed to restore window geometry: {e}")
             self._apply_safe_default_geometry()
     
     def _final_geometry_check(self, x, y, width, height, screen):
@@ -4196,100 +4200,176 @@ class UnifiedAssistantWindow(QMainWindow):
             logging.warning(f"Failed to save initial geometry configuration: {e}")
     
     def save_geometry(self):
-        """Save window geometry to settings with enhanced format support"""
-        if self.settings_manager:
+        """Save current window geometry to settings based on window state"""
+        if not self.settings_manager:
+            return
+            
+        # Skip geometry saving during precreation to avoid overwriting default settings
+        if getattr(self, '_is_precreating', False):
+            logging.debug("Skipping geometry save during precreation")
+            return
+            
+        try:
+            geo = self.geometry()
+            screen = QApplication.primaryScreen().availableGeometry()
+            screen_width = screen.width()
+            screen_height = screen.height()
+            screen_x = screen.x()
+            screen_y = screen.y()
+            
+            # Calculate relative values
+            left_percent = (geo.x() - screen_x) / screen_width if screen_width > 0 else 0.5
+            top_percent = (geo.y() - screen_y) / screen_height if screen_height > 0 else 0.1
+            width_percent = geo.width() / screen_width if screen_width > 0 else 0.3
+            height_percent = geo.height() / screen_height if screen_height > 0 else 0.5
+            
+            # Ensure values are in reasonable range
+            left_percent = max(0.0, min(1.0, left_percent))
+            top_percent = max(0.0, min(1.0, top_percent))
+            width_percent = max(0.1, min(0.9, width_percent))
+            height_percent = max(0.1, min(0.9, height_percent))
+            
+            # Get current window_geometry from settings or create default
             try:
-                scale = _get_scale()  # Get DPI scaling factor
-                geo = self.geometry()
-                screen = QApplication.primaryScreen().availableGeometry()
-                
-                # Get current settings to maintain consistency
-                current_settings = self.settings_manager.get()
-                current_popup = current_settings.get('popup', {})
-                
-                # Check if current configuration uses relative coordinates
-                use_relative_position = current_popup.get('use_relative_position', False)
-                use_relative_size = current_popup.get('use_relative_size', False)
-                
-                if use_relative_position:
-                    # Save as relative coordinates (0.0-1.0)
-                    left_percent = (geo.x() - screen.x()) / screen.width() if screen.width() > 0 else 0.5
-                    top_percent = (geo.y() - screen.y()) / screen.height() if screen.height() > 0 else 0.1
-                    
-                    # Ensure relative coordinates are within reasonable range
-                    left_percent = max(0.0, min(1.0, left_percent))
-                    top_percent = max(0.0, min(1.0, top_percent))
-                else:
-                    # Save as absolute coordinates (logical pixels)
-                    left_percent = current_popup.get('left_percent', 0.6)
-                    top_percent = current_popup.get('top_percent', 0.1)
-                
-                if use_relative_size:
-                    # Save as relative size
-                    width_percent = geo.width() / screen.width() if screen.width() > 0 else 0.4
-                    height_percent = geo.height() / screen.height() if screen.height() > 0 else 0.7
-                    
-                    # Ensure relative size is within reasonable range
-                    width_percent = max(0.2, min(0.9, width_percent))
-                    height_percent = max(0.3, min(0.9, height_percent))
-                else:
-                    # Save as fixed size
-                    width_percent = current_popup.get('width_percent', 0.4)
-                    height_percent = current_popup.get('height_percent', 0.7)
-                
-                # Convert to logical pixel coordinates (for backward compatibility)
-                css_x = int(geo.x() / scale) if scale != 1.0 else geo.x()
-                css_y = int(geo.y() / scale) if scale != 1.0 else geo.y()
-                css_w = int(geo.width() / scale) if scale != 1.0 else geo.width()
-                css_h = int(geo.height() / scale) if scale != 1.0 else geo.height()
-                
-                # Build complete popup configuration
-                popup_config = {
-                    # Traditional fixed coordinates (for backward compatibility)
-                    'left': css_x,
-                    'top': css_y,
-                    'width': css_w,
-                    'height': css_h,
-                    # New relative coordinate system
-                    'use_relative_position': use_relative_position,
+                current_window_geometry = self.settings_manager.settings.window_geometry
+            except AttributeError:
+                current_window_geometry = WindowGeometryConfig()
+                logging.warning("window_geometry not found in settings during save, using defaults")
+            
+            # Update geometry based on current state
+            update_data = {'window_geometry': {}}
+            
+            if self.current_state == WindowState.CHAT_ONLY:
+                # Chat only saves both position and size
+                update_data['window_geometry']['chat_only'] = {
                     'left_percent': left_percent,
                     'top_percent': top_percent,
                     'width_percent': width_percent,
-                    'height_percent': height_percent,
-                    'use_relative_size': use_relative_size,
+                    'height_percent': height_percent
                 }
-                
-                # Update configuration
-                self.settings_manager.update({'popup': popup_config})
-                
-                # Record saved information
-                pos_type = "Relative" if use_relative_position else "Absolute"
-                size_type = "Relative" if use_relative_size else "Fixed"
-                logging.info(f"Save window geometry: {pos_type} position({css_x},{css_y}|{left_percent:.2f},{top_percent:.2f}) "
-                           f"{size_type} size({css_w}x{css_h}|{width_percent:.2f}x{height_percent:.2f}) "
-                           f"DPI scaling({scale:.2f})")
-                
+            elif self.current_state == WindowState.FULL_CONTENT:
+                # Full content only saves size
+                update_data['window_geometry']['full_content'] = {
+                    'width_percent': width_percent,
+                    'height_percent': height_percent
+                }
+            elif self.current_state == WindowState.WEBVIEW:
+                # WebView only saves size
+                update_data['window_geometry']['webview'] = {
+                    'width_percent': width_percent,
+                    'height_percent': height_percent
+                }
+            
+            # Update settings in memory
+            self.settings_manager.update(update_data)
+            self._pending_geometry_save = True
+            
+            logging.info(f"Saved {self.current_state.value} geometry: "
+                        f"pos({left_percent:.2f}, {top_percent:.2f}) "
+                        f"size({width_percent:.2f}x{height_percent:.2f})")
+                        
+        except Exception as e:
+            logging.error(f"Failed to save window geometry: {e}")
+    
+    def _persist_geometry_if_needed(self):
+        """Persist geometry to disk if there are pending changes"""
+        if getattr(self, '_pending_geometry_save', False):
+            try:
+                # Force save to disk
+                self.settings_manager.save()
+                self._pending_geometry_save = False
+                logging.debug("Persisted geometry changes to disk")
             except Exception as e:
-                logging.error(f"Failed to save window geometry information: {e}")
-                # Fallback to save basic information
-                try:
-                    geo = self.geometry()
-                    self.settings_manager.update({
-                        'popup': {
-                            'left': geo.x(),
-                            'top': geo.y(),
-                            'width': geo.width(),
-                            'height': geo.height()
-                        }
-                    })
-                    logging.warning("Save window geometry information using basic format")
-                except Exception as fallback_error:
-                    logging.error(f"Failed to save window geometry information using basic format: {fallback_error}")
+                logging.error(f"Failed to persist geometry: {e}")
+    
+    def set_precreating_mode(self, is_precreating: bool):
+        """Set the precreating mode flag"""
+        self._is_precreating = is_precreating
+        logging.debug(f"Precreating mode set to: {is_precreating}")
+    
+    def _get_window_screen_quadrant(self):
+        """Get which quadrant of the screen the window center is in
+        Returns: tuple (quadrant, center_x_percent, center_y_percent)
+        Quadrants: 1=top-right, 2=top-left, 3=bottom-left, 4=bottom-right
+        """
+        try:
+            screen = QApplication.primaryScreen().availableGeometry()
+            window_rect = self.geometry()
+            
+            # Calculate window center
+            window_center_x = window_rect.x() + window_rect.width() // 2
+            window_center_y = window_rect.y() + window_rect.height() // 2
+            
+            # Calculate relative position (0.0 to 1.0)
+            center_x_percent = (window_center_x - screen.x()) / screen.width()
+            center_y_percent = (window_center_y - screen.y()) / screen.height()
+            
+            # Determine quadrant
+            if center_x_percent >= 0.5 and center_y_percent < 0.5:
+                quadrant = 1  # top-right
+            elif center_x_percent < 0.5 and center_y_percent < 0.5:
+                quadrant = 2  # top-left  
+            elif center_x_percent < 0.5 and center_y_percent >= 0.5:
+                quadrant = 3  # bottom-left
+            else:
+                quadrant = 4  # bottom-right
+                
+            return quadrant, center_x_percent, center_y_percent
+            
+        except Exception as e:
+            logging.error(f"Failed to calculate window quadrant: {e}")
+            return 4, 0.8, 0.8  # Default to bottom-right
+    
+    def _show_menu_with_intelligent_position(self, menu, reference_button):
+        """Show menu with intelligent positioning based on window location"""
+        try:
+            quadrant, center_x_percent, center_y_percent = self._get_window_screen_quadrant()
+            
+            # Calculate menu position based on quadrant and button position  
+            button_rect = reference_button.geometry()
+            button_global_pos = reference_button.mapToGlobal(QPoint(0, 0))
+            menu_size = menu.sizeHint()
+            
+            # Decide menu direction based on window position
+            if center_y_percent < 0.4:  # Window in upper part of screen
+                # Show menu below button
+                menu_pos = QPoint(button_global_pos.x(), button_global_pos.y() + button_rect.height())
+            else:  # Window in lower part of screen  
+                # Show menu above button
+                menu_pos = QPoint(button_global_pos.x(), button_global_pos.y() - menu_size.height())
+            
+            # Adjust horizontal position to avoid screen edges
+            screen = QApplication.primaryScreen().availableGeometry()
+            if menu_pos.x() + menu_size.width() > screen.right():
+                menu_pos.setX(screen.right() - menu_size.width())
+            if menu_pos.x() < screen.left():
+                menu_pos.setX(screen.left())
+                
+            logging.debug(f"Showing menu at quadrant {quadrant}, position: {menu_pos}")
+            menu.exec(menu_pos)
+            
+        except Exception as e:
+            logging.error(f"Failed to position menu intelligently: {e}")
+            # Fallback to default positioning
+            button_global_pos = reference_button.mapToGlobal(QPoint(0, reference_button.height()))
+            menu.exec(button_global_pos)
     
     def update_window_layout(self):
         """Update window layout based on current state"""
-        # Get current bottom-right position before any changes
-        current_bottom_right = self.geometry().bottomRight()
+        # Get anchor point based on window position before any changes
+        quadrant, center_x_percent, center_y_percent = self._get_window_screen_quadrant()
+        
+        # Determine which corner to use as anchor based on quadrant
+        if quadrant == 1:  # top-right
+            anchor_point = self.geometry().topRight()
+        elif quadrant == 2:  # top-left
+            anchor_point = self.geometry().topLeft()
+        elif quadrant == 3:  # bottom-left
+            anchor_point = self.geometry().bottomLeft()
+        else:  # quadrant == 4, bottom-right (default)
+            anchor_point = self.geometry().bottomRight()
+            
+        logging.debug(f"Window quadrant: {quadrant}, using anchor: {anchor_point}")
         
         if self.current_state == WindowState.CHAT_ONLY:
             # Hide title bar and content area, only show input container
@@ -4313,12 +4393,8 @@ class UnifiedAssistantWindow(QMainWindow):
             self.setMinimumSize(300, 200)
             self.setMaximumSize(16777215, 16777215)
             
-            # Restore saved full content geometry if available
-            if self._full_content_geometry:
-                self.resize(self._full_content_geometry.size())
-            else:
-                # Default size
-                self.resize(380, 600)
+            # Restore geometry from settings
+            self.restore_geometry()
 
             # Update main container style for standard rounded corners
             self.update_container_style(full_rounded=False)
@@ -4333,34 +4409,41 @@ class UnifiedAssistantWindow(QMainWindow):
             self.setMinimumSize(300, 200)
             self.setMaximumSize(16777215, 16777215)
             
-            # Use saved webview geometry or default
-            if self._webview_geometry:
-                self.resize(self._webview_geometry.size())
-            else:
-                self.resize(self._get_default_webview_size())
+            # Restore geometry from settings
+            self.restore_geometry()
             
             # Update main container style
             self.update_container_style(full_rounded=False)
         
-        # Reposition window to maintain bottom-right corner position
+        # Reposition window based on intelligent anchor point
         new_size = self.size()
-        new_x = current_bottom_right.x() - new_size.width()
-        new_y = current_bottom_right.y() - new_size.height()
+        
+        # Calculate new position based on which corner is anchored
+        if quadrant == 1:  # top-right - anchor top-right corner
+            new_x = anchor_point.x() - new_size.width()
+            new_y = anchor_point.y()
+        elif quadrant == 2:  # top-left - anchor top-left corner
+            new_x = anchor_point.x()
+            new_y = anchor_point.y()
+        elif quadrant == 3:  # bottom-left - anchor bottom-left corner
+            new_x = anchor_point.x()
+            new_y = anchor_point.y() - new_size.height()
+        else:  # quadrant == 4, bottom-right - anchor bottom-right corner (default)
+            new_x = anchor_point.x() - new_size.width()
+            new_y = anchor_point.y() - new_size.height()
         
         # Ensure window stays within screen bounds
         screen = QApplication.primaryScreen().geometry()
         new_x = max(0, min(new_x, screen.width() - new_size.width()))
         new_y = max(0, min(new_y, screen.height() - new_size.height()))
         
+        logging.debug(f"Repositioning window from anchor {anchor_point} to ({new_x}, {new_y})")
         self.move(new_x, new_y)
     
     def switch_to_chat_only(self):
         """Switch to chat only state (input box only)"""
         # Save current state's geometry before switching
-        if self.current_state == WindowState.FULL_CONTENT:
-            self._full_content_geometry = self.geometry()
-        elif self.current_state == WindowState.WEBVIEW:
-            self._webview_geometry = self.geometry()
+        self.save_geometry()
 
         self.current_state = WindowState.CHAT_ONLY
         self.update_window_layout()
@@ -4369,7 +4452,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Switch to full content state"""
         # Save current state's geometry before switching
         if self.current_state == WindowState.WEBVIEW:
-            self._webview_geometry = self.geometry()
+            self.save_geometry()
             
         self.current_state = WindowState.FULL_CONTENT
         self.has_user_input = True
@@ -4379,7 +4462,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Switch to webview state"""
         # Save current state's geometry before switching
         if self.current_state == WindowState.FULL_CONTENT:
-            self._full_content_geometry = self.geometry()
+            self.save_geometry()
             
         self.current_state = WindowState.WEBVIEW
         self.update_window_layout()
@@ -4858,11 +4941,8 @@ class UnifiedAssistantWindow(QMainWindow):
             clear_action = history_menu.addAction("Clear History")
             clear_action.triggered.connect(self.clear_history)
         
-        # Show menu above the button (popup upward)
-        # Calculate position to show menu above the button
-        menu_height = history_menu.sizeHint().height()
-        button_pos = self.history_button.mapToGlobal(QPoint(0, -menu_height))
-        history_menu.exec(button_pos)
+        # Show menu with intelligent positioning
+        self._show_menu_with_intelligent_position(history_menu, self.history_button)
     
     def clear_history(self):
         """Clear browsing history"""
@@ -5020,7 +5100,7 @@ class UnifiedAssistantWindow(QMainWindow):
         return super().eventFilter(obj, event)
         
     def show_mode_menu(self):
-        """Show search mode menu"""
+        """Show search mode menu with intelligent positioning"""
         mode_menu = QMenu(self)  # Use standard QMenu with parent
         from src.game_wiki_tooltip.i18n import t
         
@@ -5038,11 +5118,8 @@ class UnifiedAssistantWindow(QMainWindow):
         url_action = mode_menu.addAction(t("search_mode_url"))
         url_action.triggered.connect(lambda: self.set_mode("url"))
         
-        # Show menu above the button (popup upward)
-        # Calculate position to show menu above the button
-        menu_height = mode_menu.sizeHint().height()
-        button_pos = self.mode_button.mapToGlobal(QPoint(0, -menu_height))
-        mode_menu.exec(button_pos)
+        # Show menu with intelligent positioning
+        self._show_menu_with_intelligent_position(mode_menu, self.mode_button)
 
     def on_send_clicked(self):
         """Handle send button click"""
@@ -5199,13 +5276,15 @@ class UnifiedAssistantWindow(QMainWindow):
     def closeEvent(self, event):
         """Handle close event - just hide the window"""
         event.ignore()  # Don't actually close the window
-        self.hide()  # Just hide it
         
-        # Save geometry information
+        # Save geometry information and persist to disk
         try:
             self.save_geometry()
+            self._persist_geometry_if_needed()
         except Exception:
             pass
+            
+        self.hide()  # Just hide it
             
         # Notify controller that window is closing
         self.window_closing.emit()
@@ -5404,6 +5483,7 @@ class AssistantController:
                 logger.info("Hiding main window")
                 try:
                     self.main_window.save_geometry()
+                    self.main_window._persist_geometry_if_needed()
                 except Exception as e:
                     logger.warning(f"Failed to save geometry when hiding main window: {e}")
                 self.main_window.hide()
@@ -5427,6 +5507,7 @@ class AssistantController:
             logger.info("Hiding main window")
             try:
                 self.main_window.save_geometry()
+                self.main_window._persist_geometry_if_needed()
             except Exception as e:
                 logger.warning(f"Failed to save geometry when hiding main window: {e}")
             self.main_window.hide()
@@ -5460,6 +5541,10 @@ class AssistantController:
             
             # Create window but keep it hidden
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
+            
+            # Set precreating mode to prevent geometry saving during initialization
+            self.main_window.set_precreating_mode(True)
+            
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
@@ -5519,6 +5604,10 @@ class AssistantController:
         if not self.main_window:
             logger.info("Creating new UnifiedAssistantWindow")
             self.main_window = UnifiedAssistantWindow(self.settings_manager)
+            
+            # Ensure precreating mode is off for new windows
+            self.main_window.set_precreating_mode(False)
+            
             self.main_window.query_submitted.connect(self.handle_query)
             # When window is closed, go back to mini mode
             self.main_window.window_closing.connect(self.show_mini)
@@ -5550,6 +5639,11 @@ class AssistantController:
 
         # Set window initial opacity to 0 (prepare fade-in animation)
         self.main_window.setWindowOpacity(0.0)
+
+        # Clear precreating mode before showing window
+        if hasattr(self.main_window, '_is_precreating') and self.main_window._is_precreating:
+            self.main_window.set_precreating_mode(False)
+            logger.info("Cleared precreating mode for main window")
 
         # Ensure window is visible and focused
         logger.info("Showing main window with fade-in animation")
@@ -5648,6 +5742,7 @@ class AssistantController:
         if self.main_window:
             try:
                 self.main_window.save_geometry()
+                self.main_window._persist_geometry_if_needed()
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)

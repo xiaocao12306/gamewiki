@@ -2265,11 +2265,6 @@ class IntegratedAssistantController(AssistantController):
                 # 如果用户没有输入过，显示CHAT_ONLY形态
                 logger.info("🎯 Switching to CHAT_ONLY mode (no user input yet)")
                 self.main_window.switch_to_chat_only()
-            else:
-                # 如果用户有输入历史，显示FULL_CONTENT形态
-                logger.info("🎯 Keeping FULL_CONTENT mode (user has input history)")
-                # 确保切换到聊天视图并设置focus
-                self.main_window.show_chat_view()
                 
         logger.info("💬 Chat window shown")
     
