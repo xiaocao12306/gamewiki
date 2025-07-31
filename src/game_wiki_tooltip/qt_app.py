@@ -386,9 +386,6 @@ class GameWikiApp(QObject):
             # Initialize assistant controller with limited mode flag
             self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
             
-            # Connect visibility change handler
-            self.assistant_ctrl.visibility_changed = self._on_assistant_visibility_changed
-            
             # Initialize tray icon
             self.tray_icon = QtTrayIcon()
             self.tray_icon.settings_requested.connect(self._show_settings)
@@ -562,10 +559,6 @@ class GameWikiApp(QObject):
         # 保留是为了兼容性，但实际上不会被调用
         pass
         
-    def _on_assistant_visibility_changed(self, is_visible):
-        """Handle assistant visibility change to update tray icon"""
-        if self.tray_icon:
-            self.tray_icon.update_toggle_text(is_visible)
             
     def _on_settings_applied(self):
         """Handle settings applied"""
@@ -662,7 +655,7 @@ class GameWikiApp(QObject):
                     self.assistant_ctrl = None
                     logger.info("Old assistant controller cleaned up")
                 
-                # Reinitialize components (slight delay to ensure old windows are fully cleaned)
+                # Reinitialize components (slight delay to ensure old window_component are fully cleaned)
                 QTimer.singleShot(100, lambda: self._initialize_components(limited_mode=new_limited_mode))
                 
                 # Show mode switch notification (but don't repeat hotkey notification)
@@ -814,7 +807,7 @@ class GameWikiApp(QObject):
             return False
             
     def _on_hotkey_triggered(self):
-        """Handle hotkey trigger with new rules"""
+        """Handle hotkey trigger using SmartInteractionManager"""
         logger.info("=== HOTKEY TRIGGERED ===")
         
         if not self.assistant_ctrl:
@@ -822,78 +815,23 @@ class GameWikiApp(QObject):
             return
         
         try:
-            # Check if main window exists and is visible
-            if self.assistant_ctrl.main_window and self.assistant_ctrl.main_window.isVisible():
-                # Window is visible
-                logger.info("Main window is visible")
-                
-                # Check mouse state
-                try:
-                    from .smart_interaction_manager import SmartInteractionManager
-                    if hasattr(self.assistant_ctrl, 'smart_manager'):
-                        mouse_state = self.assistant_ctrl.smart_manager.get_mouse_state()
-                        if mouse_state.is_visible:
-                            # Mouse is visible, show mouse for interaction
-                            logger.info("Mouse is visible, showing mouse for interaction")
-                            self.assistant_ctrl.show_mouse_for_interaction()
-                        else:
-                            # Mouse is hidden, hide window
-                            logger.info("Mouse is hidden, hiding window")
-                            self.assistant_ctrl.main_window.hide()
-                    else:
-                        # No smart manager, fallback to hide window
-                        logger.info("No smart manager, hiding window")
-                        self.assistant_ctrl.main_window.hide()
-                except Exception as e:
-                    logger.warning(f"Error checking mouse state: {e}, hiding window")
-                    self.assistant_ctrl.main_window.hide()
-            else:
-                # Window is hidden or doesn't exist, show it
-                logger.info("Main window is hidden or doesn't exist, showing window")
-                
-                # Check game window and set context
-                game_window_title = self._get_game_window_title()
-                if game_window_title:
-                    logger.info(f"🎮 Current game window: {game_window_title}")
-                    self.assistant_ctrl.set_current_game_window(game_window_title)
-                
-                # Show window
-                self.assistant_ctrl.expand_to_chat()
-            
-            # Update tray icon state
+            # Use smart interaction manager to handle hotkey
             is_visible = self.assistant_ctrl.main_window and self.assistant_ctrl.main_window.isVisible()
-            self.tray_icon.update_toggle_text(is_visible)
-            logger.info(f"✅ Hotkey processing completed, window visible: {is_visible}")
-            
+            self.assistant_ctrl.handle_smart_hotkey(is_visible)
+            logger.info("=== Hotkey processing completed ===")
         except Exception as e:
             logger.error(f"Error in hotkey handler: {e}")
             import traceback
             traceback.print_exc()
-            
-        logger.info("=== Hotkey processing completed ===")
     
-    def _get_game_window_title(self) -> Optional[str]:
-        """Get the title of the current foreground window (game window)"""
-        try:
-            from src.game_wiki_tooltip.utils import get_foreground_title
-            title = get_foreground_title()
-            if title:
-                logger.info(f"Got foreground window title: {title}")
-                return title
-            else:
-                logger.warning("No foreground window title found")
-                return None
-        except Exception as e:
-            logger.error(f"Failed to get foreground window title: {e}")
-            return None
             
     def _quit_application(self):
         """Quit application"""
         logger.info("Quitting application...")
         
-        # Clean up assistant controller and its windows first
+        # Clean up assistant controller and its window_component first
         if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
-            logger.info("Cleaning up assistant controller and related windows...")
+            logger.info("Cleaning up assistant controller and related window_component...")
             
             
             # Clean up main window

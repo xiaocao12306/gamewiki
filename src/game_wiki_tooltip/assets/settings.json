@@ -4,18 +4,6 @@
         "key": "Q",
         "modifiers": ["Ctrl"]
     },
-    "popup": {
-        "width": 600,
-        "height": 500,
-        "left": 100,
-        "top": 50,
-        "use_relative_position": true,
-        "left_percent": 0.55,
-        "top_percent": 0.1,
-        "width_percent": 0.35,
-        "height_percent": 0.65,
-        "use_relative_size": true
-    },
     "window_geometry": {
         "chat_only": {
             "left_percent": 0.65,

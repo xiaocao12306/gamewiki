@@ -99,9 +99,9 @@ class QtTrayIcon(QObject):
             self.tray_icon.hide()
             
     def update_toggle_text(self, is_visible: bool):
-        """Update toggle action text based on visibility state"""
-        if hasattr(self, 'toggle_action'):
-            pass  # Toggle action removed
+        """Update toggle action text based on visibility state - deprecated"""
+        # This method is deprecated and no longer needed
+        pass
             
     def show_notification(self, title: str, message: str):
         """Show system notification"""

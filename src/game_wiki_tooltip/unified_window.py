@@ -21,11 +21,12 @@ from dataclasses import dataclass, field
 from src.game_wiki_tooltip.i18n import t
 from src.game_wiki_tooltip.config import PopupConfig, WindowGeometryConfig, ChatOnlyGeometry, FullContentGeometry, WebViewGeometry
 
-# Import from windows module
-from src.game_wiki_tooltip.windows import (
+# Import from window_component module
+from src.game_wiki_tooltip.window_component import (
     convert_markdown_to_html,
     AssistantController,
-    WikiView
+    WikiView,
+    load_svg_icon
 )
 
 class WindowState(Enum):
@@ -66,44 +67,6 @@ except ImportError:
 
 # Import graphics compatibility for Windows version detection
 from src.game_wiki_tooltip.graphics_compatibility import WindowsGraphicsCompatibility
-
-def load_svg_icon(svg_path, color="#666666", size=16):
-    """Load SVG icon and set color"""
-    try:
-        import os
-        from PyQt6.QtSvg import QSvgRenderer
-        from PyQt6.QtCore import QByteArray
-        
-        # Check if file exists
-        if not os.path.exists(svg_path):
-            print(f"SVG file not found: {svg_path}")
-            return QIcon()
-        
-        # Read SVG file
-        with open(svg_path, 'r', encoding='utf-8') as f:
-            svg_content = f.read()
-        
-        # Replace color
-        svg_content = svg_content.replace('stroke="#000000"', f'stroke="{color}"')
-        svg_content = svg_content.replace('fill="#000000"', f'fill="{color}"')
-        
-        # Create icon
-        icon = QIcon()
-        renderer = QSvgRenderer(QByteArray(svg_content.encode()))
-        
-        # Create pixmaps for different sizes
-        for s in [size, size*2]:  # Support high DPI
-            pixmap = QPixmap(s, s)
-            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
-            painter = QPainter(pixmap)
-            renderer.render(painter)
-            painter.end()
-            icon.addPixmap(pixmap)
-        
-        return icon
-    except Exception as e:
-        print(f"Failed to load SVG icon: {e}")
-        return QIcon()
 
 class QuickAccessPopup(QWidget):
     """Horizontal popup widget for quick access shortcuts"""
@@ -2168,6 +2131,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Window state management
         self.current_state = WindowState.FULL_CONTENT  # Default state
         self.has_user_input = False  # Track if user has entered any input
+        self.has_switched_state = False  # Track if user has manually switched window states
         
         # Store geometry for different states
         self._chat_only_size = QSize(380, 115)  # Input box only
@@ -2330,6 +2294,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.wiki_view = WikiView()
         self.wiki_view.back_requested.connect(self.show_chat_view)  # This will restore input/shortcuts
         self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
+        self.wiki_view.close_requested.connect(self.hide)  # Connect close button to hide window
         # Ensure WikiView has a reasonable Minimum size but does not force a fixed size
         self.wiki_view.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -2564,7 +2529,7 @@ class UnifiedAssistantWindow(QMainWindow):
         QMenu {
             background-color: white;
             border: 1px solid #d0d0d0;
-            border-radius: 8px;
+            border-radius: 0px;
             padding: 5px;
         }
         
@@ -3098,10 +3063,10 @@ class UnifiedAssistantWindow(QMainWindow):
             self.update_container_style(full_rounded=False)
             
         elif self.current_state == WindowState.WEBVIEW:
-            # WebView state
-            self.title_bar.show()
+            # WebView state - hide title bar
+            self.title_bar.hide()
             self.content_stack.show()
-            self.input_container.show()
+            self.input_container.hide()  # Also hide input container in webview mode
             
             # Remove fixed size constraints
             self.setMinimumSize(300, 200)
@@ -3154,6 +3119,7 @@ class UnifiedAssistantWindow(QMainWindow):
             
         self.current_state = WindowState.FULL_CONTENT
         self.has_user_input = True
+        self.has_switched_state = True  # User has manually switched states
         self.update_window_layout()
         
     def switch_to_webview(self):
@@ -3163,6 +3129,7 @@ class UnifiedAssistantWindow(QMainWindow):
             self.save_geometry()
             
         self.current_state = WindowState.WEBVIEW
+        self.has_switched_state = True  # User has manually switched states
         self.update_window_layout()
         
     def position_chat_window(self):

@@ -42,6 +42,7 @@ class WikiView(QWidget):
 
     back_requested = pyqtSignal()
     wiki_page_loaded = pyqtSignal(str, str)
+    close_requested = pyqtSignal()  # Signal to close the window
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -172,6 +173,25 @@ class WikiView(QWidget):
             """)
         self.open_browser_button.clicked.connect(self.open_in_browser)
 
+        # Close button
+        self.close_button = QPushButton("✕")
+        self.close_button.setFixedSize(30, 30)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c82333;
+            }
+        """)
+        self.close_button.setToolTip("Close window")
+        self.close_button.clicked.connect(self.close_requested.emit)
+
         # Add all widgets to toolbar
         toolbar_layout.addWidget(self.back_button)
         toolbar_layout.addSpacing(10)
@@ -182,6 +202,8 @@ class WikiView(QWidget):
         toolbar_layout.addWidget(self.url_bar, 1)  # URL bar takes remaining space
         toolbar_layout.addSpacing(10)
         toolbar_layout.addWidget(self.open_browser_button)
+        toolbar_layout.addSpacing(5)
+        toolbar_layout.addWidget(self.close_button)
 
         # Content area - delayed WebView creation
         self.web_view = None

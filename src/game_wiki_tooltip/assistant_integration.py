@@ -12,7 +12,7 @@ import os # Added for os.getenv
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt
 
-from src.game_wiki_tooltip.windows import AssistantController
+from src.game_wiki_tooltip.window_component import AssistantController
 from src.game_wiki_tooltip.unified_window import MessageType, TransitionMessages
 from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
 from src.game_wiki_tooltip.utils import get_foreground_title
@@ -179,7 +179,7 @@ class QueryWorker(QThread):
             self.intent_detected.emit(intent)
             
             if intent.intent_type == "unsupported":
-                # For unsupported windows, emit error signal directly
+                # For unsupported window_component, emit error signal directly
                 error_msg = f"The current window '{self.game_context}' is not in the list of supported games.\n\nPlease check the settings page for supported games, or try using this tool in a supported game window."
                 self.error_occurred.emit(error_msg)
                 return
@@ -2245,21 +2245,25 @@ class IntegratedAssistantController(AssistantController):
     def show_chat_window(self):
         """显示聊天窗口，隐藏悬浮窗"""
         logger.info("💬 Show chat window requested")
-        
-        
+
         # 显示聊天窗口
         if not self.main_window:
             self.expand_to_chat()  # 创建并显示聊天窗口
         else:
+            # 恢复窗口几何位置
+            self.main_window.restore_geometry()
+
             self.main_window.show()
             self.main_window.raise_()
             self.main_window.activateWindow()
             
             # 决定显示哪种形态
-            if not self.main_window.has_user_input:
-                # 如果用户没有输入过，显示CHAT_ONLY形态
-                logger.info("🎯 Switching to CHAT_ONLY mode (no user input yet)")
+            if not self.main_window.has_switched_state:
+                # 如果用户没有切换过形态，显示CHAT_ONLY形态
+                logger.info("🎯 Switching to CHAT_ONLY mode (no state switch yet)")
                 self.main_window.switch_to_chat_only()
+            
+
                 
         logger.info("💬 Chat window shown")
     
@@ -2271,14 +2275,6 @@ class IntegratedAssistantController(AssistantController):
         if self.main_window:
             self.main_window.hide()
             logger.info("💬 Chat window hidden")
-        
-        # 检查用户设置的悬浮窗隐藏状态
-        if hasattr(self, '_is_manually_hidden') and self._is_manually_hidden:
-            logger.info("🔹 Mini window stays hidden (user setting)")
-        else:
-            # 显示聊天窗口
-            self.expand_to_chat()
-            logger.info("🔹 Chat window shown")
     
     def show_mouse_for_interaction(self):
         """显示鼠标以便与聊天窗口互动"""
@@ -2290,34 +2286,3 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🖱️ Mouse cursor shown")
         except Exception as e:
             logger.error(f"Failed to show mouse cursor: {e}")
-    
-    def show_assistant(self):
-        """显示助手窗口"""
-        logger.info("🔍 Show assistant requested")
-        self.expand_to_chat()
-    
-    def hide_assistant(self):
-        """隐藏助手窗口"""
-        logger.info("🚫 Hide assistant requested")
-        if hasattr(self, '_is_manually_hidden'):
-            self._is_manually_hidden = True
-        
-        # 隐藏所有窗口
-        if self.main_window:
-            self.main_window.hide()
-    
-    def toggle_assistant(self):
-        """切换助手窗口显示状态"""
-        logger.info("🔄 Toggle assistant requested")
-        
-        # 使用统一的可见性检查方法
-        if self.is_assistant_visible():
-            self.hide_assistant()
-        else:
-            self.show_assistant()
-
-    def is_assistant_visible(self) -> bool:
-        """检查助手窗口是否可见（检查所有窗口）"""
-        if self.main_window and self.main_window.isVisible():
-            return True
-        return False

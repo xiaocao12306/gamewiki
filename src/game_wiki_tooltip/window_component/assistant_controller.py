@@ -47,6 +47,7 @@ class AssistantController:
         self.current_mode = WindowMode.CHAT
         self.current_game_window = None  # Record current game window title
         self._precreated = False  # Track if window has been pre-created
+        self.previous_window_state = None  # Track previous window state for restoration
         
     def set_current_game_window(self, game_window_title: str):
         """Set current game window title"""
@@ -152,9 +153,13 @@ class AssistantController:
         self.main_window.activateWindow()
 
         # Apply window layout based on current state
-        if not self.main_window.has_user_input:
-            logger.info("Applying CHAT_ONLY layout for window with no user input")
-            self.main_window.update_window_layout()
+        if not self.main_window.has_switched_state:
+            logger.info("Applying CHAT_ONLY layout for window with no state switch")
+            self.main_window.switch_to_chat_only()
+        elif self.previous_window_state == WindowState.WEBVIEW:
+            # Restore to webview state if that was the previous state
+            logger.info("Restoring to previous WEBVIEW state")
+            self.main_window.switch_to_webview()
         
         # Create fade-in animation
         self._fade_in_animation = QPropertyAnimation(self.main_window, b"windowOpacity")
@@ -182,14 +187,6 @@ class AssistantController:
         self.current_mode = WindowMode.CHAT
         logger.info("expand_to_chat() completed")
         
-    def show_mini(self):
-        """Show assistant (directly shows chat window since mini window is removed)"""
-        logger = logging.getLogger(__name__)
-        logger.info("show_mini() called - redirecting to expand_to_chat()")
-        
-        # Directly call expand_to_chat since mini window is removed
-        self.expand_to_chat()
-        
     def handle_wiki_page_found(self, url: str, title: str):
         """Handle signal when real wiki page is found (basic implementation, subclasses can override)"""
         logger = logging.getLogger(__name__)
@@ -216,24 +213,19 @@ class AssistantController:
         self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)
             
     def hide_all(self):
-        """Hide all windows"""
+        """Hide all window_component"""
         if self.main_window:
             try:
+                # Save current window state before hiding
+                self.previous_window_state = self.main_window.current_state
                 self.main_window.save_geometry()
                 self.main_window._persist_geometry_if_needed()
             except Exception as e:
                 logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to save geometry when hiding all windows: {e}")
+                logger.warning(f"Failed to save geometry when hiding all window_component: {e}")
             self.main_window.hide()
         self.current_mode = None
         
     def is_visible(self):
         """Check if any window is visible"""
         return self.main_window and self.main_window.isVisible()
-        
-    def _on_main_window_visibility_changed(self, is_visible: bool):
-        """Handle main window visibility change"""
-        # This is called when main window is hidden via context menu
-        # We need to notify any external listeners (like tray icon)
-        if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
-            self.visibility_changed(is_visible)

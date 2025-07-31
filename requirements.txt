@@ -39,4 +39,4 @@ BlurWindow>=1.0.0
 
 # 如果BlurWindow不可用，可以使用以下替代方案
 # pywin32>=306
-# ctypes-windows-sdk>=0.0.1
+# ctypes-window_component-sdk>=0.0.1

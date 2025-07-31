@@ -94,10 +94,6 @@ class WindowGeometryConfig:
 
 @dataclass
 class PopupConfig:
-    width: int = 600
-    height: int = 500
-    left: int = 100
-    top: int = 50
     # Use relative coordinates as default configuration
     use_relative_position: bool = True
     left_percent: float = 0.55  # 55% of screen width (right-center)
@@ -216,80 +212,6 @@ class PopupConfig:
             y = screen_y + 10
         
         return x, y, width, height
-    
-    @classmethod
-    def create_smart_default(cls, screen_geometry=None):
-        """
-        Create smart default configuration
-        Use relative coordinate system, optimize percentage parameters based on screen size
-        
-        Args:
-            screen_geometry: Screen geometry info
-            
-        Returns:
-            PopupConfig: Smart default configuration instance
-        """
-        if screen_geometry is None:
-            try:
-                from PyQt6.QtWidgets import QApplication
-                screen_geometry = QApplication.primaryScreen().availableGeometry()
-            except ImportError:
-                try:
-                    from PyQt5.QtWidgets import QApplication  
-                    screen_geometry = QApplication.primaryScreen().availableGeometry()
-                except ImportError:
-                    # Fall back to traditional fixed values
-                    return cls()
-        
-        # Compatible with different types of screen_geometry objects
-        def get_screen_value(obj, attr_name):
-            """Get screen geometry attribute value, compatible with method calls and attribute access"""
-            try:
-                # First try method call (PyQt object)
-                attr = getattr(obj, attr_name)
-                if callable(attr):
-                    return attr()
-                else:
-                    return attr
-            except (AttributeError, TypeError):
-                # If failed, try direct attribute access (test object)
-                return getattr(obj, attr_name, 0)
-        
-        # Select configuration strategy based on screen size
-        screen_width = get_screen_value(screen_geometry, 'width')
-        screen_height = get_screen_value(screen_geometry, 'height')
-        
-        if screen_width >= 1920 and screen_height >= 1080:
-            # Large screen: can use larger window and more right position
-            return cls(
-                use_relative_position=True,
-                use_relative_size=True,
-                left_percent=0.58,    # More to the right,充分利用大屏幕
-                top_percent=0.08,     # Slightly up
-                width_percent=0.38,   # Slightly larger width
-                height_percent=0.75,  # Higher window
-            )
-        elif screen_width >= 1366 and screen_height >= 768:
-            # Medium screen: balanced configuration
-            return cls(
-                use_relative_position=True,
-                use_relative_size=True,
-                left_percent=0.55,    # Standard right position
-                top_percent=0.1,      # Standard top position
-                width_percent=0.35,   # Standard width
-                height_percent=0.65,  # Standard height
-            )
-        else:
-            # Small screen: more compact configuration, ensure content visible
-            return cls(
-                use_relative_position=True,
-                use_relative_size=True,
-                left_percent=0.52,    # Slightly centered, avoid too close to edge
-                top_percent=0.05,     # More up, save vertical space
-                width_percent=0.42,   # More wide, ensure content readable
-                height_percent=0.7,   # More high,充分利用屏幕
-            )
-
 
 @dataclass
 class ApiConfig:
@@ -301,7 +223,6 @@ class AppSettings:
     """Application settings"""
     language: str = "en"
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
-    popup: PopupConfig = field(default_factory=PopupConfig)
     window_geometry: WindowGeometryConfig = field(default_factory=WindowGeometryConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
@@ -342,9 +263,6 @@ class SettingsManager:
         # Update hotkey settings
         if 'hotkey' in new_settings:
             self._settings.hotkey = HotkeyConfig(**new_settings['hotkey'])
-        # Update popup settings
-        if 'popup' in new_settings:
-            self._settings.popup = PopupConfig(**new_settings['popup'])
         # Update window geometry settings
         if 'window_geometry' in new_settings:
             geom = new_settings['window_geometry']
@@ -404,9 +322,6 @@ class SettingsManager:
             # Merge settings, preserve user modifications but ensure all fields exist
             merged_data = self._merge_settings(default_data, existing_data)
             
-            # Special handling: upgrade old popup configuration to new format
-            merged_data = self._upgrade_popup_config(merged_data)
-            
             # If merged data is different from existing data, save update
             if merged_data != existing_data:
                 self.path.write_text(json.dumps(merged_data, indent=4, ensure_ascii=False), encoding="utf-8")
@@ -425,7 +340,6 @@ class SettingsManager:
             return AppSettings(
                 language=merged_data.get('language', 'en'),
                 hotkey=HotkeyConfig(**merged_data.get('hotkey', {})),
-                popup=PopupConfig(**merged_data.get('popup', {})),
                 window_geometry=window_geometry,
                 api=ApiConfig(**merged_data.get('api', {})),
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
@@ -448,109 +362,11 @@ class SettingsManager:
             return AppSettings(
                 language=default_data.get('language', 'en'),
                 hotkey=HotkeyConfig(**default_data.get('hotkey', {})),
-                popup=PopupConfig(**default_data.get('popup', {})),
                 window_geometry=window_geometry,
                 api=ApiConfig(**default_data.get('api', {})),
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
                 shortcuts=default_data.get('shortcuts', [])
             )
-    
-    def _upgrade_popup_config(self, data: dict) -> dict:
-        """
-        Upgrade old popup configuration to new format
-        Use smart relative coordinate system
-        
-        Args:
-            data: settings data dictionary
-            
-        Returns:
-            dict: upgraded settings data
-        """
-        popup = data.get('popup', {})
-        
-        # Check if upgrade is needed (missing new fields)
-        new_fields = ['use_relative_position', 'left_percent', 'top_percent', 
-                     'width_percent', 'height_percent', 'use_relative_size']
-        needs_upgrade = not all(field in popup for field in new_fields)
-        
-        if needs_upgrade:
-            print("🔄 Detected old popup configuration, upgrading to smart relative coordinate system...")
-            
-            # Check if there are basic coordinate information
-            has_basic_coords = all(field in popup for field in ['left', 'top', 'width', 'height'])
-            
-            if has_basic_coords:
-                # Keep original coordinates as fallback, but use relative coordinates
-                left = popup.get('left', 100)
-                top = popup.get('top', 50)
-                width = popup.get('width', 600)
-                height = popup.get('height', 500)
-                
-                # Check if the coordinates are extreme (e.g. too large or negative)
-                is_extreme_coords = (left > 3000 or top > 2000 or 
-                                   left < 0 or top < 0 or 
-                                   width > 2000 or height > 1500 or
-                                   width < 100 or height < 100)
-                
-                if is_extreme_coords:
-                    print(f"⚠️  Detected extreme coordinate values, using standard smart configuration")
-                    # Use standard smart relative coordinates
-                    popup.update({
-                        'left': 100,
-                        'top': 50,
-                        'width': 600,
-                        'height': 500,
-                        'use_relative_position': True,
-                        'left_percent': 0.55,
-                        'top_percent': 0.1,
-                        'width_percent': 0.35,
-                        'height_percent': 0.65,
-                        'use_relative_size': True
-                    })
-                else:
-                    # Normal coordinates, upgrade to smart relative coordinates
-                    popup.update({
-                        'use_relative_position': True,
-                        'left_percent': 0.55,
-                        'top_percent': 0.1,
-                        'width_percent': 0.35,
-                        'height_percent': 0.65,
-                        'use_relative_size': True
-                    })
-                    
-                print(f"✅ Upgraded to smart relative coordinate configuration (original coordinates: {left},{top},{width}x{height})")
-            else:
-                # No basic coordinates, create standard smart configuration
-                popup.update({
-                    'left': 100,
-                    'top': 50,
-                    'width': 600,
-                    'height': 500,
-                    'use_relative_position': True,
-                    'left_percent': 0.55,
-                    'top_percent': 0.1,
-                    'width_percent': 0.35,
-                    'height_percent': 0.65,
-                    'use_relative_size': True
-                })
-                print(f"✅ Created standard smart relative coordinate configuration")
-            
-            data['popup'] = popup
-        else:
-            # New fields exist, check if fixed coordinates need to be migrated to relative coordinates
-            if not popup.get('use_relative_position', True):
-                print("🔄 Detected fixed coordinate configuration, suggesting upgrade to relative coordinates...")
-                popup['use_relative_position'] = True
-                popup['use_relative_size'] = True
-                popup['left_percent'] = 0.55
-                popup['top_percent'] = 0.1
-                popup['width_percent'] = 0.35
-                popup['height_percent'] = 0.65
-                print(f"✅ Upgraded from fixed coordinates to smart relative coordinates")
-                data['popup'] = popup
-        
-        return data
-
 
 # ---------- Game-configs ----------
 
@@ -605,14 +421,8 @@ class GameConfigManager:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     self._games = json.load(f)
                 logger.info(f"Loaded games config from {config_path}")
-            else:
-                # Create default config if it doesn't exist
-                self._games = self._create_default_config()
-                self._save()
-                logger.info(f"Created default games config at {config_path}")
         except Exception as e:
             logger.error(f"Failed to load games config: {e}")
-            self._games = self._create_default_config()
             
     def _ensure_language_configs_copied(self):
         """Ensure language-specific configuration files are copied to appdata directory"""
@@ -647,36 +457,6 @@ class GameConfigManager:
         except Exception as e:
             logger.error(f"Failed to ensure language configuration file copy: {e}")
     
-    def _create_default_config(self) -> dict:
-        """Create default games configuration"""
-        # Default to English games config
-        return {
-            "VALORANT": {
-                "BaseUrl": "https://valorant.fandom.com/wiki/",
-                "NeedsSearch": False
-            },
-            "Counter-Strike 2": {
-                "BaseUrl": "https://counterstrike.fandom.com/wiki/",
-                "NeedsSearch": False
-            },
-            "Stardew Valley": {
-                "BaseUrl": "https://stardewvalleywiki.com/",
-                "NeedsSearch": True
-            },
-            "Don't Starve Together": {
-                "BaseUrl": "https://dontstarve.fandom.com/wiki/",
-                "NeedsSearch": True
-            },
-            "Elden Ring": {
-                "BaseUrl": "https://eldenring.wiki.fextralife.com/",
-                "NeedsSearch": True
-            },
-            "HELLDIVERS 2": {
-                "BaseUrl": "https://helldivers.fandom.com/wiki/",
-                "NeedsSearch": True
-            }
-        }
-    
     def _save(self):
         """Save games configuration"""
         try:
@@ -710,9 +490,6 @@ class GameConfigManager:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     self._games = json.load(f)
                 logger.info(f"Reloaded games config for language '{language}' from {config_path}")
-            else:
-                # If language-specific file doesn't exist, create it with default config
-                self._games = self._create_default_config()
                 
                 # Save the config to the language-specific file
                 with open(config_path, 'w', encoding='utf-8') as f:
@@ -721,7 +498,6 @@ class GameConfigManager:
                 
         except Exception as e:
             logger.error(f"Failed to reload games config for language '{language}': {e}")
-            self._games = self._create_default_config()
     
     def for_title(self, window_title: str) -> Optional[GameConfig]:
         """Get game configuration based on window title (backward compatibility)"""
