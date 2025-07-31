@@ -234,9 +234,9 @@ class GeminiSummarizer:
             # 构建查询信息部分
             query_section = f"[检索查询]: {query}  ← 用于判断哪些材料段落最相关"
             if original_query and original_query != query:
-                query_section += f"\n[原始查询]: {original_query}  ← 用于决定回答风格、详细程度和措辞偏好"
+                query_section += f"\n[原始查询]: {original_query}  ← **关键**：必须严格按照此查询的格式要求回答（如一句话、简短、详细等）"
             else:
-                query_section = f"[用户查询]: {query}"
+                query_section = f"[用户查询]: {query}  ← **关键**：必须严格按照此查询的格式要求回答"
             
             prompt = f"""你是一个专业的游戏攻略助手。基于以下JSON格式的游戏知识块，回答玩家的问题。
 
@@ -262,10 +262,14 @@ class GeminiSummarizer:
 
 格式要求：
 • 开头先给出一句话总结（用💡标记）
-• 按照原始查询的措辞和细节要求组织答案
+• 不要添加任何寒暄或开场白（如"我来帮你..."、"好的，让我..."）
+• 如果提供的知识块足以回答问题，直接给出答案
+• 如果使用了Google搜索工具，在开头说明："我使用了Google搜索为你找到了以下信息"
+• 严格按照[原始查询]的要求组织答案：
+  - 如果要求"一句话"或"简短回答"，只提供简洁答案
+  - 如果要求详细解释，提供完整信息
 • 使用友好的游戏术语
-• 基于JSON中的实际数据，不要编造信息
-• 如果信息不相关或不足，请明确说明
+• 基于实际数据，不要编造信息
 
 
 你的回答："""
@@ -275,9 +279,9 @@ class GeminiSummarizer:
             # 构建查询信息部分
             query_section = f"[Retrieval Query]: {query}  ← for determining which material segments are most relevant"
             if original_query and original_query != query:
-                query_section += f"\n[Original Query]: {original_query}  ← for determining response style, detail level, and wording preferences"
+                query_section += f"\n[Original Query]: {original_query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements (e.g., one sentence, brief, detailed)"
             else:
-                query_section = f"[User Query]: {query}"
+                query_section = f"[User Query]: {query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements"
             
             prompt = f"""You are a professional game guide assistant. Based on the following JSON-formatted game knowledge chunks, answer the player's question.
 
@@ -303,10 +307,14 @@ Response guidelines:
 
 Format requirements:
 • Start with a one-sentence summary (marked with 💡)
-• Organize response according to original query's wording and detail requirements
+• Don't add any greetings or introductions (like "I'm ready to help...", "Okay, let me...")
+• If knowledge chunks are sufficient, directly provide the answer
+• If Google Search tool was used, mention at the beginning: "I used Google search to find the following information"
+• Strictly follow the [Original Query] requirements:
+  - If asked for "one sentence" or "brief answer", provide only concise response
+  - If asked for detailed explanation, provide complete information
 • Use friendly gaming terminology
-• Base on actual data from JSON, don't fabricate information
-• If information is irrelevant or insufficient, clearly state so
+• Base on actual data, don't fabricate information
 
 
 Your response:"""

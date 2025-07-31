@@ -67,7 +67,7 @@ class ChatOnlyGeometry:
     left_percent: float = 0.65
     top_percent: float = 0.85
     width_percent: float = 0.22
-    height_percent: float = 0.30
+    height_percent: float = 0.108
 
 
 @dataclass
