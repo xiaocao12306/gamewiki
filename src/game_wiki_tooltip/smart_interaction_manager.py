@@ -315,28 +315,6 @@ class SmartInteractionManager(QObject):
         except Exception as e:
             logger.error(f"Error applying mouse passthrough settings: {e}")
     
-    def get_interaction_summary(self) -> dict:
-        """Get current interaction state summary"""
-        return {
-            'mode': self.current_mode.value,
-            'mouse_state': self.last_mouse_state.__dict__ if self.last_mouse_state else None,
-            # 移除 last_window_state，改为按需检测
-            'passthrough_enabled': self.should_enable_mouse_passthrough()
-        }
-    
-    def add_game_keyword(self, keyword: str):
-        """Add game window recognition keyword"""
-        if keyword and keyword.lower() not in self.game_keywords:
-            self.game_keywords.append(keyword.lower())
-            logger.info(f"Added game keyword: {keyword}")
-    
-    def remove_game_keyword(self, keyword: str):
-        """Remove game window recognition keyword"""
-        keyword_lower = keyword.lower()
-        if keyword_lower in self.game_keywords:
-            self.game_keywords.remove(keyword_lower)
-            logger.info(f"Removed game keyword: {keyword}")
-    
     def set_hotkey_double_press_threshold(self, threshold: float):
         """Set hotkey double-click time threshold"""
         self.hotkey_double_press_threshold = max(0.1, min(2.0, threshold))

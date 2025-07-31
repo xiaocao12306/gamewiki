@@ -1938,28 +1938,7 @@ class IntegratedAssistantController(AssistantController):
         else:
             logger.info(f"⏳ Skip temporary state wiki page update: {title}")
             # For temporary state, still call, but do not trigger final update in chat window
-            
-    def expand_to_chat(self):
-        """Override expand_to_chat method to connect stop signal"""
-        # Call parent class expand_to_chat method
-        super().expand_to_chat()
-        
-        # Connect stop generation signal
-        if self.main_window and hasattr(self.main_window, 'stop_generation_requested'):
-            self.main_window.stop_generation_requested.connect(self.stop_current_generation)
-            logger.info("✅ Stop generation signal connected")
-            
-        # Schedule AI preload after first window display (only if not already scheduled)
-        if not self.limited_mode and (not hasattr(self, '_ai_preload_scheduled') or not self._ai_preload_scheduled):
-            # Check if AI modules are already loaded
-            if _ai_modules_loaded:
-                logger.info("✅ AI modules already loaded, skipping preload schedule")
-            else:
-                self._ai_preload_scheduled = True
-                # Start AI loading immediately but with low priority
-                QTimer.singleShot(0, self._schedule_ai_preload)
-                logger.info("📅 AI modules loading started with low priority from expand_to_chat")
-    
+
     def _add_web_search_option(self):
         """Add web search option when knowledge is insufficient"""
         logger.info("🔍 Adding web search option for insufficient knowledge")
@@ -2246,25 +2225,21 @@ class IntegratedAssistantController(AssistantController):
         """显示聊天窗口，隐藏悬浮窗"""
         logger.info("💬 Show chat window requested")
 
-        # 显示聊天窗口
-        if not self.main_window:
-            self.expand_to_chat()  # 创建并显示聊天窗口
-        else:
-            # 恢复窗口几何位置
-            self.main_window.restore_geometry()
+        # 先决定显示哪种形态
+        if not self.main_window.has_switched_state:
+            # 如果用户没有切换过形态，显示CHAT_ONLY形态
+            logger.info("🎯 Switching to CHAT_ONLY mode (no state switch yet)")
+            self.main_window.switch_to_chat_only()
+            self.main_window.set_precreating_mode(False)
 
-            self.main_window.show()
-            self.main_window.raise_()
-            self.main_window.activateWindow()
-            
-            # 决定显示哪种形态
-            if not self.main_window.has_switched_state:
-                # 如果用户没有切换过形态，显示CHAT_ONLY形态
-                logger.info("🎯 Switching to CHAT_ONLY mode (no state switch yet)")
-                self.main_window.switch_to_chat_only()
-            
+        # 然后恢复对应状态的几何位置
+        self.main_window.restore_geometry()
 
-                
+        # 最后显示窗口
+        self.main_window.show()
+        self.main_window.raise_()
+        self.main_window.activateWindow()
+
         logger.info("💬 Chat window shown")
     
     def hide_chat_window(self):

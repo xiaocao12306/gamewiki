@@ -2141,6 +2141,11 @@ class UnifiedAssistantWindow(QMainWindow):
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
         self._default_webview_size = None  # Will be calculated when needed
         
+        # Geometry save timer for delayed saving on move/resize
+        self._geometry_save_timer = QTimer()
+        self._geometry_save_timer.setSingleShot(True)
+        self._geometry_save_timer.timeout.connect(self._delayed_save_geometry)
+        
         # History manager will be initialized lazily
         self.history_manager = None
         
@@ -2157,22 +2162,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Debug: print size after initialization
         print(f"🏠 UnifiedAssistantWindow initialized, size: {self.size()}")
-        
-    def _get_default_webview_size(self):
-        """Get default WebView size, calculating it if needed"""
-        if self._default_webview_size is None:
-            try:
-                screen = QApplication.primaryScreen().geometry()
-                self._default_webview_size = QSize(
-                    min(1200, int(screen.width() * 0.7)),  # 70% of screen width or 1200px
-                    min(800, int(screen.height() * 0.8))    # 80% of screen height or 800px
-                )
-            except Exception as e:
-                print(f"Failed to calculate default webview size: {e}")
-                # Fallback to reasonable defaults
-                self._default_webview_size = QSize(1200, 800)
-        return self._default_webview_size
-    
+
     def apply_blur_effect(self):
         """Apply BlurWindow transparency effect"""
         if BLUR_WINDOW_AVAILABLE:
@@ -2923,6 +2913,12 @@ class UnifiedAssistantWindow(QMainWindow):
                     'height_percent': height_percent
                 }
             
+            # For FULL_CONTENT and WEBVIEW, also update CHAT_ONLY position based on anchor
+            if self.current_state in [WindowState.FULL_CONTENT, WindowState.WEBVIEW]:
+                chat_only_geom = self._calculate_chat_only_position_from_anchor(geo)
+                update_data['window_geometry']['chat_only'] = chat_only_geom
+                logging.info(f"Updated CHAT_ONLY position based on {self.current_state.value} anchor")
+            
             # Update settings in memory
             self.settings_manager.update(update_data)
             self._pending_geometry_save = True
@@ -2944,6 +2940,30 @@ class UnifiedAssistantWindow(QMainWindow):
                 logging.debug("Persisted geometry changes to disk")
             except Exception as e:
                 logging.error(f"Failed to persist geometry: {e}")
+    
+    def moveEvent(self, event):
+        """Handle window move events with delayed saving"""
+        super().moveEvent(event)
+        # Only save if not in precreating mode and window is visible
+        if not self._is_precreating and self.isVisible():
+            # Restart timer to delay save (debounce)
+            self._geometry_save_timer.stop()
+            self._geometry_save_timer.start(500)  # 500ms delay
+    
+    def resizeEvent(self, event):
+        """Handle window resize events with delayed saving"""
+        super().resizeEvent(event)
+        # Only save if not in precreating mode and window is visible
+        if not self._is_precreating and self.isVisible():
+            # Restart timer to delay save (debounce)
+            self._geometry_save_timer.stop()
+            self._geometry_save_timer.start(500)  # 500ms delay
+    
+    def _delayed_save_geometry(self):
+        """Save geometry after delay (called by timer)"""
+        logging.debug("Timer triggered: saving geometry after move/resize")
+        self.save_geometry()
+        self._persist_geometry_if_needed()
     
     def set_precreating_mode(self, is_precreating: bool):
         """Set the precreating mode flag"""
@@ -2982,6 +3002,65 @@ class UnifiedAssistantWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Failed to calculate window quadrant: {e}")
             return 4, 0.8, 0.8  # Default to bottom-right
+    
+    def _calculate_chat_only_position_from_anchor(self, current_geometry):
+        """Calculate CHAT_ONLY position based on current window's anchor point"""
+        try:
+            screen = QApplication.primaryScreen().availableGeometry()
+            screen_width = screen.width()
+            screen_height = screen.height()
+            screen_x = screen.x()
+            screen_y = screen.y()
+            
+            # Get quadrant and anchor point
+            quadrant, _, _ = self._get_window_screen_quadrant()
+            
+            # Get CHAT_ONLY size from settings
+            chat_only_width = int(screen_width * 0.22)  # Default 22% of screen width
+            chat_only_height = int(screen_height * 0.30)  # Default 30% of screen height
+            
+            # Calculate position based on quadrant
+            if quadrant == 1:  # top-right - anchor at top-right
+                left = current_geometry.x() + current_geometry.width() - chat_only_width
+                top = current_geometry.y()
+            elif quadrant == 2:  # top-left - anchor at top-left
+                left = current_geometry.x()
+                top = current_geometry.y()
+            elif quadrant == 3:  # bottom-left - anchor at bottom-left
+                left = current_geometry.x()
+                top = current_geometry.y() + current_geometry.height() - chat_only_height
+            else:  # quadrant == 4, bottom-right - anchor at bottom-right
+                left = current_geometry.x() + current_geometry.width() - chat_only_width
+                top = current_geometry.y() + current_geometry.height() - chat_only_height
+            
+            # Convert to percentages
+            left_percent = (left - screen_x) / screen_width
+            top_percent = (top - screen_y) / screen_height
+            width_percent = chat_only_width / screen_width
+            height_percent = chat_only_height / screen_height
+            
+            # Ensure values are in reasonable range
+            left_percent = max(0.0, min(1.0, left_percent))
+            top_percent = max(0.0, min(1.0, top_percent))
+            width_percent = max(0.1, min(0.5, width_percent))
+            height_percent = max(0.1, min(0.5, height_percent))
+            
+            return {
+                'left_percent': left_percent,
+                'top_percent': top_percent,
+                'width_percent': width_percent,
+                'height_percent': height_percent
+            }
+            
+        except Exception as e:
+            logging.error(f"Failed to calculate chat only position: {e}")
+            # Return default values
+            return {
+                'left_percent': 0.65,
+                'top_percent': 0.85,
+                'width_percent': 0.22,
+                'height_percent': 0.30
+            }
     
     def _show_menu_with_intelligent_position(self, menu, reference_button):
         """Show menu with intelligent positioning based on window location"""
@@ -3040,8 +3119,10 @@ class UnifiedAssistantWindow(QMainWindow):
             self.content_stack.hide()
             self.input_container.show()
             
-            # Set window to chat only size
-            self.setFixedSize(self._chat_only_size)
+            # Set window to chat only size using min/max instead of fixed
+            # This allows setGeometry to work properly in restore_geometry
+            self.setMinimumSize(self._chat_only_size)
+            self.setMaximumSize(self._chat_only_size)
 
             # Update main container style for full rounded corners
             self.update_container_style(full_rounded=True)
