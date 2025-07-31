@@ -393,7 +393,6 @@ class GameWikiApp(QObject):
             self.tray_icon = QtTrayIcon()
             self.tray_icon.settings_requested.connect(self._show_settings)
             self.tray_icon.exit_requested.connect(self._quit_application)
-            self.tray_icon.toggle_visibility_requested.connect(self._toggle_assistant_visibility)
             self.tray_icon.show()
             
             # Initialize hotkey manager with ultra-compatible mode
@@ -556,13 +555,6 @@ class GameWikiApp(QObject):
         self.settings_window.raise_()
         self.settings_window.activateWindow()
         
-    def _toggle_assistant_visibility(self):
-        """Toggle assistant window visibility"""
-        if self.assistant_ctrl:
-            self.assistant_ctrl.toggle_visibility()
-            # Update tray icon menu text
-            is_visible = self.assistant_ctrl.is_visible()
-            self.tray_icon.update_toggle_text(is_visible)
         
     def _on_initial_setup_closed(self):
         """Handle initial setup window closed - deprecated, kept for compatibility"""
@@ -822,32 +814,78 @@ class GameWikiApp(QObject):
             return False
             
     def _on_hotkey_triggered(self):
-        """Handle hotkey trigger using smart interaction manager"""
-        logger.info("=== SMART HOTKEY TRIGGERED ===")
-        logger.info(f"Hotkey triggered! {self.hotkey_triggered_count}th time")
+        """Handle hotkey trigger with new rules"""
+        logger.info("=== HOTKEY TRIGGERED ===")
         
         if not self.assistant_ctrl:
             logger.warning("assistant_ctrl is None, cannot process hotkey")
             return
         
         try:
-            # Get current chat window visibility status - 只检查聊天窗口
-            current_visible = (self.assistant_ctrl.main_window and 
-                             self.assistant_ctrl.main_window.isVisible())
+            # Check if main window exists and is visible
+            if self.assistant_ctrl.main_window and self.assistant_ctrl.main_window.isVisible():
+                # Window is visible
+                logger.info("Main window is visible")
+                
+                # Check mouse state
+                try:
+                    from .smart_interaction_manager import SmartInteractionManager
+                    if hasattr(self.assistant_ctrl, 'smart_manager'):
+                        mouse_state = self.assistant_ctrl.smart_manager.get_mouse_state()
+                        if mouse_state.is_visible:
+                            # Mouse is visible, show mouse for interaction
+                            logger.info("Mouse is visible, showing mouse for interaction")
+                            self.assistant_ctrl.show_mouse_for_interaction()
+                        else:
+                            # Mouse is hidden, hide window
+                            logger.info("Mouse is hidden, hiding window")
+                            self.assistant_ctrl.main_window.hide()
+                    else:
+                        # No smart manager, fallback to hide window
+                        logger.info("No smart manager, hiding window")
+                        self.assistant_ctrl.main_window.hide()
+                except Exception as e:
+                    logger.warning(f"Error checking mouse state: {e}, hiding window")
+                    self.assistant_ctrl.main_window.hide()
+            else:
+                # Window is hidden or doesn't exist, show it
+                logger.info("Main window is hidden or doesn't exist, showing window")
+                
+                # Check game window and set context
+                game_window_title = self._get_game_window_title()
+                if game_window_title:
+                    logger.info(f"🎮 Current game window: {game_window_title}")
+                    self.assistant_ctrl.set_current_game_window(game_window_title)
+                
+                # Show window
+                self.assistant_ctrl.expand_to_chat()
             
-            # Use smart interaction manager to handle hotkey
-            handled = self.assistant_ctrl.handle_smart_hotkey(current_visible)
+            # Update tray icon state
+            is_visible = self.assistant_ctrl.main_window and self.assistant_ctrl.main_window.isVisible()
+            self.tray_icon.update_toggle_text(is_visible)
+            logger.info(f"✅ Hotkey processing completed, window visible: {is_visible}")
             
-            if handled:
-                # Update tray icon based on final chat window state - 只检查聊天窗口
-                final_visible = (self.assistant_ctrl.main_window and 
-                               self.assistant_ctrl.main_window.isVisible())
-                self.tray_icon.update_toggle_text(final_visible)
-                logger.info(f"🎯 Smart hotkey processing completed, chat window visible: {final_visible}")
         except Exception as e:
-            return
+            logger.error(f"Error in hotkey handler: {e}")
+            import traceback
+            traceback.print_exc()
             
-        logger.info("=== Smart hotkey processing completed ===")
+        logger.info("=== Hotkey processing completed ===")
+    
+    def _get_game_window_title(self) -> Optional[str]:
+        """Get the title of the current foreground window (game window)"""
+        try:
+            from src.game_wiki_tooltip.utils import get_foreground_title
+            title = get_foreground_title()
+            if title:
+                logger.info(f"Got foreground window title: {title}")
+                return title
+            else:
+                logger.warning("No foreground window title found")
+                return None
+        except Exception as e:
+            logger.error(f"Failed to get foreground window title: {e}")
+            return None
             
     def _quit_application(self):
         """Quit application"""

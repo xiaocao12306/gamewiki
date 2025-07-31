@@ -12,9 +12,8 @@ import os # Added for os.getenv
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt
 
-from src.game_wiki_tooltip.unified_window import (
-    AssistantController, MessageType, TransitionMessages
-)
+from src.game_wiki_tooltip.windows import AssistantController
+from src.game_wiki_tooltip.unified_window import MessageType, TransitionMessages
 from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
 from src.game_wiki_tooltip.utils import get_foreground_title
 from src.game_wiki_tooltip.i18n import t, get_current_language
