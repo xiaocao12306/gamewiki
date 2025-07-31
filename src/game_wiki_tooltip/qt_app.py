@@ -360,17 +360,6 @@ class GameWikiApp(QObject):
             if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
                 logger.info("Detected existing assistant controller, cleaning up first...")
                 
-                # Clean up mini window
-                if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
-                    try:
-                        logger.info("Cleaning up existing mini window...")
-                        self.assistant_ctrl.mini_window.hide()
-                        self.assistant_ctrl.mini_window.close()
-                        self.assistant_ctrl.mini_window.deleteLater()
-                        self.assistant_ctrl.mini_window = None
-                    except Exception as e:
-                        logger.warning(f"Error cleaning up existing mini window: {e}")
-                        self.assistant_ctrl.mini_window = None
                 
                 # Clean up main window
                 if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
@@ -492,7 +481,7 @@ class GameWikiApp(QObject):
                     QTimer.singleShot(200, check_ai_loader)
             else:
                 # No AI loading support, show UI immediately
-                QTimer.singleShot(100, self._precreate_chat_window_and_show_mini)
+                QTimer.singleShot(100, self._precreate_chat_window)
             
             logger.info(f"Component initialization completed successfully (limited_mode={limited_mode})")
             
@@ -505,8 +494,8 @@ class GameWikiApp(QObject):
             )
             sys.exit(1)
             
-    def _precreate_chat_window_and_show_mini(self):
-        """Pre-create chat window and show mini assistant"""
+    def _precreate_chat_window(self):
+        """Pre-create chat window"""
         try:
             logger.info("Starting chat window pre-creation...")
             
@@ -527,12 +516,8 @@ class GameWikiApp(QObject):
         except Exception as e:
             logger.warning(f"Failed to pre-create chat window: {e}")
             # Not critical, just means first hotkey will be slower
-            
-        # Show mini assistant after chat window is ready
-        logger.info("Showing mini assistant...")
-        self.assistant_ctrl.show_mini()
         
-        # Close splash screen after mini window is shown
+        # Close splash screen after pre-creation
         if self.splash_screen:
             logger.info("Scheduling splash screen closure")
             QTimer.singleShot(100, self._close_splash_screen)
@@ -552,12 +537,12 @@ class GameWikiApp(QObject):
             logger.warning("⚠️ AI modules loading failed, showing UI anyway")
         
         # Pre-create chat window and show mini assistant
-        self._precreate_chat_window_and_show_mini()
+        self._precreate_chat_window()
         
     def _show_ui_fallback(self):
         """Fallback to show UI if AI loading signal wasn't connected"""
         logger.info("⏱️ AI loading timeout, showing UI as fallback")
-        self._precreate_chat_window_and_show_mini()
+        self._precreate_chat_window()
             
     def _show_settings(self, initial_setup=False):
         """Show settings window"""
@@ -660,17 +645,6 @@ class GameWikiApp(QObject):
                     logger.info("Cleaning up old assistant controller...")
                     
                     # Clean up mini window
-                    if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
-                        try:
-                            logger.info("Cleaning up old mini window...")
-                            self.assistant_ctrl.mini_window.hide()
-                            self.assistant_ctrl.mini_window.close()
-                            self.assistant_ctrl.mini_window.deleteLater()
-                            self.assistant_ctrl.mini_window = None
-                            logger.info("Old mini window cleaned up")
-                        except Exception as e:
-                            logger.warning(f"Error cleaning up old mini window: {e}")
-                            self.assistant_ctrl.mini_window = None
                     
                     # Clean up main window
                     if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:
@@ -883,18 +857,6 @@ class GameWikiApp(QObject):
         if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
             logger.info("Cleaning up assistant controller and related windows...")
             
-            # Clean up mini window
-            if hasattr(self.assistant_ctrl, 'mini_window') and self.assistant_ctrl.mini_window:
-                try:
-                    logger.info("Closing mini window...")
-                    self.assistant_ctrl.mini_window.hide()
-                    self.assistant_ctrl.mini_window.close()
-                    self.assistant_ctrl.mini_window.deleteLater()
-                    self.assistant_ctrl.mini_window = None
-                    logger.info("Mini window closed")
-                except Exception as e:
-                    logger.warning(f"Error closing mini window: {e}")
-                    self.assistant_ctrl.mini_window = None
             
             # Clean up main window
             if hasattr(self.assistant_ctrl, 'main_window') and self.assistant_ctrl.main_window:

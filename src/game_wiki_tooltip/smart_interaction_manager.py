@@ -244,7 +244,7 @@ class SmartInteractionManager(QObject):
             current_chat_visible: Whether the chat window (main_window) is currently visible
             
         Returns:
-            Suggested action: 'show_chat', 'hide_chat', 'show_mini', 'ignore', 'show_mouse'
+            Suggested action: 'show_chat', 'hide_chat', 'ignore', 'show_mouse'
         """
         current_time = time.time()
         time_since_last = current_time - self.last_hotkey_time

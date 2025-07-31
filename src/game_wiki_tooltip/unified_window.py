@@ -424,7 +424,6 @@ class ExpandableIconButton(QPushButton):
 
 class WindowMode(Enum):
     """Window display modes"""
-    MINI = "mini"
     CHAT = "chat"
     WIKI = "wiki"
 
@@ -753,139 +752,6 @@ def convert_markdown_to_html(text: str) -> str:
         print(f"❌ [RENDER-ERROR] Markdown conversion failed: {e}")
         return text
 
-
-class MiniAssistant(QWidget):
-    """Circular mini assistant window"""
-    
-    clicked = pyqtSignal()
-    visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(60, 60)
-        
-        # Position at screen edge
-        screen = QApplication.primaryScreen().geometry()
-        self.move(screen.width() - 80, screen.height() // 2 - 30)
-        
-        # Animation setup
-        self.hover_animation = QPropertyAnimation(self, b"geometry")
-        self.hover_animation.setDuration(150)
-        self.hover_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        
-        # Drag support
-        self.dragging = False
-        self.drag_position = None
-        
-    def paintEvent(self, event):
-        """Draw the circular assistant"""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Shadow effect
-        shadow_color = QColor(0, 0, 0, 30)
-        for i in range(3):
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(shadow_color)
-            painter.drawEllipse(2 + i, 2 + i, 56 - 2*i, 56 - 2*i)
-        
-        # Main circle with gradient
-        gradient = QLinearGradient(0, 0, 60, 60)
-        gradient.setColorAt(0, QColor(70, 130, 255, 200))
-        gradient.setColorAt(1, QColor(100, 150, 255, 200))
-        painter.setBrush(QBrush(gradient))
-        painter.setPen(QPen(QColor(255, 255, 255, 100), 2))
-        painter.drawEllipse(5, 5, 50, 50)
-        
-        # Icon text
-        painter.setPen(QColor(255, 255, 255))
-        font = QFont("Arial", 16, QFont.Weight.Bold)
-        painter.setFont(font)
-        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "AI")
-        
-    def contextMenuEvent(self, event):
-        """Handle right-click menu event"""
-        menu = QMenu(self)
-        hide_action = menu.addAction(t("menu_hide_overlay"))
-        hide_action.triggered.connect(self._on_hide_requested)
-        menu.exec(event.globalPos())
-        
-    def _on_hide_requested(self):
-        """Handle hide request from context menu"""
-        self.hide()
-        self.visibility_changed.emit(False)
-        
-    def mousePressEvent(self, event):
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info("MiniAssistant: mousePressEvent triggered")
-        
-        if event.button() == Qt.MouseButton.LeftButton:
-            logger.info("MiniAssistant: Left button pressed, starting drag")
-            self.dragging = True
-            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            self.click_time = event.timestamp()
-            
-    def mouseMoveEvent(self, event):
-        if self.dragging and event.buttons() == Qt.MouseButton.LeftButton:
-            self.move(event.globalPosition().toPoint() - self.drag_position)
-            
-    def mouseReleaseEvent(self, event):
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info("MiniAssistant: mouseReleaseEvent triggered")
-        
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Check if it was a click (not drag)
-            time_diff = event.timestamp() - self.click_time
-            logger.info(f"MiniAssistant: Time diff: {time_diff}ms")
-            
-            if time_diff < 200:  # 200ms threshold
-                drag_distance = (event.globalPosition().toPoint() - 
-                               (self.frameGeometry().topLeft() + self.drag_position)).manhattanLength()
-                logger.info(f"MiniAssistant: Drag distance: {drag_distance}px")
-                
-                if drag_distance < 5:  # 5 pixel threshold
-                    logger.info("MiniAssistant: Emitting clicked signal")
-                    self.clicked.emit()
-                else:
-                    logger.info("MiniAssistant: Not a click - drag distance too large")
-            else:
-                logger.info("MiniAssistant: Not a click - time too long")
-            
-            self.dragging = False
-            
-    def enterEvent(self, event):
-        """Hover effect - slight enlargement"""
-        current = self.geometry()
-        expanded = QRect(
-            current.x() - 5,
-            current.y() - 5,
-            current.width() + 10,
-            current.height() + 10
-        )
-        self.hover_animation.setStartValue(current)
-        self.hover_animation.setEndValue(expanded)
-        self.hover_animation.start()
-        
-    def leaveEvent(self, event):
-        """Reset size on hover leave"""
-        current = self.geometry()
-        normal = QRect(
-            current.x() + 5,
-            current.y() + 5,
-            60,
-            60
-        )
-        self.hover_animation.setStartValue(current)
-        self.hover_animation.setEndValue(normal)
-        self.hover_animation.start()
 
 
 class StatusMessageWidget(QFrame):
@@ -4205,7 +4071,7 @@ class UnifiedAssistantWindow(QMainWindow):
             return
             
         # Skip geometry saving during precreation to avoid overwriting default settings
-        if getattr(self, '_is_precreating', False):
+        if getattr(self, '_is_precreating'):
             logging.debug("Skipping geometry save during precreation")
             return
             
@@ -5455,65 +5321,12 @@ class AssistantController:
     
     def __init__(self, settings_manager=None):
         self.settings_manager = settings_manager
-        self.mini_window = None
         self.main_window = None
-        self.current_mode = WindowMode.MINI
+        self.current_mode = WindowMode.CHAT
         self.current_game_window = None  # Record current game window title
         self._is_manually_hidden = False  # Record if user manually hidden the floating window
         self._was_hidden_before_hotkey = False  # Record hidden state before hotkey
         self._precreated = False  # Track if window has been pre-created
-        
-    def show_mini(self):
-        """Show mini assistant"""
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info("show_mini() called")
-        
-        # Check if need to restore previous hidden state
-        if hasattr(self, '_was_hidden_before_hotkey') and self._was_hidden_before_hotkey:
-            logger.info("Restoring hidden state from before hotkey")
-            self._is_manually_hidden = True
-            self._was_hidden_before_hotkey = False  # Reset flag
-        
-        # If user manually hidden the floating window, skip showing
-        if self._is_manually_hidden:
-            logger.info("Mini window was manually hidden, skipping show")
-            # If there is main window, save geometry and hide it
-            if self.main_window:
-                logger.info("Hiding main window")
-                try:
-                    self.main_window.save_geometry()
-                    self.main_window._persist_geometry_if_needed()
-                except Exception as e:
-                    logger.warning(f"Failed to save geometry when hiding main window: {e}")
-                self.main_window.hide()
-            return
-        
-        if not self.mini_window:
-            logger.info("Creating new MiniAssistant window")
-            self.mini_window = MiniAssistant()
-            self.mini_window.clicked.connect(self.expand_to_chat)
-            self.mini_window.visibility_changed.connect(self._on_mini_window_visibility_changed)
-            logger.info("MiniAssistant created and signal connected")
-        
-        # Show mini window
-        logger.info("Showing mini window")
-        self.mini_window.show()
-        self.mini_window.raise_()
-        self.mini_window.activateWindow()
-        
-        # If there is main window, save geometry and hide it
-        if self.main_window:
-            logger.info("Hiding main window")
-            try:
-                self.main_window.save_geometry()
-                self.main_window._persist_geometry_if_needed()
-            except Exception as e:
-                logger.warning(f"Failed to save geometry when hiding main window: {e}")
-            self.main_window.hide()
-        
-        self.current_mode = WindowMode.MINI
-        logger.info("show_mini() completed")
         
     def set_current_game_window(self, game_window_title: str):
         """Set current game window title"""
@@ -5546,7 +5359,6 @@ class AssistantController:
             self.main_window.set_precreating_mode(True)
             
             self.main_window.query_submitted.connect(self.handle_query)
-            self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             
             # CRITICAL FIX: Ensure task buttons are created during pre-creation
@@ -5610,7 +5422,6 @@ class AssistantController:
             
             self.main_window.query_submitted.connect(self.handle_query)
             # When window is closed, go back to mini mode
-            self.main_window.window_closing.connect(self.show_mini)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             self.main_window.visibility_changed.connect(self._on_main_window_visibility_changed)
 
@@ -5669,39 +5480,21 @@ class AssistantController:
         self._fade_in_animation.setEndValue(1.0)
         self._fade_in_animation.setEasingCurve(QEasingCurve.Type.OutQuad)  # Faster curve
         self._fade_in_animation.start()
+        self.main_window.restore_geometry()
 
-        if self.mini_window:
-            logger.info("Mini window exists, hiding it")
-            # Hide mini window
-            self.mini_window.hide()
+        # Ensure window is within screen range
+        screen = QApplication.primaryScreen().geometry()
+        window_rect = self.main_window.geometry()
 
-            # Only restore geometry if not in CHAT_ONLY state
-            # CHAT_ONLY state should always position at bottom right
-            if self.main_window.current_state != WindowState.CHAT_ONLY:
-                # Restore main window to previous saved position and size
-                self.main_window.restore_geometry()
+        # Adjust position to ensure window is visible
+        x = max(10, min(window_rect.x(), screen.width() - window_rect.width() - 10))
+        y = max(30, min(window_rect.y(), screen.height() - window_rect.height() - 40))
 
-            # Ensure window is within screen range
-            screen = QApplication.primaryScreen().geometry()
-            window_rect = self.main_window.geometry()
+        if x != window_rect.x() or y != window_rect.y():
+            self.main_window.move(x, y)
+            logger.info(f"Adjusted window position to ensure visibility: ({x}, {y})")
 
-            # Adjust position to ensure window is visible
-            x = max(10, min(window_rect.x(), screen.width() - window_rect.width() - 10))
-            y = max(30, min(window_rect.y(), screen.height() - window_rect.height() - 40))
-
-            if x != window_rect.x() or y != window_rect.y():
-                self.main_window.move(x, y)
-                logger.info(f"Adjusted window position to ensure visibility: ({x}, {y})")
-
-            # Message width update and input field focus setting will be done after animation
-
-            logger.info("Window position adjusted, fade-in animation in progress")
-        else:
-            logger.info("No mini window, showing main window with fade-in animation")
-            # Use restore_geometry to restore previous window position and size
-            self.main_window.restore_geometry()
-
-            # During window animation, message width does not need to be updated (will be updated after animation)
+        logger.info("Window position adjusted, fade-in animation in progress")
 
         self.current_mode = WindowMode.CHAT
 
@@ -5737,8 +5530,6 @@ class AssistantController:
             
     def hide_all(self):
         """Hide all windows"""
-        if self.mini_window:
-            self.mini_window.hide()
         if self.main_window:
             try:
                 self.main_window.save_geometry()
@@ -5763,31 +5554,12 @@ class AssistantController:
             
     def is_visible(self):
         """Check if any window is visible"""
-        mini_visible = self.mini_window and self.mini_window.isVisible()
-        main_visible = self.main_window and self.main_window.isVisible()
-        return mini_visible or main_visible
+        return self.main_window and self.main_window.isVisible()
         
     def restore_last_window(self):
         """Restore last displayed window state"""
-        # If there is recorded mode, restore to that mode
-        if hasattr(self, '_last_visible_mode') and self._last_visible_mode:
-            if self._last_visible_mode == WindowMode.MINI:
-                self.show_mini()
-            elif self._last_visible_mode == WindowMode.CHAT:
-                self.expand_to_chat()
-        else:
-            # Default show mini window
-            self.show_mini()
-            
-    def _on_mini_window_visibility_changed(self, is_visible: bool):
-        """Handle mini window visibility change"""
-        # This is called when mini window is hidden via context menu
-        # We need to notify any external listeners (like tray icon)
-        if not is_visible:
-            # If it is a hidden operation, set manually hidden flag
-            self._is_manually_hidden = True
-        if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
-            self.visibility_changed(is_visible)
+        # Always show chat window (mini window removed)
+        self.expand_to_chat()
         
     def _on_main_window_visibility_changed(self, is_visible: bool):
         """Handle main window visibility change"""
@@ -5798,13 +5570,3 @@ class AssistantController:
             self._is_manually_hidden = True
         if hasattr(self, 'visibility_changed') and callable(self.visibility_changed):
             self.visibility_changed(is_visible)
-
-# Demo/Testing
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    
-    # Create controller
-    controller = AssistantController()
-    controller.show_mini()
-    
-    sys.exit(app.exec())

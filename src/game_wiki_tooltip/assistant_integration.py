@@ -2247,10 +2247,6 @@ class IntegratedAssistantController(AssistantController):
         """显示聊天窗口，隐藏悬浮窗"""
         logger.info("💬 Show chat window requested")
         
-        # 隐藏悬浮窗
-        if self.mini_window:
-            self.mini_window.hide()
-            logger.info("🔹 Mini window hidden")
         
         # 显示聊天窗口
         if not self.main_window:
@@ -2281,9 +2277,9 @@ class IntegratedAssistantController(AssistantController):
         if hasattr(self, '_is_manually_hidden') and self._is_manually_hidden:
             logger.info("🔹 Mini window stays hidden (user setting)")
         else:
-            # 显示悬浮窗
-            self.show_mini()
-            logger.info("🔹 Mini window shown")
+            # 显示聊天窗口
+            self.expand_to_chat()
+            logger.info("🔹 Chat window shown")
     
     def show_mouse_for_interaction(self):
         """显示鼠标以便与聊天窗口互动"""
@@ -2299,7 +2295,7 @@ class IntegratedAssistantController(AssistantController):
     def show_assistant(self):
         """显示助手窗口"""
         logger.info("🔍 Show assistant requested")
-        self.show_mini()
+        self.expand_to_chat()
     
     def hide_assistant(self):
         """隐藏助手窗口"""
@@ -2308,8 +2304,6 @@ class IntegratedAssistantController(AssistantController):
             self._is_manually_hidden = True
         
         # 隐藏所有窗口
-        if self.mini_window:
-            self.mini_window.hide()
         if self.main_window:
             self.main_window.hide()
     
@@ -2325,8 +2319,6 @@ class IntegratedAssistantController(AssistantController):
 
     def is_assistant_visible(self) -> bool:
         """检查助手窗口是否可见（检查所有窗口）"""
-        if self.mini_window and self.mini_window.isVisible():
-            return True
         if self.main_window and self.main_window.isVisible():
             return True
         return False
