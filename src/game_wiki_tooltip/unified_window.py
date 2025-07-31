@@ -2134,9 +2134,9 @@ class UnifiedAssistantWindow(QMainWindow):
         self.has_switched_state = False  # Track if user has manually switched window states
         
         # Store geometry for different states
-        self._chat_only_size = QSize(380, 115)  # Input box only
         self._pending_geometry_save = False  # Flag to track if geometry needs saving
         self._is_precreating = False  # Flag to indicate if window is in precreation mode
+        self._cached_chat_only_size = None  # Cache for chat_only size to avoid recalculation
         
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
         self._default_webview_size = None  # Will be calculated when needed
@@ -2710,6 +2710,47 @@ class UnifiedAssistantWindow(QMainWindow):
         """
         self.setStyleSheet(style_sheet)
         
+    def _get_chat_only_size(self):
+        """Calculate chat_only size from settings percentages (with caching)"""
+        # Return cached size if available
+        if self._cached_chat_only_size is not None:
+            return self._cached_chat_only_size
+            
+        try:
+            screen = QApplication.primaryScreen()
+            if not screen:
+                self._cached_chat_only_size = QSize(380, 115)  # Fallback size
+                return self._cached_chat_only_size
+                
+            available_rect = screen.availableGeometry()
+            screen_width = available_rect.width()
+            screen_height = available_rect.height()
+            
+            # Get geometry config from settings
+            try:
+                window_geom = self.settings_manager.settings.window_geometry
+                chat_only_geom = window_geom.chat_only
+            except AttributeError:
+                # Fallback to default percentages
+                self._cached_chat_only_size = QSize(int(screen_width * 0.22), int(screen_height * 0.108))
+                return self._cached_chat_only_size
+            
+            width = int(screen_width * chat_only_geom.width_percent)
+            height = int(screen_height * chat_only_geom.height_percent)
+            
+            # Ensure reasonable minimum size
+            width = max(300, width)
+            height = max(100, height)
+            
+            self._cached_chat_only_size = QSize(width, height)
+            logging.info(f"Calculated and cached chat_only size: {width}x{height}")
+            return self._cached_chat_only_size
+            
+        except Exception as e:
+            logging.error(f"Failed to calculate chat_only size: {e}")
+            self._cached_chat_only_size = QSize(380, 115)  # Fallback size
+            return self._cached_chat_only_size
+        
     def restore_geometry(self):
         """Restore window geometry from settings based on current window state"""
         if not self.settings_manager:
@@ -2743,9 +2784,9 @@ class UnifiedAssistantWindow(QMainWindow):
                 x = int(screen_x + screen_width * geom.left_percent)
                 y = int(screen_y + screen_height * geom.top_percent)
 
-                # Use fixed size for CHAT_ONLY
-                width = self._chat_only_size.width()
-                height = self._chat_only_size.height()
+                # Calculate size from settings percentages
+                width = int(screen_width * geom.width_percent)
+                height = int(screen_height * geom.height_percent)
                 
                 self.setGeometry(x, y, width, height)
                 logging.info(f"Restored chat_only position: {x}, {y} (fixed size: {width}x{height})")
@@ -3003,8 +3044,15 @@ class UnifiedAssistantWindow(QMainWindow):
             quadrant, _, _ = self._get_window_screen_quadrant()
             
             # Get CHAT_ONLY size from settings
-            chat_only_width = int(screen_width * 0.22)  # Default 22% of screen width
-            chat_only_height = int(screen_height * 0.30)  # Default 30% of screen height
+            try:
+                window_geom = self.settings_manager.settings.window_geometry
+                chat_only_geom = window_geom.chat_only
+                chat_only_width = int(screen_width * chat_only_geom.width_percent)
+                chat_only_height = int(screen_height * chat_only_geom.height_percent)
+            except AttributeError:
+                # Fallback to default percentages
+                chat_only_width = int(screen_width * 0.22)
+                chat_only_height = int(screen_height * 0.108)
             
             # Calculate position based on quadrant
             if quadrant == 1:  # top-right - anchor at top-right
@@ -3046,7 +3094,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 'left_percent': 0.65,
                 'top_percent': 0.85,
                 'width_percent': 0.22,
-                'height_percent': 0.30
+                'height_percent': 0.108
             }
     
     def _show_menu_with_intelligent_position(self, menu, reference_button):
@@ -3107,7 +3155,11 @@ class UnifiedAssistantWindow(QMainWindow):
             self.input_container.show()
             
             # For CHAT_ONLY mode, completely disable resizing by setting fixed size
-            self.setFixedSize(self._chat_only_size)
+            # Only call setFixedSize if the size has changed to avoid BlurWindow issues
+            target_size = self._get_chat_only_size()
+            if self.size() != target_size:
+                self.setFixedSize(target_size)
+                logging.info(f"Setting CHAT_ONLY fixed size to: {target_size.width()}x{target_size.height()}")
 
             # Update main container style for full rounded corners
             self.update_container_style(full_rounded=True)
