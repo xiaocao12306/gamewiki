@@ -2144,7 +2144,6 @@ class UnifiedAssistantWindow(QMainWindow):
         # Geometry save timer for delayed saving on move/resize
         self._geometry_save_timer = QTimer()
         self._geometry_save_timer.setSingleShot(True)
-        self._geometry_save_timer.timeout.connect(self._delayed_save_geometry)
         
         # History manager will be initialized lazily
         self.history_manager = None
@@ -2338,11 +2337,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.input_field.setObjectName("searchInput")
         # Set placeholder text with recommended query examples
         placeholder_texts = [
-            "• " + t("query_example_1"),
-            "• " + t("query_example_2"),
-            "• " + t("query_example_3"),
-            "• " + t("query_example_4"),
-            "• " + t("query_example_5")
+            "search for information...",
         ]
         self.input_field.setPlaceholderText(" | ".join(placeholder_texts[:3]))  # Show first 3 examples
         self.input_field.returnPressed.connect(self.on_input_return_pressed)
@@ -2733,7 +2728,7 @@ class UnifiedAssistantWindow(QMainWindow):
             screen_height = available_rect.height()
             screen_x = available_rect.x()
             screen_y = available_rect.y()
-            
+            print('test', screen_x, screen_y, screen_width, screen_height)
             # Get geometry config based on current state
             try:
                 window_geom = self.settings_manager.settings.window_geometry
@@ -2743,18 +2738,17 @@ class UnifiedAssistantWindow(QMainWindow):
                 logging.warning("window_geometry not found in settings, using defaults")
             
             if self.current_state == WindowState.CHAT_ONLY:
-                # Chat only uses both position and size
+                # Chat only uses position only (size is fixed)
                 geom = window_geom.chat_only
                 x = int(screen_x + screen_width * geom.left_percent)
                 y = int(screen_y + screen_height * geom.top_percent)
-                width = int(screen_width * geom.width_percent)
-                height = int(screen_height * geom.height_percent)
-                
-                # Ensure minimum size
-                width = max(300, min(width, 800))
-                height = max(100, min(height, 400))
+
+                # Use fixed size for CHAT_ONLY
+                width = self._chat_only_size.width()
+                height = self._chat_only_size.height()
                 
                 self.setGeometry(x, y, width, height)
+                logging.info(f"Restored chat_only position: {x}, {y} (fixed size: {width}x{height})")
                 
             elif self.current_state == WindowState.FULL_CONTENT:
                 # Full content only uses size, position determined by search box
@@ -2893,12 +2887,11 @@ class UnifiedAssistantWindow(QMainWindow):
             update_data = {'window_geometry': {}}
             
             if self.current_state == WindowState.CHAT_ONLY:
-                # Chat only saves both position and size
+                # Chat only saves only position, not size (size is fixed)
                 update_data['window_geometry']['chat_only'] = {
                     'left_percent': left_percent,
-                    'top_percent': top_percent,
-                    'width_percent': width_percent,
-                    'height_percent': height_percent
+                    'top_percent': top_percent
+                    # Size is fixed, no need to save width_percent and height_percent
                 }
             elif self.current_state == WindowState.FULL_CONTENT:
                 # Full content only saves size
@@ -2958,12 +2951,6 @@ class UnifiedAssistantWindow(QMainWindow):
             # Restart timer to delay save (debounce)
             self._geometry_save_timer.stop()
             self._geometry_save_timer.start(500)  # 500ms delay
-    
-    def _delayed_save_geometry(self):
-        """Save geometry after delay (called by timer)"""
-        logging.debug("Timer triggered: saving geometry after move/resize")
-        self.save_geometry()
-        self._persist_geometry_if_needed()
     
     def set_precreating_mode(self, is_precreating: bool):
         """Set the precreating mode flag"""
@@ -3119,10 +3106,8 @@ class UnifiedAssistantWindow(QMainWindow):
             self.content_stack.hide()
             self.input_container.show()
             
-            # Set window to chat only size using min/max instead of fixed
-            # This allows setGeometry to work properly in restore_geometry
-            self.setMinimumSize(self._chat_only_size)
-            self.setMaximumSize(self._chat_only_size)
+            # For CHAT_ONLY mode, completely disable resizing by setting fixed size
+            self.setFixedSize(self._chat_only_size)
 
             # Update main container style for full rounded corners
             self.update_container_style(full_rounded=True)
@@ -4068,7 +4053,11 @@ class UnifiedAssistantWindow(QMainWindow):
     # Mouse event handlers for drag and resize
     def get_resize_edge(self, pos):
         """Check if mouse position is at window edge, return edge type"""
-        margin = 10
+        # Disable resize detection for CHAT_ONLY mode
+        if self.current_state == WindowState.CHAT_ONLY:
+            return None
+            
+        margin = 15
         rect = self.rect()
         
         left = pos.x() <= margin
@@ -4112,18 +4101,38 @@ class UnifiedAssistantWindow(QMainWindow):
         """Mouse press event"""
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position().toPoint()
-            edge = self.get_resize_edge(pos)
             
-            if edge:
-                # Start resizing
-                self.resizing = True
-                self.resize_edge = edge
-                self.resize_start_pos = event.globalPosition().toPoint()
-                self.resize_start_geometry = self.geometry()
-            elif hasattr(self, 'title_bar') and self.title_bar.geometry().contains(pos):
-                # Start dragging only if clicked on title bar
-                self.dragging = True
-                self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            # In CHAT_ONLY mode, disable resizing completely
+            if self.current_state == WindowState.CHAT_ONLY:
+                # Check if clicked on search_input_row (the input field area)
+                if hasattr(self, 'input_field') and self.input_field.isVisible():
+                    input_field_rect = self.input_field.geometry()
+                    # Map to window coordinates
+                    input_field_global = self.input_field.mapTo(self, input_field_rect.topLeft())
+                    input_field_rect_in_window = QRect(input_field_global, input_field_rect.size())
+                    
+                    # If clicked outside the input field area, allow dragging
+                    if not input_field_rect_in_window.contains(pos):
+                        self.dragging = True
+                        self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                else:
+                    # If input field not visible, allow dragging anywhere
+                    self.dragging = True
+                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            else:
+                # For other modes, keep existing behavior
+                edge = self.get_resize_edge(pos)
+                
+                if edge:
+                    # Start resizing
+                    self.resizing = True
+                    self.resize_edge = edge
+                    self.resize_start_pos = event.globalPosition().toPoint()
+                    self.resize_start_geometry = self.geometry()
+                elif hasattr(self, 'title_bar') and self.title_bar.geometry().contains(pos):
+                    # Start dragging only if clicked on title bar
+                    self.dragging = True
+                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
             
     def mouseMoveEvent(self, event):

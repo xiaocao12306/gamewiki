@@ -142,20 +142,6 @@ class AssistantController:
         
         # Show initial processing status
         self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)
-            
-    def hide_all(self):
-        """Hide all window_component"""
-        if self.main_window:
-            try:
-                # Save current window state before hiding
-                self.previous_window_state = self.main_window.current_state
-                self.main_window.save_geometry()
-                self.main_window._persist_geometry_if_needed()
-            except Exception as e:
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to save geometry when hiding all window_component: {e}")
-            self.main_window.hide()
-        self.current_mode = None
         
     def is_visible(self):
         """Check if any window is visible"""
