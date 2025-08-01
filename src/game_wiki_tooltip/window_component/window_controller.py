@@ -153,8 +153,6 @@ class AssistantController:
                 query
             )
         
-        # Reset auto scroll state, ensure auto scroll is enabled when new query
-        self.main_window.chat_view.reset_auto_scroll()
         
         # Show initial processing status
         self.main_window.chat_view.show_status(TransitionMessages.QUERY_RECEIVED)

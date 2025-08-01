@@ -1034,7 +1034,7 @@ class StreamingMessageWidget(MessageWidget):
         try:
             parent = self.parent()
             # Check if parent is ChatView (by checking specific methods)
-            if parent and hasattr(parent, 'request_auto_scroll') and hasattr(parent, 'verticalScrollBar'):
+            if parent and hasattr(parent, 'verticalScrollBar'):
                 return parent
         except:
             pass
@@ -1088,8 +1088,8 @@ class StreamingMessageWidget(MessageWidget):
         # Ensure timer starts
         if not self.typing_timer.isActive():
             print(f"⏰ [STREAMING-WIDGET] Started typewriter timer")
-            # Faster typewriter effect: 5ms per character (previously 20ms)
-            self.typing_timer.start(5)
+            # Faster typewriter effect: 2ms per character (previously 5ms)
+            self.typing_timer.start(2)
         else:
             print(f"⏰ [STREAMING-WIDGET] Typewriter timer already running")
     
@@ -1103,13 +1103,13 @@ class StreamingMessageWidget(MessageWidget):
             new_interval = 1
         elif remaining_chars > 200:
             # Medium remaining content, fast speed
-            new_interval = 2
+            new_interval = 1
         elif remaining_chars > 50:
             # Small amount of remaining content, normal speed
-            new_interval = 3
+            new_interval = 2
         else:
-            # Very little remaining content, slow speed to maintain typewriter effect
-            new_interval = 5
+            # Very little remaining content, normal speed to maintain typewriter effect
+            new_interval = 2
             
         # Check if timer interval needs adjustment
         if self.typing_timer.isActive():
@@ -1152,7 +1152,9 @@ class StreamingMessageWidget(MessageWidget):
         self._adjust_typing_speed()
             
         if self.display_index < len(self.full_text):
-            self.display_index += 1
+            # Show multiple characters at once for faster display
+            batch_size = 3  # Show 3 characters at a time
+            self.display_index = min(self.display_index + batch_size, len(self.full_text))
             display_text = self.full_text[:self.display_index]
             current_time = time.time()
             
@@ -1312,9 +1314,6 @@ class StreamingMessageWidget(MessageWidget):
             # Only scroll when needed (reduce scrolling calls)
             if should_update_display:
                 chat_view = self.get_chat_view()
-                if chat_view:
-                    # Use unified scroll request mechanism
-                    chat_view.request_auto_scroll()
         else:
             self.typing_timer.stop()
             
@@ -1387,9 +1386,6 @@ class StreamingMessageWidget(MessageWidget):
                     QTimer.singleShot(50, chat_view.container.updateGeometry)
                 
                 # Request scrolling to the bottom, using unified scroll management
-                if chat_view:
-                    # Slightly delay to ensure layout is complete
-                    QTimer.singleShot(100, chat_view.request_auto_scroll)
             
     def update_dots(self):
         """Update loading dots animation"""
@@ -1424,21 +1420,10 @@ class ChatView(QScrollArea):
         self.messages: List[MessageWidget] = []
         self.current_status_widget: Optional[StatusMessageWidget] = None
         
-        # Automatic scroll control
-        self.auto_scroll_enabled = True  # Whether to enable automatic scrolling
-        self.user_scrolled_manually = False  # Whether the user has manually scrolled
-        self.last_scroll_position = 0  # Last scroll position
-        
         # Resize anti-shake mechanism
         self.resize_timer = QTimer()
         self.resize_timer.setSingleShot(True)
         self.resize_timer.timeout.connect(self._performDelayedResize)
-        
-        # Unified scroll manager
-        self._scroll_request_timer = QTimer()
-        self._scroll_request_timer.setSingleShot(True)
-        self._scroll_request_timer.timeout.connect(self._perform_auto_scroll)
-        self._scroll_request_pending = False
         
         # Content stability detection
         self._last_content_height = 0
@@ -1483,11 +1468,9 @@ class ChatView(QScrollArea):
             }
         """)
         
-        # Connect scrollbar signals, monitor user manual scrolling
+        # Connect scrollbar signals
         scrollbar = self.verticalScrollBar()
         scrollbar.valueChanged.connect(self._on_scroll_changed)
-        scrollbar.sliderPressed.connect(self._on_user_scroll_start)
-        scrollbar.sliderReleased.connect(self._on_user_scroll_end)
         
         # Don't add welcome message anymore
         
@@ -1594,9 +1577,6 @@ class ChatView(QScrollArea):
         widget.updateGeometry()
         self.container.updateGeometry()
         
-        # Use unified scroll request mechanism
-        self.request_auto_scroll()
-        
         return widget
         
     def add_streaming_message(self) -> StreamingMessageWidget:
@@ -1631,8 +1611,6 @@ class ChatView(QScrollArea):
         # Gentle layout update
         self.current_status_widget.updateGeometry()
         self.container.updateGeometry()
-        # Use unified scroll request mechanism
-        self.request_auto_scroll()
         
         return self.current_status_widget
         
@@ -1640,8 +1618,6 @@ class ChatView(QScrollArea):
         """Update current status information"""
         if self.current_status_widget:
             self.current_status_widget.update_status(message)
-            # Ensure scrolling to the bottom to display the new status
-            self.request_auto_scroll()
         else:
             self.show_status(message)
             
@@ -1681,162 +1657,43 @@ class ChatView(QScrollArea):
         scrollbar = self.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
         
-    def smart_scroll_to_bottom(self):
-        """Smart scroll to the bottom - only execute when automatic scrolling is enabled"""
-        if self.auto_scroll_enabled and not self.user_scrolled_manually:
-            self.scroll_to_bottom()
             
-    def request_auto_scroll(self):
-        """Request automatic scrolling (anti-shake)"""
-        if not self.auto_scroll_enabled or self.user_scrolled_manually:
-            print(f"🚫 [SCROLL] Scroll request rejected - auto_enabled: {self.auto_scroll_enabled}, manual: {self.user_scrolled_manually}")
-            return
-            
-        # Mark that there is a scroll request
-        self._scroll_request_pending = True
-        print(f"📋 [SCROLL] Received scroll request, starting debounce timer")
         
-        # Use anti-shake timer to avoid frequent scrolling
-        self._scroll_request_timer.stop()
-        self._scroll_request_timer.start(100)  # 100ms anti-shake
-        
-    def _perform_auto_scroll(self):
-        """Perform actual automatic scrolling"""
-        print(f"🔄 [SCROLL] _perform_auto_scroll called, pending: {self._scroll_request_pending}")
-        if not self._scroll_request_pending:
-            return
-            
-        # Check if the content height has changed
-        current_height = self.container.sizeHint().height()
-        if current_height != self._last_content_height:
-            # Content is still changing, waiting for stability
-            print(f"📏 [SCROLL] Content height changed: {self._last_content_height} -> {current_height}，Waiting for stability")
-            self._last_content_height = current_height
-            self._content_stable_timer.stop()
-            self._content_stable_timer.start(50)  # Check again after 50ms
-            return
-            
-        # Content stable, execute scrolling
-        if self.auto_scroll_enabled and not self.user_scrolled_manually:
-            # Check if it is near the bottom (tolerance 50px)
-            scrollbar = self.verticalScrollBar()
-            at_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
-            
-            print(f"📊 [SCROLL] Scroll check - max: {scrollbar.maximum()}, value: {scrollbar.value()}, at_bottom: {at_bottom}")
-            
-            if at_bottom or self._scroll_request_pending:
-                # Smooth scroll to the bottom
-                self.scroll_to_bottom()
-                print(f"📍 [SCROLL] Executing auto scroll, height: {current_height}px")
-        else:
-            print(f"🚫 [SCROLL] Scroll disabled or user manually scrolled")
-                
-        self._scroll_request_pending = False
         
     def _check_content_stability(self):
         """Check if the content is stable"""
         current_height = self.container.sizeHint().height()
-        if current_height == self._last_content_height:
-            # Content stable, execute pending scrolling
-            if self._scroll_request_pending:
-                self._perform_auto_scroll()
-        else:
+        if current_height != self._last_content_height:
             # Content is still changing, continue waiting
             self._last_content_height = current_height
             self._content_stable_timer.start(50)
             
     def _on_scroll_changed(self, value):
         """Callback when scroll position changes"""
-        scrollbar = self.verticalScrollBar()
-        
-        # Check if it is near the bottom (less than 50 pixels from the bottom)
-        near_bottom = (scrollbar.maximum() - value) <= 50
-        
-        # If the user scrolls to near the bottom, re-enable automatic scrolling
-        if near_bottom and self.user_scrolled_manually:
-            print("📍 User scrolled near bottom, re-enabling auto scroll")
-            self.user_scrolled_manually = False
-            self.auto_scroll_enabled = True
+        # Currently no action needed on scroll change
+        pass
             
-    def _on_user_scroll_start(self):
-        """User starts manual scrolling"""
-        self.user_scrolled_manually = True
-        
-    def _on_user_scroll_end(self):
-        """User ends manual scrolling"""
-        # Check if it is near the bottom
-        scrollbar = self.verticalScrollBar()
-        near_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
-        
-        if not near_bottom:
-            # If not near the bottom, disable auto scroll
-            self.auto_scroll_enabled = False
-            print("📍 User manually scrolled away from bottom, disabling auto scroll")
-        else:
-            # If near the bottom, maintain auto scroll
-            self.auto_scroll_enabled = True
-            self.user_scrolled_manually = False
-            print("📍 User near bottom, maintaining auto scroll")
             
     def wheelEvent(self, event):
-        """Mouse wheel event - detect user wheel operation"""
-        # Mark that the user has manually scrolled
-        self.user_scrolled_manually = True
-        
+        """Mouse wheel event"""
         # Call the original wheel event processing
         super().wheelEvent(event)
-        
-        # Delay checking if it is near the bottom
-        QTimer.singleShot(100, self._check_if_near_bottom)
-        
-    def _check_if_near_bottom(self):
-        """Check if it is near the bottom"""
-        scrollbar = self.verticalScrollBar()
-        near_bottom = (scrollbar.maximum() - scrollbar.value()) <= 50
-        
-        if near_bottom:
-            # If near the bottom, re-enable auto scroll
-            self.auto_scroll_enabled = True
-            self.user_scrolled_manually = False
-        else:
-            # Otherwise disable auto scroll
-            self.auto_scroll_enabled = False
-            print("📍 Wheel operation left bottom, disabling auto scroll")
             
     def mouseDoubleClickEvent(self, event):
-        """Double-click event - manually re-enable auto scroll and scroll to the bottom"""
+        """Double-click event"""
         if event.button() == Qt.MouseButton.LeftButton:
-            print("📍 Double-clicked chat area, re-enabling auto scroll")
-            self.auto_scroll_enabled = True
-            self.user_scrolled_manually = False
+            # Scroll to bottom on double-click
             self.scroll_to_bottom()
         super().mouseDoubleClickEvent(event)
         
-    def reset_auto_scroll(self):
-        """Reset auto scroll state (for external use)"""
-        self.auto_scroll_enabled = True
-        self.user_scrolled_manually = False
-        print("📍 Reset auto scroll state")
-        
-    def disable_auto_scroll(self):
-        """Disable auto scroll (for external use)"""
-        self.auto_scroll_enabled = False
-        self.user_scrolled_manually = True
-        print("📍 Disable auto scroll")
         
     def keyPressEvent(self, event):
-        """Keyboard event - support shortcut key control auto scroll"""
+        """Keyboard event"""
         if event.key() == Qt.Key.Key_End:
-            # End key: re-enable auto scroll and scroll to the bottom
-            print("📍 Pressed End key, re-enabling auto scroll")
-            self.auto_scroll_enabled = True
-            self.user_scrolled_manually = False
+            # End key: scroll to the bottom
             self.scroll_to_bottom()
         elif event.key() == Qt.Key.Key_Home:
-            # Home key: scroll to the top and disable auto scroll
-            print("📍 Pressed Home key, scroll to the top and disable auto scroll")
-            self.auto_scroll_enabled = False
-            self.user_scrolled_manually = True
+            # Home key: scroll to the top
             scrollbar = self.verticalScrollBar()
             scrollbar.setValue(0)
         else:
@@ -1944,8 +1801,6 @@ class ChatView(QScrollArea):
         # Delay a little bit to check again, ensure all content has been rendered
         QTimer.singleShot(50, self._finalizeContentDisplay)
         
-        # Ensure scrolling to the correct position
-        QTimer.singleShot(100, self.smart_scroll_to_bottom)
         
     def _ensureContentComplete(self):
         """Ensure all message content is displayed completely"""
