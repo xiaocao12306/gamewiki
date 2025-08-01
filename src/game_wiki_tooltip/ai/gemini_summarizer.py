@@ -13,6 +13,7 @@ import re
 
 # Import i18n for internationalization
 from src.game_wiki_tooltip.i18n import t
+from .rag_config import RAGConfig, get_default_config
 
 logger = logging.getLogger(__name__)
 
@@ -31,23 +32,37 @@ class SummarizationConfig:
 class GeminiSummarizer:
     """Summarizes multiple knowledge chunks using Gemini Flash 2.5 Lite"""
     
-    def __init__(self, config: SummarizationConfig):
+    def __init__(self, config: SummarizationConfig = None, rag_config: RAGConfig = None):
         """Initialize Gemini summarizer with configuration"""
-        self.config = config
+        # Use RAGConfig if provided, otherwise use SummarizationConfig
+        if rag_config:
+            self.rag_config = rag_config
+            # Extract settings from RAGConfig
+            self.config = SummarizationConfig(
+                api_key=rag_config.llm_settings.get_api_key(),
+                model_name=rag_config.summarization.model_name,
+                temperature=rag_config.summarization.temperature,
+                include_sources=rag_config.summarization.include_sources,
+                language=rag_config.summarization.language,
+                enable_google_search=True  # Default to True
+            )
+        else:
+            self.config = config
+            self.rag_config = None
         
         # Configure Gemini API
-        genai.configure(api_key=config.api_key)
+        genai.configure(api_key=self.config.api_key)
         
         # Initialize model with safety settings (no max_output_tokens limit)
         self.model = genai.GenerativeModel(
-            model_name=config.model_name,
+            model_name=self.config.model_name,
             generation_config={
-                "temperature": config.temperature,
+                "temperature": self.config.temperature,
                 # Let the model decide output length based on query requirements
             }
         )
         
-        logger.info(f"Initialized GeminiSummarizer with model: {config.model_name}")
+        logger.info(f"Initialized GeminiSummarizer with model: {self.config.model_name}")
     
     async def summarize_chunks_stream(
         self,
@@ -89,6 +104,12 @@ class GeminiSummarizer:
         try:
             print(f"🚀 [STREAM-DEBUG] Calling Gemini streaming API")
             
+            # Detect language from query
+            language = self._detect_language(query) if self.config.language == "auto" else self.config.language
+            
+            # Build system instruction
+            system_instruction = self._build_system_instruction(language)
+            
             # Build prompt
             prompt = self._build_summarization_prompt(chunks, query, original_query, context)
             
@@ -110,15 +131,21 @@ class GeminiSummarizer:
                     client = new_genai.Client(api_key=self.config.api_key)
                     
                     # Configure Google Search tool if enabled
-                    config = None
+                    tools = []
                     if self.config.enable_google_search:
                         print(f"🔍 [STREAM-DEBUG] Enabling Google Search tool (new API)")
                         grounding_tool = new_types.Tool(
                             google_search=new_types.GoogleSearch()
                         )
-                        config = new_types.GenerateContentConfig(
-                            tools=[grounding_tool]
-                        )
+                        tools = [grounding_tool]
+                    
+                    # Build config with system instruction
+                    config = new_types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        tools=tools if tools else None,
+                        # Allow model to generate appropriate length based on query
+                        temperature=self.config.temperature
+                    )
                     
                     # Stream content generation
                     response = client.models.generate_content_stream(
@@ -209,42 +236,14 @@ class GeminiSummarizer:
                 yield "❌ API key configuration issue, please check if Gemini API key is correctly configured.\n\n"
                 return
     
-    def _build_summarization_prompt(
-        self, 
-        chunks: List[Dict[str, Any]], 
-        query: str,
-        original_query: Optional[str] = None,
-        context: Optional[str] = None
-    ) -> str:
-        """Build the universal prompt for Gemini summarization"""
+    def _build_system_instruction(self, language: str = "auto") -> str:
+        """Build system instruction for Gemini"""
+        # Detect language if auto
+        if language == "auto":
+            language = "en"  # Default to Chinese, will be overridden by actual query language
         
-        # Detect language from query or use config
-        language = self._detect_language(query) if self.config.language == "auto" else self.config.language
-        
-        # Format chunks as raw JSON for the prompt
-        chunks_json = self._format_chunks_as_json(chunks)
-        
-        # Detect if user is asking for detailed explanations
-        is_detailed_query = self._is_detailed_query(query)
-        
-        # Build language-specific prompt
         if language == "zh":
-            detail_instruction = "详细解释选择原因和策略" if is_detailed_query else "简洁明了的回答"
-            
-            # 构建查询信息部分
-            query_section = f"[检索查询]: {query}  ← 用于判断哪些材料段落最相关"
-            if original_query and original_query != query:
-                query_section += f"\n[原始查询]: {original_query}  ← **关键**：必须严格按照此查询的格式要求回答（如一句话、简短、详细等）"
-            else:
-                query_section = f"[用户查询]: {query}  ← **关键**：必须严格按照此查询的格式要求回答"
-            
-            prompt = f"""你是一个专业的游戏攻略助手。基于以下JSON格式的游戏知识块，回答玩家的问题。
-
-{query_section}
-{f"游戏上下文：{context}" if context else ""}
-
-可用的游戏知识块（JSON格式）：
-{chunks_json}
+            return """你是一个专业的游戏攻略助手。你的任务是基于提供的游戏知识库内容，为玩家提供准确、有用的游戏攻略信息。
 
 回答指南：
 1. **开头必须提供一句话总结**：在正式回答之前，用一句话概括答案要点（例如："💡 **总结**：推荐使用火箭筒配合重装甲来对付这个BOSS"）
@@ -257,7 +256,11 @@ class GeminiSummarizer:
    - 敌人攻略：提供弱点、血量、推荐武器等关键信息
    - 游戏策略：给出具体的操作建议和技巧
    - 物品信息：详细说明属性、获取方式、用途等
-5. **回答详细程度**：{detail_instruction}
+5. **智能判断回答详细程度**：
+   - 仔细分析[原始查询]中的表述，理解用户期望的回答长度
+   - 如果用户要求"一句话"、"简短"、"简要"等，提供简洁答案
+   - 如果用户询问"为什么"、"如何"、"详细解释"等，提供完整深入的回答
+   - 如果没有明确要求，根据问题复杂度提供适中长度的回答
 6. **利用structured_data**：优先使用结构化数据中的具体数值、名称、配置等信息
 
 格式要求：
@@ -265,31 +268,11 @@ class GeminiSummarizer:
 • 不要添加任何寒暄或开场白（如"我来帮你..."、"好的，让我..."）
 • 如果提供的知识块足以回答问题，直接给出答案
 • 如果使用了Google搜索工具，在开头说明："我使用了Google搜索为你找到了以下信息"
-• 严格按照[原始查询]的要求组织答案：
-  - 如果要求"一句话"或"简短回答"，只提供简洁答案
-  - 如果要求详细解释，提供完整信息
+• 严格按照[原始查询]的要求组织答案
 • 使用友好的游戏术语
-• 基于实际数据，不要编造信息
-
-
-你的回答："""
+• 基于实际数据，不要编造信息"""
         else:
-            detail_instruction = "detailed explanations with reasons and strategies" if is_detailed_query else "concise and clear responses"
-            
-            # 构建查询信息部分
-            query_section = f"[Retrieval Query]: {query}  ← for determining which material segments are most relevant"
-            if original_query and original_query != query:
-                query_section += f"\n[Original Query]: {original_query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements (e.g., one sentence, brief, detailed)"
-            else:
-                query_section = f"[User Query]: {query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements"
-            
-            prompt = f"""You are a professional game guide assistant. Based on the following JSON-formatted game knowledge chunks, answer the player's question.
-
-{query_section}
-{f"Game context: {context}" if context else ""}
-
-Available game knowledge chunks (JSON format):
-{chunks_json}
+            return """You are a professional game guide assistant. Your task is to provide accurate and useful game strategy information to players based on the provided game knowledge base content.
 
 Response guidelines:
 1. **Start with a one-sentence summary**: Before the detailed answer, provide a one-sentence summary of the key points (e.g., "💡 **Summary**: Recommended to use rocket launcher with heavy armor against this boss")
@@ -302,7 +285,11 @@ Response guidelines:
    - Enemy guides: Provide weak points, health, recommended weapons
    - Game strategies: Give specific operation suggestions and tactics
    - Item information: Detail attributes, acquisition methods, uses
-5. **Response detail level**: {detail_instruction}
+5. **Intelligently determine response detail level**:
+   - Carefully analyze the wording in [Original Query] to understand the user's expected response length
+   - If user asks for "one sentence", "brief", "short", etc., provide concise answer
+   - If user asks "why", "how", "detailed explanation", etc., provide complete in-depth response
+   - If no explicit requirement, provide moderate length response based on question complexity
 6. **Utilize structured_data**: Prioritize specific values, names, configurations from structured data
 
 Format requirements:
@@ -310,14 +297,56 @@ Format requirements:
 • Don't add any greetings or introductions (like "I'm ready to help...", "Okay, let me...")
 • If knowledge chunks are sufficient, directly provide the answer
 • If Google Search tool was used, mention at the beginning: "I used Google search to find the following information"
-• Strictly follow the [Original Query] requirements:
-  - If asked for "one sentence" or "brief answer", provide only concise response
-  - If asked for detailed explanation, provide complete information
+• Strictly follow the [Original Query] requirements
 • Use friendly gaming terminology
-• Base on actual data, don't fabricate information
+• Base on actual data, don't fabricate information"""
+    
+    def _build_summarization_prompt(
+        self, 
+        chunks: List[Dict[str, Any]], 
+        query: str,
+        original_query: Optional[str] = None,
+        context: Optional[str] = None
+    ) -> str:
+        """Build the simplified prompt for Gemini summarization (guidelines moved to system instruction)"""
+        
+        # Detect language from query or use config
+        language = self._detect_language(query) if self.config.language == "auto" else self.config.language
+        
+        # Format chunks as raw JSON for the prompt
+        chunks_json = self._format_chunks_as_json(chunks)
+        
+        # Build language-specific prompt
+        if language == "zh":
+            # 构建查询信息部分
+            query_section = f"[检索查询]: {query}  ← 用于判断哪些材料段落最相关"
+            if original_query and original_query != query:
+                query_section += f"\n[原始查询]: {original_query}  ← **关键**：必须严格按照此查询的格式要求回答"
+            else:
+                query_section = f"[用户查询]: {query}  ← **关键**：必须严格按照此查询的格式要求回答"
+            
+            prompt = f"""{query_section}
+{f"游戏上下文：{context}" if context else ""}
 
+可用的游戏知识块（JSON格式）：
+{chunks_json}
 
-Your response:"""
+请基于以上知识块回答用户的问题。"""
+        else:
+            # 构建查询信息部分
+            query_section = f"[Retrieval Query]: {query}  ← for determining which material segments are most relevant"
+            if original_query and original_query != query:
+                query_section += f"\n[Original Query]: {original_query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements"
+            else:
+                query_section = f"[User Query]: {query}  ← **CRITICAL**: You MUST strictly follow this query's format requirements"
+            
+            prompt = f"""{query_section}
+{f"Game context: {context}" if context else ""}
+
+Available game knowledge chunks (JSON format):
+{chunks_json}
+
+Please answer the user's question based on the above knowledge chunks."""
         
         return prompt
     
@@ -347,20 +376,6 @@ Your response:"""
             logger.warning(f"Failed to serialize chunks as JSON: {e}")
             return str(formatted_chunks)
     
-    def _is_detailed_query(self, query: str) -> bool:
-        """Detect if the query is asking for detailed explanations"""
-        detailed_keywords = [
-            # Chinese keywords
-            "为什么", "原因", "详细", "解释", "说明", "分析", "机制", "深入",
-            "策略", "技巧", "攻略", "教程",
-            # English keywords  
-            "why", "reason", "detailed", "explain",  "analysis",
-            "mechanism", "strategy", "tactics",
-            "in-depth", "comprehensive"
-        ]
-        
-        query_lower = query.lower()
-        return any(keyword in query_lower for keyword in detailed_keywords)
     
     def _format_summary_response(
         self, 
@@ -446,6 +461,21 @@ Your response:"""
             "language": self._detect_language(summary)
         }
     
+    def _convert_timestamp_to_seconds(self, timestamp: str) -> int:
+        """Convert MM:SS or HH:MM:SS format to seconds"""
+        if not timestamp:
+            return 0
+        
+        try:
+            parts = timestamp.split(':')
+            if len(parts) == 2:  # MM:SS
+                return int(parts[0]) * 60 + int(parts[1])
+            elif len(parts) == 3:  # HH:MM:SS
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+            return 0
+        except (ValueError, AttributeError):
+            return 0
+    
     def _extract_video_sources(self, chunks: List[Dict[str, Any]], summary_text: str) -> str:
         """Extract video source information from chunks"""
         try:
@@ -476,8 +506,8 @@ Your response:"""
             with open(kb_path, 'r', encoding='utf-8') as f:
                 kb_data = json.load(f)
             
-            # Collect video sources
-            video_sources = {}  # URL -> {title, timestamps}
+            # Collect video sources - now as a list of individual entries
+            video_sources = []  # List of {url, topic, start_seconds}
             
             # Check which chunks were actually used in the summary
             used_chunks = []
@@ -521,18 +551,25 @@ Your response:"""
                             
                             video_url = video_info.get("url", "")
                             if video_url:
-                                if video_url not in video_sources:
-                                    video_sources[video_url] = {
-                                        "title": video_info.get("title", "Unknown Video"),
-                                        "timestamps": []
-                                    }
-                                
-                                # Add timestamp
+                                # Get timestamp
                                 timestamp = kb_chunk.get("timestamp", {})
                                 start = timestamp.get("start", "")
-                                end = timestamp.get("end", "")
-                                if start and end:
-                                    video_sources[video_url]["timestamps"].append(f"{start}-{end}")
+                                
+                                # Create individual video source entry
+                                video_source_entry = {
+                                    "url": video_url,
+                                    "topic": chunk_topic,
+                                    "title": video_info.get("title", "Unknown Video")
+                                }
+                                
+                                # Convert start time to seconds for YouTube link
+                                if start:
+                                    start_seconds = self._convert_timestamp_to_seconds(start)
+                                    video_source_entry["start_seconds"] = start_seconds
+                                    print(f"   - Timestamp: {start} -> {start_seconds} seconds")
+                                
+                                video_sources.append(video_source_entry)
+                                print(f"   - Added video source: {video_url} at {start}")
             
             # Format video sources
             print(f"📹 [VIDEO-DEBUG] Found {len(video_sources)} video sources")
@@ -544,19 +581,39 @@ Your response:"""
             # Build the sources text
             sources_lines = ["---", "<small>", f"📺 **{t('video_sources_label')}**"]
             
-            for url, info in video_sources.items():
-                title = info["title"]
-                timestamps = info["timestamps"]
-                
-                # Sort timestamps
-                timestamps = sorted(set(timestamps))  # Remove duplicates and sort
-                
-                # Format timestamps
-                if timestamps:
-                    timestamp_str = "; ".join(timestamps)
-                    sources_lines.append(f"- [{title} ({timestamp_str})]({url})")
+            # Remove duplicates based on topic and URL with timestamp
+            seen_entries = set()
+            unique_sources = []
+            
+            for source in video_sources:
+                # Create unique key with topic and time
+                if "start_seconds" in source:
+                    unique_key = f"{source['topic']}_{source['url']}_{source['start_seconds']}"
                 else:
-                    sources_lines.append(f"- [{title}]({url})")
+                    unique_key = f"{source['topic']}_{source['url']}"
+                
+                if unique_key not in seen_entries:
+                    seen_entries.add(unique_key)
+                    unique_sources.append(source)
+            
+            # Sort by topic for consistent ordering
+            unique_sources.sort(key=lambda x: x.get('topic', ''))
+            
+            # Format each video source
+            for source in unique_sources:
+                topic = source.get("topic", "Video Source")
+                url = source.get("url", "")
+                
+                # Add timestamp parameter for YouTube videos
+                if "youtube.com" in url and "start_seconds" in source:
+                    # Append time parameter to URL
+                    time_param = f"&t={source['start_seconds']}"
+                    link_url = f"{url}{time_param}"
+                else:
+                    link_url = url
+                
+                # Create markdown link with topic as text
+                sources_lines.append(f"- [{topic}]({link_url})")
             
             sources_lines.append("</small>")
             
@@ -587,6 +644,7 @@ def create_gemini_summarizer(
     api_key: Optional[str] = None,
     model_name: str = "gemini-2.5-flash-lite",
     enable_google_search: bool = True,
+    rag_config: Optional[RAGConfig] = None,
     **kwargs
 ) -> GeminiSummarizer:
     """
@@ -606,6 +664,11 @@ def create_gemini_summarizer(
         if not api_key:
             raise ValueError("Gemini API key not provided and GEMINI_API_KEY env var not set")
     
+    # If RAGConfig is provided, use it
+    if rag_config:
+        return GeminiSummarizer(rag_config=rag_config)
+    
+    # Otherwise, use individual parameters
     config = SummarizationConfig(
         api_key=api_key,
         model_name=model_name,

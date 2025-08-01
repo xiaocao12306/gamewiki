@@ -309,12 +309,12 @@ class FirstRunInitializationThread(InitializationThread):
             self.progress_update.emit(60, "Loading AI modules...")
             try:
                 # Import and initialize AI modules during splash screen
-                from src.game_wiki_tooltip.ai.unified_query_processor import process_query_unified
-                from src.game_wiki_tooltip.ai.rag_config import get_default_config
-                from src.game_wiki_tooltip.ai.rag_query import EnhancedRagQuery
+                from .ai.unified_query_processor import process_query_unified
+                from .ai.rag_config import get_default_config
+                from .ai.rag_query import EnhancedRagQuery
                 
                 # Mark AI modules as loaded in assistant_integration
-                import src.game_wiki_tooltip.assistant_integration as ai_integration
+                from . import assistant_integration as ai_integration
                 ai_integration.process_query_unified = process_query_unified
                 ai_integration.get_default_config = get_default_config
                 ai_integration.EnhancedRagQuery = EnhancedRagQuery
@@ -353,28 +353,15 @@ class FirstRunInitializationThread(InitializationThread):
                 
                 if gemini_api_key and ai_integration.get_default_config and ai_integration.EnhancedRagQuery:
                     # Pre-initialize RAG for Helldivers 2
-                    from src.game_wiki_tooltip.ai.rag_config import LLMConfig
-                    
-                    llm_config = LLMConfig(
-                        api_key=gemini_api_key,
-                        model='gemini-2.5-flash-lite'
-                    )
-                    
-                    # Get RAG config
+                    # Get RAG config and update it with the API key
                     rag_config = ai_integration.get_default_config()
+                    rag_config.llm_settings.api_key = gemini_api_key
 
-                    # Create RAG engine instance
+                    # Create RAG engine instance using rag_config
                     rag_engine = ai_integration.EnhancedRagQuery(
                         vector_store_path=None,
-                        enable_hybrid_search=rag_config.hybrid_search.enabled,
-                        hybrid_config=rag_config.hybrid_search.to_dict(),
-                        llm_config=llm_config,
                         google_api_key=gemini_api_key,
-                        enable_query_rewrite=False,
-                        enable_summarization=rag_config.summarization.enabled,
-                        summarization_config=rag_config.summarization.to_dict(),
-                        enable_intent_reranking=rag_config.intent_reranking.enabled,
-                        reranking_config=rag_config.intent_reranking.to_dict()
+                        rag_config=rag_config
                     )
                     
                     # Initialize for Helldivers 2

@@ -14,7 +14,8 @@ from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt
 
 from src.game_wiki_tooltip.window_component import AssistantController
 from src.game_wiki_tooltip.unified_window import MessageType, TransitionMessages
-from src.game_wiki_tooltip.config import SettingsManager, LLMConfig
+from src.game_wiki_tooltip.config import SettingsManager
+from src.game_wiki_tooltip.ai.rag_config import LLMSettings
 from src.game_wiki_tooltip.utils import get_foreground_title
 from src.game_wiki_tooltip.i18n import t, get_current_language
 from src.game_wiki_tooltip.smart_interaction_manager import SmartInteractionManager, InteractionMode
@@ -385,7 +386,7 @@ class RAGIntegration(QObject):
             if has_api_key:
                 logger.info("✅ Complete API key configuration detected, initializing AI components")
                 
-                llm_config = LLMConfig(
+                llm_config = LLMSettings(
                     api_key=gemini_api_key,
                     model='gemini-2.5-flash-lite'
                 )
@@ -419,7 +420,7 @@ class RAGIntegration(QObject):
         self._ai_initialized = True
         return True
             
-    def _init_rag_for_game(self, game_name: str, llm_config: LLMConfig, google_api_key: str, wait_for_init: bool = False):
+    def _init_rag_for_game(self, game_name: str, llm_config: LLMSettings, google_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
         try:
             # Check if already initializing or initialized for this game
@@ -624,11 +625,11 @@ class RAGIntegration(QObject):
             llm_config = self._llm_config
             if not llm_config:
                 # If there is no stored configuration, create temporary configuration and check API key
-                llm_config = LLMConfig(
+                llm_config = LLMSettings(
                     model='gemini-2.5-flash-lite'
                 )
                 
-                # Use LLMConfig's get_api_key method to get API key (supports GEMINI_API_KEY environment variable)
+                # Use LLMSettings's get_api_key method to get API key (supports GEMINI_API_KEY environment variable)
                 api_key = llm_config.get_api_key()
                 if not api_key:
                     logger.warning("GEMINI_API_KEY not configured, use simple intent detection")
@@ -782,65 +783,6 @@ class RAGIntegration(QObject):
             logger.error(f"Wiki search preparation failed: {e}")
             return "", query
             
-    async def search_wiki_async(self, query: str, game_context: str = None) -> tuple[str, str]:
-        """Search for wiki page"""
-        # Use existing wiki search logic from overlay.py
-        try:
-            import aiohttp
-            from urllib.parse import quote, urlparse
-            
-            # Use the incoming game context, if not get the current game window title
-            game_title = game_context or get_selected_game_title()
-            logger.info(f"🎮 Current game window title: {game_title}")
-            
-            # Find game configuration - use instance variable
-            game_config = self.game_cfg_mgr.for_title(game_title)
-            
-            if not game_config:
-                logger.warning(f"Game configuration not found: {game_title}")
-                # Fallback to general search
-                search_query = f"{game_title} {query} wiki"
-                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
-            else:
-                logger.info(f"Game configuration found: {game_config}")
-                
-                # Get base URL
-                base_url = game_config.BaseUrl
-                logger.info(f"Game base URL: {base_url}")
-                
-                # Extract domain
-                if base_url.startswith(('http://', 'https://')):
-                    domain = urlparse(base_url).hostname or ''
-                else:
-                    # If there is no protocol prefix, use base_url as domain
-                    domain = base_url.split('/')[0]  # Remove path part
-                
-                logger.info(f"Extracted domain: {domain}")
-                
-                # Build correct search query: site:domain user query
-                search_query = f"site:{domain} {query}"
-                ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
-                
-                logger.info(f"Built search query: {search_query}")
-                logger.info(f"DuckDuckGo URL: {ddg_url}")
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(ddg_url, allow_redirects=True) as response:
-                    final_url = str(response.url)
-                    
-                    # Extract title from URL or use query
-                    title = query
-                    if 'wiki' in final_url:
-                        parts = final_url.split('/')
-                        if parts:
-                            title = parts[-1].replace('_', ' ')
-                            
-                    return final_url, title
-                    
-        except Exception as e:
-            logger.error(f"Wiki search failed: {e}")
-            return "", query
-            
     def on_wiki_found(self, real_url: str, real_title: str = None):
         """When JavaScript finds the real wiki page, call this method"""
         if self._pending_wiki_update:
@@ -923,7 +865,7 @@ class RAGIntegration(QObject):
                     has_api_key = bool(gemini_api_key)
                     
                     if has_api_key:
-                        llm_config = LLMConfig(
+                        llm_config = LLMSettings(
                             api_key=gemini_api_key,
                             model='gemini-2.5-flash-lite'
                         )
@@ -1025,8 +967,7 @@ class RAGIntegration(QObject):
                             "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
                             "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
                             "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
-                            "• 文明6 (Civilization VI) - 文明特色、胜利策略等\n"
-                            "• 七日杀 (7 Days to Die) - 建筑、武器制作等"
+                            "• 文明6 (Civilization VI) - 文明特色、胜利策略等"
                         )
                     else:
                         error_msg = (
@@ -1036,8 +977,7 @@ class RAGIntegration(QObject):
                             "• HELLDIVERS 2 - Weapon builds, enemy guides, etc.\n"
                             "• Elden Ring - Boss guides, equipment recommendations, etc.\n"
                             "• Don't Starve Together - Survival tips, character guides, etc.\n"
-                            "• Civilization VI - Civilization features, victory strategies, etc.\n"
-                            "• 7 Days to Die - Construction, weapon crafting, etc."
+                            "• Civilization VI - Civilization features, victory strategies, etc."
                         )
                     
                     self.error_occurred.emit(error_msg)
@@ -1090,6 +1030,11 @@ class RAGIntegration(QObject):
                 
                 # If there is no output, it may need to switch to wiki mode
                 if not has_output:
+                    # Check if stop was requested before switching to wiki
+                    if stop_flag and stop_flag():
+                        logger.info("🛑 Stop requested, not switching to wiki mode")
+                        return
+                        
                     logger.info(f"🔄 RAG query has no output, may need to switch to wiki mode: '{query}'")
                     
                     from src.game_wiki_tooltip.i18n import get_current_language
@@ -1163,6 +1108,12 @@ class RAGIntegration(QObject):
                 else:
                     # General error - try to switch to wiki mode automatically
                     logger.error(f"Streaming RAG query failed: {e}")
+                    
+                    # Check if stop was requested before switching to wiki
+                    if stop_flag and stop_flag():
+                        logger.info("🛑 Stop requested, not switching to wiki mode after error")
+                        return
+                        
                     logger.info("Trying to switch to Wiki search mode...")
                     
                     try:
@@ -1270,6 +1221,21 @@ class IntegratedAssistantController(AssistantController):
         
         logger.info("📋 AI modules loading started in background thread")
         
+    def handle_stop_generation(self):
+        """Handle stop generation request from UI"""
+        logger.info("🛑 Received stop generation request from UI")
+        
+        # Stop current worker thread
+        if self._current_worker and self._current_worker.isRunning():
+            logger.info("🛑 Stopping current worker...")
+            self._current_worker.stop()
+            
+        # Reset UI state
+        if self.main_window:
+            self.main_window.set_generating_state(False)
+            # Hide any status messages when generation is stopped
+            self.main_window.chat_view.hide_status()
+        
     def _on_ai_modules_loaded(self, success: bool):
         """Callback when AI modules are loaded"""
         if success:
@@ -1369,24 +1335,22 @@ class IntegratedAssistantController(AssistantController):
         # Store search mode
         self._search_mode = mode
         
-        # Add user message
-        self.main_window.chat_view.add_message(
-            MessageType.USER_QUERY,
-            query
-        )
+        # Check if the last message in chat view is already this user query
+        # to avoid duplication (since it may have been added in the UI already)
+        should_add_message = True
+        if self.main_window and self.main_window.chat_view.messages:
+            last_message = self.main_window.chat_view.messages[-1]
+            if (hasattr(last_message, 'message') and 
+                last_message.message.type == MessageType.USER_QUERY and 
+                last_message.message.content == query):
+                should_add_message = False
         
-        # Check if user requested web search
-        query_lower = query.lower()
-        web_search_keywords = [
-            'search web', 'web search', 'search online', 'online search',
-            '搜索网络', '网络搜索', '在线搜索', '搜索在线'
-        ]
-        
-        if getattr(self, '_web_search_suggested', False) and any(kw in query_lower for kw in web_search_keywords):
-            logger.info("🔍 User requested web search")
-            self._web_search_suggested = False
-            self._perform_web_search()
-            return
+        # Add user message only if not already added
+        if should_add_message:
+            self.main_window.chat_view.add_message(
+                MessageType.USER_QUERY,
+                query
+            )
         
         # Check RAG engine initialization status (check the RAGIntegration's status)
         if hasattr(self.rag_integration, '_rag_initializing') and self.rag_integration._rag_initializing:
@@ -1758,12 +1722,7 @@ class IntegratedAssistantController(AssistantController):
         # Notify streaming message component to quickly display remaining content
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
             self._current_streaming_msg.mark_as_completed()
-        
-        # Check if knowledge was insufficient and add web search option
-        if getattr(self, '_knowledge_insufficient', False):
-            self._add_web_search_option()
-            self._knowledge_insufficient = False
-        
+
         # Reset UI state
         if self.main_window:
             self.main_window.set_generating_state(False)
@@ -1793,55 +1752,6 @@ class IntegratedAssistantController(AssistantController):
             MessageType.AI_RESPONSE,
             f"❌ {error_msg}"
         )
-        
-    def _check_rag_init_and_process_query(self):
-        """Check if RAG initialization is complete and process pending query"""
-        # Check if RAG is still initializing
-        if self.rag_integration._rag_initializing:
-            # Still initializing, continue waiting
-            logger.debug("RAG still initializing, waiting...")
-            return
-            
-        # Stop the timer
-        if hasattr(self, '_init_check_timer') and self._init_check_timer:
-            self._init_check_timer.stop()
-            self._init_check_timer = None
-            
-        # Check if we have a pending query
-        if not hasattr(self, '_pending_query') or not self._pending_query:
-            logger.warning("No pending query found after RAG initialization")
-            return
-            
-        # Extract pending query details
-        pending = self._pending_query
-        self._pending_query = None  # Clear pending query
-        
-        # Check if RAG engine is now available
-        if self.rag_integration.rag_engine:
-            logger.info("✅ RAG initialization complete, processing pending query")
-            # Clear initialization message
-            if self.main_window:
-                self.main_window.chat_view.hide_status()
-            
-            # Process the query using asyncio
-            import asyncio
-            task = asyncio.create_task(
-                self.rag_integration.generate_guide_async(
-                    query=pending['query'],
-                    game_context=pending['game_context'],
-                    original_query=pending['original_query'],
-                    skip_query_processing=pending['skip_query_processing'],
-                    unified_query_result=pending['unified_query_result'],
-                    stop_flag=pending.get('stop_flag')
-                )
-            )
-            # Store task reference for potential cancellation
-            self._current_task = task
-        else:
-            logger.error("RAG initialization failed, unable to process query")
-            self.rag_integration.error_occurred.emit(
-                "Failed to initialize AI guide system. Please check your API keys and try again."
-            )
         
     def _on_wiki_result(self, url: str, title: str):
         """Handle wiki search result from RAG integration"""
@@ -1904,7 +1814,7 @@ class IntegratedAssistantController(AssistantController):
             has_api_key = bool(gemini_api_key)
             
             if has_api_key:
-                llm_config = LLMConfig(
+                llm_config = LLMSettings(
                     api_key=gemini_api_key,
                     model='gemini-2.5-flash-lite'
                 )
@@ -1920,11 +1830,6 @@ class IntegratedAssistantController(AssistantController):
                 
         except Exception as e:
             logger.error(f"RAG engine reinitialization failed: {e}")
-            
-    def on_wiki_page_found(self, real_url: str, real_title: str = None):
-        """Called when JavaScript in webview finds real wiki page"""
-        logger.info(f"🌐 Received webview wiki page callback: {real_url}")
-        self.rag_integration.on_wiki_found(real_url, real_title)
         
     def handle_wiki_page_found(self, url: str, title: str):
         """Override parent class method: handle WikiView signal when real wiki page is found"""
@@ -1938,154 +1843,6 @@ class IntegratedAssistantController(AssistantController):
         else:
             logger.info(f"⏳ Skip temporary state wiki page update: {title}")
             # For temporary state, still call, but do not trigger final update in chat window
-
-    def _add_web_search_option(self):
-        """Add web search option when knowledge is insufficient"""
-        logger.info("🔍 Adding web search option for insufficient knowledge")
-        
-        current_lang = get_current_language()
-        
-        # Create web search prompt message
-        if current_lang == 'zh':
-            message = "\n\n💡 知识库中的信息可能不够全面。您可以点击下方按钮进行网络搜索以获取更详细的信息。"
-            button_text = "🔍 搜索网络"
-        else:
-            message = "\n\n💡 The knowledge base might not have sufficient information. You can click the button below to search the web for more details."
-            button_text = "🔍 Search Web"
-        
-        # Add message to chat
-        if self.main_window and hasattr(self.main_window, 'chat_view'):
-            self.main_window.chat_view.add_message(MessageType.ASSISTANT, message)
-            
-            # Add interactive button
-            self.main_window.chat_view.add_interactive_button(
-                button_text,
-                self._perform_web_search
-            )
-    
-    def _perform_web_search(self):
-        """Perform web search using Google Search grounding"""
-        logger.info("🌐 Starting web search with Google grounding")
-        
-        # Get the last user query
-        if not hasattr(self, '_last_user_query'):
-            logger.error("No user query available for web search")
-            return
-        
-        # Start web search in a new worker
-        self._start_web_search_worker(
-            self._last_user_query,
-            getattr(self, '_last_rewritten_query', None),
-            getattr(self, '_last_game_context', None)
-        )
-    
-    def _start_web_search_worker(self, query: str, rewritten_query: str = None, game_context: str = None):
-        """Start web search worker"""
-        from PyQt6.QtCore import QThread
-        
-        # Create web search worker
-        class WebSearchWorker(QThread):
-            chunk_ready = pyqtSignal(str)
-            finished_signal = pyqtSignal()
-            error_signal = pyqtSignal(str)
-            
-            def __init__(self, query, rewritten_query, game_context, api_key):
-                super().__init__()
-                self.query = query
-                self.rewritten_query = rewritten_query
-                self.game_context = game_context
-                self.api_key = api_key
-                
-            def run(self):
-                try:
-                    # Import and use Google Search grounding
-                    from src.game_wiki_tooltip.ai.google_search_grounding import create_google_search_grounding
-                    
-                    grounding = create_google_search_grounding(api_key=self.api_key)
-                    
-                    # Run async in sync context
-                    import asyncio
-                    
-                    async def search_and_stream():
-                        async for chunk in grounding.search_and_generate_stream(
-                            self.query,
-                            self.rewritten_query,
-                            self.game_context
-                        ):
-                            self.chunk_ready.emit(chunk)
-                    
-                    # Run the async function
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    loop.run_until_complete(search_and_stream())
-                    
-                    self.finished_signal.emit()
-                    
-                except Exception as e:
-                    logger.error(f"Web search error: {e}")
-                    self.error_signal.emit(str(e))
-        
-        # Get API key
-        settings = self.settings_manager.get()
-        api_settings = settings.get('api', {})
-        api_key = api_settings.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-        
-        if not api_key:
-            logger.error("No API key available for web search")
-            return
-        
-        # Create and start worker
-        self._web_search_worker = WebSearchWorker(query, rewritten_query, game_context, api_key)
-        
-        # Setup streaming message for web search
-        current_lang = get_current_language()
-        if current_lang == 'zh':
-            self.main_window.chat_view.add_message("🌐 正在搜索网络信息...\n\n", MessageType.ASSISTANT)
-        else:
-            self.main_window.chat_view.add_message("🌐 Searching the web...\n\n", MessageType.ASSISTANT)
-        
-        self._setup_streaming_message()
-        
-        # Connect signals
-        self._web_search_worker.chunk_ready.connect(self._on_streaming_chunk)
-        self._web_search_worker.finished_signal.connect(self._on_streaming_finished)
-        self._web_search_worker.error_signal.connect(self._on_error)
-        
-        # Start worker
-        self._web_search_worker.start()
-        self.main_window.set_generating_state(True)
-    
-    def stop_current_generation(self):
-        """Stop current generation process"""
-        logger.info("🛑 Received stop generation request")
-        
-        try:
-            # First restore UI state
-            if self.main_window:
-                try:
-                    self.main_window.set_generating_state(False)
-                    logger.info("🛑 UI state restored to non-generating state")
-                except Exception as e:
-                    logger.error(f"Error restoring UI state: {e}")
-            
-            # Stop current worker
-            if self._current_worker and self._current_worker.isRunning():
-                logger.info("🛑 Stop current QueryWorker")
-                try:
-                    self._current_worker.stop()
-                    logger.info("🛑 QueryWorker stop request sent")
-                    # Do not wait for worker to finish, let it finish asynchronously
-                except Exception as e:
-                    logger.error(f"Error stopping QueryWorker: {e}")
-                    
-        except Exception as e:
-            logger.error(f"Error during generation: {e}")
-            # Even if there is an error, try to restore UI state
-            if self.main_window:
-                try:
-                    self.main_window.set_generating_state(False)
-                except:
-                    pass
     
     # Smart interaction manager signal handling methods
     def _on_interaction_mode_changed(self, mode: InteractionMode):
@@ -2202,24 +1959,6 @@ class IntegratedAssistantController(AssistantController):
             logger.error(f"Error in delayed game window setting: {e}")
             import traceback
             traceback.print_exc()
-    
-    def switch_game(self, game_name: str):
-        """Switch to a different game (game_name should be window title)"""
-        # Stop current worker
-        if self._current_worker and self._current_worker.isRunning():
-            self._current_worker.stop()
-            self._current_worker.wait()
-            
-        # First map window title to vector library name
-        from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
-        vector_game_name = map_window_title_to_game_name(game_name)
-        
-        if vector_game_name:
-            logger.info(f"🔄 Manually switch game: '{game_name}' -> vector library: {vector_game_name}")
-            # Reinitialize with mapped vector library name
-            self._reinitialize_rag_for_game(vector_game_name)
-        else:
-            logger.warning(f"⚠️ Game '{game_name}' not supported, cannot switch RAG engine")
     
     def show_chat_window(self):
         """显示聊天窗口，隐藏悬浮窗"""

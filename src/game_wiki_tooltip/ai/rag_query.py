@@ -111,7 +111,8 @@ except ImportError as e:
     logging.warning(f"Hybrid retriever module not available: {e}")
 
 # Import configuration and query rewrite
-from src.game_wiki_tooltip.config import LLMConfig
+from .rag_config import LLMSettings
+from .rag_config import RAGConfig, get_default_config
 
 logger = logging.getLogger(__name__)
 
@@ -203,13 +204,14 @@ class EnhancedRagQuery:
     def __init__(self, vector_store_path: Optional[str] = None,
                  enable_hybrid_search: bool = True,
                  hybrid_config: Optional[Dict] = None,
-                 llm_config: Optional[LLMConfig] = None,
+                 llm_config: Optional[LLMSettings] = None,
                  google_api_key: Optional[str] = None,
                  enable_query_rewrite: bool = True,
                  enable_summarization: bool = True,
                  summarization_config: Optional[Dict] = None,
                  enable_intent_reranking: bool = True,
-                 reranking_config: Optional[Dict] = None):
+                 reranking_config: Optional[Dict] = None,
+                 rag_config: Optional[RAGConfig] = None):
         """
         Initialize RAG query
         
@@ -237,8 +239,24 @@ class EnhancedRagQuery:
             "bm25_weight": 0.5,
             "rrf_k": 60
         }
-        self.llm_config = llm_config
-        self.google_api_key = google_api_key
+        # Use RAGConfig if provided, otherwise create from individual parameters
+        if rag_config:
+            self.rag_config = rag_config
+            # Override individual settings from RAGConfig
+            self.llm_config = rag_config.llm_settings
+            self.enable_hybrid_search = rag_config.hybrid_search.enabled
+            self.hybrid_config = rag_config.hybrid_search.to_dict()
+            self.enable_summarization = rag_config.summarization.enabled
+            self.summarization_config = rag_config.summarization.to_dict()
+            self.enable_intent_reranking = rag_config.intent_reranking.enabled
+            self.reranking_config = rag_config.intent_reranking.to_dict()
+            self.enable_query_rewrite = rag_config.query_processing.enable_query_rewrite
+        else:
+            # Use individual parameters for backward compatibility
+            self.rag_config = None
+            self.llm_config = llm_config
+        
+        self.google_api_key = google_api_key or (self.llm_config.get_api_key() if self.llm_config else None)
         self.enable_query_rewrite = enable_query_rewrite
         self.hybrid_retriever = None
         
@@ -432,13 +450,8 @@ class EnhancedRagQuery:
         try:
             import os
             
-            # Get API key, priority: LLM config > summarization config > environment variable
-            api_key = None
-            if self.llm_config and hasattr(self.llm_config, 'get_api_key'):
-                api_key = self.llm_config.get_api_key()
-            
-            if not api_key:
-                api_key = self.summarization_config.get("api_key") or os.environ.get("GEMINI_API_KEY")
+            # Get API key from centralized config
+            api_key = self.google_api_key
             
             if not api_key:
                 logger.warning("Gemini API key not found, summary feature will be disabled")
@@ -659,67 +672,7 @@ class EnhancedRagQuery:
             print(f"❌ [VECTOR-DEBUG] Qdrant search failed: {e}")
             logger.error(f"Qdrant search failed: {e}")
             return []
-    
-    def _search_hybrid(self, query: str, top_k: int = 3) -> Dict[str, Any]:
-        """
-        Use hybrid search for search
-        
-        Args:
-            query: Query text
-            top_k: Number of results to return
-            
-        Returns:
-            Hybrid search results (including metadata)
-        """
-        print(f"🔍 [RAG-DEBUG] Starting hybrid search: query='{query}', top_k={top_k}")
-        
-        if not self.hybrid_retriever:
-            print(f"⚠️ [RAG-DEBUG] Hybrid retriever not initialized, falling back to vector search")
-            logger.warning("Hybrid retriever not initialized, falling back to vector search")
-            results = self._search_faiss(query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(query, top_k)
-            return {
-                "results": results,
-                "query": {"original": query, "rewritten": query, "rewrite_applied": False},
-                "metadata": {
-                    "total_results": len(results),
-                    "search_type": "vector_fallback",
-                    "fusion_method": "none",
-                    "rewrite_info": {
-                        "intent": "unknown",
-                        "confidence": 0.0,
-                        "reasoning": "Hybrid retriever not initialized"
-                    }
-                }
-            }
-        
-        # Execute hybrid search
-        try:
-            print(f"🚀 [RAG-DEBUG] Starting hybrid search")
-            search_response = self.hybrid_retriever.search(query, top_k)
-            result_count = len(search_response.get('results', []))
-            print(f"✅ [RAG-DEBUG] Hybrid search completed, found {result_count} results")
-            logger.info(f"Hybrid search completed, found {result_count} results")
-            return search_response
-        except Exception as e:
-            print(f"❌ [RAG-DEBUG] Hybrid search failed: {e}")
-            logger.error(f"Hybrid search failed: {e}")
-            # Fall back to vector search
-            results = self._search_faiss(query, top_k) if self.config["vector_store_type"] == "faiss" else self._search_qdrant(query, top_k)
-            return {
-                "results": results,
-                "query": {"original": query, "rewritten": query, "rewrite_applied": False},
-                "metadata": {
-                    "total_results": len(results),
-                    "search_type": "vector_fallback",
-                    "fusion_method": "none",
-                    "rewrite_info": {
-                        "intent": "unknown",
-                        "confidence": 0.0,
-                        "reasoning": f"Hybrid search failed: {str(e)}"
-                    }
-                }
-            }
-    
+
     def _search_hybrid_with_processed_query(self, unified_query_result, top_k: int = 3) -> Dict[str, Any]:
         """
         Use preprocessed unified query results for hybrid search
@@ -1063,8 +1016,6 @@ class EnhancedRagQuery:
                     # If there is a preprocessed result, pass it to hybrid search
                     if unified_query_result:
                         search_response = self._search_hybrid_with_processed_query(unified_query_result, top_k)
-                    else:
-                        search_response = self._search_hybrid(question, top_k)
                     
                     results = search_response.get("results", [])
                     
@@ -1167,138 +1118,5 @@ class EnhancedRagQuery:
             logger.error(f"Streaming query error: {str(e)}")
             yield f"Sorry, an error occurred during the query, please try again later."
 
-
-
 # Global instance
 _enhanced_rag_query = None
-
-def get_enhanced_rag_query(vector_store_path: Optional[str] = None,
-                          llm_config: Optional[LLMConfig] = None,
-                          enable_summarization: bool = True) -> EnhancedRagQuery:
-    """Get singleton instance of EnhancedRagQuery"""
-    global _enhanced_rag_query
-    if _enhanced_rag_query is None:
-        _enhanced_rag_query = EnhancedRagQuery(
-            vector_store_path=vector_store_path,
-            llm_config=llm_config,
-            enable_summarization=enable_summarization
-        )
-    return _enhanced_rag_query
-
-async def query_enhanced_rag(question: str, 
-                           game_name: Optional[str] = None,
-                           top_k: int = 3,
-                           enable_hybrid_search: bool = True,
-                           hybrid_config: Optional[Dict] = None,
-                           llm_config: Optional[LLMConfig] = None,
-                           enable_summarization: bool = True,
-                           summarization_config: Optional[Dict] = None,
-                           enable_intent_reranking: bool = True,
-                           reranking_config: Optional[Dict] = None) -> Dict[str, Any]:
-    """
-    Convenience function to execute enhanced RAG query
-    
-    Args:
-        question: User question
-        game_name: Game name (optional)
-        top_k: Number of search results
-        enable_hybrid_search: Whether to enable hybrid search
-        hybrid_config: Hybrid search configuration
-        llm_config: LLM configuration
-        enable_summarization: Whether to enable Gemini summary
-        summarization_config: Summary configuration
-        enable_intent_reranking: Whether to enable intent-aware reranking
-        reranking_config: Reranking configuration
-        
-    Returns:
-        Query result dictionary
-    """
-    print(f"🎯 [RAG-DEBUG] Calling query_enhanced_rag - question: '{question}', game: {game_name}")
-    print(f"🔧 [RAG-DEBUG] Configuration - hybrid search: {enable_hybrid_search}, summary: {enable_summarization}, reranking: {enable_intent_reranking}")
-    # Load settings from configuration file
-    import os
-    from pathlib import Path
-    config_path = Path(__file__).parent.parent / "assets" / "settings.json"
-    if config_path.exists():
-        import json
-        with open(config_path, 'r', encoding='utf-8') as f:
-            settings = json.load(f)
-            
-            # Load hybrid search settings
-            if hybrid_config is None:
-                hybrid_search_settings = settings.get("hybrid_search", {})
-                enable_hybrid_search = hybrid_search_settings.get("enabled", True)
-                hybrid_config = {
-                    "fusion_method": hybrid_search_settings.get("fusion_method", "rrf"),
-                    "vector_weight": hybrid_search_settings.get("vector_weight", 0.5),
-                    "bm25_weight": hybrid_search_settings.get("bm25_weight", 0.5),
-                    "rrf_k": hybrid_search_settings.get("rrf_k", 60)
-                }
-            
-            # Load summary settings
-            if summarization_config is None:
-                summarization_settings = settings.get("summarization", {})
-                enable_summarization = summarization_settings.get("enabled", True)  # Default to enable summary
-                summarization_config = {
-                    "api_key": summarization_settings.get("api_key") or os.environ.get("GEMINI_API_KEY"),
-                    "model_name": summarization_settings.get("model_name", "gemini-2.5-flash-lite"),
-                    # Remove deprecated max_summary_length parameter
-                    "temperature": summarization_settings.get("temperature", 0.3),
-                    "include_sources": summarization_settings.get("include_sources", True),
-                    "language": summarization_settings.get("language", "auto")
-                }
-            
-            # Load reranking settings
-            if enable_intent_reranking is None:
-                reranking_settings = settings.get("intent_reranking", {})
-                enable_intent_reranking = reranking_settings.get("enabled", True)
-            
-            if reranking_config is None:
-                reranking_settings = settings.get("intent_reranking", {})
-                reranking_config = {
-                    "intent_weight": reranking_settings.get("intent_weight", 0.4),
-                    "semantic_weight": reranking_settings.get("semantic_weight", 0.6)
-                }
-    
-    print(f"🔧 [RAG-DEBUG] Creating EnhancedRagQuery instance")
-    rag_query = EnhancedRagQuery(
-        enable_hybrid_search=enable_hybrid_search,
-        hybrid_config=hybrid_config,
-        llm_config=llm_config,
-        enable_summarization=enable_summarization,
-        summarization_config=summarization_config,
-        enable_intent_reranking=enable_intent_reranking,
-        reranking_config=reranking_config
-    )
-    
-    print(f"🔧 [RAG-DEBUG] Initializing RAG engine")
-    await rag_query.initialize(game_name)
-    
-    print(f"🔍 [RAG-DEBUG] Executing RAG query (streaming)")
-    answer_parts = []
-    async for chunk in rag_query.query_stream(question, top_k):
-        answer_parts.append(chunk)
-    
-    # Build result format compatible with original query method
-    result = {
-        "answer": "".join(answer_parts),
-        "sources": [],
-        "confidence": 0.0,
-        "query_time": 0.0,
-        "results_count": 0
-    }
-    print(f"✅ [RAG-DEBUG] query_enhanced_rag completed")
-    return result
-
-
-class SimpleRagQuery(EnhancedRagQuery):
-    """Simplified RAG query, maintaining backward compatibility"""
-    pass
-
-def get_rag_query() -> SimpleRagQuery:
-    """Get singleton instance of simplified RAG query (backward compatibility)"""
-    return SimpleRagQuery()
-
-async def query_rag(question: str, game_name: Optional[str] = None) -> Dict[str, Any]:
-    """Convenience function to execute simplified RAG query (backward compatibility)"""
-    return await query_enhanced_rag(question, game_name) 

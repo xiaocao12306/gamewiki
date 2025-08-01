@@ -12,7 +12,8 @@ import logging
 from typing import Dict, Any, Optional, Literal
 from dataclasses import dataclass
 
-from src.game_wiki_tooltip.config import LLMConfig
+from .rag_config import LLMSettings
+from .rag_config import RAGConfig, get_default_config
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,14 @@ class UnifiedQueryResult:
 class UnifiedQueryProcessor:
     """Unified query processor - complete translation+rewrite+intent analysis in one LLM call"""
     
-    def __init__(self, llm_config: Optional[LLMConfig] = None):
-        self.llm_config = llm_config or LLMConfig()
+    def __init__(self, llm_config: Optional[LLMSettings] = None, rag_config: Optional[RAGConfig] = None):
+        # Use RAGConfig if provided, otherwise fall back to LLMConfig
+        if rag_config:
+            self.llm_config = rag_config.llm_settings
+            self.rag_config = rag_config
+        else:
+            self.llm_config = llm_config or LLMSettings()
+            self.rag_config = None
         self.llm_client = None
         
         # Cache mechanism
@@ -546,23 +553,24 @@ This is a specialized query designed to enhance important game terms while prese
 # Global instance
 _unified_processor = None
 
-def get_unified_processor(llm_config: Optional[LLMConfig] = None) -> UnifiedQueryProcessor:
+def get_unified_processor(llm_config: Optional[LLMSettings] = None, rag_config: Optional[RAGConfig] = None) -> UnifiedQueryProcessor:
     """Get singleton instance of unified query processor"""
     global _unified_processor
     if _unified_processor is None:
-        _unified_processor = UnifiedQueryProcessor(llm_config=llm_config)
+        _unified_processor = UnifiedQueryProcessor(llm_config=llm_config, rag_config=rag_config)
     return _unified_processor
 
-def process_query_unified(query: str, llm_config: Optional[LLMConfig] = None) -> UnifiedQueryResult:
+def process_query_unified(query: str, llm_config: Optional[LLMSettings] = None, rag_config: Optional[RAGConfig] = None) -> UnifiedQueryResult:
     """
     Convenience function for unified query processing
     
     Args:
         query: User query
-        llm_config: LLM configuration
+        llm_config: LLM configuration (deprecated, use rag_config)
+        rag_config: RAG configuration with LLM settings
         
     Returns:
         UnifiedQueryResult: Processing result
     """
-    processor = get_unified_processor(llm_config)
+    processor = get_unified_processor(llm_config, rag_config)
     return processor.process_query(query) 

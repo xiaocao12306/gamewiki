@@ -83,6 +83,11 @@ class AssistantController:
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             
+            # Connect stop generation signal if handler exists
+            if hasattr(self, 'handle_stop_generation'):
+                self.main_window.stop_generation_requested.connect(self.handle_stop_generation)
+                logger.info("✅ Connected stop_generation_requested signal")
+            
             # CRITICAL FIX: Ensure task buttons are created during pre-creation
             logger.info(f"🔍 [DEBUG] Force loading shortcuts for pre-created window...")
             try:
@@ -131,11 +136,22 @@ class AssistantController:
         
     def handle_query(self, query: str, mode: str = "auto"):
         """Handle user query"""
-        # Add user message to chat
-        self.main_window.chat_view.add_message(
-            MessageType.USER_QUERY,
-            query
-        )
+        # Check if the last message in chat view is already this user query
+        # to avoid duplication (since it may have been added in the UI already)
+        should_add_message = True
+        if self.main_window and self.main_window.chat_view.messages:
+            last_message = self.main_window.chat_view.messages[-1]
+            if (hasattr(last_message, 'message') and 
+                last_message.message.type == MessageType.USER_QUERY and 
+                last_message.message.content == query):
+                should_add_message = False
+        
+        # Add user message to chat only if not already added
+        if should_add_message:
+            self.main_window.chat_view.add_message(
+                MessageType.USER_QUERY,
+                query
+            )
         
         # Reset auto scroll state, ensure auto scroll is enabled when new query
         self.main_window.chat_view.reset_auto_scroll()

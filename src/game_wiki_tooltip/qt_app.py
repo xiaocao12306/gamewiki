@@ -506,6 +506,18 @@ class GameWikiApp(QObject):
                     # Temporarily create and hide the window
                     from .unified_window import UnifiedAssistantWindow
                     self.assistant_ctrl.main_window = UnifiedAssistantWindow(self.settings_mgr)
+                    
+                    # Connect signals
+                    self.assistant_ctrl.main_window.query_submitted.connect(self.assistant_ctrl.handle_query)
+                    self.assistant_ctrl.main_window.wiki_page_found.connect(self.assistant_ctrl.handle_wiki_page_found)
+                    
+                    # Connect stop generation signal if handler exists
+                    if hasattr(self.assistant_ctrl, 'handle_stop_generation'):
+                        self.assistant_ctrl.main_window.stop_generation_requested.connect(
+                            self.assistant_ctrl.handle_stop_generation
+                        )
+                        logger.info("✅ Connected stop_generation_requested signal in fallback method")
+                    
                     self.assistant_ctrl.main_window.hide()
                     logger.info("✅ Chat window pre-created via fallback method")
                     

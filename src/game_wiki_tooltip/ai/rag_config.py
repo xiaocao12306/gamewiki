@@ -10,15 +10,65 @@ from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LLMSettings:
+    """LLM configuration settings"""
+    model: str = "gemini-2.5-flash-lite"
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    max_tokens: int = 1000
+    temperature: float = 0.7
+    timeout: int = 30
+    enable_cache: bool = True
+    cache_ttl: int = 3600  # Cache TTL in seconds
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    
+    def is_valid(self) -> bool:
+        """Check if configuration is valid"""
+        api_key = self.get_api_key()
+        return bool(api_key and self.model)
+    
+    def get_api_key(self) -> Optional[str]:
+        """Get API key, prioritize environment variable"""
+        if self.api_key:
+            return self.api_key
+        
+        # Get API key from environment variable based on model type
+        if "gemini" in self.model.lower():
+            return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        elif "gpt" in self.model.lower() or "openai" in self.model.lower():
+            return os.getenv("OPENAI_API_KEY")
+        
+        return None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            "model": self.model,
+            "api_key": self.api_key,
+            "base_url": self.base_url,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "timeout": self.timeout,
+            "enable_cache": self.enable_cache,
+            "cache_ttl": self.cache_ttl,
+            "max_retries": self.max_retries,
+            "retry_delay": self.retry_delay
+        }
+    
 
 
 @dataclass
 class HybridSearchConfig:
     """Hybrid search configuration"""
     enabled: bool = True
-    fusion_method: str = "rrf"  # rrf, weighted, normalized
+    fusion_method: str = "rrf"  # rrf (reciprocal rank fusion)
     vector_weight: float = 0.5  # Same as evaluator
     bm25_weight: float = 0.5    # Same as evaluator
     rrf_k: int = 60            # RRF algorithm parameters
@@ -101,6 +151,9 @@ class RAGConfig:
     # Query processing configuration
     query_processing: QueryProcessingConfig = field(default_factory=QueryProcessingConfig)
     
+    # LLM configuration
+    llm_settings: LLMSettings = field(default_factory=LLMSettings)
+    
     # Basic configuration
     top_k: int = 5
     enable_cache: bool = True
@@ -153,6 +206,21 @@ class RAGConfig:
                 unified_processing=qp_dict.get("unified_processing", True)
             )
         
+        # LLM configuration
+        if "llm_settings" in config_dict:
+            llm_dict = config_dict["llm_settings"]
+            config.llm_settings = LLMSettings(
+                model=llm_dict.get("model", "gemini-2.5-flash-lite"),
+                api_key=llm_dict.get("api_key", None),
+                base_url=llm_dict.get("base_url", None),
+                temperature=llm_dict.get("temperature", 0.7),
+                timeout=llm_dict.get("timeout", 30),
+                enable_cache=llm_dict.get("enable_cache", True),
+                cache_ttl=llm_dict.get("cache_ttl", 3600),
+                max_retries=llm_dict.get("max_retries", 3),
+                retry_delay=llm_dict.get("retry_delay", 1.0)
+            )
+        
         # Basic configuration
         config.top_k = config_dict.get("top_k", 5)
         config.enable_cache = config_dict.get("enable_cache", True)
@@ -176,6 +244,7 @@ class RAGConfig:
                 **self.intent_reranking.to_dict()
             },
             "query_processing": self.query_processing.to_dict(),
+            "llm_settings": self.llm_settings.to_dict(),
             "top_k": self.top_k,
             "enable_cache": self.enable_cache,
             "cache_ttl": self.cache_ttl
@@ -254,6 +323,18 @@ def get_default_config() -> RAGConfig:
             enable_query_rewrite=True,
             enable_intent_classification=True,
             unified_processing=True
+        ),
+        llm_settings=LLMSettings(
+            model="gemini-2.5-flash-lite",
+            api_key=None,  # Will be loaded from environment variable
+            base_url=None,
+            max_tokens=1000,
+            temperature=0.7,
+            timeout=30,
+            enable_cache=True,
+            cache_ttl=3600,
+            max_retries=3,
+            retry_delay=1.0
         ),
         top_k=5,
         enable_cache=True,

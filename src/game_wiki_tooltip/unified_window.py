@@ -19,7 +19,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 
 from src.game_wiki_tooltip.i18n import t
-from src.game_wiki_tooltip.config import PopupConfig, WindowGeometryConfig, ChatOnlyGeometry, FullContentGeometry, WebViewGeometry
+from src.game_wiki_tooltip.config import WindowGeometryConfig, ChatOnlyGeometry, FullContentGeometry, WebViewGeometry
 
 # Import from window_component module
 from src.game_wiki_tooltip.window_component import (
@@ -667,7 +667,7 @@ class MessageWidget(QFrame):
         self.content_label.setOpenExternalLinks(False)
         self.content_label.setSizePolicy(
             QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.MinimumExpanding
+            QSizePolicy.Policy.Minimum
         )
         
         # Set content based on message type
@@ -918,13 +918,13 @@ class StreamingMessageWidget(MessageWidget):
         # Find message bubble
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
-            # Use MinimumExpanding policy to allow content to expand freely
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            # Use Minimum policy to only take required height
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         
         # Optimize content_label settings
         if hasattr(self, 'content_label'):
-            # Use MinimumExpanding policy to allow content to expand freely
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            # Use Minimum policy to only take required height
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             # Set text wrapping
             self.content_label.setWordWrap(True)
             self.content_label.setScaledContents(False)
@@ -972,11 +972,11 @@ class StreamingMessageWidget(MessageWidget):
         bubble = self.findChild(QFrame, "messageBubble")
         if bubble:
             bubble.setMaximumWidth(bubble_width)
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
         if hasattr(self, 'content_label'):
             self.content_label.setMaximumWidth(content_width)
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             
         # Only output debug information in abnormal cases
         if chat_view and hasattr(chat_view, 'viewport'):
@@ -1016,14 +1016,14 @@ class StreamingMessageWidget(MessageWidget):
             # Remove fixed width, restore maximum width limit
             bubble.setMinimumWidth(0)
             bubble.setMaximumWidth(self._calculated_bubble_width)
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             print(f"🔓 [STREAMING] Restored bubble flexible width, max: {self._calculated_bubble_width}px")
             
         if hasattr(self, 'content_label') and hasattr(self, '_calculated_content_width'):
             # Remove fixed width, restore maximum width limit
             self.content_label.setMinimumWidth(0)
             self.content_label.setMaximumWidth(self._calculated_content_width)
-            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+            self.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
             print(f"🔓 [STREAMING] Restored content flexible width, max: {self._calculated_content_width}px")
             
         # Mark flexible width as restored
@@ -1667,8 +1667,8 @@ class ChatView(QScrollArea):
             # Ensure valid width
             chat_width = max(300, chat_width)
             
-            # Set the maximum width of the status message to 75% of the width of the chat view, minimum 300px, maximum 600px
-            max_width = min(max(int(chat_width * 0.75), 300), 600)
+            # Set the maximum width of the status message to 85% of the width of the chat view, minimum 300px, maximum 800px
+            max_width = min(max(int(chat_width * 0.85), 300), 800)
             # Find the status bubble and set its maximum width
             bubble = widget.findChild(QFrame, "statusBubble")
             if bubble:
@@ -1897,13 +1897,13 @@ class ChatView(QScrollArea):
                 if bubble:
                     # Use maximum width, let the layout system decide the actual width
                     bubble.setMaximumWidth(max_width)
-                    bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                    bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                 
                 # Update the width of content_label at the same time
                 if hasattr(widget, 'content_label'):
                     content_width = max_width - 24  # Subtract margin
                     widget.content_label.setMaximumWidth(content_width)
-                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                    widget.content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                 
                 # Output debug information only in abnormal cases
                 if viewport_width < 400:  # Output warning when the view width is abnormal
@@ -1962,7 +1962,7 @@ class ChatView(QScrollArea):
                         
                         # Ensure content is not truncated
                         content_label.setWordWrap(True)
-                        content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                        content_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                         
                         # For StreamingMessageWidget, ensure the format is correct
                         if isinstance(widget, StreamingMessageWidget):
@@ -1982,7 +1982,7 @@ class ChatView(QScrollArea):
                         # 4. Ensure bubble container is correctly expanded
                         bubble = widget.findChild(QFrame, "messageBubble")
                         if bubble:
-                            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+                            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                             
                             # Improved: use a more reliable way to calculate the required height
                             # Wait a little bit to let the content render
@@ -2472,19 +2472,12 @@ class UnifiedAssistantWindow(QMainWindow):
         
         layout.addStretch()
         
-        # Minimize button
-        min_btn = QPushButton("−")
-        min_btn.setObjectName("minBtn")
-        min_btn.setFixedSize(30, 25)
-        min_btn.clicked.connect(self.showMinimized)
-        
         # Close button
         close_btn = QPushButton("×")
         close_btn.setObjectName("closeBtn")
         close_btn.setFixedSize(30, 25)
         close_btn.clicked.connect(self.close)
         
-        layout.addWidget(min_btn)
         layout.addWidget(close_btn)
         
         return title_bar
@@ -3920,6 +3913,9 @@ class UnifiedAssistantWindow(QMainWindow):
                 # If this is the first user input and we're in CHAT_ONLY mode, switch to FULL_CONTENT
                 if not self.has_user_input and self.current_state == WindowState.CHAT_ONLY:
                     self.switch_to_full_content()
+                
+                # Add user message to chat immediately to avoid blank screen
+                self.chat_view.add_message(MessageType.USER_QUERY, text)
                     
                 self.input_field.clear()
                 self.query_submitted.emit(text, self.current_mode)
@@ -4007,10 +4003,6 @@ class UnifiedAssistantWindow(QMainWindow):
     def contextMenuEvent(self, event):
         """Handle right-click menu event"""
         menu = QMenu(self)
-        
-        # Minimize to mini window
-        minimize_action = menu.addAction(t("menu_minimize_to_mini"))
-        minimize_action.triggered.connect(lambda: self.window_closing.emit())
         
         # Hide to tray
         hide_action = menu.addAction(t("menu_hide_to_tray"))

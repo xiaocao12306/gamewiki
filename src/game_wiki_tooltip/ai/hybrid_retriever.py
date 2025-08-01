@@ -13,12 +13,12 @@ Features:
 import numpy as np
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
 from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
 from .unified_query_processor import process_query_unified, UnifiedQueryResult
-from src.game_wiki_tooltip.config import LLMConfig
+from .rag_config import LLMSettings
 from src.game_wiki_tooltip.i18n import t
+from .rag_config import RAGConfig
 
 logger = logging.getLogger(__name__)
 
@@ -62,29 +62,37 @@ class HybridSearchRetriever:
                  vector_weight: float = 0.5,
                  bm25_weight: float = 0.5,
                  rrf_k: int = 60,
-                 llm_config: Optional[LLMConfig] = None,
+                 llm_config: Optional[LLMSettings] = None,
                  enable_unified_processing: bool = True,
-                 enable_query_rewrite: bool = True):
+                 enable_query_rewrite: bool = True,
+                 rag_config: Optional[RAGConfig] = None):
         """
         Initialize the hybrid search retriever
         
         Args:
             vector_retriever: Vector retriever adapter
             bm25_index_path: BM25 index path
-            fusion_method: Fusion method ("rrf", "weighted", "normalized")
+            fusion_method: Fusion method ("rrf")
             vector_weight: Vector search weight
             bm25_weight: BM25 search weight
             rrf_k: k parameter for RRF algorithm
-            llm_config: LLM config
+            llm_config: LLM config (deprecated, use rag_config)
             enable_unified_processing: Whether to enable unified query processing (recommended)
             enable_query_rewrite: Whether to enable query rewrite (only effective when unified processing is disabled)
+            rag_config: RAG configuration with centralized LLM settings
         """
         self.vector_retriever = vector_retriever
         self.fusion_method = fusion_method
         self.vector_weight = vector_weight
         self.bm25_weight = bm25_weight
         self.rrf_k = rrf_k
-        self.llm_config = llm_config or LLMConfig()
+        # Use RAGConfig if provided, otherwise fall back to LLMConfig
+        if rag_config:
+            self.llm_config = rag_config.llm_settings
+            self.rag_config = rag_config
+        else:
+            self.llm_config = llm_config or LLMSettings()
+            self.rag_config = None
         
         # Performance optimization: unified vs separate processing
         self.enable_unified_processing = enable_unified_processing
@@ -162,7 +170,7 @@ class HybridSearchRetriever:
         if self.enable_unified_processing:
             # Use unified processor (recommended)
             try:
-                unified_result = process_query_unified(query, self.llm_config)
+                unified_result = process_query_unified(query, self.llm_config, self.rag_config)
                 
                 # Extract processing results
                 final_query = unified_result.rewritten_query
@@ -341,10 +349,6 @@ class HybridSearchRetriever:
         """
         if self.fusion_method == "rrf":
             return self._reciprocal_rank_fusion(vector_results, bm25_results, top_k)
-        elif self.fusion_method == "weighted":
-            return self._weighted_fusion(vector_results, bm25_results, top_k)
-        elif self.fusion_method == "normalized":
-            return self._normalized_fusion(vector_results, bm25_results, top_k)
         else:
             logger.warning(f"Unknown fusion method: {self.fusion_method}, using RRF")
             return self._reciprocal_rank_fusion(vector_results, bm25_results, top_k)
@@ -439,102 +443,6 @@ class HybridSearchRetriever:
         print(f"✅ [FUSION-DEBUG] RRF fusion complete, returning {len(final_results)} results")
         return final_results
     
-    def _weighted_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
-        """
-        Fuse results using weighted average
-        """
-        # Normalize scores
-        vector_scores = [r.get("score", 0) for r in vector_results]
-        bm25_scores = [r.get("score", 0) for r in bm25_results]
-        
-        if vector_scores:
-            vector_scaler = MinMaxScaler()
-            vector_scores_norm = vector_scaler.fit_transform([[s] for s in vector_scores]).flatten()
-        else:
-            vector_scores_norm = []
-        
-        if bm25_scores:
-            bm25_scaler = MinMaxScaler()
-            bm25_scores_norm = bm25_scaler.fit_transform([[s] for s in bm25_scores]).flatten()
-        else:
-            bm25_scores_norm = []
-        
-        # Create document score mapping
-        doc_scores = {}
-        
-        # Process vector results
-        for i, result in enumerate(vector_results):
-            doc_id = result.get("chunk_id", f"vector_{i}")
-            normalized_score = vector_scores_norm[i] if i < len(vector_scores_norm) else 0
-            
-            if doc_id not in doc_scores:
-                doc_scores[doc_id] = {
-                    "result": result,
-                    "vector_score": normalized_score,
-                    "bm25_score": 0
-                }
-            else:
-                doc_scores[doc_id]["vector_score"] = normalized_score
-        
-        # Process BM25 results
-        for i, result in enumerate(bm25_results):
-            doc_id = result.get("chunk_id", f"bm25_{i}")
-            normalized_score = bm25_scores_norm[i] if i < len(bm25_scores_norm) else 0
-            
-            if doc_id not in doc_scores:
-                doc_scores[doc_id] = {
-                    "result": result,
-                    "vector_score": 0,
-                    "bm25_score": normalized_score
-                }
-            else:
-                doc_scores[doc_id]["bm25_score"] = normalized_score
-        
-        # Calculate weighted score
-        for doc_id, scores in doc_scores.items():
-            weighted_score = (
-                scores["vector_score"] * self.vector_weight +
-                scores["bm25_score"] * self.bm25_weight
-            )
-            scores["fusion_score"] = weighted_score
-        
-        # Sort and return results
-        sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["fusion_score"], reverse=True)
-        
-        final_results = []
-        for doc_id, scores in sorted_docs[:top_k]:
-            result = scores["result"].copy()
-            result["fusion_score"] = scores["fusion_score"]
-            result["vector_score"] = scores["vector_score"]
-            result["bm25_score"] = scores["bm25_score"]
-            result["fusion_method"] = "weighted"
-            final_results.append(result)
-        
-        return final_results
-    
-    def _normalized_fusion(self, vector_results: List[Dict], bm25_results: List[Dict], top_k: int) -> List[Dict]:
-        """
-        Fuse results using normalization
-        """
-        # Normalization logic is similar to weighted fusion, but with equal weights
-        temp_vector_weight = self.vector_weight
-        temp_bm25_weight = self.bm25_weight
-        
-        # Temporarily set equal weights
-        self.vector_weight = 0.5
-        self.bm25_weight = 0.5
-        
-        result = self._weighted_fusion(vector_results, bm25_results, top_k)
-        
-        # Restore original weights
-        self.vector_weight = temp_vector_weight
-        self.bm25_weight = temp_bm25_weight
-        
-        # Update fusion method tag
-        for r in result:
-            r["fusion_method"] = "normalized"
-        
-        return result
     
     def _get_processing_stats(self) -> Dict[str, Any]:
         """Get processing statistics"""
@@ -549,59 +457,3 @@ class HybridSearchRetriever:
                 "translation_stats": self.query_translation_stats.copy(),
                 "rewrite_stats": self.query_rewrite_stats.copy()
             }
-    
-    def get_search_stats(self) -> Dict[str, Any]:
-        """Get search statistics"""
-        vector_stats = {}
-        bm25_stats = {}
-        
-        # Get BM25 statistics
-        if hasattr(self.bm25_indexer, 'get_stats'):
-            bm25_stats = self.bm25_indexer.get_stats()
-        
-        base_stats = {
-            "vector_stats": vector_stats,
-            "bm25_stats": bm25_stats,
-            "unified_processing_enabled": self.enable_unified_processing,
-            "query_rewrite_enabled": self.enable_query_rewrite
-        }
-        
-        if self.enable_unified_processing:
-            base_stats["unified_processing_stats"] = self.unified_processing_stats.copy()
-        else:
-            base_stats["query_rewrite_stats"] = self.query_rewrite_stats.copy()
-            base_stats["query_translation_stats"] = self.query_translation_stats.copy()
-        
-        return base_stats
-    
-    def reset_stats(self):
-        """Reset all statistics"""
-        self.unified_processing_stats = {
-            "total_queries": 0,
-            "unified_successful": 0,
-            "unified_failed": 0,
-            "cache_hits": 0,
-            "average_processing_time": 0.0
-        }
-        
-        self.query_rewrite_stats = {
-            "total_queries": 0,
-            "rewritten_queries": 0,
-            "cache_hits": 0
-        }
-        
-        self.query_translation_stats = {
-            "total_queries": 0,
-            "translated_queries": 0
-        }
-
-
-def test_hybrid_retriever():
-    """Test hybrid retriever"""
-    # Requires actual vector retriever instance
-    print("Hybrid retriever test requires full RAG system support")
-    print("Please test in the complete system")
-
-
-if __name__ == "__main__":
-    test_hybrid_retriever() 
