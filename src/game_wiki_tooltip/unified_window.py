@@ -49,7 +49,7 @@ try:
     )
     from PyQt6.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
-        QPalette, QIcon, QPixmap, QPainterPath, QTextDocument
+        QPalette, QIcon, QPixmap, QPainterPath, QTextDocument, QCursor
     )
     # Only WebView2 is supported
 except ImportError:
@@ -2144,6 +2144,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Geometry save timer for delayed saving on move/resize
         self._geometry_save_timer = QTimer()
         self._geometry_save_timer.setSingleShot(True)
+        self._geometry_save_timer.timeout.connect(self.save_geometry)
         
         # History manager will be initialized lazily
         self.history_manager = None
@@ -4101,7 +4102,8 @@ class UnifiedAssistantWindow(QMainWindow):
         if self.current_state == WindowState.CHAT_ONLY:
             return None
             
-        margin = 15
+        # Use larger margin for WebView mode for better edge detection
+        margin = 20 if self.current_state == WindowState.WEBVIEW else 15
         rect = self.rect()
         
         left = pos.x() <= margin
@@ -4205,6 +4207,22 @@ class UnifiedAssistantWindow(QMainWindow):
             self.resize_edge = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
+    
+    def enterEvent(self, event):
+        """Mouse entered window - reset cursor if not on edge"""
+        if not self.resizing:
+            # Get current mouse position relative to window
+            pos = self.mapFromGlobal(QCursor.pos())
+            # Only reset cursor if not on a resize edge
+            if not self.get_resize_edge(pos):
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+        super().enterEvent(event)
+    
+    def leaveEvent(self, event):
+        """Mouse left window - reset cursor"""
+        if not self.resizing:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+        super().leaveEvent(event)
     
     def resize_window(self, global_pos):
         """Resize window"""

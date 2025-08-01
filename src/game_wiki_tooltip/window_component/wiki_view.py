@@ -58,6 +58,9 @@ class WikiView(QWidget):
         self._url_monitor_timer = QTimer()
         self._url_monitor_timer.timeout.connect(self._monitor_wiki_navigation)
         self._monitoring_start_url = None
+        
+        # Enable mouse tracking for better edge detection
+        self.setMouseTracking(True)
 
         self.init_ui()
 
