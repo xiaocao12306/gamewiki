@@ -1963,6 +1963,10 @@ class IntegratedAssistantController(AssistantController):
     def show_chat_window(self):
         """显示聊天窗口，隐藏悬浮窗"""
         logger.info("💬 Show chat window requested")
+        
+        # 标记窗口刚刚显示，激活保护期
+        if hasattr(self, 'smart_interaction') and self.smart_interaction:
+            self.smart_interaction.mark_window_just_shown()
 
         # 先决定显示哪种形态
         if not self.main_window.has_switched_state:
@@ -2002,5 +2006,19 @@ class IntegratedAssistantController(AssistantController):
             from .utils import show_cursor_until_visible
             show_cursor_until_visible()
             logger.info("🖱️ Mouse cursor shown")
+            
+            # 延迟一点时间让鼠标状态更新，然后强制更新交互模式
+            # 这会重新评估窗口的鼠标穿透状态
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(100, self._update_window_after_mouse_shown)
+            
         except Exception as e:
             logger.error(f"Failed to show mouse cursor: {e}")
+    
+    def _update_window_after_mouse_shown(self):
+        """在鼠标显示后更新窗口状态"""
+        logger.info("🔄 Updating window state after mouse shown")
+        
+        # 强制更新交互模式，这会触发窗口穿透状态的重新评估
+        if hasattr(self, 'smart_interaction') and self.smart_interaction:
+            self.smart_interaction.force_update_interaction_mode()

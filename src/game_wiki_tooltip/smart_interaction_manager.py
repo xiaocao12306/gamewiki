@@ -97,6 +97,11 @@ class SmartInteractionManager(QObject):
         self.last_hotkey_time = 0
         self.hotkey_double_press_threshold = 0.5  # Double-click hotkey time threshold (seconds)
         
+        # Window display protection
+        self._window_just_shown = False
+        self._window_shown_time = 0
+        self.window_protection_duration = 1.0  # Protection duration after window shown (seconds)
+        
         # Monitor timer
         self.monitor_timer = QTimer()
         self.monitor_timer.timeout.connect(self._monitor_system_state)
@@ -205,13 +210,17 @@ class SmartInteractionManager(QObject):
                 logger.debug(f"Mouse state changed: visible={mouse_state.is_visible}, suppressed={mouse_state.is_suppressed}")
                 
                 # 只在鼠标状态变化时才重新计算交互模式
-                window_state = self.get_window_state()
-                new_mode = self._calculate_interaction_mode(mouse_state, window_state)
-                if new_mode != self.current_mode:
-                    old_mode = self.current_mode
-                    self.current_mode = new_mode
-                    self.interaction_mode_changed.emit(new_mode)
-                    logger.info(f"Interaction mode changed: {old_mode.value} -> {new_mode.value}")
+                # 如果窗口在保护期内，延迟模式更新以避免误判
+                if not self.is_window_protected():
+                    window_state = self.get_window_state()
+                    new_mode = self._calculate_interaction_mode(mouse_state, window_state)
+                    if new_mode != self.current_mode:
+                        old_mode = self.current_mode
+                        self.current_mode = new_mode
+                        self.interaction_mode_changed.emit(new_mode)
+                        logger.info(f"Interaction mode changed: {old_mode.value} -> {new_mode.value}")
+                else:
+                    logger.debug("🛡️ Delaying interaction mode update during window protection period")
                 
         except Exception as e:
             logger.error(f"Error monitoring system state: {e}")
@@ -233,8 +242,24 @@ class SmartInteractionManager(QObject):
         return InteractionMode.NORMAL
     
     def should_enable_mouse_passthrough(self) -> bool:
-        """Check if mouse passthrough should be enabled"""
-        return self.current_mode == InteractionMode.GAME_HIDDEN
+        """Check if mouse passthrough should be enabled
+        
+        Mouse passthrough should only be enabled when:
+        1. We're in GAME_HIDDEN mode AND
+        2. The mouse is actually hidden (not just the mode says so)
+        """
+        # First check the mode
+        if self.current_mode != InteractionMode.GAME_HIDDEN:
+            return False
+        
+        # Then check actual mouse state
+        mouse_state = self.get_mouse_state()
+        if mouse_state and mouse_state.is_visible:
+            # Mouse is actually visible, disable passthrough
+            logger.debug("🖱️ Mouse is visible, disabling passthrough despite GAME_HIDDEN mode")
+            return False
+        
+        return True
     
     def handle_hotkey_press(self, current_chat_visible: bool) -> str:
         """
@@ -264,6 +289,20 @@ class SmartInteractionManager(QObject):
             return 'show_chat'
         
         # 场景2&3：聊天窗口可见的情况
+        
+        # 检查窗口是否在保护期内
+        if self.is_window_protected():
+            logger.info("🛡️ Window is in protection period")
+            # 如果在游戏模式且鼠标隐藏，仍然需要显示鼠标
+            mouse_state = self.get_mouse_state()
+            if self.current_mode == InteractionMode.GAME_HIDDEN or (mouse_state and not mouse_state.is_visible):
+                logger.info("🎮 Game mode (mouse hidden) + protection: Still showing mouse for interaction")
+                return 'show_mouse'
+            else:
+                # 保护期内但鼠标已经可见，忽略操作避免误关闭
+                logger.info("🛡️ Ignoring hotkey during protection period (mouse already visible)")
+                return 'ignore'
+        
         if self.current_mode == InteractionMode.GAME_HIDDEN:
             # 游戏模式 + 鼠标隐藏 -> 显示鼠标，让用户与聊天窗口互动
             logger.info("🎮 Game mode (mouse hidden): Showing mouse for interaction")
@@ -339,4 +378,54 @@ class SmartInteractionManager(QObject):
                 return None
         except Exception as e:
             logger.error(f"Failed to get current game window: {e}")
-            return None 
+            return None
+    
+    def mark_window_just_shown(self):
+        """Mark that the chat window has just been shown"""
+        self._window_just_shown = True
+        self._window_shown_time = time.time()
+        logger.info(f"🛡️ Window display protection activated for {self.window_protection_duration}s")
+    
+    def is_window_protected(self) -> bool:
+        """Check if the window is still in protection period"""
+        if not self._window_just_shown:
+            return False
+        
+        current_time = time.time()
+        elapsed = current_time - self._window_shown_time
+        
+        if elapsed > self.window_protection_duration:
+            self._window_just_shown = False
+            logger.debug("🛡️ Window display protection expired")
+            return False
+        
+        return True
+    
+    def force_update_interaction_mode(self):
+        """Force update interaction mode and window passthrough state
+        
+        This is useful after showing mouse cursor to ensure window state is correct
+        """
+        logger.info("🔄 Force updating interaction mode and window passthrough state")
+        
+        # Get current states
+        mouse_state = self.get_mouse_state()
+        window_state = self.get_window_state()
+        
+        if not mouse_state or not window_state:
+            logger.warning("Cannot update interaction mode: missing state information")
+            return
+        
+        # Recalculate interaction mode
+        new_mode = self._calculate_interaction_mode(mouse_state, window_state)
+        old_mode = self.current_mode
+        
+        # Always emit the signal to ensure passthrough state is updated
+        # even if mode hasn't changed (mouse state might have changed)
+        self.current_mode = new_mode
+        self.interaction_mode_changed.emit(new_mode)
+        
+        if new_mode != old_mode:
+            logger.info(f"🎮 Interaction mode force updated: {old_mode.value} -> {new_mode.value}")
+        else:
+            logger.info(f"🎮 Interaction mode unchanged but passthrough state may have updated: {new_mode.value}") 
