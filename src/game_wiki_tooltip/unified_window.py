@@ -1556,9 +1556,6 @@ class ChatView(QScrollArea):
         # Check and fix ChatView width exception
         self._check_and_fix_width()
         
-        # Store current height to prevent shrinking during message addition
-        current_height = self.height()
-        
         message = ChatMessage(
             type=msg_type,
             content=content,
@@ -1570,8 +1567,10 @@ class ChatView(QScrollArea):
         else:
             widget = MessageWidget(message, self)
         
-        # Temporarily set minimum height during layout update
-        self.setMinimumHeight(current_height)
+        # Only set minimum height if we have existing messages (to prevent shrinking)
+        if self.messages:
+            current_height = self.height()
+            self.setMinimumHeight(current_height)
         
         self.layout.insertWidget(self.layout.count() - 1, widget)
         self.messages.append(widget)
@@ -1583,8 +1582,9 @@ class ChatView(QScrollArea):
         widget.updateGeometry()
         self.container.updateGeometry()
         
-        # Reset minimum height after layout stabilizes
-        QTimer.singleShot(50, lambda: self.setMinimumHeight(0))
+        # Reset minimum height after layout stabilizes (only if we set it)
+        if self.messages and len(self.messages) > 1:  # We set minimum height if there were existing messages
+            QTimer.singleShot(10, lambda: self.setMinimumHeight(0))
         
         return widget
         
@@ -1650,8 +1650,15 @@ class ChatView(QScrollArea):
             # Re-enable updates
             self.setUpdatesEnabled(True)
             
+            # Check if input field should have focus
+            parent_window = self.parent()
+            if (parent_window and hasattr(parent_window, 'input_field') and 
+                hasattr(parent_window, 'isActiveWindow') and parent_window.isActiveWindow()):
+                # Restore focus to input field if window is active
+                parent_window.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
+            
             # Reset minimum height after a short delay
-            QTimer.singleShot(100, lambda: self.setMinimumHeight(0))
+            QTimer.singleShot(10, lambda: self.setMinimumHeight(0))
         
         return self.current_status_widget
         
@@ -1678,7 +1685,7 @@ class ChatView(QScrollArea):
             self.current_status_widget = None
             
             # Reset minimum height after a short delay
-            QTimer.singleShot(100, lambda: self.setMinimumHeight(0))
+            QTimer.singleShot(10, lambda: self.setMinimumHeight(0))
             
     def _update_status_width(self, widget: StatusMessageWidget):
         """Update status message widget maximum width"""
@@ -1985,6 +1992,10 @@ class ChatView(QScrollArea):
         super().showEvent(event)
         # Delay update, ensure the window is fully displayed
         QTimer.singleShot(100, self.update_all_message_widths)
+        
+        # Additional content refresh to fix incomplete display issues
+        QTimer.singleShot(150, self._performDelayedResize)
+        QTimer.singleShot(200, self._ensureContentComplete)
 
 
 

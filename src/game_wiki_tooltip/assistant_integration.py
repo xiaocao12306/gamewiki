@@ -1979,6 +1979,10 @@ class IntegratedAssistantController(AssistantController):
         self.main_window.raise_()
         self.main_window.activateWindow()
 
+        # 设置输入框焦点
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(100, self.main_window._set_chat_input_focus)
+
         logger.info("💬 Chat window shown")
     
     def hide_chat_window(self):
