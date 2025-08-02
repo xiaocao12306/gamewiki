@@ -1556,6 +1556,9 @@ class ChatView(QScrollArea):
         # Check and fix ChatView width exception
         self._check_and_fix_width()
         
+        # Store current height to prevent shrinking during message addition
+        current_height = self.height()
+        
         message = ChatMessage(
             type=msg_type,
             content=content,
@@ -1566,7 +1569,10 @@ class ChatView(QScrollArea):
             widget = StreamingMessageWidget(message, self)
         else:
             widget = MessageWidget(message, self)
-            
+        
+        # Temporarily set minimum height during layout update
+        self.setMinimumHeight(current_height)
+        
         self.layout.insertWidget(self.layout.count() - 1, widget)
         self.messages.append(widget)
         
@@ -1576,6 +1582,9 @@ class ChatView(QScrollArea):
         # Gentle layout update, avoid forced resizing
         widget.updateGeometry()
         self.container.updateGeometry()
+        
+        # Reset minimum height after layout stabilizes
+        QTimer.singleShot(50, lambda: self.setMinimumHeight(0))
         
         return widget
         
@@ -1597,20 +1606,52 @@ class ChatView(QScrollArea):
         # Check and fix ChatView width exception
         self._check_and_fix_width()
         
-        # If there is already a status message, hide it first
-        if self.current_status_widget:
-            self.hide_status()
+        # Store current height to prevent shrinking
+        current_height = self.height()
+        
+        # Temporarily disable updates to prevent visual glitches
+        self.setUpdatesEnabled(False)
+        
+        try:
+            # If there is already a status message, replace it atomically
+            if self.current_status_widget:
+                # Create new status message first
+                new_status_widget = StatusMessageWidget(message, self)
+                
+                # Get the index of the old widget
+                old_index = self.layout.indexOf(self.current_status_widget)
+                
+                # Remove old widget and insert new one at the same position
+                self.layout.removeWidget(self.current_status_widget)
+                self.layout.insertWidget(old_index, new_status_widget)
+                
+                # Clean up old widget
+                self.current_status_widget.hide()
+                self.current_status_widget.deleteLater()
+                
+                # Update reference
+                self.current_status_widget = new_status_widget
+            else:
+                # No existing status, just add new one
+                self.current_status_widget = StatusMessageWidget(message, self)
+                self.layout.insertWidget(self.layout.count() - 1, self.current_status_widget)
             
-        # Create new status message
-        self.current_status_widget = StatusMessageWidget(message, self)
-        self.layout.insertWidget(self.layout.count() - 1, self.current_status_widget)
-        
-        # Dynamically set message maximum width
-        self._update_status_width(self.current_status_widget)
-        
-        # Gentle layout update
-        self.current_status_widget.updateGeometry()
-        self.container.updateGeometry()
+            # Set minimum height to prevent shrinking
+            self.setMinimumHeight(current_height)
+            
+            # Dynamically set message maximum width
+            self._update_status_width(self.current_status_widget)
+            
+            # Gentle layout update
+            self.current_status_widget.updateGeometry()
+            self.container.updateGeometry()
+            
+        finally:
+            # Re-enable updates
+            self.setUpdatesEnabled(True)
+            
+            # Reset minimum height after a short delay
+            QTimer.singleShot(100, lambda: self.setMinimumHeight(0))
         
         return self.current_status_widget
         
@@ -1624,10 +1665,20 @@ class ChatView(QScrollArea):
     def hide_status(self):
         """Hide current status information"""
         if self.current_status_widget:
+            # Store current height to prevent shrinking
+            current_height = self.height()
+            
+            # Temporarily set minimum height
+            self.setMinimumHeight(current_height)
+            
+            # Hide and remove widget
             self.current_status_widget.hide_with_fadeout()
             self.layout.removeWidget(self.current_status_widget)
             self.current_status_widget.deleteLater()
             self.current_status_widget = None
+            
+            # Reset minimum height after a short delay
+            QTimer.singleShot(100, lambda: self.setMinimumHeight(0))
             
     def _update_status_width(self, widget: StatusMessageWidget):
         """Update status message widget maximum width"""
