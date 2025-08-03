@@ -1852,11 +1852,18 @@ class IntegratedAssistantController(AssistantController):
         # Adjust window mouse passthrough state based on interaction mode
         if hasattr(self, 'main_window') and self.main_window:
             should_passthrough = self.smart_interaction.should_enable_mouse_passthrough()
+            logger.info(f"🔧 Should enable passthrough: {should_passthrough}")
+            
+            # Get current mouse state for debugging
+            mouse_state = self.smart_interaction.get_mouse_state()
+            if mouse_state:
+                logger.info(f"🖱️ Current mouse state: visible={mouse_state.is_visible}, suppressed={mouse_state.is_suppressed}")
+            
             self.smart_interaction.apply_mouse_passthrough(self.main_window, should_passthrough)
             
             # Show status message for different modes
             if mode == InteractionMode.GAME_HIDDEN:
-                logger.info("🎮 Game mouse hidden mode: enabled mouse passthrough to prevent accidental clicks")
+                logger.info("🎮 Game mouse hidden mode: checking if passthrough needed")
             elif mode == InteractionMode.GAME_VISIBLE:
                 logger.info("🎮 Game mouse visible mode: normal interaction")
             else:
@@ -1993,6 +2000,10 @@ class IntegratedAssistantController(AssistantController):
         """隐藏聊天窗口，根据用户设置决定是否显示悬浮窗"""
         logger.info("💬 Hide chat window requested")
         
+        # 清除用户主动显示鼠标的标记
+        if hasattr(self, 'smart_interaction') and self.smart_interaction:
+            self.smart_interaction.set_user_requested_mouse_visible(False)
+        
         # 隐藏聊天窗口
         if self.main_window:
             self.main_window.hide()
@@ -2002,6 +2013,10 @@ class IntegratedAssistantController(AssistantController):
         """显示鼠标以便与聊天窗口互动"""
         logger.info("🖱️ Show mouse for interaction requested")
         try:
+            # 标记用户主动请求显示鼠标
+            if hasattr(self, 'smart_interaction') and self.smart_interaction:
+                self.smart_interaction.set_user_requested_mouse_visible(True)
+            
             # 调用Windows API显示鼠标
             from .utils import show_cursor_until_visible
             show_cursor_until_visible()
@@ -2021,4 +2036,13 @@ class IntegratedAssistantController(AssistantController):
         
         # 强制更新交互模式，这会触发窗口穿透状态的重新评估
         if hasattr(self, 'smart_interaction') and self.smart_interaction:
+            # 先检查当前的穿透状态
+            current_passthrough = self.smart_interaction.should_enable_mouse_passthrough()
+            logger.info(f"🔍 Current passthrough state check: {current_passthrough}")
+            
+            # 强制更新交互模式
             self.smart_interaction.force_update_interaction_mode()
+            
+            # 再次检查更新后的穿透状态
+            new_passthrough = self.smart_interaction.should_enable_mouse_passthrough()
+            logger.info(f"🔍 New passthrough state after update: {new_passthrough}")

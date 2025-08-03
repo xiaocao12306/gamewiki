@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 # Windows API constants
 CURSOR_SHOWING = 0x00000001
 CURSOR_SUPPRESSED = 0x00000002
+GWL_EXSTYLE = -20
+WS_EX_TRANSPARENT = 0x00000020
+WS_EX_LAYERED = 0x00080000
 
 # Windows API function definitions
 user32 = ctypes.windll.user32
@@ -46,6 +49,14 @@ GetForegroundWindow.restype = wintypes.HWND
 GetWindowTextW = user32.GetWindowTextW
 GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
 GetWindowTextW.restype = ctypes.c_int
+
+GetWindowLongW = user32.GetWindowLongW
+GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+GetWindowLongW.restype = wintypes.LONG
+
+SetWindowLongW = user32.SetWindowLongW
+SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.LONG]
+SetWindowLongW.restype = wintypes.LONG
 
 class InteractionMode(Enum):
     """Interaction mode enumeration"""
@@ -101,6 +112,9 @@ class SmartInteractionManager(QObject):
         self._window_just_shown = False
         self._window_shown_time = 0
         self.window_protection_duration = 1.0  # Protection duration after window shown (seconds)
+        
+        # User interaction tracking
+        self._user_requested_mouse_visible = False  # Track if user explicitly requested mouse visibility
         
         # Monitor timer
         self.monitor_timer = QTimer()
@@ -196,10 +210,23 @@ class SmartInteractionManager(QObject):
         return any(keyword in title_lower for keyword in self.game_keywords)
     
     def _monitor_system_state(self):
-        """Monitor system state changes - 只监控鼠标状态，不监控窗口变化"""
+        """Monitor system state changes - 监控鼠标状态和游戏窗口焦点"""
         try:
-            # Get current mouse state
+            # Get current states
             mouse_state = self.get_mouse_state()
+            window_state = self.get_window_state()
+            
+            # Check if game window just got focus (and chat window is visible)
+            if window_state and window_state.is_game_window:
+                # If game window is in focus and user hasn't explicitly requested mouse
+                # we should clear the flag to ensure proper passthrough
+                if hasattr(self.controller, 'main_window') and self.controller.main_window and self.controller.main_window.isVisible():
+                    if self._user_requested_mouse_visible:
+                        # Game regained focus, clear user request
+                        logger.info("🎮 Game window regained focus, clearing user mouse request")
+                        self._user_requested_mouse_visible = False
+                        # Force update to re-enable passthrough
+                        self.force_update_interaction_mode()
             
             # Check mouse state changes
             if mouse_state and (not self.last_mouse_state or 
@@ -212,7 +239,6 @@ class SmartInteractionManager(QObject):
                 # 只在鼠标状态变化时才重新计算交互模式
                 # 如果窗口在保护期内，延迟模式更新以避免误判
                 if not self.is_window_protected():
-                    window_state = self.get_window_state()
                     new_mode = self._calculate_interaction_mode(mouse_state, window_state)
                     if new_mode != self.current_mode:
                         old_mode = self.current_mode
@@ -244,19 +270,27 @@ class SmartInteractionManager(QObject):
     def should_enable_mouse_passthrough(self) -> bool:
         """Check if mouse passthrough should be enabled
         
-        Mouse passthrough should only be enabled when:
-        1. We're in GAME_HIDDEN mode AND
-        2. The mouse is actually hidden (not just the mode says so)
+        Mouse passthrough should be enabled when:
+        1. In a game environment AND user hasn't explicitly requested mouse visibility
+        2. OR in GAME_HIDDEN mode AND mouse is actually hidden
         """
-        # First check the mode
+        # Get current window state to check if we're in a game
+        window_state = self.get_window_state()
+        
+        # If in a game window and user hasn't explicitly requested mouse visibility, always enable passthrough
+        if window_state and window_state.is_game_window and not self._user_requested_mouse_visible:
+            logger.debug("🎮 Game window active and user hasn't requested mouse - enabling passthrough")
+            return True
+        
+        # Otherwise, use the original logic
         if self.current_mode != InteractionMode.GAME_HIDDEN:
             return False
         
-        # Then check actual mouse state
+        # Check actual mouse state
         mouse_state = self.get_mouse_state()
-        if mouse_state and mouse_state.is_visible:
-            # Mouse is actually visible, disable passthrough
-            logger.debug("🖱️ Mouse is visible, disabling passthrough despite GAME_HIDDEN mode")
+        if mouse_state and mouse_state.is_visible and self._user_requested_mouse_visible:
+            # Mouse is visible because user requested it
+            logger.debug("🖱️ Mouse is visible by user request, disabling passthrough")
             return False
         
         return True
@@ -303,9 +337,11 @@ class SmartInteractionManager(QObject):
                 logger.info("🛡️ Ignoring hotkey during protection period (mouse already visible)")
                 return 'ignore'
         
-        if self.current_mode == InteractionMode.GAME_HIDDEN:
-            # 游戏模式 + 鼠标隐藏 -> 显示鼠标，让用户与聊天窗口互动
-            logger.info("🎮 Game mode (mouse hidden): Showing mouse for interaction")
+        # 检查鼠标实际状态，不仅依赖于交互模式
+        mouse_state = self.get_mouse_state()
+        if self.current_mode == InteractionMode.GAME_HIDDEN or (mouse_state and not mouse_state.is_visible):
+            # 游戏模式 + 鼠标隐藏 或 鼠标实际隐藏 -> 显示鼠标，让用户与聊天窗口互动
+            logger.info("🎮 Mouse is hidden (mode or actual state): Showing mouse for interaction")
             return 'show_mouse'
             
         elif time_since_last < self.hotkey_double_press_threshold:
@@ -330,26 +366,31 @@ class SmartInteractionManager(QObject):
             enable: Whether to enable mouse passthrough
         """
         try:
-            if enable:
-                # Enable mouse passthrough
-                widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-                # Keep window on top but don't respond to mouse events
-                current_flags = widget.windowFlags()
-                new_flags = current_flags | Qt.WindowType.WindowTransparentForInput
-                widget.setWindowFlags(new_flags)
-                logger.debug(f"Enabled mouse passthrough for window {widget}")
-            else:
-                # Disable mouse passthrough
-                widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-                # Restore normal mouse event response
-                current_flags = widget.windowFlags()
-                new_flags = current_flags & ~Qt.WindowType.WindowTransparentForInput
-                widget.setWindowFlags(new_flags)
-                logger.debug(f"Disabled mouse passthrough for window {widget}")
+            # First set Qt attribute
+            widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, enable)
+            
+            # Then use Windows API for true transparency
+            try:
+                # Get window handle
+                hwnd = widget.winId().__int__()
                 
-            # Re-show window to apply settings
-            if widget.isVisible():
-                widget.show()
+                # Get current extended style
+                current_exstyle = GetWindowLongW(hwnd, GWL_EXSTYLE)
+                
+                if enable:
+                    # Add WS_EX_TRANSPARENT to make window truly transparent to mouse
+                    new_exstyle = current_exstyle | WS_EX_TRANSPARENT
+                    SetWindowLongW(hwnd, GWL_EXSTYLE, new_exstyle)
+                    logger.info(f"✅ Enabled TRUE mouse passthrough for window {widget} (hwnd: {hwnd})")
+                else:
+                    # Remove WS_EX_TRANSPARENT to restore normal mouse interaction
+                    new_exstyle = current_exstyle & ~WS_EX_TRANSPARENT
+                    SetWindowLongW(hwnd, GWL_EXSTYLE, new_exstyle)
+                    logger.info(f"❌ Disabled mouse passthrough for window {widget} (hwnd: {hwnd})")
+                    
+            except Exception as win_err:
+                logger.error(f"Windows API error: {win_err}")
+                # Fall back to Qt-only implementation
                 
         except Exception as e:
             logger.error(f"Error applying mouse passthrough settings: {e}")
@@ -385,6 +426,14 @@ class SmartInteractionManager(QObject):
         self._window_just_shown = True
         self._window_shown_time = time.time()
         logger.info(f"🛡️ Window display protection activated for {self.window_protection_duration}s")
+    
+    def set_user_requested_mouse_visible(self, visible: bool):
+        """Set whether the user has explicitly requested mouse visibility"""
+        self._user_requested_mouse_visible = visible
+        logger.info(f"👤 User requested mouse visible: {visible}")
+        
+        # Force update interaction mode to apply the new passthrough state
+        self.force_update_interaction_mode()
     
     def is_window_protected(self) -> bool:
         """Check if the window is still in protection period"""
