@@ -2013,14 +2013,33 @@ class IntegratedAssistantController(AssistantController):
         """显示鼠标以便与聊天窗口互动"""
         logger.info("🖱️ Show mouse for interaction requested")
         try:
-            # 标记用户主动请求显示鼠标
+            # 1. 先激活聊天窗口，确保它获得焦点
+            if self.main_window and self.main_window.isVisible():
+                logger.info("🎯 Activating chat window first")
+                self.main_window.activateWindow()
+                self.main_window.raise_()
+            
+            # 2. 在显示鼠标之前，先设置鼠标位置到窗口中心
+            if self.main_window and self.main_window.isVisible():
+                import ctypes
+                
+                # 获取窗口几何信息
+                geometry = self.main_window.geometry()
+                center_x = geometry.x() + geometry.width() // 2
+                center_y = geometry.y() + geometry.height() // 2
+                
+                # 使用Windows API移动鼠标到窗口中心（在显示之前）
+                ctypes.windll.user32.SetCursorPos(center_x, center_y)
+                logger.info(f"🎯 Pre-positioned cursor to window center: ({center_x}, {center_y})")
+            
+            # 3. 标记用户主动请求显示鼠标
             if hasattr(self, 'smart_interaction') and self.smart_interaction:
                 self.smart_interaction.set_user_requested_mouse_visible(True)
             
-            # 调用Windows API显示鼠标
+            # 4. 最后调用Windows API显示鼠标
             from .utils import show_cursor_until_visible
             show_cursor_until_visible()
-            logger.info("🖱️ Mouse cursor shown")
+            logger.info("🖱️ Mouse cursor shown (after positioning)")
             
             # 延迟一点时间让鼠标状态更新，然后强制更新交互模式
             # 这会重新评估窗口的鼠标穿透状态

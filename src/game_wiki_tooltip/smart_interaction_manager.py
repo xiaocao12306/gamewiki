@@ -111,7 +111,7 @@ class SmartInteractionManager(QObject):
         # Window display protection
         self._window_just_shown = False
         self._window_shown_time = 0
-        self.window_protection_duration = 1.0  # Protection duration after window shown (seconds)
+        self.window_protection_duration = 0.1  # Protection duration after window shown (seconds)
         
         # User interaction tracking
         self._user_requested_mouse_visible = False  # Track if user explicitly requested mouse visibility
