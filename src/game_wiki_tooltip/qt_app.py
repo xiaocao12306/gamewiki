@@ -396,7 +396,6 @@ class GameWikiApp(QObject):
                 if self.hotkey_mgr.is_registered():
                     # Show success notification
                     hotkey_string = self.hotkey_mgr.get_hotkey_string()
-                    registration_info = self.hotkey_mgr.get_registration_info()
                     
                     if limited_mode:
                         # 合并启动通知：热键信息 + 受限模式信息
@@ -407,7 +406,7 @@ class GameWikiApp(QObject):
                         )
                     else:
                         # 完整功能模式的通知
-                        notification_msg = f"{t('hotkey_registered', hotkey=hotkey_string)})"
+                        notification_msg = f"{t('hotkey_registered', hotkey=hotkey_string)}"
                     
                     self.tray_icon.show_notification(
                         "GameWiki Assistant",

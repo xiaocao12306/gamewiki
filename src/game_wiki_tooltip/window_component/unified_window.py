@@ -2066,9 +2066,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # History manager will be initialized lazily
         self.history_manager = None
         
-        # Track current navigation to avoid duplicate history entries
-        self._pending_navigation = None  # URL being navigated to
-        self._last_recorded_url = None  # Last URL added to history
+        # History tracking moved to show_chat_view() method
         
         self.init_ui()
         
@@ -3208,10 +3206,19 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def show_chat_view(self):
         """Switch to chat view"""
-        # First stop media playback in WikiView (only pause when currently displaying WikiView)
+        # First record history if needed, then stop media playback
         if hasattr(self, 'wiki_view') and self.wiki_view:
             current_widget = self.content_stack.currentWidget()
             if current_widget == self.wiki_view:
+                # Get current URL before switching
+                current_url = getattr(self.wiki_view, 'current_url', None)
+                
+                # Check if we should record history (not task flow HTML)
+                if current_url and not self._is_task_flow_url(current_url):
+                    # Record history with actual page title
+                    self._record_history_before_leaving_wiki()
+                
+                # Then pause media playback
                 self.wiki_view.pause_page()
         
         # If coming from WEBVIEW state, switch back to FULL_CONTENT
@@ -3282,6 +3289,257 @@ class UnifiedAssistantWindow(QMainWindow):
         # If immediate attempt fails, try again after a longer delay
         logger.info("🔄 Retrying focus setting after delay...")
         QTimer.singleShot(300, lambda: try_set_focus())
+    
+    def _is_task_flow_url(self, url: str) -> bool:
+        """Check if URL is a task flow local HTML file"""
+        # Task flow URLs are local files with specific game names
+        if not url.startswith('file://'):
+            return False
+        
+        # Check if it contains any game-specific task flow patterns
+        # Updated patterns to match actual file names
+        task_flow_patterns = [
+            'helldiver2_',     # Helldivers 2
+            'dst_',            # Don't Starve Together
+            'civilization6_',  # Civilization VI
+            'eldenring_'       # Elden Ring (for future use)
+        ]
+        url_lower = url.lower()
+        
+        # Check if URL ends with .html and contains any of the patterns
+        if url_lower.endswith('.html'):
+            return any(pattern in url_lower for pattern in task_flow_patterns)
+        
+        return False
+    
+    def _record_history_before_leaving_wiki(self):
+        """Record browsing history before leaving wiki view using JavaScript to get actual page title"""
+        logger = logging.getLogger(__name__)
+        
+        if not hasattr(self, 'wiki_view') or not self.wiki_view:
+            logger.debug("No wiki_view available, skipping history record")
+            return
+            
+        # Get webview instance (handle both WebEngine and WebView2)
+        web_view = getattr(self.wiki_view, 'web_view', None)
+        if not web_view:
+            logger.debug("No web_view available, skipping history record")
+            return
+            
+        current_url = getattr(self.wiki_view, 'current_url', None)
+        if not current_url:
+            logger.debug("No current_url available, skipping history record")
+            return
+            
+        logger.info(f"🔍 Recording history for URL: {current_url}")
+        
+        # For WebView2, we need a different approach since runJavaScript doesn't return values properly
+        if hasattr(web_view, 'webview2') and web_view.webview2:
+            # WebView2 specific handling
+            self._get_title_from_webview2(web_view, current_url)
+        elif hasattr(web_view, 'page') and callable(getattr(web_view, 'page', None)):
+            # Qt WebEngine handling
+            script = """
+            (function() {
+                // Try multiple methods to get the best title
+                var title = document.title;
+                
+                // If title is empty or just the domain, try other methods
+                if (!title || title.trim() === '' || title === window.location.hostname) {
+                    // Try Open Graph title
+                    var ogTitle = document.querySelector('meta[property="og:title"]');
+                    if (ogTitle && ogTitle.content) {
+                        title = ogTitle.content;
+                    } else {
+                        // Try Twitter title
+                        var twitterTitle = document.querySelector('meta[name="twitter:title"]');
+                        if (twitterTitle && twitterTitle.content) {
+                            title = twitterTitle.content;
+                        } else {
+                            // Try first H1
+                            var h1 = document.querySelector('h1');
+                            if (h1 && h1.innerText) {
+                                title = h1.innerText.trim();
+                            }
+                        }
+                    }
+                }
+                
+                return title || '';
+            })();
+            """
+            
+            try:
+                web_view.page().runJavaScript(
+                    script,
+                    lambda title: self._save_to_history(current_url, title)
+                )
+            except Exception as e:
+                logger.error(f"Failed to get page title via JavaScript: {e}")
+                # Fallback: save with URL as title
+                self._save_to_history(current_url, current_url)
+        else:
+            logger.warning("Unknown web view type, using URL as title")
+            self._save_to_history(current_url, current_url)
+    
+    def _get_title_from_webview2(self, web_view, current_url):
+        """Get title from WebView2 using a workaround"""
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # First, store the title in a global variable
+            store_script = """
+            window.__gamewiki_page_title = (function() {
+                var title = document.title;
+                
+                if (!title || title.trim() === '' || title === window.location.hostname) {
+                    var ogTitle = document.querySelector('meta[property="og:title"]');
+                    if (ogTitle && ogTitle.content) {
+                        title = ogTitle.content;
+                    } else {
+                        var twitterTitle = document.querySelector('meta[name="twitter:title"]');
+                        if (twitterTitle && twitterTitle.content) {
+                            title = twitterTitle.content;
+                        } else {
+                            var h1 = document.querySelector('h1');
+                            if (h1 && h1.innerText) {
+                                title = h1.innerText.trim();
+                            }
+                        }
+                    }
+                }
+                
+                return title || document.title || '';
+            })();
+            """
+            
+            # Execute script to store title
+            web_view.runJavaScript(store_script)
+            
+            # Wait a bit and then retrieve the stored title
+            QTimer.singleShot(100, lambda: self._retrieve_webview2_title(web_view, current_url))
+            
+        except Exception as e:
+            logger.error(f"Failed to store title in WebView2: {e}")
+            self._save_to_history(current_url, current_url)
+    
+    def _retrieve_webview2_title(self, web_view, current_url):
+        """Retrieve the stored title from WebView2"""
+        logger = logging.getLogger(__name__)
+        
+        # For now, since WebView2's runJavaScript doesn't return values properly,
+        # we'll use a workaround by checking if we have a cached title
+        # or use the document title if available
+        
+        # Try to get title from WikiView's current_title attribute
+        if hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
+            title = self.wiki_view.current_title
+            logger.info(f"Using cached title from WikiView: {title}")
+            self._save_to_history(current_url, title)
+        else:
+            # Try one more time with direct JavaScript execution
+            try:
+                # Simple script to get title
+                simple_script = "document.title || '';"
+                web_view.runJavaScript(simple_script)
+                
+                # Since WebView2 doesn't return values properly, use a different approach
+                # Set a timer to check for title after giving the page more time to load
+                QTimer.singleShot(500, lambda: self._final_title_attempt(current_url))
+                
+            except Exception as e:
+                logger.error(f"Final JavaScript attempt failed: {e}")
+                self._fallback_title_extraction(current_url)
+    
+    def _final_title_attempt(self, current_url):
+        """Final attempt to get title after delay"""
+        logger = logging.getLogger(__name__)
+        
+        # Check if WikiView has updated title
+        if hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
+            title = self.wiki_view.current_title
+            logger.info(f"Got title after delay: {title}")
+            self._save_to_history(current_url, title)
+        else:
+            self._fallback_title_extraction(current_url)
+    
+    def _fallback_title_extraction(self, current_url):
+        """Extract a meaningful title from URL as last resort"""
+        logger = logging.getLogger(__name__)
+        
+        try:
+            from urllib.parse import urlparse, unquote, parse_qs
+            parsed = urlparse(current_url)
+            
+            # Special handling for YouTube
+            if 'youtube.com' in parsed.netloc:
+                if 'watch' in parsed.path:
+                    # Extract video ID for a better title
+                    query_params = parse_qs(parsed.query)
+                    video_id = query_params.get('v', [''])[0]
+                    if video_id:
+                        title = f"YouTube Video ({video_id})"
+                    else:
+                        title = "YouTube Video"
+                else:
+                    title = "YouTube"
+            elif 'wikipedia.org' in parsed.netloc or 'wiki.' in parsed.netloc:
+                # For wiki pages, use the page name from URL
+                path_parts = [p for p in parsed.path.strip('/').split('/') if p and p != 'wiki']
+                if path_parts:
+                    title = unquote(path_parts[-1]).replace('_', ' ')
+                else:
+                    title = "Wiki Page"
+            else:
+                # Generic fallback
+                path_parts = [p for p in parsed.path.strip('/').split('/') if p]
+                if path_parts:
+                    # Use the last meaningful part of the path
+                    title = unquote(path_parts[-1]).replace('-', ' ').replace('_', ' ').title()
+                else:
+                    title = parsed.netloc
+            
+            logger.info(f"Using fallback title: {title}")
+            self._save_to_history(current_url, title)
+            
+        except Exception as e:
+            logger.error(f"Failed to extract title from URL: {e}")
+            # Last resort: use domain name
+            try:
+                from urllib.parse import urlparse
+                title = urlparse(current_url).netloc or current_url
+                self._save_to_history(current_url, title)
+            except:
+                self._save_to_history(current_url, current_url)
+    
+    def _save_to_history(self, url: str, title: str):
+        """Save URL and title to browsing history"""
+        logger = logging.getLogger(__name__)
+        
+        # Validate title
+        if not title or title.strip() == '':
+            logger.warning(f"Empty title for URL: {url}, skipping history record")
+            return
+            
+        # Clean up title
+        title = title.strip()
+        
+        # Ensure history manager exists
+        self._ensure_history_manager()
+        
+        # Determine source type
+        source = "web"
+        if "youtube.com" in url.lower():
+            source = "video"
+        elif any(wiki in url.lower() for wiki in ['wikipedia.org', 'fandom.com', 'wiki.']):
+            source = "wiki"
+            
+        # Add to history
+        try:
+            self.history_manager.add_entry(url, title, source=source)
+            logger.info(f"✅ Recorded history: {title} ({url})")
+        except Exception as e:
+            logger.error(f"Failed to save history: {e}")
 
     def show_wiki_page(self, url: str, title: str):
         """Switch to wiki view and load page"""
@@ -3291,36 +3549,8 @@ class UnifiedAssistantWindow(QMainWindow):
         # Switch to WEBVIEW state
         self.switch_to_webview()
         
-        # Only add to history if:
-        # 1. Not a local file
-        # 2. Not the same as last recorded URL
-        # 3. Has a meaningful title (not just domain)
-        if (hasattr(self, 'history_manager') and 
-            not url.startswith('file://') and 
-            url != self._last_recorded_url and
-            title and title.strip() != ""):
-            
-            # Check if title is just a domain (indicates quick access)
-            try:
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                is_just_domain = (title == parsed.netloc)
-            except:
-                is_just_domain = False
-            
-            # Only record if we have a real title, not just domain
-            if not is_just_domain:
-                # Determine source type
-                if "wiki" in url.lower() or "wiki" in title.lower():
-                    source = "wiki"
-                else:
-                    source = "web"
-                self._ensure_history_manager()
-                self.history_manager.add_entry(url, title, source=source)
-                self._last_recorded_url = url
-            else:
-                # Mark as pending for when real title arrives
-                self._pending_navigation = url
+        # History recording moved to show_chat_view() - record when user clicks "back to chat"
+        # This ensures we get the actual page title from JavaScript
         
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
@@ -3402,8 +3632,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Switch to webview window form first
         self.switch_to_webview()
         
-        # Mark as pending navigation (don't record history yet)
-        self._pending_navigation = url
+        # History recording moved to show_chat_view() - record when user clicks "back to chat"
         
         # Extract domain as temporary title
         try:

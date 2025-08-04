@@ -188,31 +188,53 @@ class SimpleWebView2Widget(QWidget):
         """Extract page title using JavaScript"""
         try:
             if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
-                # More comprehensive title extraction
+                # Since ExecuteScriptAsync doesn't return values directly in this implementation,
+                # we'll use a workaround by storing the title in a property we can check later
                 script = """
                 (function() {
                     var title = document.title;
                     if (title && title !== '' && title !== 'undefined') {
+                        // Store in window object for later retrieval
+                        window.__webview2_title = title;
                         return title;
                     }
                     // Fallback to h1 if title is empty
                     var h1 = document.querySelector('h1');
                     if (h1 && h1.innerText) {
+                        window.__webview2_title = h1.innerText.trim();
                         return h1.innerText.trim();
                     }
+                    window.__webview2_title = '';
                     return '';
                 })();
                 """
-                # Use ExecuteScriptAsync if available
+                # Execute script
                 if hasattr(self.webview2.CoreWebView2, 'ExecuteScriptAsync'):
                     self.webview2.CoreWebView2.ExecuteScriptAsync(script)
-                    # Check for title change after a delay
-                    QTimer.singleShot(500, self._check_and_emit_title)
                 elif hasattr(self.webview2, 'ExecuteScriptAsync'):
                     self.webview2.ExecuteScriptAsync(script)
-                    QTimer.singleShot(500, self._check_and_emit_title)
+                    
+                # Try to get document.title directly after a delay
+                QTimer.singleShot(500, self._update_title_from_document)
         except Exception as e:
             logger.warning(f"Failed to extract title: {e}")
+    
+    def _update_title_from_document(self):
+        """Update title from document.title"""
+        try:
+            if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
+                # Get the document title property if available
+                if hasattr(self.webview2.CoreWebView2, 'DocumentTitle'):
+                    title = self.webview2.CoreWebView2.DocumentTitle
+                    if title and title != self.current_title:
+                        self.current_title = title
+                        self.titleChanged.emit(title)
+                        logger.info(f"Title updated from DocumentTitle: {title}")
+                else:
+                    # Fallback: emit signal to check title later
+                    self._check_and_emit_title()
+        except Exception as e:
+            logger.warning(f"Failed to update title from document: {e}")
             
     def _check_and_emit_title(self):
         """Check if we have a title and emit it"""

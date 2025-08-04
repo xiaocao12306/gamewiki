@@ -106,7 +106,7 @@ class QtTrayIcon(QObject):
     def show_notification(self, title: str, message: str):
         """Show system notification"""
         if self.tray_icon and QSystemTrayIcon.isSystemTrayAvailable():
-            self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 1000)
+            self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information)
             
     def cleanup(self):
         """Clean up resources"""
