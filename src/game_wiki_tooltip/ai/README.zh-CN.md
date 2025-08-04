@@ -139,19 +139,6 @@ python src/game_wiki_tooltip/ai/rebuild_bm25_only.py terraria
 python src/game_wiki_tooltip/ai/rebuild_bm25_only.py --clean
 ```
 
-## 先决条件
-
-### 环境变量
-为向量嵌入设置您的 JINA API 密钥：
-```bash
-export JINA_API_KEY="your_jina_api_key_here"
-```
-
-### 必需依赖
-```bash
-pip install bm25s faiss-cpu
-```
-
 ## 输出结构
 
 构建完成后，将创建以下文件：
@@ -184,40 +171,8 @@ src/game_wiki_tooltip/ai/vectorstore/
 ### 常见问题
 
 1. **BM25 包不可用**：使用 `pip install bm25s` 安装 bm25s
-2. **JINA API 密钥缺失**：设置 JINA_API_KEY 环境变量
 3. **文件未找到**：确保您的 JSON 文件存在于 `data/knowledge_chunk/` 中
 4. **索引构建失败**：检查您的 JSON 文件格式是否符合要求的结构
 
 ### 日志
 构建日志保存到 `vector_build.log` 用于调试。
-
-## 使用流程
-
-### 1. 准备知识库文件
-将您的知识库 JSON 文件放在 `data/knowledge_chunk/` 目录下，文件名格式为 `游戏名称.json`。
-
-### 2. 设置环境
-```bash
-# 设置 API 密钥
-export JINA_API_KEY="your_api_key"
-
-# 安装依赖
-pip install bm25s faiss-cpu
-```
-
-### 3. 构建索引
-```bash
-# 为新游戏构建完整的向量库和 BM25 索引
-python src/game_wiki_tooltip/ai/build_vector_index.py --game 游戏名称
-
-# 或者仅重建 BM25 索引（如果向量库已存在）
-python src/game_wiki_tooltip/ai/rebuild_bm25_only.py 游戏名称
-```
-
-### 4. 验证结果
-```bash
-# 验证索引是否正确构建
-python src/game_wiki_tooltip/ai/rebuild_bm25_only.py --verify-only
-```
-
-构建完成后，您的知识库将可用于游戏内的智能搜索和问答功能。 

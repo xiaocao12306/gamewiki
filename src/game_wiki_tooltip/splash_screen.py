@@ -6,7 +6,7 @@ Shows a loading screen while the main application initializes
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QProgressBar
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QPixmap, QFont, QPalette, QColor
+from PyQt6.QtGui import QPixmap, QFont
 from pathlib import Path
 
 
@@ -29,8 +29,8 @@ class InitializationThread(QThread):
             # Step 2: Import Qt modules
             self.progress_update.emit(25, "Loading UI components...")
             from . import qt_app
-            from . import unified_window
-            
+            from src.game_wiki_tooltip.window_component import unified_window
+
             # Step 3: Initialize settings
             self.progress_update.emit(40, "Loading settings...")
             from .config import SettingsManager
@@ -298,8 +298,8 @@ class FirstRunInitializationThread(InitializationThread):
             # Step 3: Import Qt modules
             self.progress_update.emit(30, "Loading UI components...")
             from . import qt_app
-            from . import unified_window
-            
+            from src.game_wiki_tooltip.window_component import unified_window
+
             # Step 4: Initialize settings
             self.progress_update.emit(45, "Initializing settings...")
             from .config import SettingsManager

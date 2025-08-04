@@ -135,8 +135,7 @@ python src/game_wiki_tooltip/ai/rebuild_bm25_only.py GAME_NAME
 
 The application supports customizable hotkey combinations:
 - Modifier keys: Ctrl, Alt, Shift, Win
-- Function keys: F1-F12, A-Z, etc.
-- Qt version provides better hotkey management and configuration interface
+- Function keys: A-Z
 
 ### Game Configuration
 
@@ -171,21 +170,32 @@ Each game configuration includes:
    src/game_wiki_tooltip/ai/rag_config.py
    ```
 
-3. **Build Vector Indexes**
-   ```bash
-   # Build FAISS vector index
-   python src/game_wiki_tooltip/ai/build_vector_index.py
-   
-   # Build enhanced BM25 index
-   python src/game_wiki_tooltip/ai/enhanced_bm25_indexer.py
-   
-   # Rebuild all enhanced indexes
-   python src/game_wiki_tooltip/ai/rebuild_enhanced_indexes.py
-   ```
+3. **Build Custom Knowledge Base/Vector Indexes**
 
-5. **Vector Database Diagnosis**
+#### Knowledge Base Format
+Knowledge bases should be JSON files in the `data/knowledge_chunk/` directory with the following structure:
+```json
+[
+  {
+    "video_info": { "url": "...", "title": "...", "game": "..." },
+    "knowledge_chunks": [
+      {
+        "chunk_id": "unique_id",
+        "topic": "Topic Title",
+        "summary": "Detailed description...",
+        "keywords": ["keyword1", "keyword2"],
+        "type": "Build_Recommendation",
+        "build": { "name": "...", "focus": "..." },
+        "structured_data": { "enemy_name": "...", "weak_points": [...] }
+      }
+    ]
+  }
+]
+```
+
    ```bash
-   python test_diagnose_vector.py
+   # Build FAISS vector index for a specific game
+   python src/game_wiki_tooltip/ai/build_vector_index.py --game game_name
    ```
 
 ### Adding New Games
@@ -202,6 +212,50 @@ Example configuration:
         "NeedsSearch": true
     }
 }
+```
+
+## 🛠️ Project Structure
+
+```
+gamewiki/
+├── src/
+│   └── game_wiki_tooltip/       # Main application module
+│       ├── ai/                  # AI and RAG related features
+│       │   ├── vectorstore/     # FAISS vector index storage
+│       │   ├── build_vector_index.py  # Vector index builder
+│       │   ├── hybrid_retriever.py   # Hybrid retrieval system
+│       │   ├── intent_aware_reranker.py # Intent-aware reranker
+│       │   ├── unified_query_processor.py # Unified query processor
+│       │   └── rag_query.py          # RAG query interface
+│       ├── assets/              # Static resource files
+│       │   ├── games.json       # Game configuration
+│       │   ├── games_en.json    # English game configuration
+│       │   ├── games_zh.json    # Chinese game configuration
+│       │   ├── html/            # Game task flow HTML
+│       │   └── icons/           # Icon resources
+│       ├── window_component/    # Window components
+│       │   ├── unified_window.py     # Unified window system
+│       │   ├── wiki_view.py          # Wiki view component
+│       │   └── window_controller.py  # Window controller
+│       ├── qt_app.py            # Qt application main entry
+│       ├── qt_hotkey_manager.py # Global hotkey management
+│       ├── qt_settings_window.py # Settings window
+│       ├── qt_tray_icon.py      # System tray icon
+│       ├── assistant_integration.py  # AI assistant integration
+│       ├── config.py            # Configuration management
+│       ├── history_manager.py   # History management
+│       ├── i18n.py             # Internationalization support
+│       └── webview_widget.py    # WebView component
+├── data/
+│   ├── knowledge_chunk/         # Game knowledge base JSON files
+│   │   ├── helldiver2.json     # HELLDIVERS 2 knowledge base
+│   │   ├── eldenring.json      # Elden Ring knowledge base
+│   │   ├── dst.json            # Don't Starve Together knowledge base
+│   │   └── civilization6.json  # Civilization VI knowledge base
+│   └── LLM_prompt/             # LLM prompt templates
+├── requirements.txt             # Python dependencies
+├── CLAUDE.md                   # Claude AI development guide
+└── README.md                   # English documentation
 ```
 
 ## 🐛 Troubleshooting
@@ -227,14 +281,12 @@ Example configuration:
    - Confirm internet connection is normal
    - Verify vector index files exist
    - Check knowledge base data file integrity
-   - Run vector diagnosis tool
 
 5. **Inaccurate Search Results**
    - Check if knowledge base data is up to date
    - Adjust RAG configuration parameters
-   - Run quality evaluation tool
+   - Run quality evaluation tools
    - Rebuild vector indexes
-   - Use adaptive retrieval optimization
 
 6. **Performance Issues**
    - Run vector database diagnosis

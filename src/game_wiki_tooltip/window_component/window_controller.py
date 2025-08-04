@@ -4,11 +4,6 @@ Assistant controller for managing chat window and game context.
 
 import logging
 from enum import Enum
-from typing import Optional
-
-
-from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
-from PyQt6.QtWidgets import QApplication
 
 
 class WindowMode(Enum):
@@ -72,7 +67,7 @@ class AssistantController:
             logger.info("Pre-creating chat window...")
             
             # Import here to avoid circular import
-            from ..unified_window import UnifiedAssistantWindow
+            from src.game_wiki_tooltip.window_component.unified_window import UnifiedAssistantWindow
             
             # Create window but keep it hidden
             self.main_window = UnifiedAssistantWindow(self.settings_manager)

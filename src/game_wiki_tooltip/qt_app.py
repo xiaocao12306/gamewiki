@@ -4,27 +4,23 @@ Main PyQt6 application entry point.
 
 import sys
 import logging
-import ctypes
 import os
 import argparse
-from typing import Optional
 
 import win32con
 import win32gui
-import win32api
 
 from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox
-from PyQt6.QtCore import QTimer, pyqtSignal, QObject, pyqtSlot, QAbstractNativeEventFilter, Qt
+from PyQt6.QtCore import QTimer, QObject, QAbstractNativeEventFilter, Qt
 from PyQt6.QtGui import QIcon
 
 from src.game_wiki_tooltip.config import SettingsManager, GameConfigManager
 from src.game_wiki_tooltip.qt_tray_icon import QtTrayIcon
 from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
-from src.game_wiki_tooltip.qt_hotkey_manager import QtHotkeyManager, HotkeyError
+from src.game_wiki_tooltip.qt_hotkey_manager import QtHotkeyManager
 from src.game_wiki_tooltip.assistant_integration import IntegratedAssistantController
 from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
 from src.game_wiki_tooltip.i18n import init_translations, t
-from src.game_wiki_tooltip.graphics_compatibility import apply_windows_10_fixes, set_application_attributes, get_graphics_debug_info, set_qt_attributes_before_app_creation
 
 # 热键常量 - 与test_hotkey_only.py保持一致
 MOD_CONTROL = 0x0002
@@ -220,10 +216,6 @@ class GameWikiApp(QObject):
         # Store splash screen reference
         self.splash_screen = splash_screen
         self.force_settings = force_settings
-
-        # AI modules are now preloaded during splash screen
-        # No need for background preloading here
-        logger.info("AI modules should have been loaded during splash screen")
         
         # Get existing QApplication instance
         self.app = QApplication.instance()
@@ -406,20 +398,16 @@ class GameWikiApp(QObject):
                     hotkey_string = self.hotkey_mgr.get_hotkey_string()
                     registration_info = self.hotkey_mgr.get_registration_info()
                     
-                    mode_text = "Ultra Compatible Mode"
-                    
                     if limited_mode:
                         # 合并启动通知：热键信息 + 受限模式信息
                         notification_msg = (
                             f"{t('hotkey_registered', hotkey=hotkey_string)}\n"
                             f"Started in limited mode (Wiki search only)\n"
-                            f"Running in {mode_text}\n\n"
                             f"Missing API keys for AI guide features\n"
-                            f"Configure complete API keys to enable full functionality"
                         )
                     else:
                         # 完整功能模式的通知
-                        notification_msg = f"{t('hotkey_registered', hotkey=hotkey_string)}\nFull functionality enabled ({mode_text})"
+                        notification_msg = f"{t('hotkey_registered', hotkey=hotkey_string)})"
                     
                     self.tray_icon.show_notification(
                         "GameWiki Assistant",
@@ -498,13 +486,13 @@ class GameWikiApp(QObject):
             # Check if assistant controller supports pre-creation
             if hasattr(self.assistant_ctrl, 'precreate_chat_window'):
                 self.assistant_ctrl.precreate_chat_window()
-                logger.info("✅ Chat window pre-created successfully")
+                logger.info("✅ f")
             else:
                 # Fallback: Try to create and immediately hide the window
                 logger.info("Using fallback pre-creation method")
                 if hasattr(self.assistant_ctrl, 'main_window') and not self.assistant_ctrl.main_window:
                     # Temporarily create and hide the window
-                    from .unified_window import UnifiedAssistantWindow
+                    from src.game_wiki_tooltip.window_component.unified_window import UnifiedAssistantWindow
                     self.assistant_ctrl.main_window = UnifiedAssistantWindow(self.settings_mgr)
                     
                     # Connect signals
@@ -563,14 +551,6 @@ class GameWikiApp(QObject):
         self.settings_window.show()
         self.settings_window.raise_()
         self.settings_window.activateWindow()
-        
-        
-    def _on_initial_setup_closed(self):
-        """Handle initial setup window closed - deprecated, kept for compatibility"""
-        # 这个方法现在不再使用，因为我们不再强制要求API key
-        # 保留是为了兼容性，但实际上不会被调用
-        pass
-        
             
     def _on_settings_applied(self):
         """Handle settings applied"""
@@ -924,8 +904,7 @@ def run_main_app(qapp, splash_screen=None):
         pass
     
     # Initialize logging
-    import logging
-    
+
     # Apply graphics fixes
     logger.info("Applying PyQt6 Windows graphics compatibility fixes...")
     from src.game_wiki_tooltip.graphics_compatibility import (

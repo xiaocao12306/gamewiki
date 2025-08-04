@@ -2279,7 +2279,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Load history icon
         import pathlib
-        base_path = pathlib.Path(__file__).parent.parent.parent  # Go up to project root
+        base_path = pathlib.Path(__file__).parent.parent.parent.parent  # Go up to project root
         history_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "refresh-ccw-clock-svgrepo-com.svg")
         history_icon = load_svg_icon(history_icon_path, color="#111111", size=20)
         self.history_button.setIcon(history_icon)
@@ -3543,7 +3543,7 @@ class UnifiedAssistantWindow(QMainWindow):
             
             # Get HTML file path
             import pathlib
-            base_path = pathlib.Path(__file__).parent
+            base_path = pathlib.Path(__file__).parent.parent
             html_path = base_path / "assets" / "html" / html_filename
             
             if html_path.exists():
@@ -3845,7 +3845,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Get icon paths
         import pathlib
-        base_path = pathlib.Path(__file__).parent.parent.parent
+        base_path = pathlib.Path(__file__).parent.parent.parent.parent
         pause_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "pause-circle-svgrepo-com.svg")
         send_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "arrow-circle-up-svgrepo-com.svg")
         
@@ -4182,5 +4182,3 @@ class UnifiedAssistantWindow(QMainWindow):
                 geometry.setHeight(min_height)
         
         self.setGeometry(geometry)
-
-

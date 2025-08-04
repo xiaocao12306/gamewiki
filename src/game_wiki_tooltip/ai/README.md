@@ -139,19 +139,6 @@ python src/game_wiki_tooltip/ai/rebuild_bm25_only.py terraria
 python src/game_wiki_tooltip/ai/rebuild_bm25_only.py --clean
 ```
 
-## Prerequisites
-
-### Environment Variables
-Set your JINA API key for vector embeddings:
-```bash
-export JINA_API_KEY="your_jina_api_key_here"
-```
-
-### Required Dependencies
-```bash
-pip install bm25s faiss-cpu
-```
-
 ## Output Structure
 
 After building, the following files will be created:
@@ -184,7 +171,6 @@ src/game_wiki_tooltip/ai/vectorstore/
 ### Common Issues
 
 1. **BM25 package unavailable**: Install bm25s with `pip install bm25s`
-2. **JINA API key missing**: Set the JINA_API_KEY environment variable
 3. **File not found**: Ensure your JSON file exists in `data/knowledge_chunk/`
 4. **Index build failed**: Check your JSON file format matches the required structure
 

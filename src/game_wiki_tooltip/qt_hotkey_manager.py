@@ -67,10 +67,6 @@ class QtHotkeyManager(QObject):
         
     def _get_virtual_key(self, key: str) -> int:
         """Convert key name to virtual key code"""
-        # Handle function keys
-        if key.startswith('F') and key[1:].isdigit():
-            return win32con.VK_F1 + int(key[1:]) - 1
-            
         # Handle letter keys
         if len(key) == 1 and key.isalpha():
             return ord(key.upper())

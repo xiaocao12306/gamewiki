@@ -32,16 +32,6 @@ python src/game_wiki_tooltip/ai/rebuild_bm25_only.py GAME_NAME
 python src/game_wiki_tooltip/ai/rebuild_bm25_only.py terraria
 ```
 
-## Prerequisites / 先决条件
-
-```bash
-# Set API key / 设置 API 密钥
-export JINA_API_KEY="your_api_key"
-
-# Install dependencies / 安装依赖
-pip install bm25s faiss-cpu
-```
-
 For detailed instructions, please refer to the documentation links above.
 
 详细说明请参考上面的文档链接。 

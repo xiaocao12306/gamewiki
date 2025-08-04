@@ -6,18 +6,17 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Optional, Dict, Any
+from typing import Optional
 from dataclasses import dataclass
 import os # Added for os.getenv
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
 
 from src.game_wiki_tooltip.window_component import AssistantController
-from src.game_wiki_tooltip.unified_window import MessageType, TransitionMessages
+from src.game_wiki_tooltip.window_component.unified_window import MessageType, TransitionMessages
 from src.game_wiki_tooltip.config import SettingsManager
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
 from src.game_wiki_tooltip.utils import get_foreground_title
-from src.game_wiki_tooltip.i18n import t, get_current_language
 from src.game_wiki_tooltip.smart_interaction_manager import SmartInteractionManager, InteractionMode
 
 # Lazy load AI modules - import only when needed to speed up startup
@@ -287,9 +286,7 @@ class RAGIntegration(QObject):
         self._current_rag_game = None   # Track current initialized game
         
         # Initialize game configuration manager
-        from src.game_wiki_tooltip.utils import APPDATA_DIR
-        from src.game_wiki_tooltip.config import GameConfigManager
-        
+
         # Select game configuration file based on language settings
         self._init_game_config_manager()
         
@@ -1989,12 +1986,23 @@ class IntegratedAssistantController(AssistantController):
         self.main_window.show()
         self.main_window.raise_()
         self.main_window.activateWindow()
+        
+        # 关键：确保窗口显示时是可交互的
+        # 使用小延迟确保窗口完全显示后再设置
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(50, self._ensure_window_interactable)
 
         # 设置输入框焦点
-        from PyQt6.QtCore import QTimer
         QTimer.singleShot(100, self.main_window._set_chat_input_focus)
 
         logger.info("💬 Chat window shown")
+    
+    def _ensure_window_interactable(self):
+        """确保窗口在显示后是可交互的"""
+        if self.main_window and self.main_window.isVisible():
+            logger.info("🔧 Ensuring window is interactable after showing")
+            # 强制设置窗口为非穿透状态
+            self.smart_interaction.apply_mouse_passthrough(self.main_window, False)
     
     def hide_chat_window(self):
         """隐藏聊天窗口，根据用户设置决定是否显示悬浮窗"""
@@ -2023,10 +2031,12 @@ class IntegratedAssistantController(AssistantController):
             if self.main_window and self.main_window.isVisible():
                 import ctypes
                 
-                # 获取窗口几何信息
-                geometry = self.main_window.geometry()
-                center_x = geometry.x() + geometry.width() // 2
-                center_y = geometry.y() + geometry.height() // 2
+                # 使用mapToGlobal获取窗口中心的屏幕坐标
+                center_point = self.main_window.mapToGlobal(
+                    QPoint(self.main_window.width() // 2, self.main_window.height() // 2)
+                )
+                center_x = center_point.x()
+                center_y = center_point.y()
                 
                 # 使用Windows API移动鼠标到窗口中心（在显示之前）
                 ctypes.windll.user32.SetCursorPos(center_x, center_y)
@@ -2040,6 +2050,21 @@ class IntegratedAssistantController(AssistantController):
             from .utils import show_cursor_until_visible
             show_cursor_until_visible()
             logger.info("🖱️ Mouse cursor shown (after positioning)")
+            
+            # 5. 微移鼠标以强制Windows立即渲染（移动1像素再移回）
+            if self.main_window and self.main_window.isVisible():
+                import ctypes
+                # 重新获取坐标以防窗口移动
+                center_point = self.main_window.mapToGlobal(
+                    QPoint(self.main_window.width() // 2, self.main_window.height() // 2)
+                )
+                center_x = center_point.x()
+                center_y = center_point.y()
+                
+                # 微移动：右移1像素再移回，触发鼠标渲染
+                ctypes.windll.user32.SetCursorPos(center_x + 1, center_y)
+                ctypes.windll.user32.SetCursorPos(center_x, center_y)
+                logger.info("🎯 Micro-moved cursor to ensure rendering")
             
             # 延迟一点时间让鼠标状态更新，然后强制更新交互模式
             # 这会重新评估窗口的鼠标穿透状态

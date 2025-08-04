@@ -530,9 +530,6 @@ class QtSettingsWindow(QMainWindow):
         # Add A-Z
         for i in range(26):
             self.key_combo.addItem(chr(ord('A') + i))
-        # Add F1-F12
-        for i in range(1, 13):
-            self.key_combo.addItem(f"F{i}")
         key_layout.addWidget(self.key_combo)
         key_layout.addStretch()
         group_layout.addLayout(key_layout)

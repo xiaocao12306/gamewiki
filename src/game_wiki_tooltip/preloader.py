@@ -23,30 +23,6 @@ def suppress_warnings():
     # Set environment variable to suppress TensorFlow warnings if using it
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-
-def preload_jieba():
-    """Preload jieba to avoid delay on first use"""
-    try:
-        logger.info("Preloading jieba module...")
-        import jieba
-        # Initialize jieba with a simple test to ensure dictionary is loaded
-        jieba.lcut("测试", cut_all=False)
-        logger.info("✅ Jieba preloaded successfully")
-    except Exception as e:
-        logger.warning(f"Failed to preload jieba: {e}")
-
-
-def preload_vector_mappings():
-    """Preload vector mappings to avoid delay on first hotkey"""
-    try:
-        logger.info("Preloading vector mappings...")
-        from .ai.rag_query import load_vector_mappings
-        mappings = load_vector_mappings()
-        logger.info(f"✅ Vector mappings preloaded: {len(mappings)} mappings")
-    except Exception as e:
-        logger.warning(f"Failed to preload vector mappings: {e}")
-
-
 def preload_ai_modules():
     """Preload AI modules - now called from splash screen instead of background thread"""
     try:
