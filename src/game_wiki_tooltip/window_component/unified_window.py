@@ -3399,6 +3399,9 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def open_url(self, url: str):
         """Open a URL in the wiki view"""
+        # Switch to webview window form first
+        self.switch_to_webview()
+        
         # Mark as pending navigation (don't record history yet)
         self._pending_navigation = url
         
