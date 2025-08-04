@@ -2199,7 +2199,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.wiki_view = WikiView()
         self.wiki_view.back_requested.connect(self.show_chat_view)  # This will restore input/shortcuts
         self.wiki_view.wiki_page_loaded.connect(self.handle_wiki_page_loaded)
-        self.wiki_view.close_requested.connect(self.hide)  # Connect close button to hide window
+        self.wiki_view.close_requested.connect(self._handle_wiki_close)  # Connect close button to pause and hide
         # Ensure WikiView has a reasonable Minimum size but does not force a fixed size
         self.wiki_view.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -3203,6 +3203,17 @@ class UnifiedAssistantWindow(QMainWindow):
                     border: 1px solid rgba(255, 255, 255, 40);
                 }
             """)
+    
+    def _handle_wiki_close(self):
+        """Handle wiki view close button - pause media then hide window"""
+        # Pause media playback before hiding
+        if hasattr(self, 'wiki_view') and self.wiki_view:
+            current_widget = self.content_stack.currentWidget()
+            if current_widget == self.wiki_view:
+                self.wiki_view.pause_page()
+        
+        # Hide the window
+        self.hide()
     
     def show_chat_view(self):
         """Switch to chat view"""

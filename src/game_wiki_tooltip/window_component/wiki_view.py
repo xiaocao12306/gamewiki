@@ -589,6 +589,21 @@ class WikiView(QWidget):
         self.current_url = url
         self.current_title = title
         self.url_bar.setText(url)  # Update URL bar instead of title label
+        
+        # Always ensure page is in interactive state when loading
+        if self._is_paused:
+            print("📝 Page was paused, resuming before load")
+            self.resume_page()
+        
+        # Additional safeguard: force restore pointer events
+        if self.web_view:
+            try:
+                self.web_view.page().runJavaScript("""
+                    document.body.style.pointerEvents = '';
+                    console.log('✅ Pointer events reset on load');
+                """)
+            except:
+                pass
 
         # Start monitoring for wiki page navigation if loading from search engine
         if any(engine in url.lower() for engine in ['duckduckgo.com', 'google.com', 'bing.com']):
@@ -647,9 +662,7 @@ class WikiView(QWidget):
 
                         videos.forEach(function(video) {
                             video.pause();
-                            video.currentTime = 0;
-                            video.muted = true;
-                            video.volume = 0;
+                            // Don't change muted state or volume
                             // Remove all event listeners
                             video.onplay = null;
                             video.onloadeddata = null;
@@ -658,9 +671,7 @@ class WikiView(QWidget):
 
                         audios.forEach(function(audio) {
                             audio.pause();
-                            audio.currentTime = 0;
-                            audio.muted = true;
-                            audio.volume = 0;
+                            // Don't change muted state or volume
                             // Remove all event listeners
                             audio.onplay = null;
                             audio.onloadeddata = null;
@@ -677,9 +688,7 @@ class WikiView(QWidget):
 
                                 iframeVideos.forEach(function(video) {
                                     video.pause();
-                                    video.currentTime = 0;
-                                    video.muted = true;
-                                    video.volume = 0;
+                                    // Don't change muted state or volume
                                     video.onplay = null;
                                     video.onloadeddata = null;
                                     video.oncanplay = null;
@@ -687,9 +696,7 @@ class WikiView(QWidget):
 
                                 iframeAudios.forEach(function(audio) {
                                     audio.pause();
-                                    audio.currentTime = 0;
-                                    audio.muted = true;
-                                    audio.volume = 0;
+                                    // Don't change muted state or volume
                                     audio.onplay = null;
                                     audio.onloadeddata = null;
                                     audio.oncanplay = null;
@@ -784,9 +791,10 @@ class WikiView(QWidget):
     def resume_page(self):
         """Resume page activity"""
         if self.web_view and self._is_paused:
-            try:
-                # Restore page visibility and interactivity
-                self.web_view.page().runJavaScript("""
+            def restore_interactivity():
+                try:
+                    # Restore page visibility and interactivity
+                    script = """
                     (function() {
                         // Restore page visibility state
                         Object.defineProperty(document, 'hidden', {value: false, writable: false});
@@ -796,26 +804,109 @@ class WikiView(QWidget):
                         var event = new Event('visibilitychange');
                         document.dispatchEvent(event);
 
-                        // Restore page interactivity
+                        // Force restore page interactivity - multiple attempts
                         document.body.style.pointerEvents = '';
+                        document.body.style.pointerEvents = 'auto';
+                        
+                        // Also check all parent elements
+                        var element = document.body;
+                        while (element) {
+                            if (element.style && element.style.pointerEvents === 'none') {
+                                element.style.pointerEvents = '';
+                            }
+                            element = element.parentElement;
+                        }
 
-                        // Restore media playback functionality
+                        // Force restore media playback functionality
                         if (window._originalPlay) {
                             HTMLMediaElement.prototype.play = window._originalPlay;
                             delete window._originalPlay;
+                            console.log('✅ Media play function restored from backup');
+                        } else {
+                            // If original method is lost, check if play is still blocked
+                            if (HTMLMediaElement.prototype.play.toString().includes('blocked')) {
+                                // Create a new native play method
+                                HTMLMediaElement.prototype.play = function() {
+                                    // Use native browser's play implementation
+                                    var video = document.createElement('video');
+                                    var nativePlay = video.play;
+                                    return nativePlay.apply(this, arguments);
+                                };
+                                console.log('⚠️ Media play function recreated');
+                            }
                         }
+                        
+                        // Restore all existing media elements
+                        var allMedia = document.querySelectorAll('video, audio');
+                        allMedia.forEach(function(media) {
+                            // Don't change muted state or volume - let user control remain
+                            // Clear any event handlers that might block playback
+                            media.onplay = null;
+                            console.log('✅ Media element restored:', media.tagName);
+                        });
 
-                        console.log('▶️ The page has been restored to visible and interactive state');
+                        console.log('▶️ Page restored - pointer events: ' + document.body.style.pointerEvents);
+                        
+                        // Return true to indicate success
+                        return true;
                     })();
-                    """)
-
-                self._is_paused = False
-                print("▶️ WikiView: The page has been restored")
-
-            except Exception as e:
-                print(f"⚠️ WikiView: Failed to restore page: {e}")
+                    """
+                    
+                    self.web_view.page().runJavaScript(script)
+                    self._is_paused = False
+                    print("▶️ WikiView: Page restore attempted")
+                    
+                    # Schedule a verification check
+                    QTimer.singleShot(200, self._verify_page_restored)
+                    
+                except Exception as e:
+                    print(f"⚠️ WikiView: Failed to restore page: {e}")
+                    # Retry after a delay
+                    QTimer.singleShot(100, restore_interactivity)
+            
+            # Execute restoration
+            restore_interactivity()
         else:
             print("▶️ WikiView: The page is not in a paused state, skipping restore operation")
+    
+    def _verify_page_restored(self):
+        """Verify that page interactivity was restored"""
+        if self.web_view:
+            try:
+                script = """
+                (function() {
+                    var pointerEvents = document.body.style.pointerEvents;
+                    if (pointerEvents === 'none') {
+                        // Force restore again
+                        document.body.style.pointerEvents = '';
+                        console.log('⚠️ Pointer events were still disabled, forced restore');
+                    }
+                    
+                    // Also verify media playback functionality
+                    if (HTMLMediaElement.prototype.play.toString().includes('blocked')) {
+                        console.log('⚠️ Media play still blocked, attempting restore');
+                        if (window._originalPlay) {
+                            HTMLMediaElement.prototype.play = window._originalPlay;
+                            delete window._originalPlay;
+                            console.log('✅ Media play restored in verification');
+                        } else {
+                            // Recreate play function
+                            HTMLMediaElement.prototype.play = function() {
+                                var video = document.createElement('video');
+                                var nativePlay = video.play;
+                                return nativePlay.apply(this, arguments);
+                            };
+                            console.log('✅ Media play recreated in verification');
+                        }
+                    }
+                    
+                    console.log('✅ Page verification complete - pointer events: ' + (pointerEvents || 'default'));
+                    return true;
+                })();
+                """
+                self.web_view.page().runJavaScript(script)
+            except Exception as e:
+                print(f"⚠️ Failed to verify page restoration: {e}")
 
     def hideEvent(self, event):
         """When WikiView is hidden, automatically pause media playback"""
