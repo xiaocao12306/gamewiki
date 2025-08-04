@@ -343,23 +343,28 @@ Please answer the user's question based on the above knowledge chunks."""
         return prompt
     
     def _format_chunks_as_json(self, chunks: List[Dict[str, Any]]) -> str:
-        """Format chunks as clean JSON for the prompt"""
+        """Format chunks as clean JSON for the prompt - now preserving all original fields"""
         formatted_chunks = []
         
         for i, chunk in enumerate(chunks, 1):
-            # Create a clean chunk representation
-            clean_chunk = {
-                "chunk_id": i,
-                "topic": chunk.get("topic", "Unknown Topic"),
-                "summary": chunk.get("summary", ""),
-                "keywords": chunk.get("keywords", []),
-                "type": chunk.get("type", "General"),
-                "relevance_score": chunk.get("score", 0),
-                "structured_data": chunk.get("structured_data", {}),
-                "content": chunk.get("content", "")
+            # Pass complete chunk data with an index for reference
+            # This ensures all fields (build, tactics, enemy_info, etc.) are preserved
+            chunk_with_index = {
+                "chunk_id": i,  # Add index for easy reference in prompts
+                **chunk  # Spread all original fields from the chunk
             }
             
-            formatted_chunks.append(clean_chunk)
+            # Only remove truly internal fields that are not useful for LLM
+            # Keep all game-related content including build, tactics, etc.
+            internal_fields_to_remove = ['_internal_id', '_vector_id', '_index_id']
+            for field in internal_fields_to_remove:
+                chunk_with_index.pop(field, None)
+            
+            # Ensure score is included if it exists
+            if 'score' in chunk and 'relevance_score' not in chunk_with_index:
+                chunk_with_index['relevance_score'] = chunk.get('score', 0)
+            
+            formatted_chunks.append(chunk_with_index)
         
         try:
             return json.dumps(formatted_chunks, ensure_ascii=False, indent=2)

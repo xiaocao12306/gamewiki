@@ -172,18 +172,24 @@ class EnhancedBM25Indexer:
         
         return processed_tokens
     
-    def build_enhanced_text(self, chunk: Dict[str, Any]) -> str:
+    def build_enhanced_text(self, chunk: Dict[str, Any], video_info: Optional[Dict[str, Any]] = None) -> str:
         """
         Build search text, focused on content extraction
         Remove weighting logic, query optimization by LLM
         
         Args:
             chunk: Knowledge chunk
+            video_info: Video information (optional)
             
         Returns:
             Search text
         """
         text_parts = []
+        
+        # 0. Video title (highest priority for keyword matching)
+        if video_info and 'title' in video_info:
+            # Add video title multiple times to increase its weight in BM25
+            text_parts.extend([video_info['title']] * 2)
         
         # 1. Topic (important content)
         topic = chunk.get("topic", "")
@@ -249,12 +255,12 @@ class EnhancedBM25Indexer:
                     if "rationale" in stratagem:
                         text_parts.append(stratagem["rationale"])
     
-    def build_index(self, chunks: List[Dict[str, Any]]) -> None:
+    def build_index(self, chunks_or_tuples: List[Any]) -> None:
         """
         Build enhanced BM25 index
         
         Args:
-            chunks: Knowledge chunk list
+            chunks_or_tuples: Either a list of chunks, or a list of (chunk, video_info) tuples
             
         Raises:
             BM25UnavailableError: When BM25 functionality is unavailable
@@ -262,16 +268,29 @@ class EnhancedBM25Indexer:
         if not BM25_AVAILABLE:
             raise BM25UnavailableError(t("bm25_build_failed"))
             
+        # Handle both input formats for backward compatibility
+        chunks = []
+        chunks_with_video_info = []
+        
+        if chunks_or_tuples and isinstance(chunks_or_tuples[0], tuple):
+            # New format: list of (chunk, video_info) tuples
+            chunks_with_video_info = chunks_or_tuples
+            chunks = [chunk for chunk, _ in chunks_or_tuples]
+        else:
+            # Old format: list of chunks
+            chunks = chunks_or_tuples
+            chunks_with_video_info = [(chunk, None) for chunk in chunks]
+            
         logger.info(f"Start building enhanced BM25 index, {len(chunks)} knowledge chunks")
         
         self.documents = chunks
         
         # Build enhanced search text
         search_texts = []
-        for i, chunk in enumerate(chunks):
+        for i, (chunk, video_info) in enumerate(chunks_with_video_info):
             try:
-                # Build enhanced text
-                enhanced_text = self.build_enhanced_text(chunk)
+                # Build enhanced text with video_info
+                enhanced_text = self.build_enhanced_text(chunk, video_info)
                 
                 # Preprocess and weight
                 tokenized = self.preprocess_text(enhanced_text)

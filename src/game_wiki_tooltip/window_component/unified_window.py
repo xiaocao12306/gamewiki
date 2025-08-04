@@ -115,6 +115,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.voice_thread = None
         self.is_voice_recording = False
         self.original_placeholder = ""
+        self._voice_completed_text = ""  # Store completed sentences
+        self._voice_current_sentence = ""  # Track current partial sentence
         self._cached_chat_only_size = None  # Cache for chat_only size to avoid recalculation
         
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
@@ -2135,6 +2137,10 @@ class UnifiedAssistantWindow(QMainWindow):
             
         self.is_voice_recording = True
         
+        # Initialize voice state - keep existing text and prepare for new input
+        self._voice_completed_text = self.input_field.text()  # Keep existing text
+        self._voice_current_sentence = ""
+        
         # Update UI state
         self.voice_button.setObjectName("voiceBtnActive")
         self.voice_button.setStyleSheet("""
@@ -2191,16 +2197,35 @@ class UnifiedAssistantWindow(QMainWindow):
     
     def on_voice_partial_result(self, text: str):
         """Handle partial voice recognition results."""
-        self.input_field.setText(text)
+        # Update current sentence and display completed text + current partial
+        self._voice_current_sentence = text
+        full_text = self._voice_completed_text
+        if full_text and text:
+            full_text += " " + text
+        elif text:
+            full_text = text
+        self.input_field.setText(full_text)
     
     def on_voice_final_result(self, text: str):
         """Handle final voice recognition results."""
-        current_text = self.input_field.text()
-        if current_text:
-            # Append to existing text with a space
-            self.input_field.setText(current_text + " " + text)
-        else:
-            self.input_field.setText(text)
+        # Only add the final result if it's different from the current sentence
+        # This prevents duplication when partial and final results are the same
+        if text and text != self._voice_current_sentence:
+            # This is a new sentence, append it
+            if self._voice_completed_text:
+                self._voice_completed_text += " " + text
+            else:
+                self._voice_completed_text = text
+        elif text:
+            # Same as current sentence, just update completed text
+            if self._voice_completed_text:
+                self._voice_completed_text += " " + text
+            else:
+                self._voice_completed_text = text
+        
+        # Clear current sentence and update display
+        self._voice_current_sentence = ""
+        self.input_field.setText(self._voice_completed_text)
     
     def on_voice_error(self, error_msg: str):
         """Handle voice recognition errors."""

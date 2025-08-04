@@ -22,8 +22,14 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 # 添加项目根目录到Python路径
-project_root = Path(__file__).parent
+project_root = Path(__file__).resolve().parents[3]  # 向上3级到达项目根目录
 sys.path.insert(0, str(project_root))
+
+# 导入必要的模块
+try:
+    from enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
+except ImportError:
+    from src.game_wiki_tooltip.ai.enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
 
 def setup_logging():
     """设置日志"""
@@ -31,6 +37,22 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
+
+def get_vectorstore_dir() -> Path:
+    """获取向量库目录的正确路径"""
+    # 尝试多个可能的向量库路径
+    possible_paths = [
+        Path("vectorstore"),
+        Path("src/game_wiki_tooltip/ai/vectorstore"),
+        Path(__file__).parent / "vectorstore"
+    ]
+    
+    for path in possible_paths:
+        if path.exists():
+            return path
+    
+    # 如果都不存在，返回默认路径
+    return Path(__file__).parent / "vectorstore"
 
 def check_environment():
     """检查环境和依赖"""
@@ -49,7 +71,7 @@ def check_environment():
 
 def get_existing_games() -> List[str]:
     """获取现有向量库的游戏列表"""
-    vectorstore_dir = Path("vectorstore")
+    vectorstore_dir = get_vectorstore_dir()
     if not vectorstore_dir.exists():
         return []
     
@@ -63,11 +85,11 @@ def get_existing_games() -> List[str]:
     
     return games
 
-def load_game_chunks(game_name: str) -> List[Dict[str, Any]]:
-    """从现有的metadata.json加载知识块"""
+def load_game_chunks(game_name: str) -> List[tuple]:
+    """从现有的metadata.json加载知识块，并尝试匹配原始数据中的video_info"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("vectorstore")
+    vectorstore_dir = get_vectorstore_dir()
     game_dir = vectorstore_dir / f"{game_name}_vectors"
     metadata_file = game_dir / "metadata.json"
     
@@ -80,13 +102,78 @@ def load_game_chunks(game_name: str) -> List[Dict[str, Any]]:
         chunks = json.load(f)
     
     logger.info(f"✅ 成功加载 {len(chunks)} 个知识块")
-    return chunks
+    
+    # 尝试加载原始knowledge_chunk文件以获取video_info
+    chunks_with_video_info = []
+    chunk_to_video_map = {}
+    
+    # 查找knowledge_chunk文件
+    knowledge_chunk_paths = [
+        Path("../../data/knowledge_chunk") / f"{game_name}.json",
+        Path("data/knowledge_chunk") / f"{game_name}.json",
+        Path(__file__).parent.parent.parent.parent / "data" / "knowledge_chunk" / f"{game_name}.json"
+    ]
+    
+    knowledge_chunk_file = None
+    for path in knowledge_chunk_paths:
+        if path.exists():
+            knowledge_chunk_file = path
+            break
+    
+    if knowledge_chunk_file:
+        logger.info(f"📄 找到原始知识库文件: {knowledge_chunk_file}")
+        try:
+            with open(knowledge_chunk_file, 'r', encoding='utf-8') as f:
+                original_data = json.load(f)
+            
+            # 构建topic到video_info的映射（使用topic作为匹配键更可靠）
+            topic_to_video_map = {}
+            for item in original_data:
+                if isinstance(item, dict) and "video_info" in item and "knowledge_chunks" in item:
+                    video_info = item["video_info"]
+                    for chunk in item["knowledge_chunks"]:
+                        if "topic" in chunk:
+                            topic_to_video_map[chunk["topic"]] = video_info
+                        # 也保留chunk_id映射作为备用
+                        if "chunk_id" in chunk:
+                            chunk_to_video_map[chunk["chunk_id"]] = video_info
+            
+            logger.info(f"🎬 成功映射 {len(topic_to_video_map)} 个topic到video_info")
+            logger.info(f"📝 成功映射 {len(chunk_to_video_map)} 个chunk_id到video_info")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ 无法加载原始知识库文件: {e}")
+            topic_to_video_map = {}
+    else:
+        logger.warning("⚠️ 未找到原始knowledge_chunk文件，将不包含video_info")
+        topic_to_video_map = {}
+    
+    # 组合chunks和video_info（优先使用topic匹配，其次使用chunk_id）
+    matched_count = 0
+    for chunk in chunks:
+        topic = chunk.get("topic", "")
+        chunk_id = chunk.get("chunk_id", "")
+        
+        # 优先使用topic匹配
+        video_info = topic_to_video_map.get(topic, {})
+        if not video_info and chunk_id:
+            # 如果topic没匹配到，尝试用chunk_id
+            video_info = chunk_to_video_map.get(chunk_id, {})
+        
+        if video_info:
+            matched_count += 1
+            
+        chunks_with_video_info.append((chunk, video_info))
+    
+    logger.info(f"✅ 最终匹配 {matched_count}/{len(chunks)} 个chunk到video_info")
+    
+    return chunks_with_video_info
 
 def clean_old_bm25_files(game_name: str):
     """清理旧的BM25索引文件"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("vectorstore")
+    vectorstore_dir = get_vectorstore_dir()
     game_dir = vectorstore_dir / f"{game_name}_vectors"
     
     if not game_dir.exists():
@@ -118,20 +205,18 @@ def rebuild_bm25_for_game(game_name: str) -> bool:
     try:
         logger.info(f"🎮 开始重建游戏 '{game_name}' 的BM25索引...")
         
-        # 加载现有的知识块数据
-        chunks = load_game_chunks(game_name)
+        # 加载现有的知识块数据（现在包含video_info）
+        chunks_with_video_info = load_game_chunks(game_name)
         
         # 创建新的BM25索引器
-        from src.game_wiki_tooltip.ai.enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
-        
         bm25_indexer = EnhancedBM25Indexer(game_name=game_name)
         
-        # 构建索引
-        logger.info("🔨 构建新的BM25索引...")
-        bm25_indexer.build_index(chunks)
+        # 构建索引（传递包含video_info的数据）
+        logger.info("🔨 构建新的BM25索引（包含视频标题）...")
+        bm25_indexer.build_index(chunks_with_video_info)
         
         # 保存新索引
-        vectorstore_dir = Path("vectorstore")
+        vectorstore_dir = get_vectorstore_dir()
         game_dir = vectorstore_dir / f"{game_name}_vectors"
         bm25_index_path = game_dir / "enhanced_bm25_index.pkl"
         
@@ -184,7 +269,7 @@ def verify_bm25_indexes():
     """验证BM25索引的完整性"""
     logger = logging.getLogger(__name__)
     
-    vectorstore_dir = Path("vectorstore")
+    vectorstore_dir = get_vectorstore_dir()
     if not vectorstore_dir.exists():
         logger.error("❌ 向量库目录不存在")
         return False

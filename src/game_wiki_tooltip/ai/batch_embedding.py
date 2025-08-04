@@ -327,9 +327,8 @@ class BatchEmbeddingProcessor:
             game_name = collection_name.replace("_vectors", "") if "_vectors" in collection_name else collection_name
             
             enhanced_bm25_indexer = EnhancedBM25Indexer(game_name=game_name)
-            # Extract just chunks for BM25 indexer
-            chunks_for_bm25 = [chunk for chunk, _ in chunks_with_video_info]
-            enhanced_bm25_indexer.build_index(chunks_for_bm25)
+            # Pass chunks with video_info to BM25 indexer
+            enhanced_bm25_indexer.build_index(chunks_with_video_info)
             
             # Save enhanced BM25 index
             bm25_path = index_path / "enhanced_bm25_index.pkl"
