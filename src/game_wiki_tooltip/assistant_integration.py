@@ -1774,7 +1774,7 @@ class IntegratedAssistantController(AssistantController):
             logger.error(f"Wiki result handling error: {e}")
             self._on_error(str(e))
             
-    def _reinitialize_rag_for_game(self, vector_game_name: str):
+    def _reinitialize_rag_for_game(self, vector_game_name: str, retry_count: int = 0):
         """Reinitialize RAG engine for specific vector library (asynchronous, not blocking UI)"""
         try:
             logger.info(f"🚀 Start reinitializing RAG engine for vector library '{vector_game_name}' (asynchronous mode)")
@@ -1788,12 +1788,33 @@ class IntegratedAssistantController(AssistantController):
                 logger.info(f"✓ RAG already initialized for game '{vector_game_name}', no need to reinitialize")
                 return
             
+            # Check if we should stop retrying
+            MAX_RETRIES = 3
+            if retry_count >= MAX_RETRIES:
+                logger.info(f"⏹️ Max retries ({MAX_RETRIES}) reached for RAG initialization, stopping")
+                return
+            
             # Ensure AI modules are loaded before attempting RAG initialization
             if not self.rag_integration._ensure_ai_components_loaded():
-                logger.warning("AI components not yet loaded, deferring RAG initialization")
-                # Schedule another attempt after a delay
-                QTimer.singleShot(1000, lambda: self._reinitialize_rag_for_game(vector_game_name))
-                return
+                # Check if this is a permanent failure (missing API key) or temporary (loading)
+                settings = self.settings_manager.get()
+                api_settings = settings.get('api', {})
+                gemini_api_key = api_settings.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+                
+                if not gemini_api_key:
+                    # Permanent failure - no API key configured
+                    logger.info("⏹️ No API key configured, RAG initialization disabled")
+                    return
+                else:
+                    # Temporary failure - modules still loading
+                    if retry_count == 0:
+                        logger.info(f"AI components loading, deferring RAG initialization...")
+                    else:
+                        logger.info(f"AI components not ready, retrying RAG initialization (attempt {retry_count + 1}/{MAX_RETRIES})")
+                    # Schedule another attempt with exponential backoff
+                    delay = min(1000 * (2 ** retry_count), 10000)  # 1s, 2s, 4s, 8s, max 10s
+                    QTimer.singleShot(delay, lambda: self._reinitialize_rag_for_game(vector_game_name, retry_count + 1))
+                    return
             
             # Get API settings
             settings = self.settings_manager.get()
@@ -1826,6 +1847,27 @@ class IntegratedAssistantController(AssistantController):
                 
         except Exception as e:
             logger.error(f"RAG engine reinitialization failed: {e}")
+        
+    def reset_rag_retry_state(self):
+        """Reset RAG retry state, useful when settings change or new API keys are added."""
+        # This method can be called when settings are updated to allow retrying RAG initialization
+        # The retry counter is passed as a parameter, so no persistent state to reset
+        logger.info("RAG retry state reset - will retry initialization on next game window change")
+        
+        # If there's a current game, try to reinitialize
+        if hasattr(self, 'current_game_window') and self.current_game_window:
+            # Try to get vector name for current game
+            settings = self.settings_manager.get()
+            current_language = settings.get('language', 'zh')
+            if current_language == 'en':
+                games_config = self._games_config_en
+            else:
+                games_config = self._games_config_zh
+            
+            vector_game_name = self._get_vector_library_name(self.current_game_window, games_config)
+            if vector_game_name:
+                # Reset retry count to 0 for new attempt
+                self._reinitialize_rag_for_game(vector_game_name, retry_count=0)
         
     def handle_wiki_page_found(self, url: str, title: str):
         """Override parent class method: handle WikiView signal when real wiki page is found"""

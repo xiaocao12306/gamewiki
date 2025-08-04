@@ -88,6 +88,7 @@ class AppSettings:
     api: ApiConfig = field(default_factory=ApiConfig)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
+    audio_device_index: Optional[int] = None  # Audio device index for voice recognition
 
 
 class SettingsManager:

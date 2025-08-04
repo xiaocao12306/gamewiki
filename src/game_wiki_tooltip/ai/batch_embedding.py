@@ -127,21 +127,29 @@ class BatchEmbeddingProcessor:
         if not _check_faiss_available():
             raise ImportError("faiss-cpu or qdrant-client must be installed")
     
-    def build_text(self, chunk: Dict[str, Any]) -> str:
+    def build_text(self, chunk: Dict[str, Any], video_info: Optional[Dict[str, Any]] = None) -> str:
         """
         Build text for embedding
         
         Args:
             chunk: knowledge_chunk dictionary
+            video_info: video information dictionary (optional)
             
         Returns:
             Formatted text string
         """
-        text_parts = [
+        text_parts = []
+        
+        # Add video title if available
+        if video_info and 'title' in video_info:
+            text_parts.append(f"Video: {video_info['title']}")
+        
+        # Add existing content
+        text_parts.extend([
             f"Topic: {chunk.get('topic', 'Unknown')}",
             chunk.get('summary', ''),
             f"Keywords: {', '.join(chunk.get('keywords', []))}"
-        ]
+        ])
             
         return "\n".join(text_parts)
     
@@ -180,24 +188,30 @@ class BatchEmbeddingProcessor:
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        # Extract knowledge_chunks
+        # Extract knowledge_chunks with corresponding video_info
+        chunks_with_video_info = []
         if isinstance(data, list):
-            chunks = []
             for item in data:
                 if isinstance(item, dict):
                     if "knowledge_chunks" in item:
                         # Object directly containing knowledge_chunks
-                        chunks.extend(item["knowledge_chunks"])
+                        video_info = item.get("video_info", {})
+                        for chunk in item["knowledge_chunks"]:
+                            chunks_with_video_info.append((chunk, video_info))
                     elif "videos" in item:
                         # Object containing videos array, skip (these are video lists, not knowledge chunks)
                         continue
-            if not chunks:
-                # If no knowledge_chunks found, maybe it's a direct chunks array
-                chunks = data
+            if not chunks_with_video_info:
+                # If no knowledge_chunks found, maybe it's a direct chunks array (without video_info)
+                chunks_with_video_info = [(chunk, {}) for chunk in data]
         elif isinstance(data, dict) and "knowledge_chunks" in data:
-            chunks = data["knowledge_chunks"]
+            video_info = data.get("video_info", {})
+            chunks_with_video_info = [(chunk, video_info) for chunk in data["knowledge_chunks"]]
         else:
             raise ValueError("Incorrect JSON file format, must contain knowledge_chunks array")
+        
+        # Extract just chunks for backward compatibility
+        chunks = [chunk for chunk, _ in chunks_with_video_info]
         
         logger.info(f"Found {len(chunks)} knowledge chunks")
         
@@ -206,12 +220,12 @@ class BatchEmbeddingProcessor:
         output_path.mkdir(exist_ok=True)
         
         if self.vector_store_type == "qdrant":
-            return self._build_qdrant_index(chunks, output_path, batch_size, collection_name)
+            return self._build_qdrant_index(chunks_with_video_info, output_path, batch_size, collection_name)
         else:
-            return self._build_faiss_index(chunks, output_path, batch_size, collection_name)
+            return self._build_faiss_index(chunks_with_video_info, output_path, batch_size, collection_name)
     
     def _build_qdrant_index(self, 
-                           chunks: List[Dict], 
+                           chunks_with_video_info: List[tuple], 
                            output_path: Path,
                            batch_size: int,
                            collection_name: str) -> str:
@@ -225,17 +239,18 @@ class BatchEmbeddingProcessor:
         )
         
         # Batch processing
-        for i in tqdm(range(0, len(chunks), batch_size), desc="Building Qdrant index"):
-            batch = chunks[i:i + batch_size]
-            texts = [self.build_text(c) for c in batch]
+        for i in tqdm(range(0, len(chunks_with_video_info), batch_size), desc="Building Qdrant index"):
+            batch = chunks_with_video_info[i:i + batch_size]
+            texts = [self.build_text(chunk, video_info) for chunk, video_info in batch]
             vectors = self.embed_batch(texts)
             
             # Upload to Qdrant
+            chunks_only = [chunk for chunk, _ in batch]
             client.upload_collection(
                 collection_name=collection_name,
                 vectors=vectors,
-                payload=batch,  # Original JSON as payload
-                ids=[c.get("chunk_id", f"chunk_{i+j}") for j, c in enumerate(batch)]
+                payload=chunks_only,  # Original JSON as payload
+                ids=[c.get("chunk_id", f"chunk_{i+j}") for j, c in enumerate(chunks_only)]
             )
         
         # Save config
@@ -244,7 +259,7 @@ class BatchEmbeddingProcessor:
             "collection_name": collection_name,
             "model": self.model,
             "output_dim": self.output_dim,
-            "chunk_count": len(chunks)
+            "chunk_count": len(chunks_with_video_info)
         }
         
         config_path = output_path / f"{collection_name}_config.json"
@@ -255,7 +270,7 @@ class BatchEmbeddingProcessor:
         return str(config_path)
     
     def _build_faiss_index(self, 
-                          chunks: List[Dict], 
+                          chunks_with_video_info: List[tuple], 
                           output_path: Path,
                           batch_size: int,
                           collection_name: str) -> str:
@@ -264,13 +279,14 @@ class BatchEmbeddingProcessor:
         all_metadatas = []
         
         # Batch processing
-        for i in tqdm(range(0, len(chunks), batch_size), desc="Building FAISS index"):
-            batch = chunks[i:i + batch_size]
-            texts = [self.build_text(c) for c in batch]
+        for i in tqdm(range(0, len(chunks_with_video_info), batch_size), desc="Building FAISS index"):
+            batch = chunks_with_video_info[i:i + batch_size]
+            texts = [self.build_text(chunk, video_info) for chunk, video_info in batch]
             vectors = self.embed_batch(texts)
             
             all_vectors.extend(vectors)
-            all_metadatas.extend(batch)
+            chunks_only = [chunk for chunk, _ in batch]
+            all_metadatas.extend(chunks_only)
         
         # Convert to numpy array
         vectors_array = np.array(all_vectors, dtype=np.float32)
@@ -311,7 +327,9 @@ class BatchEmbeddingProcessor:
             game_name = collection_name.replace("_vectors", "") if "_vectors" in collection_name else collection_name
             
             enhanced_bm25_indexer = EnhancedBM25Indexer(game_name=game_name)
-            enhanced_bm25_indexer.build_index(chunks)
+            # Extract just chunks for BM25 indexer
+            chunks_for_bm25 = [chunk for chunk, _ in chunks_with_video_info]
+            enhanced_bm25_indexer.build_index(chunks_for_bm25)
             
             # Save enhanced BM25 index
             bm25_path = index_path / "enhanced_bm25_index.pkl"
@@ -336,7 +354,7 @@ class BatchEmbeddingProcessor:
             "game_name": game_name,  # Add game name
             "model": self.model,
             "output_dim": self.output_dim,
-            "chunk_count": len(chunks),
+            "chunk_count": len(chunks_with_video_info),
             "index_path": collection_name,  # Use relative path, not absolute
             "bm25_index_path": bm25_path_str,  # Use relative path
             "hybrid_search_enabled": True  # BM25 index built successfully

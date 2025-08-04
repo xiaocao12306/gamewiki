@@ -249,11 +249,8 @@ class GeminiSummarizer:
 3. **双查询理解**：
    - 检索查询帮助你理解"召回思路"，判断哪些段落最相关
    - 原始查询帮助你决定回答的措辞、详细程度、写作风格，避免"语义漂移"
-4. **根据问题类型调整回答**：
-   - 配装推荐：完整列出所有装备/部件信息
-   - 敌人攻略：提供弱点、血量、推荐武器等关键信息
-   - 游戏策略：给出具体的操作建议和技巧
-   - 物品信息：详细说明属性、获取方式、用途等
+4. **充分利用提供的json chunks**：
+   - 如果你认为某一主题的json能够有效的回答用户的问题，那么你需要充分的使用chunk中的structured_data内容，例如在装备推荐中，你**必须**列举所有的装备信息，包括主武器，副武器和其他被提及的装备
 5. **智能判断回答详细程度**：
    - 仔细分析[原始查询]中的表述，理解用户期望的回答长度
    - 如果用户要求"一句话"、"简短"、"简要"等，提供简洁答案
@@ -278,11 +275,8 @@ Response guidelines:
 3. **Dual query understanding**:
    - Retrieval query helps you understand the "recall approach" to judge which segments are most relevant
    - Original query helps you decide response wording, detail level, and writing style to avoid "semantic drift"
-4. **Adapt response based on question type**:
-   - Build recommendations: List complete equipment/component information
-   - Enemy guides: Provide weak points, health, recommended weapons
-   - Game strategies: Give specific operation suggestions and tactics
-   - Item information: Detail attributes, acquisition methods, uses
+4. **Make full use of the provided JSON chunks**:
+   - If you believe that a topic’s JSON can effectively answer the user’s question, you need to fully leverage the structured_data in that chunk. For example, when giving equipment recommendations, you must list **every piece** of gear mentioned, including the primary weapon, secondary weapon, and any other referenced equipment.
 5. **Intelligently determine response detail level**:
    - Carefully analyze the wording in [Original Query] to understand the user's expected response length
    - If user asks for "one sentence", "brief", "short", etc., provide concise answer

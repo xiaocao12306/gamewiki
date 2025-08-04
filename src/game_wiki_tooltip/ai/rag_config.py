@@ -86,7 +86,7 @@ class HybridSearchConfig:
 class SummarizationConfig:
     """Summary generation configuration"""
     enabled: bool = True
-    model_name: str = "gemini-2.0-flash"
+    model_name: str = "gemini-2.5-flash"
     max_summary_length: int = 300
     temperature: float = 0.3
     include_sources: bool = True

@@ -7,6 +7,9 @@ import sys
 import logging
 import time
 import pathlib
+import shutil
+
+logger = logging.getLogger(__name__)
 
 from src.game_wiki_tooltip.core.i18n import t
 from src.game_wiki_tooltip.core.config import WindowGeometryConfig
@@ -19,6 +22,8 @@ from src.game_wiki_tooltip.window_component import (
     QuickAccessPopup,
     ExpandableIconButton,
     ChatView,
+    VoiceRecognitionThread,
+    is_voice_recognition_available,
 )
 
 try:
@@ -105,6 +110,11 @@ class UnifiedAssistantWindow(QMainWindow):
         # Store geometry for different states
         self._pending_geometry_save = False  # Flag to track if geometry needs saving
         self._is_precreating = False  # Flag to indicate if window is in precreation mode
+        
+        # Voice recognition
+        self.voice_thread = None
+        self.is_voice_recording = False
+        self.original_placeholder = ""
         self._cached_chat_only_size = None  # Cache for chat_only size to avoid recalculation
         
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
@@ -362,6 +372,24 @@ class UnifiedAssistantWindow(QMainWindow):
         self.mode_button.setIcon(search_icon)
         self.mode_button.setIconSize(QSize(20, 20))
         
+        # Voice input button
+        self.voice_button = QPushButton()
+        self.voice_button.setObjectName("voiceBtn")
+        self.voice_button.setFixedSize(32, 32)
+        self.voice_button.setToolTip("Voice Input")
+        self.voice_button.clicked.connect(self.toggle_voice_input)
+        
+        # Load microphone icon
+        mic_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "microphone-alt-1-svgrepo-com.svg")
+        mic_icon = load_svg_icon(mic_icon_path, color="#111111", size=18)
+        self.voice_button.setIcon(mic_icon)
+        self.voice_button.setIconSize(QSize(18, 18))
+        
+        # Disable voice button if voice recognition not available
+        if not is_voice_recognition_available():
+            self.voice_button.setEnabled(False)
+            self.voice_button.setToolTip("Voice input not available. Install vosk and pyaudio.")
+        
         # Send button
         self.send_button = QPushButton()
         self.send_button.setObjectName("sendBtn")
@@ -388,18 +416,13 @@ class UnifiedAssistantWindow(QMainWindow):
         self.task_flow_button.setToolTip(t("task_flow"))
         self.task_flow_button.hide()  # Initially hidden
         
-        # Load task flow icon
-        task_icon_path = str(base_path / "src" / "game_wiki_tooltip" / "assets" / "icons" / "layers-svgrepo-com.svg")
-        task_icon = load_svg_icon(task_icon_path, color="#111111", size=20)
-        self.task_flow_button.setIcon(task_icon)
-        self.task_flow_button.setIconSize(QSize(20, 20))
-        
         access_layout.addWidget(self.task_flow_button)
         
         # Initialize current task flow game
         self.current_task_flow_game = None
         
         access_layout.addStretch()  # Space in middle
+        access_layout.addWidget(self.voice_button)
         access_layout.addWidget(self.send_button)
         
         # Add rows to search container
@@ -573,7 +596,7 @@ class UnifiedAssistantWindow(QMainWindow):
         }
         
         /* Button styles for the bottom row */
-        #historyBtn, #externalBtn, #searchBtn, #sendBtn {
+        #historyBtn, #externalBtn, #searchBtn, #voiceBtn, #sendBtn {
             background: transparent;
             border: none;
             color: #111111;
@@ -1700,7 +1723,7 @@ class UnifiedAssistantWindow(QMainWindow):
             for shortcut in visible_shortcuts:
                 try:
                     # Use package_file to get correct path
-                    from src.game_wiki_tooltip.core.utils import package_file
+                    from src.game_wiki_tooltip.core.utils import package_file, APPDATA_DIR
                     icon_path = ""
                     if shortcut.get('icon'):
                         try:
@@ -1709,38 +1732,55 @@ class UnifiedAssistantWindow(QMainWindow):
                             
                             # Get the actual file path
                             import pathlib
-                            # Try direct path first (for development)
-                            base_path = pathlib.Path(__file__).parent
-                            # relative_path already contains "assets/icons/..."
-                            direct_path = base_path / relative_path
+                            import shutil
                             
-                            if direct_path.exists():
-                                icon_path = str(direct_path)
-                                print(f"[load_shortcuts] Using direct path: {icon_path}")
+                            # Create icons directory in APPDATA if it doesn't exist
+                            icons_dir = APPDATA_DIR / "icons"
+                            icons_dir.mkdir(exist_ok=True)
+                            
+                            # Get the icon filename
+                            icon_filename = pathlib.Path(relative_path).name
+                            cached_icon_path = icons_dir / icon_filename
+                            
+                            # Check if icon already exists in cache
+                            if cached_icon_path.exists():
+                                icon_path = str(cached_icon_path)
+                                print(f"[load_shortcuts] Using cached icon: {icon_path}")
                             else:
-                                # Try package_file for packaged app
-                                try:
-                                    # Remove 'assets/' prefix for package_file call
-                                    package_path = relative_path
-                                    if relative_path.startswith('assets/'):
-                                        package_path = relative_path[7:]  # Remove 'assets/'
-                                    path_obj = package_file(package_path)
-                                    # For resources, we might need to extract
-                                    if hasattr(path_obj, 'read_bytes'):
-                                        # It's a resource, we need to save it temporarily
-                                        import tempfile
-                                        data = path_obj.read_bytes()
-                                        suffix = pathlib.Path(relative_path).suffix
-                                        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                                            tmp.write(data)
-                                            icon_path = tmp.name
-                                        print(f"[load_shortcuts] Extracted resource to: {icon_path}")
-                                    else:
-                                        icon_path = str(path_obj)
-                                        print(f"[load_shortcuts] package_file path: {icon_path}")
-                                except Exception as e:
-                                    print(f"[load_shortcuts] Failed with package_file: {e}")
-                                    icon_path = ""
+                                # Try direct path first (for development)
+                                base_path = pathlib.Path(__file__).parent
+                                # relative_path already contains "assets/icons/..."
+                                direct_path = base_path / relative_path
+                                
+                                if direct_path.exists():
+                                    # Copy to cache
+                                    shutil.copyfile(direct_path, cached_icon_path)
+                                    icon_path = str(cached_icon_path)
+                                    print(f"[load_shortcuts] Copied icon to cache: {icon_path}")
+                                else:
+                                    # Try package_file for packaged app
+                                    try:
+                                        # Remove 'assets/' prefix for package_file call
+                                        package_path = relative_path
+                                        if relative_path.startswith('assets/'):
+                                            package_path = relative_path[7:]  # Remove 'assets/'
+                                        path_obj = package_file(package_path)
+                                        
+                                        # For resources, we need to extract
+                                        if hasattr(path_obj, 'read_bytes'):
+                                            # It's a resource, save to cache
+                                            data = path_obj.read_bytes()
+                                            cached_icon_path.write_bytes(data)
+                                            icon_path = str(cached_icon_path)
+                                            print(f"[load_shortcuts] Extracted resource to cache: {icon_path}")
+                                        else:
+                                            # It's a real file, copy to cache
+                                            shutil.copyfile(path_obj, cached_icon_path)
+                                            icon_path = str(cached_icon_path)
+                                            print(f"[load_shortcuts] Copied package file to cache: {icon_path}")
+                                    except Exception as e:
+                                        print(f"[load_shortcuts] Failed with package_file: {e}")
+                                        icon_path = ""
                         except Exception as e:
                             print(f"[load_shortcuts] Failed to get icon path: {e}")
                             icon_path = ""
@@ -2080,6 +2120,95 @@ class UnifiedAssistantWindow(QMainWindow):
                 self.input_field.clear()
                 self.query_submitted.emit(text, self.current_mode)
     
+    def toggle_voice_input(self):
+        """Toggle voice recording on/off."""
+        if not self.is_voice_recording:
+            self.start_voice_recording()
+        else:
+            self.stop_voice_recording()
+    
+    def start_voice_recording(self):
+        """Start voice recording."""
+        if not is_voice_recognition_available():
+            self.chat_view.show_status("Voice recognition not available. Please install vosk and pyaudio.")
+            return
+            
+        self.is_voice_recording = True
+        
+        # Update UI state
+        self.voice_button.setObjectName("voiceBtnActive")
+        self.voice_button.setStyleSheet("""
+            QPushButton#voiceBtnActive {
+                background-color: #4444ff;
+                border: 2px solid #0000ff;
+                border-radius: 16px;
+            }
+            QPushButton#voiceBtnActive:hover {
+                background-color: #6666ff;
+            }
+        """)
+        
+        # Update icon to recording state
+        import pathlib
+        base_path = pathlib.Path(__file__).parent.parent
+        mic_icon_path = str(base_path / "assets" / "icons" / "microphone-alt-1-svgrepo-com.svg")
+        mic_icon = load_svg_icon(mic_icon_path, color="#ffffff", size=18)
+        self.voice_button.setIcon(mic_icon)
+        
+        # Store original placeholder
+        self.original_placeholder = self.input_field.placeholderText()
+        self.input_field.setPlaceholderText("Listening...")
+        
+        # Create and start voice thread with configured audio device
+        device_index = self.settings_manager.settings.audio_device_index
+        self.voice_thread = VoiceRecognitionThread(device_index=device_index)
+        self.voice_thread.partial_result.connect(self.on_voice_partial_result)
+        self.voice_thread.final_result.connect(self.on_voice_final_result)
+        self.voice_thread.error_occurred.connect(self.on_voice_error)
+        self.voice_thread.start()
+    
+    def stop_voice_recording(self):
+        """Stop voice recording."""
+        self.is_voice_recording = False
+        
+        # Restore UI state
+        self.voice_button.setObjectName("voiceBtn")
+        self.voice_button.setStyleSheet("")  # Reset to default style
+        self.input_field.setPlaceholderText(self.original_placeholder)
+        
+        # Restore icon to normal state
+        import pathlib
+        base_path = pathlib.Path(__file__).parent.parent
+        mic_icon_path = str(base_path / "assets" / "icons" / "microphone-alt-1-svgrepo-com.svg")
+        mic_icon = load_svg_icon(mic_icon_path, color="#111111", size=18)
+        self.voice_button.setIcon(mic_icon)
+        
+        # Stop voice thread
+        if self.voice_thread:
+            self.voice_thread.stop_recording()
+            self.voice_thread.wait()
+            self.voice_thread = None
+    
+    def on_voice_partial_result(self, text: str):
+        """Handle partial voice recognition results."""
+        self.input_field.setText(text)
+    
+    def on_voice_final_result(self, text: str):
+        """Handle final voice recognition results."""
+        current_text = self.input_field.text()
+        if current_text:
+            # Append to existing text with a space
+            self.input_field.setText(current_text + " " + text)
+        else:
+            self.input_field.setText(text)
+    
+    def on_voice_error(self, error_msg: str):
+        """Handle voice recognition errors."""
+        logger.error(f"Voice recognition error: {error_msg}")
+        self.stop_voice_recording()
+        # Show error to user
+        self.chat_view.show_status(f"Voice error: {error_msg}")
+    
     def set_generating_state(self, is_generating: bool, streaming_msg=None):
         """Set generation state"""
         self.is_generating = is_generating
@@ -2211,6 +2340,10 @@ class UnifiedAssistantWindow(QMainWindow):
     def closeEvent(self, event):
         """Handle close event - just hide the window"""
         event.ignore()  # Don't actually close the window
+        
+        # Stop voice recording if active
+        if self.is_voice_recording:
+            self.stop_voice_recording()
         
         # Save geometry information and persist to disk
         try:

@@ -12,6 +12,7 @@ from .chat_view import ChatView
 from .wiki_view import WikiView
 from .quick_access_popup import QuickAccessPopup, ExpandableIconButton
 from .window_controller import AssistantController
+from .voice_recognition import VoiceRecognitionThread, is_voice_recognition_available
 __all__ = [
     'convert_markdown_to_html',
     'detect_markdown_content',
@@ -28,6 +29,8 @@ __all__ = [
     'StreamingMessageWidget',
     'WindowsGraphicsCompatibility',
     'ChatView',
+    'VoiceRecognitionThread',
+    'is_voice_recognition_available',
 ]
 
 from src.game_wiki_tooltip.core.graphics_compatibility import WindowsGraphicsCompatibility

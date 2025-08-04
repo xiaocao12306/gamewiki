@@ -35,3 +35,7 @@ pythonnet>=3.0.0  # WebView2 支持已启用
 
 # BlurWindow半透明效果依赖
 BlurWindow>=1.0.0
+
+# Voice input support
+vosk>=0.3.45
+pyaudio>=0.2.13

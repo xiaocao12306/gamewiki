@@ -53,8 +53,7 @@ class ApiKeyMissingDialog(QDialog):
         message = (
             "AI guide features require both API keys to function properly:\n\n"
             f"Missing: {', '.join(self.missing_keys)}\n\n"
-            "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-            "Jina vector search is essential for complete AI guide features.\n\n"
+            "⚠️ Note: Missing Gemini API cannot provide AI RAG functionality.\n"
             "You can still use Wiki search without API keys."
         )
         
@@ -225,20 +224,20 @@ class QtSettingsWindow(QMainWindow):
         layout.addLayout(button_layout)
         
     def _create_language_tab(self):
-        """Create language configuration tab"""
+        """Create general settings configuration tab"""
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
         # Title
-        title = QLabel(t("language_title"))
+        title = QLabel("General Settings")
         title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
         layout.addWidget(title)
         
         # Language group
-        group = QGroupBox()
-        group_layout = QVBoxLayout(group)
+        lang_group = QGroupBox("Language Settings")
+        lang_group_layout = QVBoxLayout(lang_group)
         
         # Language selection
         lang_layout = QHBoxLayout()
@@ -259,9 +258,39 @@ class QtSettingsWindow(QMainWindow):
         
         lang_layout.addWidget(self.language_combo)
         lang_layout.addStretch()
-        group_layout.addLayout(lang_layout)
+        lang_group_layout.addLayout(lang_layout)
         
-        layout.addWidget(group)
+        layout.addWidget(lang_group)
+        
+        # Audio Device group
+        audio_group = QGroupBox("Audio Settings")
+        audio_group_layout = QVBoxLayout(audio_group)
+        
+        # Audio device selection
+        audio_layout = QHBoxLayout()
+        audio_label = QLabel("Audio Input Device:")
+        audio_layout.addWidget(audio_label)
+        
+        self.audio_device_combo = QComboBox()
+        self.audio_device_combo.setFixedWidth(300)
+        
+        # Populate audio device options
+        self._populate_audio_devices()
+        
+        audio_layout.addWidget(self.audio_device_combo)
+        audio_layout.addStretch()
+        audio_group_layout.addLayout(audio_layout)
+        
+        # Refresh devices button
+        refresh_layout = QHBoxLayout()
+        refresh_button = QPushButton("Refresh Devices")
+        refresh_button.clicked.connect(self._refresh_audio_devices)
+        refresh_button.setFixedWidth(120)
+        refresh_layout.addWidget(refresh_button)
+        refresh_layout.addStretch()
+        audio_group_layout.addLayout(refresh_layout)
+        
+        layout.addWidget(audio_group)
         
         # Tips
         tips_label = QLabel(t("language_tips"))
@@ -271,7 +300,42 @@ class QtSettingsWindow(QMainWindow):
         
         layout.addStretch()
         
-        self.tab_widget.addTab(tab, t("language_tab"))
+        self.tab_widget.addTab(tab, "General")
+    
+    def _populate_audio_devices(self):
+        """Populate audio device combo box"""
+        self.audio_device_combo.clear()
+        
+        # Add default option
+        self.audio_device_combo.addItem("System Default", None)
+        
+        try:
+            from src.game_wiki_tooltip.window_component.voice_recognition import get_audio_input_devices
+            devices = get_audio_input_devices()
+            
+            for device in devices:
+                device_name = device['name']
+                device_index = device['index']
+                # Show device name with index for clarity
+                display_name = f"{device_name} (Index: {device_index})"
+                self.audio_device_combo.addItem(display_name, device_index)
+                
+        except Exception as e:
+            logger.error(f"Failed to get audio devices: {e}")
+            # Add error indicator
+            self.audio_device_combo.addItem("Audio devices unavailable", None)
+    
+    def _refresh_audio_devices(self):
+        """Refresh audio device list"""
+        current_selection = self.audio_device_combo.currentData()
+        self._populate_audio_devices()
+        
+        # Try to restore previous selection
+        if current_selection is not None:
+            for i in range(self.audio_device_combo.count()):
+                if self.audio_device_combo.itemData(i) == current_selection:
+                    self.audio_device_combo.setCurrentIndex(i)
+                    break
         
     def switch_to_api_tab(self):
         """Switch to API configuration tab"""
@@ -684,9 +748,7 @@ class QtSettingsWindow(QMainWindow):
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         group_layout.addWidget(separator)
-        
-        # Jina API no longer needed - using Gemini for embeddings
-        
+
         layout.addWidget(group)
         
         # Tips
@@ -744,8 +806,6 @@ class QtSettingsWindow(QMainWindow):
             api_widgets[0].setText(t("api_title"))            # Title
             api_widgets[1].setText(t("google_api_label"))     # Google API
             api_widgets[2].setText(f'<a href="https://makersuite.google.com/app/apikey">{t("google_api_help")}</a>')
-            api_widgets[3].setText(t("jina_api_label"))       # Jina API
-            api_widgets[4].setText(f'<a href="https://jina.ai/">{t("jina_api_help")}</a>')
             api_widgets[5].setText(t("api_tips"))             # Tips
         
         # Language tab (index 4)
@@ -769,6 +829,15 @@ class QtSettingsWindow(QMainWindow):
             if self.language_combo.itemData(i) == current_language:
                 self.language_combo.setCurrentIndex(i)
                 break
+        
+        # Load audio device settings
+        audio_device_index = settings.get('audio_device_index')
+        if hasattr(self, 'audio_device_combo'):
+            # Find and set the current audio device
+            for i in range(self.audio_device_combo.count()):
+                if self.audio_device_combo.itemData(i) == audio_device_index:
+                    self.audio_device_combo.setCurrentIndex(i)
+                    break
         
         # Load hotkey settings
         hotkey = settings.get('hotkey', {})
@@ -801,6 +870,11 @@ class QtSettingsWindow(QMainWindow):
         # Get selected language
         selected_language = self.language_combo.itemData(self.language_combo.currentIndex())
         
+        # Get selected audio device
+        selected_audio_device = None
+        if hasattr(self, 'audio_device_combo'):
+            selected_audio_device = self.audio_device_combo.itemData(self.audio_device_combo.currentIndex())
+        
         # Validate hotkey
         modifiers = []
         if self.ctrl_check.isChecked():
@@ -820,8 +894,6 @@ class QtSettingsWindow(QMainWindow):
         gemini_api_key_input = self.google_api_input.text().strip()
         gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         gemini_api_key = gemini_api_key_input or gemini_api_key_env
-        
-        # Jina API key no longer needed
         
         # Check if both API keys are available
         missing_keys = []
@@ -859,7 +931,7 @@ class QtSettingsWindow(QMainWindow):
                 # Continue with settings save logic
             
         # Update settings (only save what user explicitly entered)
-        self.settings_manager.update({
+        settings_update = {
             'language': selected_language,
             'hotkey': {
                 'modifiers': modifiers,
@@ -867,10 +939,15 @@ class QtSettingsWindow(QMainWindow):
             },
             'api': {
                 'gemini_api_key': gemini_api_key_input,  # Only save user input
-                # jina_api_key removed
             },
             'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
-        })
+        }
+        
+        # Add audio device setting if available
+        if selected_audio_device is not None or hasattr(self, 'audio_device_combo'):
+            settings_update['audio_device_index'] = selected_audio_device
+        
+        self.settings_manager.update(settings_update)
         
         # Save wiki URLs if modified
         if hasattr(self, 'wiki_urls_modified') and self.wiki_urls_modified:
@@ -914,9 +991,7 @@ class QtSettingsWindow(QMainWindow):
         gemini_api_key_input = self.google_api_input.text().strip()
         gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         gemini_api_key = gemini_api_key_input or gemini_api_key_env
-        
-        # Jina API key no longer needed
-        
+
         # Check if both API keys are available
         missing_keys = []
         if not gemini_api_key:

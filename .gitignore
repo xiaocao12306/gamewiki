@@ -221,3 +221,7 @@ Windows10_Graphics_Fix_README.md
 *.backup
 *~
 GameWikiAssistant_Portable_onedir/
+
+# Vosk voice recognition models (large binary files)
+src/game_wiki_tooltip/assets/vosk_models/
+*.vosk
