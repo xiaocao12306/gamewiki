@@ -23,9 +23,9 @@ class InitializationThread(QThread):
         try:
             # Step 1: Import core modules
             self.progress_update.emit(10, "Loading core modules...")
-            from . import config
-            from . import utils
-            
+            from src.game_wiki_tooltip.core import config
+            from src.game_wiki_tooltip.core import utils
+
             # Step 2: Import Qt modules
             self.progress_update.emit(25, "Loading UI components...")
             from . import qt_app
@@ -33,7 +33,7 @@ class InitializationThread(QThread):
 
             # Step 3: Initialize settings
             self.progress_update.emit(40, "Loading settings...")
-            from .config import SettingsManager
+            from src.game_wiki_tooltip.core.config import SettingsManager
             settings_manager = SettingsManager()
             
             # Step 4: Load AI modules directly (not just start background loading)
@@ -292,9 +292,9 @@ class FirstRunInitializationThread(InitializationThread):
             
             # Step 2: Import core modules
             self.progress_update.emit(15, "Loading core modules...")
-            from . import config
-            from . import utils
-            
+            from src.game_wiki_tooltip.core import config
+            from src.game_wiki_tooltip.core import utils
+
             # Step 3: Import Qt modules
             self.progress_update.emit(30, "Loading UI components...")
             from . import qt_app
@@ -302,7 +302,7 @@ class FirstRunInitializationThread(InitializationThread):
 
             # Step 4: Initialize settings
             self.progress_update.emit(45, "Initializing settings...")
-            from .config import SettingsManager
+            from src.game_wiki_tooltip.core.config import SettingsManager
             settings_manager = SettingsManager()
             
             # Step 5: Load AI modules

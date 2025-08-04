@@ -4,16 +4,14 @@ PyQt6-compatible global hotkey management with conflict resolution.
 
 import logging
 import ctypes
-from typing import Callable, Dict, Final, Optional
+from typing import Dict, Final, Optional
 from ctypes import wintypes
 
 import win32con
-import win32api
-import win32gui
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.game_wiki_tooltip.config import SettingsManager
+from src.game_wiki_tooltip.core.config import SettingsManager
 
 MOD_MAP: Final[Dict[str, int]] = {
     "Alt": win32con.MOD_ALT,

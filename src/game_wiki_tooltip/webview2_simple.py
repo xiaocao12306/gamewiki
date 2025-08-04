@@ -3,14 +3,8 @@ Simplified WebView2 widget for PyQt6 - Alternative implementation
 Uses minimal WebView2 features to avoid compatibility issues
 """
 
-import sys
-import os
 import logging
-import ctypes
-from ctypes import wintypes
-from typing import Optional
 from pathlib import Path
-import ctypes.wintypes
 
 try:
     import clr
@@ -169,8 +163,6 @@ class SimpleWebView2Widget(QWidget):
         self.loadFinished.emit(True)
         # Inject JavaScript after page load completion
         QTimer.singleShot(100, self._inject_link_interceptor)
-        # Extract title after navigation with longer delay for dynamic pages
-        QTimer.singleShot(1500, self._extract_and_emit_title)
     
     def _on_source_changed(self, sender, args):
         """URL changed"""
@@ -261,72 +253,7 @@ class SimpleWebView2Widget(QWidget):
                     self.titleChanged.emit(self.current_title)
         except Exception as e:
             logger.warning(f"Failed to check and emit title: {e}")
-            
-    def _extract_and_emit_title(self):
-        """Extract title and emit titleChanged signal"""
-        try:
-            if self.webview2 and hasattr(self.webview2, 'CoreWebView2') and self.webview2.CoreWebView2:
-                # JavaScript to extract and return title
-                script = """
-                (function() {
-                    var title = document.title;
-                    if (title && title !== '' && title !== 'undefined') {
-                        // Return title as-is without modification
-                        return title;
-                    }
-                    // Fallback to h1
-                    var h1 = document.querySelector('h1');
-                    if (h1 && h1.innerText) {
-                        return h1.innerText.trim();
-                    }
-                    return '';
-                })();
-                """
-                
-                # Since we can't get the async result directly, we'll monitor document.title
-                # Execute the script to ensure title is properly set
-                self.webview2.CoreWebView2.ExecuteScriptAsync(script)
-                
-                # Check document.title after a short delay
-                QTimer.singleShot(200, self._emit_title_from_document)
-        except Exception as e:
-            logger.warning(f"Failed to extract and emit title: {e}")
-            
-    def _emit_title_from_document(self):
-        """Emit title from document.title"""
-        try:
-            # Skip title extraction for WebView2 - it causes crashes
-            # The titleChanged signal from WebView2 itself should handle this
-            logger.info("Skipping manual title extraction for WebView2 to avoid crashes")
-            pass
-        except Exception as e:
-            logger.warning(f"Failed to emit title from document: {e}")
-    
-            
-    def _check_title_via_script(self):
-        """Check title by injecting and reading JavaScript"""
-        try:
-            # Inject script to set title in a known location
-            script = """
-            (function() {
-                var title = document.title;
-                if (window.__webview2_title !== title) {
-                    window.__webview2_title = title;
-                    // Try to trigger a detectable event
-                    if (title && title !== '') {
-                        console.log('TITLE:' + title);
-                    }
-                }
-                return title;
-            })();
-            """
-            self.runJavaScript(script)
-            
-            # For now, we'll rely on the page's title tag being updated
-            # and detected through other means
-        except Exception as e:
-            logger.warning(f"Failed to check title via script: {e}")
-    
+
     def _connect_new_window_handler(self):
         """Connect new window request handler"""
         try:

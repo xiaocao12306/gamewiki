@@ -12,7 +12,7 @@ def package_file(relative_path: str) -> Path:
         return base_path / relative_path
     else:
         # Development environment, use simple relative path approach for Windows compatibility
-        current_dir = Path(__file__).parent
+        current_dir = Path(__file__).parent.parent
         assets_dir = current_dir / "assets"
         return assets_dir / relative_path
 

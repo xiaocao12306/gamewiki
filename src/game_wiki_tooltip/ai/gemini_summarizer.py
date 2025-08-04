@@ -6,14 +6,12 @@ import json
 import logging
 from typing import List, Dict, Optional, Any, AsyncGenerator
 import google.generativeai as genai
-import google.generativeai.types as types
 from dataclasses import dataclass
 from pathlib import Path
-import re
 
 # Import i18n for internationalization
-from src.game_wiki_tooltip.i18n import t
-from .rag_config import RAGConfig, get_default_config
+from src.game_wiki_tooltip.core.i18n import t
+from .rag_config import RAGConfig
 
 logger = logging.getLogger(__name__)
 

@@ -10,15 +10,14 @@ Features:
 """
 
 import jieba
-import json
 import pickle
 import re
 import logging
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import List, Dict, Any, Optional, Set
 from pathlib import Path
 
 # Import translation function
-from src.game_wiki_tooltip.i18n import t
+from src.game_wiki_tooltip.core.i18n import t
 
 # Try importing bm25s, a more modern and faster BM25 implementation
 try:

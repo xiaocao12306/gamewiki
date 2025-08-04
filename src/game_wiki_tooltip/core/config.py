@@ -12,7 +12,7 @@ import logging
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional
 
-from src.game_wiki_tooltip.utils import APPDATA_DIR, package_file
+from src.game_wiki_tooltip.core.utils import package_file
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,23 +22,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LLMConfig:
-    """LLM configuration class"""
-    model: str = "gemini-2.5-flash-lite"
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    max_tokens: int = 1000
-    temperature: float = 0.7
-    timeout: int = 30
-    enable_cache: bool = True
-    cache_ttl: int = 3600  # Cache TTL, seconds
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    
-    def is_valid(self) -> bool:
-        """Check if configuration is valid"""
-        api_key = self.get_api_key()
-        return bool(api_key and self.model)
-    
     def get_api_key(self) -> Optional[str]:
         """Get API key, prioritize environment variable"""
         if self.api_key:

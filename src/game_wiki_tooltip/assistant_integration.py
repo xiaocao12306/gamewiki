@@ -8,16 +8,15 @@ import threading
 import time
 from typing import Optional
 from dataclasses import dataclass
-import os # Added for os.getenv
+import os
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
 
-from src.game_wiki_tooltip.window_component import AssistantController
-from src.game_wiki_tooltip.window_component.unified_window import MessageType, TransitionMessages
-from src.game_wiki_tooltip.config import SettingsManager
+from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType
+from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
-from src.game_wiki_tooltip.utils import get_foreground_title
-from src.game_wiki_tooltip.smart_interaction_manager import SmartInteractionManager, InteractionMode
+from src.game_wiki_tooltip.core.utils import get_foreground_title
+from src.game_wiki_tooltip.core.smart_interaction_manager import SmartInteractionManager, InteractionMode
 
 # Lazy load AI modules - import only when needed to speed up startup
 logger = logging.getLogger(__name__)
@@ -298,8 +297,8 @@ class RAGIntegration(QObject):
             
     def _init_game_config_manager(self):
         """Initialize game configuration manager based on language settings"""
-        from src.game_wiki_tooltip.utils import APPDATA_DIR
-        from src.game_wiki_tooltip.config import GameConfigManager
+        from src.game_wiki_tooltip.core.utils import APPDATA_DIR
+        from src.game_wiki_tooltip.core.config import GameConfigManager
         
         # Get current language settings
         settings = self.settings_manager.get()
@@ -923,7 +922,7 @@ class RAGIntegration(QObject):
                             missing_keys.append("Jina API Key")
                         
                         # Use internationalized error information
-                        from src.game_wiki_tooltip.i18n import get_current_language
+                        from src.game_wiki_tooltip.core.i18n import get_current_language
                         current_lang = get_current_language()
                         
                         if current_lang == 'zh':
@@ -953,7 +952,7 @@ class RAGIntegration(QObject):
                     logger.info(f"📋 Window '{game_context}' does not support guide queries")
                     
                     # Use internationalized error information
-                    from src.game_wiki_tooltip.i18n import get_current_language
+                    from src.game_wiki_tooltip.core.i18n import get_current_language
                     current_lang = get_current_language()
                     
                     if current_lang == 'zh':
@@ -1034,7 +1033,7 @@ class RAGIntegration(QObject):
                         
                     logger.info(f"🔄 RAG query has no output, may need to switch to wiki mode: '{query}'")
                     
-                    from src.game_wiki_tooltip.i18n import get_current_language
+                    from src.game_wiki_tooltip.core.i18n import get_current_language
                     current_lang = get_current_language()
                     
                     if current_lang == 'zh':
@@ -1066,7 +1065,7 @@ class RAGIntegration(QObject):
                 # Handle specific RAG error types
                 from src.game_wiki_tooltip.ai.rag_query import VectorStoreUnavailableError
                 from src.game_wiki_tooltip.ai.enhanced_bm25_indexer import BM25UnavailableError
-                from src.game_wiki_tooltip.i18n import t, get_current_language
+                from src.game_wiki_tooltip.core.i18n import t, get_current_language
                 
                 current_lang = get_current_language()
                 error_str = str(e)
@@ -1352,7 +1351,7 @@ class IntegratedAssistantController(AssistantController):
         # Check RAG engine initialization status (check the RAGIntegration's status)
         if hasattr(self.rag_integration, '_rag_initializing') and self.rag_integration._rag_initializing:
             # RAG engine is initializing, display waiting status
-            from src.game_wiki_tooltip.i18n import t
+            from src.game_wiki_tooltip.core.i18n import t
             logger.info(f"🔄 RAG engine is initializing for game '{self.rag_integration._rag_init_game}', display waiting status")
             self.main_window.chat_view.show_status(t("rag_initializing"))
             
@@ -1366,7 +1365,7 @@ class IntegratedAssistantController(AssistantController):
         
     def _check_rag_init_status(self):
         """Check RAG initialization status periodically"""
-        from src.game_wiki_tooltip.i18n import t
+        from src.game_wiki_tooltip.core.i18n import t
         
         # Check if initialization is complete (check if _rag_initializing is False)
         if not self.rag_integration._rag_initializing:
@@ -2047,7 +2046,7 @@ class IntegratedAssistantController(AssistantController):
                 self.smart_interaction.set_user_requested_mouse_visible(True)
             
             # 4. 最后调用Windows API显示鼠标
-            from .utils import show_cursor_until_visible
+            from src.game_wiki_tooltip.core.utils import show_cursor_until_visible
             show_cursor_until_visible()
             logger.info("🖱️ Mouse cursor shown (after positioning)")
             

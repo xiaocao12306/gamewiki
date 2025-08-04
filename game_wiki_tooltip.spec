@@ -195,7 +195,7 @@ excludes = [
 ]
 
 a = Analysis(
-    [str(src_path / "game_wiki_tooltip" / "qt_app_bootstrap.py")],
+    [str(src_path / "game_wiki_tooltip" / "qt_app.py")],
     pathex=[str(project_root), str(src_path)],
     binaries=binaries,
     datas=datas,

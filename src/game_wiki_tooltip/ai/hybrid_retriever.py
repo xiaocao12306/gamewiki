@@ -10,14 +10,13 @@ Features:
 5. Performance optimization: complete multiple tasks in one LLM call
 """
 
-import numpy as np
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from .enhanced_bm25_indexer import EnhancedBM25Indexer, BM25UnavailableError
-from .unified_query_processor import process_query_unified, UnifiedQueryResult
+from .unified_query_processor import process_query_unified
 from .rag_config import LLMSettings
-from src.game_wiki_tooltip.i18n import t
+from src.game_wiki_tooltip.core.i18n import t
 from .rag_config import RAGConfig
 
 logger = logging.getLogger(__name__)

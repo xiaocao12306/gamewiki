@@ -18,6 +18,57 @@ except ImportError:
     print("Warning: markdown library not available. Markdown content will be displayed as plain text.")
     MARKDOWN_AVAILABLE = False
 
+def detect_markdown_content(text: str) -> bool:
+    """
+    Detect if text contains markdown format or HTML format
+
+    Args:
+        text: Text to detect
+
+    Returns:
+        True if text contains markdown or HTML format, False otherwise
+    """
+    if not text:
+        return False
+
+    # Detect common markdown patterns
+    markdown_patterns = [
+        r'\*\*.*?\*\*',  # Bold **text**
+        r'\*.*?\*',  # Italic *text*
+        r'#{1,6}\s',  # Headers # ## ### etc.
+        r'^\s*[-\*\+]\s',  # Unordered lists
+        r'^\s*\d+\.\s',  # Ordered lists
+        r'`.*?`',  # Inline code
+        r'```.*?```',  # Code blocks
+        r'\[.*?\]\(.*?\)',  # Links [text](url)
+    ]
+
+    # Detect HTML tags (especially those used in video sources)
+    html_patterns = [
+        r'<small.*?>.*?</small>',  # <small> tags
+        r'<a\s+.*?href.*?>.*?</a>',  # <a> link tags
+        r'<[^>]+>',  # Other HTML tags
+        r'📺\s*\*\*info source：\*\*',  # Video source title
+        r'---\s*\n\s*<small>',  # Markdown separator + HTML
+        r'\n\n<small>.*?来源.*?</small>',  # Generic source pattern
+        r'<br\s*/?>',  # <br> tags
+        r'<strong>.*?</strong>',  # <strong> tags
+        r'<em>.*?</em>',  # <em> tags
+        r'<code>.*?</code>',  # <code> tags
+        r'<pre>.*?</pre>',  # <pre> tags
+    ]
+
+    # Check markdown patterns
+    for pattern in markdown_patterns:
+        if re.search(pattern, text, re.MULTILINE | re.DOTALL):
+            return True
+
+    # Check HTML patterns
+    for pattern in html_patterns:
+        if re.search(pattern, text, re.MULTILINE | re.DOTALL):
+            return True
+
+    return False
 
 def convert_markdown_to_html(text: str) -> str:
     """
