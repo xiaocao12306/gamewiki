@@ -12,7 +12,7 @@ import os
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
 
-from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType
+from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType, WindowState
 from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
 from src.game_wiki_tooltip.core.utils import get_foreground_title
@@ -1948,6 +1948,15 @@ class IntegratedAssistantController(AssistantController):
             self.show_chat_window()
             logger.info("💬 Show chat window requested - executed before game window setting")
             
+            # 检查是否需要自动开启语音输入
+            if (self.settings_manager.settings.auto_voice_on_hotkey and 
+                self.main_window and 
+                self.main_window.current_state in [WindowState.CHAT_ONLY, WindowState.FULL_CONTENT]):
+                # 延迟启动语音输入，确保窗口完全显示且输入框获得焦点
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(150, lambda: self._auto_start_voice_input())
+                logger.info("🎤 Auto voice input scheduled after hotkey trigger")
+            
             # 然后异步设置游戏窗口（避免阻塞UI）
             if current_game_window:
                 logger.info(f"🎮 Setting current game window after chat display: '{current_game_window}'")
@@ -2002,6 +2011,19 @@ class IntegratedAssistantController(AssistantController):
             
         except Exception as e:
             logger.error(f"Error in delayed game window setting: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _auto_start_voice_input(self):
+        """Auto start voice input after hotkey trigger"""
+        try:
+            if self.main_window and hasattr(self.main_window, 'toggle_voice_input'):
+                logger.info("🎤 Auto-starting voice input")
+                self.main_window.toggle_voice_input()
+            else:
+                logger.warning("⚠️ Cannot auto-start voice input: main_window or toggle_voice_input not available")
+        except Exception as e:
+            logger.error(f"Error auto-starting voice input: {e}")
             import traceback
             traceback.print_exc()
     

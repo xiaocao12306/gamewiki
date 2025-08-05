@@ -290,6 +290,14 @@ class QtSettingsWindow(QMainWindow):
         refresh_layout.addStretch()
         audio_group_layout.addLayout(refresh_layout)
         
+        # Auto voice on hotkey checkbox
+        auto_voice_layout = QHBoxLayout()
+        self.auto_voice_checkbox = QCheckBox(t("auto_voice_on_hotkey") if hasattr(self, 't') else "Auto-start voice input on hotkey")
+        self.auto_voice_checkbox.setToolTip("When enabled, voice input will automatically start when opening the window with hotkey")
+        auto_voice_layout.addWidget(self.auto_voice_checkbox)
+        auto_voice_layout.addStretch()
+        audio_group_layout.addLayout(auto_voice_layout)
+        
         layout.addWidget(audio_group)
         
         # Tips
@@ -839,6 +847,11 @@ class QtSettingsWindow(QMainWindow):
                     self.audio_device_combo.setCurrentIndex(i)
                     break
         
+        # Load auto voice on hotkey setting
+        auto_voice_on_hotkey = settings.get('auto_voice_on_hotkey', False)
+        if hasattr(self, 'auto_voice_checkbox'):
+            self.auto_voice_checkbox.setChecked(auto_voice_on_hotkey)
+        
         # Load hotkey settings
         hotkey = settings.get('hotkey', {})
         modifiers = hotkey.get('modifiers', [])
@@ -946,6 +959,10 @@ class QtSettingsWindow(QMainWindow):
         # Add audio device setting if available
         if selected_audio_device is not None or hasattr(self, 'audio_device_combo'):
             settings_update['audio_device_index'] = selected_audio_device
+        
+        # Add auto voice on hotkey setting
+        if hasattr(self, 'auto_voice_checkbox'):
+            settings_update['auto_voice_on_hotkey'] = self.auto_voice_checkbox.isChecked()
         
         self.settings_manager.update(settings_update)
         

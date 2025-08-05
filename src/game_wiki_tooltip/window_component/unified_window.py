@@ -1235,31 +1235,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.current_state = WindowState.WEBVIEW
         self.has_switched_state = True  # User has manually switched states
         self.update_window_layout()
-        
-    def position_chat_window(self):
-        """Position the search box at bottom right of screen"""
-        screen = QApplication.primaryScreen()
-        screen_geometry = screen.geometry()
-        window_geometry = self.geometry()
-        
-        # Position at right side leaving about 1/5 space
-        x = screen_geometry.width() - window_geometry.width() - int(screen_geometry.width() * 0.2)
-        # Near bottom but not touching, leave about 50px gap
-        y = screen_geometry.height() - window_geometry.height() - 50
-        
-        self.move(x, y)
-        
-    def center_window(self):
-        """Center window on screen"""
-        screen = QApplication.primaryScreen()
-        screen_geometry = screen.geometry()
-        window_geometry = self.geometry()
-        
-        x = (screen_geometry.width() - window_geometry.width()) // 2
-        y = (screen_geometry.height() - window_geometry.height()) // 2
-        
-        self.move(x, y)
-        
+
     def update_container_style(self, full_rounded=False):
         """Update main container rounded corner style"""
         if full_rounded:

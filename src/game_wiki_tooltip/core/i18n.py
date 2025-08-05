@@ -178,7 +178,6 @@ class TranslationManager:
             "jina_api_help": "Get Jina API Key",
             "api_tips": "Notes:\n"
                        "• Gemini API Key is required for AI conversations and content generation\n"
-                       "• Jina API Key is used for advanced semantic search (optional)\n"
                        "• API keys are securely stored in local configuration files",
             
             # Language settings
@@ -353,7 +352,6 @@ class TranslationManager:
                 "jina_api_help": "获取 Jina API Key",
                 "api_tips": "说明：\n"
                            "• Gemini API Key 用于AI对话和内容生成\n"
-                           "• Jina API Key 用于高级语义搜索（可选）\n"
                            "• API密钥将安全保存在本地配置文件中",
                 
                 # Language settings

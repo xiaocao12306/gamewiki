@@ -394,11 +394,6 @@ class SmartInteractionManager(QObject):
                 
         except Exception as e:
             logger.error(f"Error applying mouse passthrough settings: {e}")
-    
-    def set_hotkey_double_press_threshold(self, threshold: float):
-        """Set hotkey double-click time threshold"""
-        self.hotkey_double_press_threshold = max(0.1, min(2.0, threshold))
-        logger.info(f"Set hotkey double-click threshold: {self.hotkey_double_press_threshold} seconds") 
 
     def get_current_game_window(self) -> Optional[str]:
         """获取当前前台窗口的游戏名称（用于热键触发时检测）"""

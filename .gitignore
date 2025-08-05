@@ -132,8 +132,7 @@ dmypy.json
 *.msi
 GameWikiAssistant_Portable/
 GameWikiAssistant_Portable_onedir/
-build/
-dist/
+
 
 # IDE files
 .vscode/
@@ -176,33 +175,18 @@ debug_dpi_dlls.py
 debug_package.py
 
 # Project specific
-.env
+
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# VS Code
-.vscode/
-
-# MacOS
-.DS_Store
-
 # Windows
-Thumbs.db
-ehthumbs.db
 Desktop.ini
-
-# PyCharm
-.idea/
 
 # Test output
 test_output/
 *.test
-
-# Custom app data and logs
-*.log
-logs/
 
 # Local config files
 config.local.json
@@ -212,15 +196,9 @@ settings.local.json
 *.spec.bak
 build_temp/
 
-# Testing and development files
-test_graphics_fix.py
-Windows10_Graphics_Fix_README.md
-
 # Backup files
 *.bak
 *.backup
-*~
-GameWikiAssistant_Portable_onedir/
 
 # Vosk voice recognition models (large binary files)
 src/game_wiki_tooltip/assets/vosk_models/

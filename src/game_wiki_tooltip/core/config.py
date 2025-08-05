@@ -89,6 +89,7 @@ class AppSettings:
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
     audio_device_index: Optional[int] = None  # Audio device index for voice recognition
+    auto_voice_on_hotkey: bool = False  # Auto-start voice input when hotkey triggers window
 
 
 class SettingsManager:
@@ -143,6 +144,12 @@ class SettingsManager:
         # Update shortcuts settings
         if 'shortcuts' in new_settings:
             self._settings.shortcuts = new_settings['shortcuts']
+        # Update audio device index
+        if 'audio_device_index' in new_settings:
+            self._settings.audio_device_index = new_settings['audio_device_index']
+        # Update auto voice on hotkey setting
+        if 'auto_voice_on_hotkey' in new_settings:
+            self._settings.auto_voice_on_hotkey = new_settings['auto_voice_on_hotkey']
         self.save()
 
     # ---- internal ----
@@ -205,7 +212,9 @@ class SettingsManager:
                 window_geometry=window_geometry,
                 api=ApiConfig(**merged_data.get('api', {})),
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
-                shortcuts=merged_data.get('shortcuts', [])
+                shortcuts=merged_data.get('shortcuts', []),
+                audio_device_index=merged_data.get('audio_device_index', None),
+                auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False)
             )
         except Exception as e:
             print(f"Error processing settings file: {e}")
@@ -227,7 +236,9 @@ class SettingsManager:
                 window_geometry=window_geometry,
                 api=ApiConfig(**default_data.get('api', {})),
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
-                shortcuts=default_data.get('shortcuts', [])
+                shortcuts=default_data.get('shortcuts', []),
+                audio_device_index=default_data.get('audio_device_index', None),
+                auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False)
             )
 
 # ---------- Game-configs ----------
