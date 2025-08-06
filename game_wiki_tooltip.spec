@@ -89,6 +89,26 @@ datas = [
     ("src/game_wiki_tooltip/webview2/lib", "src/game_wiki_tooltip/webview2/lib"),
 ]
 
+# Add Vosk library files and models
+import site
+site_packages = site.getsitepackages()[0] if site.getsitepackages() else None
+if not site_packages:
+    # Try to find venv site-packages
+    import sysconfig
+    site_packages = sysconfig.get_paths()["purelib"]
+
+vosk_path = Path(site_packages) / "vosk"
+if not vosk_path.exists():
+    # Try venv path
+    vosk_path = Path(".venv") / "Lib" / "site-packages" / "vosk"
+
+if vosk_path.exists():
+    print(f"[INFO] Found Vosk at: {vosk_path}")
+    # Add Vosk DLL files to the vosk directory in output
+    datas.append((str(vosk_path), "vosk"))
+else:
+    print(f"[WARNING] Vosk not found at expected location: {vosk_path}")
+
 # Collect binary files
 binaries = []
 
