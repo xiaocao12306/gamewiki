@@ -159,7 +159,7 @@ def check_ai_modules():
         "src.game_wiki_tooltip.ai.batch_embedding",
         "src.game_wiki_tooltip.ai.rag_query",
         "src.game_wiki_tooltip.ai.unified_query_processor",
-        "src.game_wiki_tooltip.config",
+        "src.game_wiki_tooltip.core.config",
     ]
     
     # Temporarily add src to path for testing

@@ -70,6 +70,28 @@
             margin-top: 1rem;
             border-radius: 0.25rem;
         }
+        .video-link {
+            color: #60A5FA;
+            text-decoration: underline;
+            margin-left: 0.5rem;
+        }
+        .video-link:hover {
+            color: #93C5FD;
+        }
+        /* Aspect ratio wrapper for responsive video */
+        .aspect-w-16 {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        }
+        .aspect-w-16 > * {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -81,8 +103,26 @@
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-black title-highlight mb-2">HELLDIVERS 2</h1>
             <p class="text-xl md:text-2xl text-gray-300">新手入门终极指南 (2025版)</p>
-            <p class="text-sm text-gray-500 mt-2">内容源自 Scyushi 的教学视频</p>
+            <p class="text-sm text-gray-500 mt-2">
+                内容源自 Scyushi 的教学视频
+                <a href="https://www.youtube.com/watch?v=SW13pGZsKqE" target="_blank" rel="noopener noreferrer" class="video-link">在此观看</a>
+            </p>
         </header>
+
+        <!-- Video Embed Section -->
+        <section class="mb-10 bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div class="aspect-w-16">
+                <iframe src="https://www.youtube.com/embed/SW13pGZsKqE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full"></iframe>
+            </div>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-white mb-2">Helldivers 2 新手完全指南（含技巧与窍门）</h2>
+                <div class="flex flex-wrap items-center text-sm text-gray-400">
+                    <span class="mr-4">作者：<strong>Scyushi</strong></span>
+                    <span class="mr-4">发布时间：<strong>2024</strong></span>
+                    <span>时长：<strong>约20分钟</strong></span>
+                </div>
+            </div>
+        </section>
 
         <!-- Section 1: Core Progression Systems -->
         <div>

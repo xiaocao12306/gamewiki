@@ -81,16 +81,6 @@ class EnhancedBM25Indexer:
             
         return default_stop_words
 
-    def _normalize_enemy_name(self, text: str) -> str:
-        """Standardize enemy name - based on current game configuration"""
-        text = text.lower()
-
-        # Standardize enemy name based on game-specific keywords
-        # Here we use a generic method, no longer hard-coding specific game mappings
-        # Can add alias mappings in game configuration if needed
-
-        return text
-        
     def preprocess_text(self, text: str) -> List[str]:
         """
         Simplified text preprocessing, focused on efficient tokenization
@@ -105,8 +95,8 @@ class EnhancedBM25Indexer:
         if not text:
             return []
 
-        # Convert to lowercase and standardize enemy name
-        text = self._normalize_enemy_name(text.lower())
+        # Convert to lowercase
+        text = text.lower()
         
         # Remove special characters, but keep Chinese, English, numbers, and spaces
         text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9\s]', ' ', text)
@@ -186,10 +176,10 @@ class EnhancedBM25Indexer:
         """
         text_parts = []
         
-        # 0. Video title (highest priority for keyword matching)
+        # 0. Video title
         if video_info and 'title' in video_info:
-            # Add video title multiple times to increase its weight in BM25
-            text_parts.extend([video_info['title']] * 2)
+            # Add video title with same weight as other content
+            text_parts.append(video_info['title'])
         
         # 1. Topic (important content)
         topic = chunk.get("topic", "")
@@ -206,54 +196,42 @@ class EnhancedBM25Indexer:
         if summary:
             text_parts.append(summary)
             
-        # 4. Structured data processing
-        self._extract_structured_content(chunk, text_parts)
+        # 4. Extract all other content recursively
+        for key, value in chunk.items():
+            if key not in ['topic', 'summary', 'keywords', 'chunk_id', 'timestamp', 'type', 
+                           'video_url', 'video_title', 'score', 'rank', 'match_info']:
+                self._extract_all_text_content(value, text_parts)
         
         return " ".join(text_parts)
     
-    def _extract_structured_content(self, chunk: Dict[str, Any], text_parts: List[str]) -> None:
-        """Extract structured content, focused on content rather than weight"""
-        
-        # Enemy weakness information
-        if "structured_data" in chunk:
-            structured = chunk["structured_data"]
+    def _extract_all_text_content(self, obj: Any, text_parts: List[str], max_depth: int = 3, current_depth: int = 0) -> None:
+        """Recursively extract all text content from any object structure"""
+        if current_depth >= max_depth:
+            return
             
-            # Enemy name
-            if "enemy_name" in structured:
-                text_parts.append(structured["enemy_name"])
-                
-            # Weakness information
-            if "weak_points" in structured:
-                for weak_point in structured["weak_points"]:
-                    if "name" in weak_point:
-                        text_parts.append(weak_point["name"])
-                    if "notes" in weak_point:
-                        text_parts.append(weak_point["notes"])
-                        
-            # Recommended weapons
-            if "recommended_weapons" in structured:
-                for weapon in structured["recommended_weapons"]:
-                    text_parts.append(weapon)
-                    
-        # Build information
-        if "build" in chunk:
-            build = chunk["build"]
-            
-            # Build name
-            if "name" in build:
-                text_parts.append(build["name"])
-                
-            # Tactical focus
-            if "focus" in build:
-                text_parts.append(build["focus"])
-                
-            # Strategy information
-            if "stratagems" in build:
-                for stratagem in build["stratagems"]:
-                    if "name" in stratagem:
-                        text_parts.append(stratagem["name"])
-                    if "rationale" in stratagem:
-                        text_parts.append(stratagem["rationale"])
+        if isinstance(obj, str) and obj.strip():
+            # Add non-empty strings
+            text_parts.append(obj)
+        elif isinstance(obj, (int, float)):
+            # Convert numbers to strings
+            text_parts.append(str(obj))
+        elif isinstance(obj, list):
+            # Process each item in list
+            for item in obj:
+                self._extract_all_text_content(item, text_parts, max_depth, current_depth + 1)
+        elif isinstance(obj, dict):
+            # Process dictionary
+            for key, value in obj.items():
+                # Skip metadata fields
+                if key not in ['chunk_id', 'timestamp', 'type', 'video_url', 'video_title', 'score', 'rank', 'match_info']:
+                    # Key names might contain useful information
+                    if isinstance(key, str) and key not in self.stop_words:
+                        # Replace underscores with spaces for better tokenization
+                        readable_key = key.replace('_', ' ')
+                        if readable_key.strip():
+                            text_parts.append(readable_key)
+                    # Recursively process the value
+                    self._extract_all_text_content(value, text_parts, max_depth, current_depth + 1)
     
     def build_index(self, chunks_or_tuples: List[Any]) -> None:
         """
@@ -340,7 +318,7 @@ class EnhancedBM25Indexer:
             raise BM25UnavailableError(t("bm25_search_not_initialized"))
             
         # Preprocess query - using the same logic as index building
-        normalized_query = self._normalize_enemy_name(query.lower())
+        normalized_query = query.lower()
         tokenized_query = self.preprocess_text(normalized_query)
         
         if not tokenized_query:
@@ -395,7 +373,6 @@ class EnhancedBM25Indexer:
                     chunk = self.documents[idx]
                     match_info = {
                         "topic": chunk.get("topic", ""),
-                        "enemy": self._extract_enemy_from_chunk(chunk),
                         "relevance_reason": self._explain_relevance(tokenized_query, chunk, original_query=query)
                     }
                     result = {
@@ -411,7 +388,6 @@ class EnhancedBM25Indexer:
                     print(f"      - 索引: {idx}")
                     print(f"      - 分数: {score:.4f}")
                     print(f"      - 主题: {chunk.get('topic', 'Unknown')}")
-                    print(f"      - 敌人: {match_info['enemy']}")
                     print(f"      - 匹配理由: {match_info['relevance_reason']}")
                     print(f"      - 摘要: {chunk.get('summary', '')[:100]}...")
                     
@@ -436,27 +412,6 @@ class EnhancedBM25Indexer:
             logger.error(f"BM25对象状态: {self.bm25 is not None}")
             logger.error(f"文档数量: {len(self.documents) if self.documents else 0}")
             raise BM25UnavailableError(error_msg)
-    
-    def _extract_enemy_from_chunk(self, chunk: Dict[str, Any]) -> str:
-        """从chunk中提取敌人/目标名称"""
-        # 检查结构化数据
-        if "structured_data" in chunk and "enemy_name" in chunk["structured_data"]:
-            return chunk["structured_data"]["enemy_name"]
-            
-        # 简单提取：从topic中查找可能的敌人名称
-        topic = chunk.get("topic", "")
-        
-        # 基本的敌人/目标识别关键词
-        target_indicators = ["enemy", "boss", "敌人", "首领", "怪物", "对手"]
-        if any(indicator in topic.lower() for indicator in target_indicators):
-            # 提取topic中的主要词汇作为目标名称
-            words = topic.split()
-            if len(words) >= 2:
-                # 取前两个词作为目标名称
-                return " ".join(words[:2])
-        
-        # 如果没有明确的敌人标识，返回通用标识
-        return "Target"
     
     def _explain_relevance(self, query_tokens: List[str], chunk: Dict[str, Any], original_query: str = None) -> str:
         """Explain matching relevance, focusing on lexical matching rather than weight"""
@@ -586,11 +541,11 @@ class EnhancedBM25Indexer:
         if not self.bm25:
             return {"status": "Not initialized", "error": "BM25 index not built"}
         
-        # Analyze enemy distribution
-        enemy_distribution = {}
+        # Analyze topic distribution
+        topic_distribution = {}
         for chunk in self.documents:
-            enemy = self._extract_enemy_from_chunk(chunk)
-            enemy_distribution[enemy] = enemy_distribution.get(enemy, 0) + 1
+            topic = chunk.get('topic', 'Unknown')
+            topic_distribution[topic] = topic_distribution.get(topic, 0) + 1
         
         # Calculate average document length (fix corpus_size access error)
         try:
@@ -610,7 +565,8 @@ class EnhancedBM25Indexer:
             "status": "已初始化",
             "document_count": len(self.documents),
             "stop_words_count": len(self.stop_words),
-            "enemy_distribution": enemy_distribution,
-            "average_document_length": avg_doc_length,
-            "top_enemies": list(sorted(enemy_distribution.items(), key=lambda x: x[1], reverse=True)[:5])
+            "topic_distribution": dict(sorted(topic_distribution.items(), 
+                                            key=lambda x: x[1], reverse=True)[:10]),
+            "unique_topics": len(topic_distribution),
+            "average_document_length": avg_doc_length
         }

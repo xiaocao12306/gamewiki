@@ -103,7 +103,23 @@ def load_game_chunks(game_name: str) -> List[tuple]:
     
     logger.info(f"✅ 成功加载 {len(chunks)} 个知识块")
     
-    # 尝试加载原始knowledge_chunk文件以获取video_info
+    # 检查是否已包含video信息（新metadata格式）
+    if chunks and 'video_url' in chunks[0]:
+        logger.info("📹 检测到新格式metadata，直接使用其中的video信息")
+        chunks_with_video_info = []
+        for chunk in chunks:
+            video_info = {}
+            if chunk.get('video_url'):
+                video_info = {
+                    'url': chunk.get('video_url', ''),
+                    'title': chunk.get('video_title', '')
+                }
+            chunks_with_video_info.append((chunk, video_info))
+        
+        logger.info(f"✅ 从metadata成功提取 {len([c for c, v in chunks_with_video_info if v])} 个视频信息")
+        return chunks_with_video_info
+    
+    # 旧格式：尝试加载原始knowledge_chunk文件以获取video_info
     chunks_with_video_info = []
     chunk_to_video_map = {}
     

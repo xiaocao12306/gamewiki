@@ -95,11 +95,14 @@ class SmartInteractionManager(QObject):
     mouse_state_changed = pyqtSignal(object)       # MouseState
     # 移除 window_state_changed 信号，改为按需检测
     
-    def __init__(self, parent=None, controller=None):
+    def __init__(self, parent=None, controller=None, game_config_manager=None):
         super().__init__(parent)
         
         # Store reference to the assistant controller (not necessarily a QObject)
         self.controller = controller
+        
+        # Store game config manager for game detection
+        self.game_config_manager = game_config_manager
         
         # State variables
         self.current_mode = InteractionMode.NORMAL
@@ -120,13 +123,6 @@ class SmartInteractionManager(QObject):
         self.monitor_timer = QTimer()
         self.monitor_timer.timeout.connect(self._monitor_system_state)
         self.monitor_timer.start(100)  # Check every 100ms
-        
-        # Game window title keywords (can be loaded from config)
-        self.game_keywords = [
-            'unity', 'unreal', 'steam', 'epic', 'origin',
-            'helldivers', 'elden ring', 'civilization', 'dst', 'don\'t starve',
-            '游戏', '全屏', 'fullscreen', 'gamemode', 'gaming'
-        ]
         
         logger.info("SmartInteractionManager initialized successfully")
     
@@ -207,7 +203,13 @@ class SmartInteractionManager(QObject):
         if any(app_keyword in title_lower for app_keyword in app_window_keywords):
             return False
         
-        return any(keyword in title_lower for keyword in self.game_keywords)
+        # Check if window title matches any game in configuration
+        if self.game_config_manager:
+            game_config = self.game_config_manager.for_title(window_title)
+            if game_config:
+                return True
+        
+        return False
     
     def _monitor_system_state(self):
         """Monitor system state changes - 监控鼠标状态和游戏窗口焦点"""

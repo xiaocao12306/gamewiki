@@ -7,7 +7,6 @@ import sys
 import logging
 import time
 import pathlib
-import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -1226,15 +1225,63 @@ class UnifiedAssistantWindow(QMainWindow):
         self.has_switched_state = True  # User has manually switched states
         self.update_window_layout()
         
+        # Restore chat scroll position after switching back from webview
+        if hasattr(self, '_was_at_bottom') and hasattr(self, 'chat_view') and self.chat_view:
+            # Use QTimer to ensure the layout is complete before restoring scroll position
+            # Schedule after other layout updates (50ms and 100ms)
+            QTimer.singleShot(200, self._restore_chat_scroll_position)
+        
     def switch_to_webview(self):
         """Switch to webview state"""
         # Save current state's geometry before switching
         if self.current_state == WindowState.FULL_CONTENT:
             self.save_geometry()
+            # Save chat scroll position before switching
+            if hasattr(self, 'chat_view') and self.chat_view:
+                scrollbar = self.chat_view.verticalScrollBar()
+                current_value = scrollbar.value()
+                current_maximum = scrollbar.maximum()
+                
+                # Check if user was at or near the bottom (within 50 pixels)
+                self._was_at_bottom = (current_maximum - current_value) <= 50
+                
+                # Save relative position as percentage if not at bottom
+                if not self._was_at_bottom and current_maximum > 0:
+                    self._saved_chat_scroll_percentage = current_value / current_maximum
+                else:
+                    self._saved_chat_scroll_percentage = None
+                    
+                logging.debug(f"Saved chat scroll state: was_at_bottom={self._was_at_bottom}, percentage={self._saved_chat_scroll_percentage}")
             
         self.current_state = WindowState.WEBVIEW
         self.has_switched_state = True  # User has manually switched states
         self.update_window_layout()
+
+    def _restore_chat_scroll_position(self):
+        """Restore saved chat scroll position"""
+        try:
+            if hasattr(self, 'chat_view') and self.chat_view:
+                scrollbar = self.chat_view.verticalScrollBar()
+                
+                # Check if we have saved scroll state
+                if hasattr(self, '_was_at_bottom'):
+                    if self._was_at_bottom:
+                        # User was at bottom, scroll to new bottom
+                        scrollbar.setValue(scrollbar.maximum())
+                        logging.debug("Restored chat scroll to bottom")
+                    elif hasattr(self, '_saved_chat_scroll_percentage') and self._saved_chat_scroll_percentage is not None:
+                        # Restore to relative position
+                        new_value = int(scrollbar.maximum() * self._saved_chat_scroll_percentage)
+                        scrollbar.setValue(new_value)
+                        logging.debug(f"Restored chat scroll to {self._saved_chat_scroll_percentage*100:.1f}% position")
+                    
+                    # Clean up saved state
+                    if hasattr(self, '_was_at_bottom'):
+                        delattr(self, '_was_at_bottom')
+                    if hasattr(self, '_saved_chat_scroll_percentage'):
+                        delattr(self, '_saved_chat_scroll_percentage')
+        except Exception as e:
+            logging.error(f"Failed to restore chat scroll position: {e}")
 
     def update_container_style(self, full_rounded=False):
         """Update main container rounded corner style"""
@@ -1302,6 +1349,9 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(100, self.chat_view._performDelayedResize)
         # Set focus to input field when returning to chat view
         QTimer.singleShot(150, self._set_chat_input_focus)
+        # Also try to restore scroll position again after all layout updates
+        if hasattr(self, '_was_at_bottom'):
+            QTimer.singleShot(250, self._restore_chat_scroll_position)
         
     def _set_chat_input_focus(self):
         """Set focus to input field in chat view with improved reliability"""
@@ -1384,7 +1434,7 @@ class UnifiedAssistantWindow(QMainWindow):
             logger.debug("No wiki_view available, skipping history record")
             return
             
-        # Get webview instance (handle both WebEngine and WebView2)
+        # Get WebView2 instance
         web_view = getattr(self.wiki_view, 'web_view', None)
         if not web_view:
             logger.debug("No web_view available, skipping history record")
@@ -1397,53 +1447,11 @@ class UnifiedAssistantWindow(QMainWindow):
             
         logger.info(f"🔍 Recording history for URL: {current_url}")
         
-        # For WebView2, we need a different approach since runJavaScript doesn't return values properly
+        # WebView2 specific handling
         if hasattr(web_view, 'webview2') and web_view.webview2:
-            # WebView2 specific handling
             self._get_title_from_webview2(web_view, current_url)
-        elif hasattr(web_view, 'page') and callable(getattr(web_view, 'page', None)):
-            # Qt WebEngine handling
-            script = """
-            (function() {
-                // Try multiple methods to get the best title
-                var title = document.title;
-                
-                // If title is empty or just the domain, try other methods
-                if (!title || title.trim() === '' || title === window.location.hostname) {
-                    // Try Open Graph title
-                    var ogTitle = document.querySelector('meta[property="og:title"]');
-                    if (ogTitle && ogTitle.content) {
-                        title = ogTitle.content;
-                    } else {
-                        // Try Twitter title
-                        var twitterTitle = document.querySelector('meta[name="twitter:title"]');
-                        if (twitterTitle && twitterTitle.content) {
-                            title = twitterTitle.content;
-                        } else {
-                            // Try first H1
-                            var h1 = document.querySelector('h1');
-                            if (h1 && h1.innerText) {
-                                title = h1.innerText.trim();
-                            }
-                        }
-                    }
-                }
-                
-                return title || '';
-            })();
-            """
-            
-            try:
-                web_view.page().runJavaScript(
-                    script,
-                    lambda title: self._save_to_history(current_url, title)
-                )
-            except Exception as e:
-                logger.error(f"Failed to get page title via JavaScript: {e}")
-                # Fallback: save with URL as title
-                self._save_to_history(current_url, current_url)
         else:
-            logger.warning("Unknown web view type, using URL as title")
+            logger.warning("WebView2 not available, using URL as title")
             self._save_to_history(current_url, current_url)
     
     def _get_title_from_webview2(self, web_view, current_url):
@@ -1744,18 +1752,10 @@ class UnifiedAssistantWindow(QMainWindow):
                                             package_path = relative_path[7:]  # Remove 'assets/'
                                         path_obj = package_file(package_path)
                                         
-                                        # For resources, we need to extract
-                                        if hasattr(path_obj, 'read_bytes'):
-                                            # It's a resource, save to cache
-                                            data = path_obj.read_bytes()
-                                            cached_icon_path.write_bytes(data)
-                                            icon_path = str(cached_icon_path)
-                                            print(f"[load_shortcuts] Extracted resource to cache: {icon_path}")
-                                        else:
-                                            # It's a real file, copy to cache
-                                            shutil.copyfile(path_obj, cached_icon_path)
-                                            icon_path = str(cached_icon_path)
-                                            print(f"[load_shortcuts] Copied package file to cache: {icon_path}")
+                                        # Copy file to cache
+                                        shutil.copyfile(path_obj, cached_icon_path)
+                                        icon_path = str(cached_icon_path)
+                                        print(f"[load_shortcuts] Copied package file to cache: {icon_path}")
                                     except Exception as e:
                                         print(f"[load_shortcuts] Failed with package_file: {e}")
                                         icon_path = ""
@@ -1997,6 +1997,11 @@ class UnifiedAssistantWindow(QMainWindow):
                 'display_name': t('civ6_task_button'),
                 'window_titles': ["sid meier's civilization vi", "civilization vi", "civ6"],
                 'handler': lambda: self._show_task_flow_html('civilization6')
+            },
+            'eldenring': {
+                'display_name': t('eldenring_task_button'),
+                'window_titles': ["elden ring"],
+                'handler': lambda: self._show_task_flow_html('eldenring')
             }
         }
         

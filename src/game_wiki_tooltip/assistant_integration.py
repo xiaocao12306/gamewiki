@@ -219,7 +219,12 @@ class QueryWorker(QThread):
         except Exception as e:
             if not self._stop_requested:  # Only report error if not stopped
                 logger.error(f"Query processing error: {e}")
-                self.error_occurred.emit(str(e))
+                # Check for specific errors and provide user-friendly messages
+                if "_check_rag_init_and_process_query" in str(e):
+                    # This error occurs when vector store is not found
+                    self.error_occurred.emit(self.rag_integration._get_localized_message("game_not_supported"))
+                else:
+                    self.error_occurred.emit(str(e))
     
     async def _wait_for_ai_modules(self) -> bool:
         """Wait for AI modules to load with timeout"""
@@ -295,6 +300,27 @@ class RAGIntegration(QObject):
         else:
             self._init_ai_components()
             
+    def _get_localized_message(self, message_key: str) -> str:
+        """Get localized message based on current language setting"""
+        # Get current language from settings
+        settings = self.settings_manager.get()
+        current_language = settings.get('language', 'zh')
+        
+        # Define localized messages
+        messages = {
+            "game_not_supported": {
+                "zh": "我们目前尚未支持该游戏的AI问答",
+                "en": "AI Q&A is not currently supported for this game"
+            }
+        }
+        
+        # Return localized message, fallback to Chinese if not found
+        if message_key in messages:
+            return messages[message_key].get(current_language, messages[message_key].get('zh', ''))
+        
+        # Return key itself if message not defined
+        return message_key
+            
     def _init_game_config_manager(self):
         """Initialize game configuration manager based on language settings"""
         from src.game_wiki_tooltip.core.utils import APPDATA_DIR
@@ -369,7 +395,6 @@ class RAGIntegration(QObject):
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
             gemini_api_key = api_settings.get('gemini_api_key', '')
-            # No longer need separate Jina API key, use Gemini API key for embeddings
             
             # Check environment variables
             if not gemini_api_key:
@@ -402,11 +427,8 @@ class RAGIntegration(QObject):
                 missing_keys = []
                 if not gemini_api_key:
                     missing_keys.append("Gemini API Key")
-                if not has_api_key:
-                    missing_keys.append("Jina API Key")
                 
                 logger.warning(f"❌ Missing required API keys: {', '.join(missing_keys)}")
-                logger.warning("Cannot initialize AI components, need to configure both Gemini API Key and Jina API Key")
                 return False
                     
         except Exception as e:
@@ -545,6 +567,55 @@ class RAGIntegration(QObject):
             # Ensure initialization flags are cleared on any error
             self._rag_initializing = False
             self._rag_init_game = None
+            
+    def _check_vector_store_exists(self, game_name: str) -> bool:
+        """Check if vector store exists for the given game"""
+        try:
+            from .ai.rag_query import find_vector_store_directory
+            from pathlib import Path
+            
+            vector_dir = find_vector_store_directory()
+            config_path = vector_dir / f"{game_name}_vectors_config.json"
+            return config_path.exists()
+        except Exception as e:
+            logger.error(f"Error checking vector store existence: {e}")
+            return False
+            
+    def _check_rag_init_and_process_query(self):
+        """Check RAG initialization status and process pending query"""
+        try:
+            # Check if initialization is complete
+            if not self._rag_initializing:
+                # Stop the timer
+                if hasattr(self, '_init_check_timer') and self._init_check_timer:
+                    self._init_check_timer.stop()
+                    self._init_check_timer = None
+                
+                # Check if initialization was successful
+                if self.rag_engine and self._pending_query:
+                    # Process the pending query
+                    query_data = self._pending_query
+                    self._pending_query = None
+                    
+                    # Continue with query processing
+                    asyncio.create_task(self.generate_guide_async(
+                        query_data['query'],
+                        query_data['game_context'],
+                        query_data['original_query'],
+                        query_data['skip_query_processing'],
+                        query_data['unified_query_result'],
+                        query_data['stop_flag']
+                    ))
+                elif not self.rag_engine and self._pending_query:
+                    # Initialization failed, show appropriate message
+                    self._pending_query = None
+                    self.streaming_chunk_ready.emit(self._get_localized_message("game_not_supported"))
+                    
+        except Exception as e:
+            logger.error(f"Error checking RAG initialization: {e}")
+            if hasattr(self, '_init_check_timer') and self._init_check_timer:
+                self._init_check_timer.stop()
+                self._init_check_timer = None
             
     async def process_query_async(self, query: str, game_context: str = None, search_mode: str = "auto") -> QueryIntent:
         """Process query using unified query processor for intent detection"""
@@ -831,9 +902,7 @@ class RAGIntegration(QObject):
                 "Currently running in limited mode with Wiki search only.\n\n"
                 "To use AI guide features, please configure both API keys (both required):\n"
                 "• Google/Gemini API Key (required) - for AI reasoning\n"
-                "• Jina API Key (required) - for vector search\n\n"
                 "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-                "Jina vector search is essential for complete AI guide features.\n\n"
                 "Restart the program after configuration to enable full functionality."
             )
             return
@@ -851,7 +920,6 @@ class RAGIntegration(QObject):
                     settings = self.settings_manager.get()
                     api_settings = settings.get('api', {})
                     gemini_api_key = api_settings.get('gemini_api_key', '')
-                    # No longer need separate Jina API key, use Gemini API key for embeddings
                     
                     # Check environment variables
                     if not gemini_api_key:
@@ -890,6 +958,12 @@ class RAGIntegration(QObject):
                                 self._init_check_timer.start(100)  # Check every 100ms
                             return
                         
+                        # Check if vector store exists before attempting initialization
+                        if not self._check_vector_store_exists(vector_game_name):
+                            logger.info(f"No vector store found for game '{vector_game_name}', showing not supported message")
+                            self.streaming_chunk_ready.emit(self._get_localized_message("game_not_supported"))
+                            return
+                        
                         # Use asynchronous initialization to avoid blocking UI
                         self._init_rag_for_game(vector_game_name, llm_config, gemini_api_key, wait_for_init=False)
                         
@@ -918,8 +992,6 @@ class RAGIntegration(QObject):
                         missing_keys = []
                         if not gemini_api_key:
                             missing_keys.append("Gemini API Key")
-                        if not has_api_key:
-                            missing_keys.append("Jina API Key")
                         
                         # Use internationalized error information
                         from src.game_wiki_tooltip.core.i18n import get_current_language
@@ -930,9 +1002,7 @@ class RAGIntegration(QObject):
                                 f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}\n\n"
                                 "AI攻略功能需要同时配置两个API密钥：\n"
                                 "• Google/Gemini API Key - 用于AI推理\n"
-                                "• Jina API Key - 用于向量搜索\n\n"
                                 "⚠️ 注意：仅有Gemini API无法提供高质量的RAG功能。\n"
-                                "Jina向量搜索对完整的AI攻略功能至关重要。\n\n"
                                 "请在设置中配置完整的API密钥并重试。"
                             )
                         else:
@@ -940,9 +1010,7 @@ class RAGIntegration(QObject):
                                 f"❌ Missing required API keys: {', '.join(missing_keys)}\n\n"
                                 "AI guide features require both API keys to be configured:\n"
                                 "• Google/Gemini API Key - for AI reasoning\n"
-                                "• Jina API Key - for vector search\n\n"
                                 "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-                                "Jina vector search is essential for complete AI guide features.\n\n"
                                 "Please configure complete API keys in settings and try again."
                             )
                         
@@ -1168,7 +1236,7 @@ class IntegratedAssistantController(AssistantController):
         self._current_wiki_message = None  # Store current wiki link message component
         
         # Initialize smart interaction manager (pass None as parent, but pass self as controller reference)
-        self.smart_interaction = SmartInteractionManager(parent=None, controller=self)
+        self.smart_interaction = SmartInteractionManager(parent=None, controller=self, game_config_manager=self.rag_integration.game_cfg_mgr)
         self._setup_smart_interaction()
         
         # Register as global instance
@@ -1820,7 +1888,6 @@ class IntegratedAssistantController(AssistantController):
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
             gemini_api_key = api_settings.get('gemini_api_key', '')
-            # No longer need separate Jina API key, use Gemini API key for embeddings
             
             # Check environment variables
             if not gemini_api_key:

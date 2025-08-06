@@ -15,7 +15,9 @@
       "Helldive difficulty",
       "gloom maps"
     ],
-    "type": "Introduction"
+    "type": "Introduction",
+    "video_url": "https://www.youtube.com/watch?v=usZFf7Z5LJg",
+    "video_title": "Helldivers 2 - 4 Great Loadouts To Easily Defeat The Terminids (Solo Super Helldive 10)"
   },
   {
     "chunk_id": "unique_id_002",
@@ -80,7 +82,9 @@
         "name": "Experimental Infusion",
         "rationale": "Increases movement speed and damage reduction upon using a stim, a critical survivability tool for a light armor build."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=usZFf7Z5LJg",
+    "video_title": "Helldivers 2 - 4 Great Loadouts To Easily Defeat The Terminids (Solo Super Helldive 10)"
   },
   {
     "chunk_id": "unique_id_003",
@@ -144,7 +148,9 @@
         "name": "Vitality Enhancement",
         "rationale": "Provides extra resilience to all damage sources, further helping to survive in the chaotic, fiery environments this build creates."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=usZFf7Z5LJg",
+    "video_title": "Helldivers 2 - 4 Great Loadouts To Easily Defeat The Terminids (Solo Super Helldive 10)"
   },
   {
     "chunk_id": "unique_id_004",
@@ -208,7 +214,9 @@
         "name": "Vitality Enhancement",
         "rationale": "Offers general damage reduction, further increasing survivability while operating inside gas and combat zones."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=usZFf7Z5LJg",
+    "video_title": "Helldivers 2 - 4 Great Loadouts To Easily Defeat The Terminids (Solo Super Helldive 10)"
   },
   {
     "chunk_id": "unique_id_005",
@@ -272,7 +280,9 @@
         "name": "Experimental Infusion",
         "rationale": "Synergizes perfectly with the Supply Pack, allowing for frequent stim use to gain speed boosts and damage reduction for quick escapes."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=usZFf7Z5LJg",
+    "video_title": "Helldivers 2 - 4 Great Loadouts To Easily Defeat The Terminids (Solo Super Helldive 10)"
   },
   {
     "chunk_id": "hd2_lowlevel_001",
@@ -293,7 +303,9 @@
       "terminid",
       "automaton"
     ],
-    "type": "Build_Recommendation"
+    "type": "Build_Recommendation",
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_002",
@@ -324,7 +336,9 @@
         "Excellent for crowd control."
       ],
       "alternative": "AR-23 Liberator (starting rifle) until unlocked."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_003",
@@ -354,7 +368,9 @@
       "cons": [
         "Less accurate than the starting pistol, which can be a consideration against Automatons."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_004",
@@ -384,7 +400,9 @@
         "usage_scene": "Automaton missions",
         "rationale": "Helps resist frequent injuries from enemy gunfire, reducing stim usage."
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_005",
@@ -424,7 +442,9 @@
         "usage_scene": "Solo Automaton Missions",
         "passive": "Med-Kit (+2 stims, longer stim duration)."
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_006",
@@ -451,7 +471,9 @@
         "Detonates on impact, making it very reliable.",
         "Excellent for quickly closing bug holes and destroying fabricators."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_007",
@@ -483,7 +505,9 @@
         "usage_scene": "Solo Play",
         "rationale": "Provides two powerful, single-use shots on a short cooldown and does not require a backpack slot."
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_lowlevel_008",
@@ -518,7 +542,9 @@
         "unlock_level": 2,
         "description": "A highly versatile hybrid stratagem that is great against both swarms and armored units, with multiple uses before needing to rearm."
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=z2sV5Q7EbNw",
+    "video_title": "Helldivers 2 - The Best Low-Level Loadout (For Both Automatons and Terminid Factions)"
   },
   {
     "chunk_id": "hd2_strat_guide_001",
@@ -610,7 +636,9 @@
           "verdict": "Highly impractical due to numerous drawbacks; the Railgun is far superior."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_strat_guide_002",
@@ -678,7 +706,9 @@
           "reason": "They are far too inconsistent and inaccurate. The random spread means they often miss critical targets entirely, making them a high-risk, low-reward option."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_strat_guide_003",
@@ -747,7 +777,9 @@
           "verdict": "Decent for low-level play but are quickly outclassed by the standard Eagle Airstrike due to its armor-piercing capabilities."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_strat_guide_004",
@@ -802,7 +834,9 @@
           "reason": "Extremely dangerous due to its high potential for friendly fire. It has a large, hard-to-judge radius and will instantly kill teammates who step too close. It is also very squishy and easily destroyed."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_strat_guide_005",
@@ -879,7 +913,9 @@
           "reason": "Highly inconsistent and unpredictable. It frequently misses targets, even at point-blank range, and has a high tendency to arc to and kill teammates. It is too lethal to your own team to be considered viable."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_stratagems_001",
@@ -922,7 +958,9 @@
           "reason": "Direct upgrade over the standard 'Guard Dog'."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_stratagems_002",
@@ -956,7 +994,9 @@
         "Overall considered a 'garbage' stratagem."
       ],
       "recommended_alternative": "A/AC-8 Autocannon Sentry"
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_stratagems_003",
@@ -993,7 +1033,9 @@
         "Turning speed is slow without ship module upgrades."
       ],
       "usage_scene": "General purpose, anti-armor, excellent for most missions."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_stratagems_004",
@@ -1035,7 +1077,9 @@
         "High risk of friendly fire in non-static missions."
       ],
       "usage_scene": "Defense missions, Eradicate Automaton Forces missions, leveling up quickly."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_shipmodules_001",
@@ -1058,7 +1102,9 @@
       "priority_tip": "Focus on getting every ship module to Level 1 before specializing.",
       "reasoning": "All level 1 upgrades are invaluable and provide significant boosts. They generally only require common samples, making them accessible early in the game.",
       "resource_focus": "Common Samples (farmed at low difficulties)."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_shipmodules_002",
@@ -1099,7 +1145,9 @@
       ],
       "upgrade_path": "Work up to 'High-Quality Lubricant' as quickly as possible within the Robotics Workshop tree.",
       "rationale": "These upgrades provide truly game-changing improvements to sentry performance, making them last longer and acquire targets much faster."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_shipmodules_003",
@@ -1135,7 +1183,9 @@
         }
       ],
       "rationale": "Eagle stratagems are used far more frequently than Orbitals because they have multiple charges before a short re-arm. These upgrades maximize their effectiveness, with 'Expanded Weapons Bay' being particularly powerful."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "helldivers2_weapons_001",
@@ -1163,7 +1213,9 @@
         "verdict": "Avoid for pure effectiveness.",
         "reason": "Weapons have lackluster damage. Their unique bonus effects do not make up for the loss of damage compared to standard options."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_domsroundtable_001",
@@ -1211,7 +1263,9 @@
         }
       ],
       "playstyle_advice": "Prioritizing Eagle upgrades is highly recommended because Eagles have multiple charges (2-4) before needing to rearm, unlike most single-use Orbital stratagems with long cooldowns. With these upgrades, the Eagle rearm time is only about 2 minutes."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_domsroundtable_002",
@@ -1276,7 +1330,9 @@
           ]
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "hd2_domsroundtable_003",
@@ -1321,7 +1377,9 @@
         "passive": "Servo-Assisted",
         "rationale": "Combines the benefits of Light Armor (speed, smaller aggro radius) with the extremely useful Servo-Assisted passive, making it a top choice for solo play and stealthy objective clearing."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=f3khvNJzB4A",
+    "video_title": "The BEST Stratagems & Weapons To Unlock FIRST | Helldivers 2 Advanced Levelling Guide"
   },
   {
     "chunk_id": "unique_id_001",
@@ -1341,7 +1399,9 @@
       "Hulk tip",
       "build guide"
     ],
-    "type": "Build_Recommendation"
+    "type": "Build_Recommendation",
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_002",
@@ -1376,7 +1436,9 @@
           "rationale": "Features an exceptionally low cooldown, allowing it to one-shot armored threats and fortifications frequently. It's also great for clearing pockets of dangerous enemies like Devastators and Berserkers."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_003",
@@ -1412,7 +1474,9 @@
           "rationale": "Creates a synergy with the Railgun by providing a sustainable source of ammo, allowing the player to maintain high damage output and an aggressive playstyle without running out of resources."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_004",
@@ -1454,7 +1518,9 @@
           "details": "For experienced players, the most efficient method is a direct, precise shot to the eye socket with a high-powered anti-armor weapon like the Railgun."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_005",
@@ -1490,7 +1556,9 @@
         "passive": "Med-Kit",
         "rationale": "Increases stim capacity by +2 and stim duration by 2.0s. This enhances survivability, which is crucial for an aggressive playstyle that involves getting close to enemies."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_006",
@@ -1522,7 +1590,9 @@
         "grenade": "Gas Grenade",
         "armor": "Medic Armour (Light or Medium)"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=-CR1UjBicWQ",
+    "video_title": "Helldivers 2 - The BEST Loadout For Automaton Major Orders! Best Bot Loadouts!"
   },
   {
     "chunk_id": "unique_id_001",
@@ -1578,7 +1648,9 @@
           "rationale": "An alternative for players wanting more passive damage. The laser is effective at burning enemies and is great for destroying Meatballs due to recent fire changes."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=Ym1x97NEb74",
+    "video_title": "Helldivers 2 - THE ULTIMATE ILLUMINATE LOADOUT - BEST BUILD & WEAPON COMBOS Indepth guide & tips"
   },
   {
     "chunk_id": "unique_id_002",
@@ -1633,7 +1705,9 @@
         "perk": "Extra Padding",
         "rationale": "Offers a perfect balance of survivability and speed. The mobility from medium armor is crucial for kiting and repositioning against fast-moving Illuminate mobs, something heavy armor struggles with."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=Ym1x97NEb74",
+    "video_title": "Helldivers 2 - THE ULTIMATE ILLUMINATE LOADOUT - BEST BUILD & WEAPON COMBOS Indepth guide & tips"
   },
   {
     "chunk_id": "unique_id_003",
@@ -1694,7 +1768,9 @@
           "strategy": "Control their movement with Gas Grenades. The Eruptor's AoE can clear a large number of them in a single shot. Use the secondary weapon to handle any that get too close."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=Ym1x97NEb74",
+    "video_title": "Helldivers 2 - THE ULTIMATE ILLUMINATE LOADOUT - BEST BUILD & WEAPON COMBOS Indepth guide & tips"
   },
   {
     "chunk_id": "unique_id_001",
@@ -1713,7 +1789,9 @@
       "terminids"
     ],
     "type": "Introductory",
-    "structured_data": {}
+    "structured_data": {},
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_002",
@@ -1764,7 +1842,9 @@
         "Eagle 500KG Bomb"
       ],
       "general_strategy": "Focus fire on fatal components like the eye, legs, or underside doors. Avoid shooting the main body due to its extremely high health pool."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_003",
@@ -1821,7 +1901,9 @@
         "Railgun (on rear vent)"
       ],
       "general_strategy": "Flank the tank to target the exposed rear vent on the turret with medium or heavy penetrating weapons. Alternatively, use heavy anti-tank weapons on the front plate."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_automaton_weakness_001",
@@ -1892,7 +1974,9 @@
         "G-23 Stun Grenade"
       ],
       "notes": "Hulks are heavily armored from the front. Use Stun Grenades to immobilize them, creating an easy opportunity to hit the head visor or circle around to the back vent. The Orbital Railcannon Strike is a guaranteed one-shot kill."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_004",
@@ -1943,7 +2027,9 @@
         "Anti-Materiel Rifle"
       ],
       "general_strategy": "Aim for the exposed, unarmored crotch area between the legs for a quick kill with medium penetrating weapons."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_005",
@@ -1997,7 +2083,9 @@
         "SMG-72 Pummeler"
       ],
       "general_strategy": "Focus fire on a single body part. The head is the fastest kill, but the stomach is a more reliable and larger target."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_006",
@@ -2050,7 +2138,9 @@
         "Punisher Plasma"
       ],
       "general_strategy": "Aim for the head. If facing a Heavy Devastator from the front, target the stomach or flank it to hit the backpack. Stagger is very useful to stop its attacks."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_007",
@@ -2098,7 +2188,9 @@
         "Anti-Tank weapons"
       ],
       "general_strategy": "Target the thrusters with Class 4 penetrating support weapons for the most ammo-efficient kill. One Autocannon shot to a thruster is enough."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_008",
@@ -2144,7 +2236,9 @@
         "Quasar Cannon"
       ],
       "general_strategy": "Destroy the dropship before it deploys troops to instantly kill all reinforcements. Target a single thruster for an efficient kill."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_009",
@@ -2187,7 +2281,9 @@
         "Any weapon"
       ],
       "general_strategy": "Aim for the head for an easy, instant kill. Body shots work well with most weapons, but be aware of light armor on some variants."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_010",
@@ -2218,7 +2314,9 @@
         }
       ],
       "general_strategy": "Shoot them anywhere. With the Peak Physique armor, a single melee hit to the body is lethal."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_011",
@@ -2263,7 +2361,9 @@
         "High fire-rate primaries",
         "Area-of-effect weapons"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_012",
@@ -2307,7 +2407,9 @@
         "Grenade Launcher"
       ],
       "general_strategy": "Headshots are efficient but be prepared for a death charge. Otherwise, focus fire on the body. Avoid hitting non-fatal limbs."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_013",
@@ -2354,7 +2456,9 @@
         "Flamethrower"
       ],
       "general_strategy": "Aim for the fleshy part of the face to bypass armor. Fire damage is excellent as it neutralizes them while they take damage."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_014",
@@ -2395,7 +2499,9 @@
         "Railgun"
       ],
       "general_strategy": "Focus fire on the head with a weapon that can penetrate light armor for a quick kill via bleed-out."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "unique_id_015",
@@ -2436,7 +2542,9 @@
         "High DPS weapons"
       ],
       "general_strategy": "Stagger the Stalker to prevent it from attacking, then focus fire on its head for a fast kill. Locating their lair and destroying it is key to stopping them from spawning."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_001",
@@ -2480,7 +2588,9 @@
         "AMR-12 AMR (one-shots head)",
         "RS-422 Railgun (one-shots head)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_002",
@@ -2533,7 +2643,9 @@
         "ARC-12 Blitzer (auto-targets head)",
         "Weapons with stagger or crowd control properties"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_003",
@@ -2589,7 +2701,9 @@
         "GL-21 Grenade Launcher"
       ],
       "notes": "ICBM launch missions on Terminid planets are guaranteed to have Spewers."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_004",
@@ -2651,7 +2765,9 @@
         "FLAM-40 Flamethrower (targets head)",
         "GL-21 Grenade Launcher (targets rear or belly)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_005",
@@ -2693,7 +2809,9 @@
         }
       ],
       "notes": "The TTK difference between targeting the head and stripped legs is much smaller than on a standard Charger."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_006",
@@ -2748,7 +2866,9 @@
         "Orbital Laser"
       ],
       "notes": "The Orbital Laser's damage was doubled, making it extremely effective against Bile Titans."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "hd2_terminid_weakness_007",
@@ -2795,7 +2915,9 @@
         "CB-9 Exploding Crossbow"
       ],
       "notes": "As they are immobile, they are excellent targets for any offensive stratagem."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=AGARrCbN9_g&t=1126s",
+    "video_title": "The Weakpoint Guide You NEED for Helldivers 2"
   },
   {
     "chunk_id": "illuminate_guide_001",
@@ -2871,7 +2993,9 @@
         "Recoilless Rifle (not a one-shot)",
         "EAT-17 (not a one-shot)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=wAD2dfVSQhE",
+    "video_title": "Helldivers 2 – 17 Fast Tips To Dominate The New Illuminate Enemies (Hidden Mechanics)"
   },
   {
     "chunk_id": "illuminate_guide_002",
@@ -2916,7 +3040,9 @@
         }
       ],
       "strategy": "Treat similarly to other Overseers. Keep an eye on the sky for its incoming mortar fire and eliminate it quickly to avoid being sniped."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=wAD2dfVSQhE",
+    "video_title": "Helldivers 2 – 17 Fast Tips To Dominate The New Illuminate Enemies (Hidden Mechanics)"
   },
   {
     "chunk_id": "illuminate_guide_003",
@@ -2978,7 +3104,9 @@
         "EAT-17 (One-shot kill)",
         "Recoilless Rifle (One-shot kill)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=wAD2dfVSQhE",
+    "video_title": "Helldivers 2 – 17 Fast Tips To Dominate The New Illuminate Enemies (Hidden Mechanics)"
   },
   {
     "chunk_id": "illuminate_guide_004",
@@ -3021,7 +3149,9 @@
           "rationale": "Excellent for providing sustained fire to take down the high-health Flash Mobs."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=wAD2dfVSQhE",
+    "video_title": "Helldivers 2 – 17 Fast Tips To Dominate The New Illuminate Enemies (Hidden Mechanics)"
   },
   {
     "chunk_id": "unique_id_001",
@@ -3040,7 +3170,9 @@
       "premium currency",
       "cosmetics"
     ],
-    "type": "Guide_Introduction"
+    "type": "Guide_Introduction",
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_002",
@@ -3065,7 +3197,9 @@
       "recommended_planet_type": "Planet with good visibility (clear, not foggy or dark).",
       "example_planet": "Crimsica",
       "mission_selection": "Any mission type is acceptable."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_003",
@@ -3102,7 +3236,9 @@
         }
       ],
       "scouting_tip": "If a generated map has few POIs, abandon the operation and find a new one until a loot-dense map is found. Memorize the layout for faster runs."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_004",
@@ -3130,7 +3266,9 @@
         "4. Select the same operation to restart on the same map with refreshed loot."
       ],
       "mechanic_explanation": "Super Credits and Medals are added to your inventory instantly upon pickup and do not require extraction to be saved, unlike Samples."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_005",
@@ -3160,7 +3298,9 @@
         "purpose": "Improves mobility to traverse terrain and obstacles quickly."
       },
       "other_stratagems_note": "Other stratagems are unimportant due to the extremely low enemy presence on Trivial difficulty."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_006",
@@ -3194,7 +3334,9 @@
         "The number of Points of Interest on the generated map.",
         "The amount of Super Credits dropped per loot location (can be +10 or a rare +100 jackpot)."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_007",
@@ -3223,7 +3365,9 @@
         "Increased downtime waiting for all players to quit, relaunch, and rejoin the lobby between runs."
       ],
       "conclusion": "Solo play is often more time-efficient due to less downtime. Group play is less boring and offers more loot potential per run if coordinated well."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=UCAVlYa5FUk",
+    "video_title": "SOLO Medals & Super Credits Farm (Helldivers 2)"
   },
   {
     "chunk_id": "unique_id_001",
@@ -3285,7 +3429,9 @@
           "rationale": "Arguably one of the best weapons in the game due to very high damage. Can be used one-handed with a ballistic shield, creating a powerful combo."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=B05Vci1a6nE",
+    "video_title": "Best Warbonds For New Players - Helldivers 2"
   },
   {
     "chunk_id": "unique_id_002",
@@ -3336,7 +3482,9 @@
           "rationale": "A great plasma pistol with a charged shot. It has medium armor penetration and good damage (125), making it effective against most enemies."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=B05Vci1a6nE",
+    "video_title": "Best Warbonds For New Players - Helldivers 2"
   },
   {
     "chunk_id": "unique_id_003",
@@ -3392,7 +3540,9 @@
           "rationale": "A high-damage 'Deagle' style pistol with medium armor penetration and a large reserve ammo pool. It's essentially an upgraded version of the starting P-19 Redeemer."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=B05Vci1a6nE",
+    "video_title": "Best Warbonds For New Players - Helldivers 2"
   },
   {
     "chunk_id": "unique_id_004",
@@ -3452,6 +3602,8 @@
           "rationale": "A powerful explosive weapon with medium armor penetration and high damage. It excels at destroying Bots and has become more ergonomic thanks to the weapon mod system."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=B05Vci1a6nE",
+    "video_title": "Best Warbonds For New Players - Helldivers 2"
   }
 ]

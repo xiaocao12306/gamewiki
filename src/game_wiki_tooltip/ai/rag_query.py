@@ -84,7 +84,8 @@ except ImportError:
 
 # Import Gemini summarizer
 try:
-    from .gemini_summarizer import create_gemini_summarizer, SummarizationConfig
+    from .gemini_summarizer import create_gemini_summarizer, GeminiSummarizer
+    from .rag_config import SummarizationConfig
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -247,7 +248,7 @@ class EnhancedRagQuery:
             self.enable_hybrid_search = rag_config.hybrid_search.enabled
             self.hybrid_config = rag_config.hybrid_search.to_dict()
             self.enable_summarization = rag_config.summarization.enabled
-            self.summarization_config = rag_config.summarization.to_dict()
+            self.summarization_config = rag_config.summarization
             self.enable_intent_reranking = rag_config.intent_reranking.enabled
             self.reranking_config = rag_config.intent_reranking.to_dict()
             self.enable_query_rewrite = rag_config.query_processing.enable_query_rewrite
@@ -262,7 +263,7 @@ class EnhancedRagQuery:
         
         # Summary configuration
         self.enable_summarization = enable_summarization and GEMINI_AVAILABLE
-        self.summarization_config = summarization_config or {}
+        self.summarization_config = summarization_config or SummarizationConfig()
         self.summarizer = None
         
         # Intent reranking configuration
@@ -458,24 +459,25 @@ class EnhancedRagQuery:
                 self.enable_summarization = False
                 return
             
-            # Create summary configuration (remove deprecated max_summary_length parameter)
-            config = SummarizationConfig(
-                api_key=api_key,
-                model_name=self.summarization_config.get("model_name", "gemini-2.5-flash-lite"),
-                temperature=self.summarization_config.get("temperature", 0.3),
-                include_sources=self.summarization_config.get("include_sources", True),
-                language=self.summarization_config.get("language", "auto")
-            )
+            # Use the config object directly or create from dict for backward compatibility
+            if isinstance(self.summarization_config, SummarizationConfig):
+                # Direct config object from RAGConfig
+                config = self.summarization_config
+                config.api_key = api_key  # Override with actual API key
+            else:
+                # Legacy dict format
+                config = SummarizationConfig(
+                    api_key=api_key,
+                    model_name=self.summarization_config.get("model_name"),
+                    temperature=self.summarization_config.get("temperature"),
+                    include_sources=self.summarization_config.get("include_sources"),
+                    language=self.summarization_config.get("language"),
+                    enable_google_search=self.summarization_config.get("enable_google_search"),
+                    thinking_budget=self.summarization_config.get("thinking_budget")
+                )
             
-            # Create summarizer (remove deprecated max_summary_length parameter)
-            self.summarizer = create_gemini_summarizer(
-                api_key=api_key,
-                model_name=config.model_name,
-                temperature=config.temperature,
-                include_sources=config.include_sources,
-                language=config.language,
-                enable_google_search=self.summarization_config.get("enable_google_search", True)
-            )
+            # Create summarizer using the config
+            self.summarizer = GeminiSummarizer(config=config)
             
             logger.info(f"Gemini summarizer initialized successfully: {config.model_name}")
             

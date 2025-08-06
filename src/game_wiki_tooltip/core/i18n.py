@@ -294,6 +294,7 @@ class TranslationManager:
             # Game Task Flow Buttons and Content
             "dst_task_button": "📋 DST Task Flow",
             "helldiver2_task_button": "📋 Helldivers 2 Guide",
+            "eldenring_task_button": "📋 Elden Ring Guide",
             "dst_task_flow_title": "DST Task Flow",
             "dst_survival_guide_title": "Don't Starve Together - Survival Guide",
             "dst_technical_error": "Unable to display the complete task flow page due to technical issues.",
@@ -456,6 +457,7 @@ class TranslationManager:
                 # Game Task Flow Buttons and Content
                 "dst_task_button": "📋 DST任务流程",
                 "helldiver2_task_button": "📋 地狱潜兵2攻略",
+                "eldenring_task_button": "📋 艾尔登法环攻略",
                 "dst_task_flow_title": "DST 任务流程",
                 "dst_survival_guide_title": "饥荒联机版 - 生存指南",
                 "dst_technical_error": "由于技术问题，无法显示完整的任务流程页面。",

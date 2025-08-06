@@ -63,9 +63,14 @@
    ```bash
    pip install -r requirements.txt
    ```
-
+   
+3. **建立环境变量**
+   ```bash
+   # Set your GEMINI API key for vector embeddings and AI rag function
+   GEMINI_API_KEY="your_gemini_api_key_here"
+   ```
+   
 5. **运行程序**
-
    ```bash
    python -m src.game_wiki_tooltip
    ```
@@ -167,33 +172,68 @@
 ```
 gamewiki/
 ├── src/
-│   └── game_wiki_tooltip/       # 主应用程序模块
-│       ├── ai/                  # AI和RAG相关功能
-│       │   ├── vectorstore/     # FAISS向量索引存储
-│       │   ├── build_vector_index.py  # 向量索引构建器
-│       │   ├── hybrid_retriever.py   # 混合检索系统
-│       │   ├── intent_aware_reranker.py # 意图感知重排序器
-│       │   ├── unified_query_processor.py # 统一查询处理器
-│       │   └── rag_query.py          # RAG查询接口
-│       ├── assets/              # 静态资源文件
-│       │   ├── games.json       # 游戏配置
-│       │   ├── games_en.json    # 英文游戏配置
-│       │   ├── games_zh.json    # 中文游戏配置
-│       │   ├── html/            # 游戏任务流程HTML
-│       │   └── icons/           # 图标资源
-│       ├── window_component/    # 窗口组件
-│       │   ├── unified_window.py     # 统一窗口系统
-│       │   ├── wiki_view.py          # Wiki视图组件
-│       │   └── window_controller.py  # 窗口控制器
-│       ├── qt_app.py            # Qt应用主入口
-│       ├── qt_hotkey_manager.py # 全局热键管理
-│       ├── qt_settings_window.py # 设置窗口
-│       ├── qt_tray_icon.py      # 系统托盘图标
-│       ├── assistant_integration.py  # AI助手集成
-│       ├── config.py            # 配置管理
-│       ├── history_manager.py   # 历史记录管理
-│       ├── i18n.py             # 国际化支持
-│       └── webview_widget.py    # WebView组件
+│   ├── game_wiki_tooltip/       # 主应用程序模块
+│   │   ├── ai/                  # AI和RAG相关功能
+│   │   │   ├── vectorstore/     # FAISS向量索引存储
+│   │   │   ├── build_vector_index.py  # 向量索引构建器
+│   │   │   ├── enhanced_bm25_indexer.py # 增强BM25索引器
+│   │   │   ├── batch_embedding.py    # 批量嵌入处理器
+│   │   │   ├── gemini_embedding.py   # Gemini嵌入服务
+│   │   │   ├── gemini_summarizer.py  # Gemini摘要生成
+│   │   │   ├── hybrid_retriever.py   # 混合检索系统
+│   │   │   ├── intent_aware_reranker.py # 意图感知重排序器
+│   │   │   ├── unified_query_processor.py # 统一查询处理器
+│   │   │   ├── rag_config.py         # RAG配置管理器
+│   │   │   └── rag_query.py          # RAG查询接口
+│   │   ├── assets/              # 静态资源文件
+│   │   │   ├── games.json       # 游戏配置
+│   │   │   ├── games_en.json    # 英文游戏配置
+│   │   │   ├── games_zh.json    # 中文游戏配置
+│   │   │   ├── settings.json    # 应用程序设置
+│   │   │   ├── vector_mappings.json # 向量映射配置
+│   │   │   ├── html/            # 游戏任务流程HTML
+│   │   │   ├── icons/           # 图标资源
+│   │   │   └── vosk_models/     # 语音识别模型
+│   │   ├── core/                # 核心功能模块
+│   │   │   ├── config.py        # 配置管理
+│   │   │   ├── graphics_compatibility.py # 图形兼容性
+│   │   │   ├── i18n.py          # 国际化支持
+│   │   │   ├── smart_interaction_manager.py # 智能交互管理
+│   │   │   └── utils.py         # 工具函数
+│   │   ├── window_component/    # 窗口组件
+│   │   │   ├── chat_messages.py      # 聊天消息处理
+│   │   │   ├── chat_view.py          # 聊天视图组件
+│   │   │   ├── chat_widgets.py       # 聊天UI小部件
+│   │   │   ├── enums.py              # 枚举定义
+│   │   │   ├── history_manager.py    # 历史记录管理
+│   │   │   ├── markdown_converter.py # Markdown转换器
+│   │   │   ├── quick_access_popup.py # 快速访问弹窗
+│   │   │   ├── svg_icon.py           # SVG图标处理器
+│   │   │   ├── unified_window.py     # 统一窗口系统
+│   │   │   ├── voice_recognition.py  # 语音识别
+│   │   │   ├── wiki_view.py          # Wiki视图组件
+│   │   │   └── window_controller.py  # 窗口控制器
+│   │   ├── webview2/            # WebView2组件
+│   │   │   └── lib/             # WebView2库文件
+│   │   ├── qt_app.py            # Qt应用主入口
+│   │   ├── qt_hotkey_manager.py # 全局热键管理
+│   │   ├── qt_settings_window.py # 设置窗口
+│   │   ├── qt_tray_icon.py      # 系统托盘图标
+│   │   ├── assistant_integration.py  # AI助手集成
+│   │   ├── preloader.py         # 应用程序预加载器
+│   │   ├── splash_screen.py     # 启动画面
+│   │   ├── webview_widget.py    # WebView组件
+│   │   ├── webview2_setup.py    # WebView2设置
+│   │   └── webview2_simple.py   # 简单WebView2组件
+│   ├── live_api/                # 实时API模块
+│   │   ├── config.py            # 实时API配置
+│   │   ├── main.py              # 实时API主入口
+│   │   └── requirements.txt     # 实时API依赖
+│   └── live_api_in_progress/    # 实时API开发模块
+│       ├── audio_player.py      # 音频播放器
+│       ├── conversation_manager.py # 对话管理器
+│       ├── live_api_client.py   # 实时API客户端
+│       └── voice_listener.py    # 语音监听服务
 ├── data/
 │   ├── knowledge_chunk/         # 游戏知识库JSON文件
 │   │   ├── helldiver2.json     # 地狱潜兵2知识库
@@ -202,6 +242,8 @@ gamewiki/
 │   │   └── civilization6.json  # 文明6知识库
 │   └── LLM_prompt/             # LLM提示词模板
 ├── requirements.txt             # Python依赖
+├── CLAUDE.md                   # Claude AI开发指南
+├── README.md                   # 英文说明文档
 └── README.zh-CN.md             # 中文说明文档
 ```
 

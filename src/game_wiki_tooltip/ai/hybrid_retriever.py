@@ -366,7 +366,7 @@ class HybridSearchRetriever:
         for rank, result in enumerate(vector_results, 1):
             chunk = result.get("chunk", {})
             doc_id = chunk.get("chunk_id", f"vector_{rank}")
-            rrf_score = 1.0 / (self.rrf_k + rank)
+            rrf_score = 1.5 / (self.rrf_k + rank)
             
             print(f"      {rank}. ID: {doc_id}")
             print(f"         Original score: {result.get('score', 0):.4f}")

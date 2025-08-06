@@ -55,9 +55,9 @@ hiddenimports = [
     'src.game_wiki_tooltip.ai.google_search_grounding',
     'src.game_wiki_tooltip.ai.intent_aware_reranker',
     # Note: intent_classifier is deprecated, unified_query_processor handles all functionality
-    'src.game_wiki_tooltip.config',
-    'src.game_wiki_tooltip.utils',
-    'src.game_wiki_tooltip.i18n',
+    'src.game_wiki_tooltip.core.config',
+    'src.game_wiki_tooltip.core.utils',
+    'src.game_wiki_tooltip.core.i18n',
     
     # Other dependencies
     'pywin32',

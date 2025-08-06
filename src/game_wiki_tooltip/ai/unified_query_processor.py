@@ -69,8 +69,6 @@ class UnifiedQueryProcessor:
         try:
             if "gemini" in self.llm_config.model.lower():
                 self._initialize_gemini_client()
-            elif "gpt" in self.llm_config.model.lower():
-                self._initialize_openai_client()
             else:
                 logger.error(f"Unsupported model type: {self.llm_config.model}")
                 return
@@ -103,26 +101,7 @@ class UnifiedQueryProcessor:
         except Exception as e:
             logger.error(f"Gemini client initialization failed: {e}")
             raise
-    
-    def _initialize_openai_client(self):
-        """Initialize OpenAI client"""
-        try:
-            import openai
-            
-            api_key = self.llm_config.get_api_key()
-            if not api_key:
-                raise ValueError("OpenAI API key not found")
-                
-            self.llm_client = openai.OpenAI(
-                api_key=api_key,
-                base_url=self.llm_config.base_url if self.llm_config.base_url else None,
-                timeout=self.llm_config.timeout
-            )
-            
-        except Exception as e:
-            logger.error(f"OpenAI client initialization failed: {e}")
-            raise
-    
+
     def _generate_cache_key(self, query: str) -> str:
         """Generate cache key"""
         return hashlib.md5(f"{query}_{self.llm_config.model}".encode()).hexdigest()
@@ -156,7 +135,7 @@ class UnifiedQueryProcessor:
 
 Your task is to analyze the user's query and perform the following tasks in ONE response:
 1. **Language Detection**: Detect the language of the query
-2. **Translation**: If the query is in Chinese, translate it to English
+2. **Translation**: If the query is not in English, translate it to English
 3. **Intent Classification**: Classify the intent (wiki/guide/unknown)
 4. **Query Rewriting**: Optimize the query for semantic search
 5. **BM25 Optimization**: Create a specialized query for keyword-based BM25 search
@@ -182,7 +161,7 @@ Please provide a JSON response with the following structure:
 - Otherwise mark as "en" or "other"
 
 **Intent Classification:**
-- **wiki**: User wants factual information, definitions, stats, or specific item/character/enemy data
+- **wiki**: User wants factual information, definitions, stats, item source, or specific item/character/enemy data
   - Single words or short phrases that look like game-specific terms should be classified as wiki
   - **Game-specific term indicators:**
     - Proper nouns (capitalized words like "Excalibur", "Gandalf", "Dragonbone")
@@ -210,7 +189,7 @@ Please provide a JSON response with the following structure:
 - Keep original game-specific terms unchanged only if they appear in the query
 - Preserve the original meaning and scope of the query
 
-**BM25 Query Optimization (CRITICAL - for keyword search):**
+**BM25 Query Optimization (for keyword search):**
 This is a specialized query designed to enhance important game terms while preserving the original query intent.
 
 **Key Principles:**
@@ -285,133 +264,6 @@ This is a specialized query designed to enhance important game terms while prese
                     time.sleep(self.llm_config.retry_delay * (2 ** attempt))
                 
         return None
-    
-    def _basic_processing(self, query: str) -> UnifiedQueryResult:
-        """Basic processing mode (fallback when LLM is unavailable)"""
-        # Simple language detection
-        chinese_chars = sum(1 for char in query if '\u4e00' <= char <= '\u9fff')
-        detected_language = "zh" if chinese_chars / len(query) > 0.3 else "en"
-        
-        # Basic intent classification
-        intent = "guide"
-        confidence = 0.6
-        
-        # Check if it's a wiki query asking for definitions
-        wiki_patterns = ["what is", "什么是", "是什么", "info", "stats", "数据", "属性"]
-        if any(pattern in query.lower() for pattern in wiki_patterns):
-            intent = "wiki"
-            confidence = 0.8
-        # Check if it's a guide query
-        elif any(word in query.lower() for word in ["how", "如何", "怎么", "best", "recommend", "推荐", "next", "下一个", "选择", "该"]):
-            intent = "guide"
-            confidence = 0.8
-        # Special handling for "什么" cases
-        elif "什么" in query:
-            # If it's recommendation queries like "该xxx什么" or "选什么"
-            if any(pattern in query for pattern in ["该", "选", "下一个", "推荐"]):
-                intent = "guide"
-                confidence = 0.7
-            else:
-                intent = "wiki"
-                confidence = 0.6
-        
-        # Basic rewriting - keep generic, not specific to any game
-        rewritten_query = query
-        
-        # Generic recommendation query processing
-        if any(word in query.lower() for word in ["推荐", "选择", "recommend", "choice", "next", "下一个"]):
-            # Check if it's a recommendation query
-            if not any(word in rewritten_query.lower() for word in ["guide", "recommendation", "攻略"]):
-                rewritten_query += " guide recommendation"
-            intent = "guide"
-            confidence = 0.8
-        
-        # Generic strategy query processing
-        elif any(word in query.lower() for word in ["怎么", "如何", "how to", "strategy", "攻略"]):
-            if not any(word in rewritten_query.lower() for word in ["guide", "strategy", "攻略"]):
-                rewritten_query += " strategy guide"
-            intent = "guide"
-            confidence = 0.8
-        
-        # Basic BM25 optimization: remove generic words, keep core words
-        bm25_optimized_query = self._basic_bm25_optimization(query)
-        
-        return UnifiedQueryResult(
-            original_query=query,
-            detected_language=detected_language,
-            translated_query=query,  # No translation in basic mode
-            rewritten_query=rewritten_query,
-            bm25_optimized_query=bm25_optimized_query,  # BM25 optimization in basic mode
-            intent=intent,
-            confidence=confidence,
-            search_type="hybrid",
-            reasoning="Basic processing mode - LLM unavailable",
-            translation_applied=False,
-            rewrite_applied=rewritten_query != query,
-            processing_time=0.001
-        )
-    
-    def _basic_bm25_optimization(self, query: str) -> str:
-        """Basic BM25 optimization (simple version when LLM is unavailable) - using weight enhancement"""
-        
-        words = query.lower().split()
-        optimized_words = []
-        
-        # Game-specific noun indicators (possible game terms)
-        game_terms = [
-            # Common game terms
-            'build', 'weapon', 'character', 'boss', 'enemy', 'skill', 'spell', 'item', 'gear',
-            'armor', 'shield', 'sword', 'bow', 'staff', 'magic', 'fire', 'ice', 'poison',
-            # Helldivers 2 related
-            'warbond', 'stratagem', 'helldiver', 'terminid', 'automaton', 'bile', 'charger',
-            # Chinese game terms
-            '配装', '武器', '角色', '技能', '装备', '护甲', '法术', '魔法', '敌人', '首领'
-        ]
-        
-        # Topic words (core concepts)
-        topic_words = [
-            'build', 'weapon', 'character', 'boss', 'strategy', 'guide', 'tip',
-            '配装', '武器', '角色', '策略', '攻略', '技巧'
-        ]
-        
-        # Generic words (reduce weight but don't delete)
-        generic_words = [
-            'best', 'good', 'great', 'top', 'recommendation', 'guide', 'tutorial', 'help',
-            '最好', '最佳', '推荐', '攻略', '教程', '帮助'
-        ]
-        
-        for word in words:
-            # Keep original words
-            optimized_words.append(word)
-            
-            # If it's a game-specific noun, repeat 2-3 times to enhance weight
-            if word in game_terms:
-                optimized_words.extend([word] * 2)  # Additional 2 repetitions
-                
-            # If it's a topic word, repeat once to enhance weight
-            elif word in topic_words:
-                optimized_words.append(word)  # Additional 1 repetition
-                
-            # Generic words remain unchanged, neither enhanced nor deleted
-        
-        # Add related terms based on query type
-        query_lower = query.lower()
-        
-        # If it's a build-related query, add related terms
-        if any(term in query_lower for term in ['build', 'setup', 'loadout', '配装', '搭配']):
-            optimized_words.extend(['loadout', 'setup', 'configuration'])
-            
-        # If it's a weapon-related query, add related terms  
-        elif any(term in query_lower for term in ['weapon', 'sword', 'gun', '武器', '剑', '枪']):
-            optimized_words.extend(['gear', 'equipment'])
-            
-        # If it's a character-related query, add related terms
-        elif any(term in query_lower for term in ['character', 'class', 'hero', '角色', '职业', '英雄']):
-            optimized_words.extend(['class', 'hero'])
-        
-        # Clean up extra spaces and return
-        optimized = " ".join(optimized_words)
-        return optimized if optimized.strip() else query
     
     def process_query(self, query: str) -> UnifiedQueryResult:
         """
@@ -535,20 +387,6 @@ This is a specialized query designed to enhance important game terms while prese
         # Cache result
         self._cache_result(query, result)
         return result
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """Get statistics"""
-        return self.stats.copy()
-    
-    def reset_stats(self):
-        """Reset statistics"""
-        self.stats = {
-            "total_queries": 0,
-            "cache_hits": 0,
-            "successful_processing": 0,
-            "failed_processing": 0,
-            "average_processing_time": 0.0
-        }
 
 # Global instance
 _unified_processor = None

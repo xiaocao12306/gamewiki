@@ -285,8 +285,13 @@ class BatchEmbeddingProcessor:
             vectors = self.embed_batch(texts)
             
             all_vectors.extend(vectors)
-            chunks_only = [chunk for chunk, _ in batch]
-            all_metadatas.extend(chunks_only)
+            # Add video info to each chunk's metadata
+            for chunk, video_info in batch:
+                chunk_with_video = chunk.copy()
+                if video_info:
+                    chunk_with_video['video_url'] = video_info.get('url', '')
+                    chunk_with_video['video_title'] = video_info.get('title', '')
+                all_metadatas.append(chunk_with_video)
         
         # Convert to numpy array
         vectors_array = np.array(all_vectors, dtype=np.float32)

@@ -20,15 +20,6 @@
             "height_percent": 0.5
         }
     },
-    "summarization": {
-        "enabled": true,
-        "api_key": "",
-        "model_name": "gemini-2.5-flash",
-        "max_summary_length": 300,
-        "temperature": 0.3,
-        "include_sources": true,
-        "language": "auto"
-    },
     "rag": {
         "hybrid_search": {
             "enabled": true,
@@ -39,10 +30,8 @@
         },
         "summarization": {
             "enabled": true,
-            "model_name": "gemini-2.0-flash",
-            "max_summary_length": 300,
+            "model_name": "gemini-2.5-flash-lite",
             "temperature": 0.3,
-            "include_sources": true,
             "language": "auto"
         },
         "intent_reranking": {

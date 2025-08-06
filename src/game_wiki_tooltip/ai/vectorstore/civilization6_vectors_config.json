@@ -4,7 +4,7 @@
   "game_name": "civilization6",
   "model": "gemini-embedding-001",
   "output_dim": 768,
-  "chunk_count": 28,
+  "chunk_count": 16,
   "index_path": "civilization6_vectors",
   "bm25_index_path": "civilization6_vectors/enhanced_bm25_index.pkl",
   "hybrid_search_enabled": true

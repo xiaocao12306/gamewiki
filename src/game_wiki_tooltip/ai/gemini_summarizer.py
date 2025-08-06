@@ -11,20 +11,9 @@ from pathlib import Path
 
 # Import i18n for internationalization
 from src.game_wiki_tooltip.core.i18n import t
-from .rag_config import RAGConfig
+from .rag_config import RAGConfig, SummarizationConfig
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SummarizationConfig:
-    """Configuration for Gemini summarization"""
-    api_key: str
-    model_name: str = "gemini-2.5-flash-lite"
-    temperature: float = 0.3
-    include_sources: bool = True
-    language: str = "auto"  # auto, zh, en
-    enable_google_search: bool = True  # Enable Google search tool
 
 
 class GeminiSummarizer:
@@ -36,14 +25,12 @@ class GeminiSummarizer:
         if rag_config:
             self.rag_config = rag_config
             # Extract settings from RAGConfig
-            self.config = SummarizationConfig(
-                api_key=rag_config.llm_settings.get_api_key(),
-                model_name=rag_config.summarization.model_name,
-                temperature=rag_config.summarization.temperature,
-                include_sources=rag_config.summarization.include_sources,
-                language=rag_config.summarization.language,
-                enable_google_search=True  # Default to True
-            )
+            # Use api_key from config or fallback to LLM settings
+            api_key = rag_config.summarization.api_key or rag_config.llm_settings.get_api_key()
+            
+            # Create config from RAGConfig settings
+            self.config = rag_config.summarization
+            self.config.api_key = api_key
         else:
             self.config = config
             self.rag_config = None
@@ -142,7 +129,8 @@ class GeminiSummarizer:
                         system_instruction=system_instruction,
                         tools=tools if tools else None,
                         # Allow model to generate appropriate length based on query
-                        temperature=self.config.temperature
+                        temperature=self.config.temperature,
+                        thinking_config=new_types.ThinkingConfig(thinking_budget=self.config.thinking_budget)
                     )
                     
                     # Stream content generation
@@ -257,6 +245,10 @@ class GeminiSummarizer:
    - 如果用户询问"为什么"、"如何"、"详细解释"等，提供完整深入的回答
    - 如果没有明确要求，根据问题复杂度提供适中长度的回答
 6. **利用structured_data**：优先使用结构化数据中的具体数值、名称、配置等信息
+7. **Google搜索使用指南**：
+   - 当提供的知识块无法充分回答用户问题时，主动使用Google搜索工具
+   - 如果用户询问的内容明显超出知识库范围（如游戏机制外的内容），使用Google搜索
+   - 结合知识库和Google搜索结果提供全面答案
 
 格式要求：
 • 开头先给出一句话总结（用💡标记）
@@ -265,7 +257,15 @@ class GeminiSummarizer:
 • 如果使用了Google搜索工具，在开头说明："我使用了Google搜索为你找到了以下信息"
 • 严格按照[原始查询]的要求组织答案
 • 使用友好的游戏术语
-• 基于实际数据，不要编造信息"""
+• 基于实际数据，不要编造信息
+• **禁止引用标记**：绝对不要在回答中添加任何引用标记、参考编号或方括号索引（如[1]、[i]、[a]等）
+• **多选项格式化**：当提供多个平行选项时（如不同的装备配置、策略等），使用编号列表保持一致的层级：
+  1. 第一个选项：描述
+     - 子项1
+     - 子项2
+  2. 第二个选项：描述
+     - 子项1
+     - 子项2"""
         else:
             return """You are a professional game guide assistant. Your task is to provide accurate and useful game strategy information to players based on the provided game knowledge base content.
 
@@ -283,6 +283,10 @@ Response guidelines:
    - If user asks "why", "how", "detailed explanation", etc., provide complete in-depth response
    - If no explicit requirement, provide moderate length response based on question complexity
 6. **Utilize structured_data**: Prioritize specific values, names, configurations from structured data
+7. **Google Search usage guide**:
+   - Proactively use Google Search tool when provided knowledge chunks cannot adequately answer the user's question
+   - If user asks about content clearly outside knowledge base scope (like non-game-mechanic content), use Google Search
+   - Combine knowledge base and Google Search results to provide comprehensive answers
 
 Format requirements:
 • Start with a one-sentence summary (marked with 💡)
@@ -291,7 +295,15 @@ Format requirements:
 • If Google Search tool was used, mention at the beginning: "I used Google search to find the following information"
 • Strictly follow the [Original Query] requirements
 • Use friendly gaming terminology
-• Base on actual data, don't fabricate information"""
+• Base on actual data, don't fabricate information
+• **No citation markers**: Never add any citation markers, reference numbers, or bracketed indices (like [1], [i], [a], etc.) in your response
+• **Multiple options formatting**: When providing multiple parallel options (like different loadouts, strategies, etc.), use numbered lists to maintain consistent hierarchy:
+  1. First option: description
+     - Sub-item 1
+     - Sub-item 2
+  2. Second option: description
+     - Sub-item 1
+     - Sub-item 2"""
     
     def _build_summarization_prompt(
         self, 
@@ -347,24 +359,23 @@ Please answer the user's question based on the above knowledge chunks."""
         formatted_chunks = []
         
         for i, chunk in enumerate(chunks, 1):
-            # Pass complete chunk data with an index for reference
-            # This ensures all fields (build, tactics, enemy_info, etc.) are preserved
-            chunk_with_index = {
-                "chunk_id": i,  # Add index for easy reference in prompts
-                **chunk  # Spread all original fields from the chunk
-            }
+            # Create a copy to avoid modifying original
+            chunk_copy = chunk.copy()
             
-            # Only remove truly internal fields that are not useful for LLM
-            # Keep all game-related content including build, tactics, etc.
-            internal_fields_to_remove = ['_internal_id', '_vector_id', '_index_id']
+            # Remove chunk_id to prevent LLM from adding references like [unique_id_002]
+            chunk_copy.pop('chunk_id', None)
+            
+            # Remove other internal fields that are not useful for LLM
+            internal_fields_to_remove = ['_internal_id', '_vector_id', '_index_id', 
+                                       'video_url', 'video_title']  # Also remove video fields as they're handled separately
             for field in internal_fields_to_remove:
-                chunk_with_index.pop(field, None)
+                chunk_copy.pop(field, None)
             
             # Ensure score is included if it exists
-            if 'score' in chunk and 'relevance_score' not in chunk_with_index:
-                chunk_with_index['relevance_score'] = chunk.get('score', 0)
+            if 'score' in chunk and 'relevance_score' not in chunk_copy:
+                chunk_copy['relevance_score'] = chunk.get('score', 0)
             
-            formatted_chunks.append(chunk_with_index)
+            formatted_chunks.append(chunk_copy)
         
         try:
             return json.dumps(formatted_chunks, ensure_ascii=False, indent=2)
@@ -391,133 +402,66 @@ Please answer the user's question based on the above knowledge chunks."""
     def _extract_video_sources(self, chunks: List[Dict[str, Any]], summary_text: str) -> str:
         """Extract video source information from chunks"""
         try:
-            # Get game name from config
-            game_name = None
-            if hasattr(self, 'current_game_name'):
-                game_name = self.current_game_name
-            
             print(f"🎥 [VIDEO-DEBUG] Starting video source extraction")
-            print(f"   - Game name: {game_name}")
             print(f"   - Number of chunks: {len(chunks)}")
             
-            if not game_name:
-                logger.debug("No game name available for video source extraction")
-                print(f"❌ [VIDEO-DEBUG] No game name available")
-                return ""
+            # Collect video sources directly from chunks
+            video_sources = []  # List of {url, title, topic, start_seconds}
+            seen_entries = set()  # Track unique video+topic+timestamp combinations
             
-            # Load original knowledge chunk file
-            # __file__ is in src/game_wiki_tooltip/ai/, need to go up to project root
-            kb_path = Path(__file__).parent.parent.parent.parent / "data" / "knowledge_chunk" / f"{game_name}.json"
-            print(f"📁 [VIDEO-DEBUG] Looking for knowledge chunk file: {kb_path}")
-            
-            if not kb_path.exists():
-                logger.debug(f"Knowledge chunk file not found: {kb_path}")
-                print(f"❌ [VIDEO-DEBUG] Knowledge chunk file not found")
-                return ""
-            
-            with open(kb_path, 'r', encoding='utf-8') as f:
-                kb_data = json.load(f)
-            
-            # Collect video sources - now as a list of individual entries
-            video_sources = []  # List of {url, topic, start_seconds}
-            
-            # Check which chunks were actually used in the summary
-            used_chunks = []
             for chunk in chunks:
-                # Check if chunk content appears in summary or has high score
-                chunk_keywords = chunk.get("keywords", [])
-                chunk_topic = chunk.get("topic", "")
-                chunk_score = chunk.get("score", 0)
-                
-                # Simple heuristic: check if keywords or topic appear in summary
-                keyword_match = any(keyword.lower() in summary_text.lower() for keyword in chunk_keywords)
-                topic_match = chunk_topic.lower() in summary_text.lower()
-                high_score = chunk_score > 0.5
-                
-                if keyword_match or topic_match or high_score:
-                    used_chunks.append(chunk)
-                    print(f"✅ [VIDEO-DEBUG] Chunk used: {chunk_topic} (score: {chunk_score:.3f})")
-                    print(f"   - Keyword match: {keyword_match}, Topic match: {topic_match}, High score: {high_score}")
-            
-            print(f"📊 [VIDEO-DEBUG] Used chunks count: {len(used_chunks)}")
-            
-            # Match chunks with original data using topic matching
-            for chunk in used_chunks:
-                chunk_topic = chunk.get("topic", "")
-                
-                print(f"🔍 [VIDEO-DEBUG] Matching chunk by topic: {chunk_topic}")
-                
-                if not chunk_topic:
-                    print(f"⚠️ [VIDEO-DEBUG] Chunk missing topic, skipping")
-                    continue
-                
-                # Search in all videos' knowledge chunks
-                for video_entry in kb_data:
-                    video_info = video_entry.get("video_info", {})
-                    if not video_info:
-                        continue
+                # Check if chunk has video information in the new format
+                if 'video_url' in chunk and chunk['video_url']:
+                    # Extract basic info
+                    url = chunk['video_url']
+                    title = chunk.get('video_title', 'Video Source')
+                    topic = chunk.get('topic', '')
                     
-                    for kb_chunk in video_entry.get("knowledge_chunks", []):
-                        # Match by topic only
-                        if kb_chunk.get("topic", "").strip() == chunk_topic.strip():
-                            
-                            video_url = video_info.get("url", "")
-                            if video_url:
-                                # Get timestamp
-                                timestamp = kb_chunk.get("timestamp", {})
-                                start = timestamp.get("start", "")
-                                
-                                # Create individual video source entry
-                                video_source_entry = {
-                                    "url": video_url,
-                                    "topic": chunk_topic,
-                                    "title": video_info.get("title", "Unknown Video")
-                                }
-                                
-                                # Convert start time to seconds for YouTube link
-                                if start:
-                                    start_seconds = self._convert_timestamp_to_seconds(start)
-                                    video_source_entry["start_seconds"] = start_seconds
-                                    print(f"   - Timestamp: {start} -> {start_seconds} seconds")
-                                
-                                video_sources.append(video_source_entry)
-                                print(f"   - Added video source: {video_url} at {start}")
+                    # Extract timestamp if available
+                    start_seconds = 0
+                    if 'timestamp' in chunk and isinstance(chunk['timestamp'], dict) and 'start' in chunk['timestamp']:
+                        start_seconds = self._convert_timestamp_to_seconds(chunk['timestamp']['start'])
+                    
+                    # Create unique key to avoid duplicates
+                    unique_key = f"{topic}_{url}_{start_seconds}" if start_seconds else f"{topic}_{url}"
+                    
+                    if unique_key not in seen_entries:
+                        seen_entries.add(unique_key)
+                        
+                        video_source = {
+                            'url': url,
+                            'title': title,
+                            'topic': topic,
+                            'start_seconds': start_seconds
+                        }
+                        
+                        video_sources.append(video_source)
+                        print(f"✅ [VIDEO-DEBUG] Found video source: {title} - {topic}")
             
-            # Format video sources
-            print(f"📹 [VIDEO-DEBUG] Found {len(video_sources)} video sources")
-            
+            # Check if no video sources found
             if not video_sources:
-                print(f"❌ [VIDEO-DEBUG] No video sources found")
+                print(f"⚠️ [VIDEO-DEBUG] No video sources found in chunks")
+                # Check if chunks are in old format
+                if chunks and 'video_url' not in chunks[0]:
+                    print(f"❌ [VIDEO-DEBUG] Chunks are in old format without video_url/video_title")
+                    logger.warning("Chunks do not contain video information. Please rebuild vector index.")
                 return ""
+            
+            print(f"📹 [VIDEO-DEBUG] Found {len(video_sources)} unique video sources")
             
             # Build the sources text
             sources_lines = ["---", "<small>", f"📺 **{t('video_sources_label')}**"]
             
-            # Remove duplicates based on topic and URL with timestamp
-            seen_entries = set()
-            unique_sources = []
-            
-            for source in video_sources:
-                # Create unique key with topic and time
-                if "start_seconds" in source:
-                    unique_key = f"{source['topic']}_{source['url']}_{source['start_seconds']}"
-                else:
-                    unique_key = f"{source['topic']}_{source['url']}"
-                
-                if unique_key not in seen_entries:
-                    seen_entries.add(unique_key)
-                    unique_sources.append(source)
-            
             # Sort by topic for consistent ordering
-            unique_sources.sort(key=lambda x: x.get('topic', ''))
+            video_sources.sort(key=lambda x: x.get('topic', ''))
             
             # Format each video source
-            for source in unique_sources:
+            for source in video_sources:
                 topic = source.get("topic", "Video Source")
                 url = source.get("url", "")
                 
                 # Add timestamp parameter for YouTube videos
-                if "youtube.com" in url and "start_seconds" in source:
+                if "youtube.com" in url and source.get("start_seconds", 0) > 0:
                     # Append time parameter to URL
                     time_param = f"&t={source['start_seconds']}"
                     link_url = f"{url}{time_param}"
@@ -554,8 +498,9 @@ Please answer the user's question based on the above knowledge chunks."""
 # Convenience function for creating summarizer
 def create_gemini_summarizer(
     api_key: Optional[str] = None,
-    model_name: str = "gemini-2.5-flash-lite",
-    enable_google_search: bool = True,
+    model_name: Optional[str] = None,
+    enable_google_search: Optional[bool] = None,
+    thinking_budget: Optional[int] = None,
     rag_config: Optional[RAGConfig] = None,
     **kwargs
 ) -> GeminiSummarizer:
@@ -566,6 +511,7 @@ def create_gemini_summarizer(
         api_key: Gemini API key (defaults to env var GEMINI_API_KEY)
         model_name: Model to use
         enable_google_search: Enable Google search tool (default: True)
+        thinking_budget: Thinking budget for dynamic thinking (default: -1)
         **kwargs: Additional config parameters
         
     Returns:
@@ -581,11 +527,21 @@ def create_gemini_summarizer(
         return GeminiSummarizer(rag_config=rag_config)
     
     # Otherwise, use individual parameters
-    config = SummarizationConfig(
-        api_key=api_key,
-        model_name=model_name,
-        enable_google_search=enable_google_search,
-        **kwargs
-    )
+    # Build config dict with only provided values
+    config_dict = {}
+    if api_key is not None:
+        config_dict['api_key'] = api_key
+    if model_name is not None:
+        config_dict['model_name'] = model_name
+    if enable_google_search is not None:
+        config_dict['enable_google_search'] = enable_google_search
+    if thinking_budget is not None:
+        config_dict['thinking_budget'] = thinking_budget
+    
+    # Merge with additional kwargs
+    config_dict.update(kwargs)
+    
+    # Create config with defaults from dataclass
+    config = SummarizationConfig(**config_dict)
     
     return GeminiSummarizer(config)

@@ -28,7 +28,9 @@
         }
       ],
       "notes": "Flowers are renewable. They can respawn via bees, rainfall, or by planting caught butterflies."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_002",
@@ -64,7 +66,9 @@
           "type": "Aura (when worn)"
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_003",
@@ -102,7 +106,9 @@
         }
       ],
       "notes": "Crafting a Top Hat is required to unlock the Magic tab for the first time."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_004",
@@ -160,7 +166,9 @@
           "notes": "Made from Meat on a Drying Rack."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_005",
@@ -206,7 +214,9 @@
           "notes": "Cactus is available year-round in the desert. Wear armor when harvesting to avoid taking damage."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_006",
@@ -251,7 +261,9 @@
           "notes": "The highest sanity-restoring food. Requires Electric Milk (from Volt Goats), making it a later-game option."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_007",
@@ -285,7 +297,9 @@
           "value": "+33"
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_008",
@@ -307,7 +321,9 @@
     "data": {
       "action": "Prototyping a new recipe",
       "effect": "Instantly restores +15 Sanity."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_009",
@@ -340,7 +356,9 @@
           "notes": "Drops from MacTusk with a 25% chance. Also provides 120 insulation and can be repaired with a Sewing Kit."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_010",
@@ -373,7 +391,9 @@
           "condition": "Player must stand directly on top of it. Requires finding Hutch in the caves and feeding it a One-man Band and a light source."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_011",
@@ -405,7 +425,9 @@
           "cost": "No hunger cost, but requires summer to be effective."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_012",
@@ -438,7 +460,9 @@
           "effect": "Instantly restores +10 Sanity by converting it from Enlightenment."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "dst_sanity_013",
@@ -465,7 +489,9 @@
       "special_effect": "Inverts all negative sanity auras into positive sanity gain.",
       "usage_scene": "Completely nullifying sanity drain from bosses, monsters, night, dusk, wetness, Nightmare Lights, and Evil Flowers.",
       "notes": "Also provides 70% damage reduction and is waterproof."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=OeOgOOdsIAI",
+    "video_title": "Don't Starve Together Guide: Sanity"
   },
   {
     "chunk_id": "unique_id_001",
@@ -505,7 +531,9 @@
           "purpose": "Helps experiment and learn Crock Pot recipes."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_002",
@@ -540,7 +568,9 @@
         "name": "Wilson",
         "reason": "He has few specific upsides or downsides, and his skill tree is not used in the guide, making the strategies universally applicable."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_003",
@@ -579,7 +609,9 @@
       "day_cycle_info": {
         "in_game_day_duration": "8 minutes real-time."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_004",
@@ -621,7 +653,9 @@
           "details": "Pick up seeds dropped by birds."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_005",
@@ -658,7 +692,9 @@
           "details": "Grow 3 juicy berries at once but take longer to regrow. Juicy berries also spoil much faster than regular ones."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_006",
@@ -709,7 +745,9 @@
           "purpose": "Prevents damage from darkness."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_007",
@@ -742,7 +780,9 @@
         "20 Gold Nuggets",
         "~40 Rocks"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_008",
@@ -785,7 +825,9 @@
         }
       ],
       "pro_tip": "Structures can be pre-crafted to carry the materials in a single inventory slot before placing them down."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_009",
@@ -814,7 +856,9 @@
         "combat_tactic": "Wear a Log Suit. Lure pigs one at a time. Dodge their attack, then hit them 3-4 times. Repeat."
       },
       "mob_interactions": "Pigs are neutral but will become hostile if one is attacked near them. They attack spiders on sight."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_010",
@@ -841,7 +885,9 @@
         "limitation": "Each Touch Stone works only once per player.",
         "post_revival": "You must return to your skeleton to pick up your dropped items."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_001",
@@ -875,7 +921,9 @@
         "Each Touch Stone can only be used once per player.",
         "It's wise to store edible items in a backpack, as pigs and spiders may eat food left on the ground after you die."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_002",
@@ -913,7 +961,9 @@
         "Destroy the empty nest for a bonus silk drop."
       ],
       "notes": "Higher level (Tier 2 or 3) nests may spawn Spider Warriors, which can also be lured into traps."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_003",
@@ -951,7 +1001,9 @@
         }
       ],
       "tip": "Pre-craft the Alchemy Engine near a Science Machine but don't place it right away to keep your inventory free."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_004",
@@ -982,7 +1034,9 @@
       "crafting_station": "Science Machine",
       "effect": "Slowly regenerates sanity while worn.",
       "usage_note": "A primary tool for sanity management in the early game. The alternative is to let sanity drop and fight Nightmare Creatures for Nightmare Fuel."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_005",
@@ -1019,7 +1073,9 @@
       ],
       "crafting_station": "Science Machine",
       "usage": "Catching bugs, specifically Fireflies at night for this guide's purpose."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_006",
@@ -1062,7 +1118,9 @@
         "Refuelable with Light Bulbs or Slurtle Slime."
       ],
       "related_action": "Find a Plugged Sinkhole, mine it with a pickaxe, and enter the Caves to pick Light Bulbs from Light Plants."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_007",
@@ -1105,7 +1163,9 @@
       "cons": [
         "Spoils over time, and its damage decreases as it rots."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_008",
@@ -1147,7 +1207,9 @@
         "name": "Scrapbook",
         "description": "Found in the pause menu, it provides detailed stats for items and mobs you've encountered."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_009",
@@ -1172,7 +1234,9 @@
         "Football Helmet"
       ],
       "effect": "Damage reduction is capped at the highest value of equipped armor (80%). The durability loss is split between the pieces."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_010",
@@ -1210,7 +1274,9 @@
       ],
       "crafting_station": "Alchemy Engine",
       "pros": "Provides light while keeping the hand slot free, making it ideal for working or fighting at night."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_011",
@@ -1233,7 +1299,9 @@
       "recommended_weapon": "Ham Bat",
       "recommended_armor": "Football Helmet",
       "strategy": "With a Ham Bat, a normal spider can be killed in two hits, allowing for aggressive farming."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_012",
@@ -1261,7 +1329,9 @@
         "Once the trees are burnt, chop them down with an Axe to collect Charcoal."
       ],
       "warning": "Fire spreads easily. To stop an uncontrolled fire, run away to unload the chunk, which pauses the fire's spread."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_013",
@@ -1297,7 +1367,9 @@
           "description": "During dusk or night, use a Shovel on a rabbit hole to force the rabbit out."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_014",
@@ -1335,7 +1407,9 @@
       ],
       "crafting_station": "Science Machine",
       "function": "Unlocks Tier 1 magic recipes, the equivalent of a Science Machine for magic."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_015",
@@ -1378,7 +1452,9 @@
           "Gears"
         ]
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_016",
@@ -1415,7 +1491,9 @@
         "Chest",
         "Fire Pit"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_017",
@@ -1476,7 +1554,9 @@
           "function": "Combines four food ingredients to create advanced recipes with superior stats."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_018",
@@ -1519,7 +1599,9 @@
         }
       ],
       "warning": "Using more than one Monster Meat in a Crock Pot recipe will result in Monster Lasagna, which is poisonous and damages health and sanity."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_019",
@@ -1548,7 +1630,9 @@
         "farming_strategy": "Feed them non-meat edible items to make them poop, then kill them for 2 Meat and 1 Pig Skin.",
         "purpose": "A good source of Manure, Meat, and Pig Skin."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_020",
@@ -1574,7 +1658,9 @@
         "Meat (not Monster Meat)",
         "Trinkets (from graves, tumbleweeds, etc.)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_021",
@@ -1616,7 +1702,9 @@
         "Clear away any weeds or debris near them."
       ],
       "seed_return": "Happy plants have a higher chance of returning 1 or 2 seeds of their specific crop type."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_022",
@@ -1639,7 +1727,9 @@
       "function": "Provides 9 slots of storage.",
       "tip": "Craft multiple chests to organize different categories of items.",
       "warning": "Leaving items on the ground is risky as Moles, Catcoons, and other mobs can steal or eat them."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_023",
@@ -1675,7 +1765,9 @@
         "Cannot spread fire to nearby objects."
       ],
       "placement_tip": "Place it one tile below the center tile of the base to illuminate most of the area."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_024",
@@ -1720,7 +1812,9 @@
         "Beefalo Wool",
         "Beefalo Horn (rare)"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_025",
@@ -1746,7 +1840,9 @@
         "Lure Hounds to a powerful neutral mob like a Beefalo herd or Treeguard.",
         "Fight them directly by kiting: wait for the lunge, dodge, attack twice, then repeat."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_beginner_026",
@@ -1770,7 +1866,9 @@
       "process": "Equip the Gardener Hat and inspect a plant at each of its growth stages (sprout, small, medium, grown).",
       "outcome": "Once fully researched, the plant's name and properties will be revealed in the farming interface, allowing for better farm management.",
       "weeds": "The last four plants in the register are weeds and should be dug up to improve the happiness of nearby crops."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_001",
@@ -1882,7 +1980,9 @@
         "interaction": "Give Farm Crop to Caged Bird",
         "output": "Crop-specific Seeds"
       }
-    ]
+    ],
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_002",
@@ -1928,7 +2028,9 @@
         }
       ],
       "survival_strategy": "Warm up next to a Campfire or burning tree until you are about to overheat. Equip the Beefalo Hat and carry a fully heated Thermal Stone to maximize the time you can spend away from a heat source."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "unique_id_003",
@@ -1986,7 +2088,9 @@
         "Gold Nugget": 2
       },
       "effect": "Provides a 25% movement speed bonus when equipped, making it one of the most essential items in the game."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_001",
@@ -2019,7 +2123,9 @@
         }
       ],
       "notes": "A useful source for Pig Skin if needed."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_002",
@@ -2067,7 +2173,9 @@
         ],
         "effects": "Restores 33 Sanity."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_003",
@@ -2103,7 +2211,9 @@
         "Farm Potatoes",
         "Kill more MacTusks"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_004",
@@ -2131,7 +2241,9 @@
         "The Pig King will reward you with Gold Nuggets."
       ],
       "benefit": "Provides an easy source of gold from an otherwise wasted resource."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_005",
@@ -2155,7 +2267,9 @@
       "action": "Gather around 20 Light Bulbs from the caves.",
       "storage": "Store the Light Bulbs in a Fridge to prevent them from spoiling.",
       "benefit": "Eliminates the need to enter the caves every time you need to refuel your Lantern or Miner Hat."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_006",
@@ -2182,7 +2296,9 @@
         "Kill the Werepig. It drops 2 Meat and 1 Pig Skin, enough to craft a Ham Bat.",
         "To farm Manure (Poop), drop unwanted non-meat food items (like spoiling Light Bulbs) on the ground while the Pig is a Werepig. It will eat them and produce Manure."
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_007",
@@ -2206,7 +2322,9 @@
       "strategy": "Target and kill the Ice Hounds first.",
       "mechanic": "Upon death, an Ice Hound unleashes an area-of-effect freeze attack.",
       "benefit": "Instantly freezes other nearby Hounds, making the encounter much easier to manage."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_008",
@@ -2229,7 +2347,9 @@
       "item": "Log Suit (low durability)",
       "action": "Throw a low-durability Log Suit into a fire.",
       "benefit": "You get the full, massive fuel value from the Log Suit without losing much utility, since its durability was already low."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_009",
@@ -2290,7 +2410,9 @@
         "Deerclops Eyeball",
         "Meat x8"
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_010",
@@ -2343,7 +2465,9 @@
           "Log x1"
         ]
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_011",
@@ -2369,7 +2493,9 @@
         "Potato"
       ],
       "strategy": "Plant a 4x4 combination of Tomatoes and Potatoes on each farm plot for a good yield of both crops and their respective seeds."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_012",
@@ -2396,7 +2522,9 @@
         "name": "Hound Defense",
         "description": "Killing the Lureplant drops its bulb, which can be replanted. Planting it on non-compostable turf (like Cobblestone or Wood Flooring) prevents Eyeplants from spawning on that turf. This allows you to create controlled 'kill zones' where Eyeplants will attack incoming enemies like Hounds."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_013",
@@ -2457,7 +2585,9 @@
         "Down Feather x5"
       ],
       "notes": "Five Down Feathers are needed for a Summer preparation item. The fight is easier at night as the Moslings will be asleep, allowing you to damage or kill them before engaging the adult."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_014",
@@ -2497,7 +2627,9 @@
           "utility": "The friendly Fruit Fly will automatically tend to your farm crops, keeping them happy without manual interaction from the player."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_001",
@@ -2535,7 +2667,9 @@
           "description": "Spawns a friendly Fruit Fly follower that automatically tends to farm crops, eliminating the need to talk to them manually."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_002",
@@ -2560,7 +2694,9 @@
       "process": "Feed excess seeds to a bird in a Birdcage.",
       "outcome": "Chance to receive Guano.",
       "utility": "Guano can be used as a good fuel source or for fertilization."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_003",
@@ -2592,7 +2728,9 @@
         "Ensure there are no weeds nearby."
       ],
       "notes": "The process can be greatly aided by a Friendly Fruit Fly follower and natural rain during Spring. It's not recommended to actively pursue this as a beginner, but it's a great bonus if it happens naturally."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_004",
@@ -2654,7 +2792,9 @@
           "type": "Fire Control"
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_005",
@@ -2690,7 +2830,9 @@
           "description": "The temperature in the Caves is always lower than the surface, making it a safe place to avoid overheating. Plants do not wilt in the caves."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_006",
@@ -2754,7 +2896,9 @@
         }
       ],
       "resource_acquisition": "Red and Blue Gems can be found by digging up graves in the Mosaic biome."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_007",
@@ -2792,7 +2936,9 @@
         "item_name": "Desert Goggles",
         "function": "Negates the vision and movement speed penalties of the sandstorm in the Oasis Desert. The blueprint can be fished from the Oasis lake."
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_008",
@@ -2837,7 +2983,9 @@
         }
       ],
       "process": "Stack 5 Gunpowder next to sleeping Beefalo and light it with a torch. Run away before it explodes."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_guide_009",
@@ -2869,7 +3017,9 @@
           "description": "Used with gears to craft the Insulated Pack, a backpack that also functions as a fridge to slow food spoilage."
         }
       ]
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=E07HsDmpG60",
+    "video_title": "Essential Beginner Survival Guide (ALL Seasons & Characters) Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_001_wilson",
@@ -2916,7 +3066,9 @@
         "utility": "5/10",
         "combat": "5/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_002_willow",
@@ -2970,7 +3122,9 @@
         "utility": "6/10",
         "combat": "6/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_003_wolfgang",
@@ -3021,7 +3175,9 @@
         "combat": "10/10"
       },
       "notes": "The video was recorded prior to the Wolfgang rework. A pop-up in the video notes that his mechanics have since changed to be controlled by a 'Might Meter' rather than being directly tied to hunger."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_004_wendy",
@@ -3073,7 +3229,9 @@
         "utility": "8/10",
         "combat": "7/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_005_wx78",
@@ -3128,7 +3286,9 @@
         "utility": "7/10",
         "combat": "7/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_006_wickerbottom",
@@ -3178,7 +3338,9 @@
         "utility": "9/10",
         "combat": "5/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_007_woodie",
@@ -3233,7 +3395,9 @@
         "utility": "6/10",
         "combat": "5/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_008_wes",
@@ -3284,7 +3448,9 @@
         "utility": "6/10",
         "combat": "3/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_009_maxwell",
@@ -3331,7 +3497,9 @@
         "utility": "9/10",
         "combat": "5/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_010_wigfrid",
@@ -3383,7 +3551,9 @@
         "utility": "7/10",
         "combat": "6/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_011_webber",
@@ -3433,7 +3603,9 @@
         "utility": "6/10",
         "combat": "6/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_012_winona",
@@ -3486,7 +3658,9 @@
         "utility": "9/10",
         "combat": "6/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_013_warly",
@@ -3536,7 +3710,9 @@
         "utility": "10/10",
         "combat": "8/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_014_wortox",
@@ -3588,7 +3764,9 @@
         "utility": "7/10",
         "combat": "6/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_015_wormwood",
@@ -3641,7 +3819,9 @@
         "utility": "7/10",
         "combat": "4/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_016_wurt",
@@ -3693,7 +3873,9 @@
         "utility": "6/10",
         "combat": "5/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_017_walter",
@@ -3750,7 +3932,9 @@
         "utility": "6/10",
         "combat": "4/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_018_wanda",
@@ -3805,7 +3989,9 @@
         "utility": "10/10",
         "combat": "9/10"
       }
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   },
   {
     "chunk_id": "dst_char_019_beginner_recommendations",
@@ -3847,6 +4033,8 @@
         }
       ],
       "overall_advice": "These characters teach the right habits and provide a sincere Don't Starve experience, as other characters can drastically change the gameplay."
-    }
+    },
+    "video_url": "https://www.youtube.com/watch?v=zrW4p19EFwU",
+    "video_title": "BEST use for EVERY Character in Don't Starve Together"
   }
 ]

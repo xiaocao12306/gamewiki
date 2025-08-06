@@ -86,11 +86,14 @@ class HybridSearchConfig:
 class SummarizationConfig:
     """Summary generation configuration"""
     enabled: bool = True
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-2.5-flash-lite"
     max_summary_length: int = 300
     temperature: float = 0.3
     include_sources: bool = True
     language: str = "auto"  # auto, zh, en
+    enable_google_search: bool = True  # Enable Google search tool
+    thinking_budget: int = -1  # -1 for dynamic thinking, 0 to disable, >0 for fixed budget
+    api_key: Optional[str] = None  # API key for summarizer
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -98,7 +101,9 @@ class SummarizationConfig:
             "max_summary_length": self.max_summary_length,
             "temperature": self.temperature,
             "include_sources": self.include_sources,
-            "language": self.language
+            "language": self.language,
+            "enable_google_search": self.enable_google_search,
+            "thinking_budget": self.thinking_budget
         }
 
 
@@ -167,64 +172,35 @@ class RAGConfig:
         # Hybrid search configuration
         if "hybrid_search" in config_dict:
             hs_dict = config_dict["hybrid_search"]
-            config.hybrid_search = HybridSearchConfig(
-                enabled=hs_dict.get("enabled", True),
-                fusion_method=hs_dict.get("fusion_method", "rrf"),
-                vector_weight=hs_dict.get("vector_weight", 0.5),
-                bm25_weight=hs_dict.get("bm25_weight", 0.5),
-                rrf_k=hs_dict.get("rrf_k", 60)
-            )
+            config.hybrid_search = HybridSearchConfig(**hs_dict)
         
         # Summary generation configuration
         if "summarization" in config_dict:
             sum_dict = config_dict["summarization"]
-            config.summarization = SummarizationConfig(
-                enabled=sum_dict.get("enabled", True),
-                model_name=sum_dict.get("model_name", "gemini-2.0-flash"),
-                max_summary_length=sum_dict.get("max_summary_length", 300),
-                temperature=sum_dict.get("temperature", 0.3),
-                include_sources=sum_dict.get("include_sources", True),
-                language=sum_dict.get("language", "auto")
-            )
+            config.summarization = SummarizationConfig(**sum_dict)
         
         # Intent reranking configuration
         if "intent_reranking" in config_dict:
             ir_dict = config_dict["intent_reranking"]
-            config.intent_reranking = IntentRerankingConfig(
-                enabled=ir_dict.get("enabled", True),
-                intent_weight=ir_dict.get("intent_weight", 0.4),
-                semantic_weight=ir_dict.get("semantic_weight", 0.6),
-                confidence_threshold=ir_dict.get("confidence_threshold", 0.7)
-            )
+            config.intent_reranking = IntentRerankingConfig(**ir_dict)
         
         # Query processing configuration
         if "query_processing" in config_dict:
             qp_dict = config_dict["query_processing"]
-            config.query_processing = QueryProcessingConfig(
-                enable_query_rewrite=qp_dict.get("enable_query_rewrite", True),
-                enable_intent_classification=qp_dict.get("enable_intent_classification", True),
-                unified_processing=qp_dict.get("unified_processing", True)
-            )
+            config.query_processing = QueryProcessingConfig(**qp_dict)
         
         # LLM configuration
         if "llm_settings" in config_dict:
             llm_dict = config_dict["llm_settings"]
-            config.llm_settings = LLMSettings(
-                model=llm_dict.get("model", "gemini-2.5-flash-lite"),
-                api_key=llm_dict.get("api_key", None),
-                base_url=llm_dict.get("base_url", None),
-                temperature=llm_dict.get("temperature", 0.7),
-                timeout=llm_dict.get("timeout", 30),
-                enable_cache=llm_dict.get("enable_cache", True),
-                cache_ttl=llm_dict.get("cache_ttl", 3600),
-                max_retries=llm_dict.get("max_retries", 3),
-                retry_delay=llm_dict.get("retry_delay", 1.0)
-            )
+            config.llm_settings = LLMSettings(**llm_dict)
         
         # Basic configuration
-        config.top_k = config_dict.get("top_k", 5)
-        config.enable_cache = config_dict.get("enable_cache", True)
-        config.cache_ttl = config_dict.get("cache_ttl", 3600)
+        if "top_k" in config_dict:
+            config.top_k = config_dict["top_k"]
+        if "enable_cache" in config_dict:
+            config.enable_cache = config_dict["enable_cache"]
+        if "cache_ttl" in config_dict:
+            config.cache_ttl = config_dict["cache_ttl"]
         
         return config
     
@@ -307,11 +283,13 @@ def get_default_config() -> RAGConfig:
         ),
         summarization=SummarizationConfig(
             enabled=True,
-            model_name="gemini-2.0-flash",
+            model_name="gemini-2.5-flash-lite",
             max_summary_length=300,
             temperature=0.3,
             include_sources=True,
-            language="auto"
+            language="auto",
+            enable_google_search=True,
+            thinking_budget=-1
         ),
         intent_reranking=IntentRerankingConfig(
             enabled=True,
