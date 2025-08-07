@@ -30,7 +30,7 @@ qdrant-client>=1.6.0
 # 打包工具
 pyinstaller>=6.0.0
 
-# WebView2 支持（可选，用于替代 PyQt6-WebEngine）
+# WebView2 支持
 pythonnet>=3.0.0  # WebView2 支持已启用
 
 # BlurWindow半透明效果依赖

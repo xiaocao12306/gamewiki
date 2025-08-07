@@ -146,7 +146,9 @@ class QtSettingsWindow(QMainWindow):
     def _init_ui(self):
         """Initialize UI"""
         self.setWindowTitle(t("settings_title"))
-        self.setFixedSize(600, 500)
+        # Use minimum size instead of fixed size to avoid layout issues
+        self.setMinimumSize(600, 500)
+        self.resize(600, 500)  # Set initial size
         
         # Set window icon
         try:
@@ -222,6 +224,11 @@ class QtSettingsWindow(QMainWindow):
         button_layout.addWidget(self.cancel_button)
         
         layout.addLayout(button_layout)
+        
+        # Force layout update to prevent window size issues
+        from PyQt6.QtWidgets import QApplication
+        QApplication.processEvents()
+        self.updateGeometry()
         
     def _create_language_tab(self):
         """Create general settings configuration tab"""
@@ -324,9 +331,8 @@ class QtSettingsWindow(QMainWindow):
             for device in devices:
                 device_name = device['name']
                 device_index = device['index']
-                # Show device name with index for clarity
-                display_name = f"{device_name} (Index: {device_index})"
-                self.audio_device_combo.addItem(display_name, device_index)
+                # Use clean device name without index for better readability
+                self.audio_device_combo.addItem(device_name, device_index)
                 
         except Exception as e:
             logger.error(f"Failed to get audio devices: {e}")

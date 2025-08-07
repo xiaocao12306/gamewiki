@@ -57,13 +57,13 @@ def get_resource_path(relative_path: str) -> Path:
     Get the absolute path of a resource file, compatible with both development and PyInstaller environments
     
     Args:
-        relative_path: Path relative to the project root or temp directory
+        relative_path: Path relative to the project root
         
     Returns:
         Absolute path to the resource file
     """
     try:
-        # PyInstaller temp directory after packaging
+        # PyInstaller packaged environment
         base_path = Path(sys._MEIPASS)
         resource_path = base_path / relative_path
     except AttributeError:

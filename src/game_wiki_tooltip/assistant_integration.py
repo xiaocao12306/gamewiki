@@ -2019,9 +2019,18 @@ class IntegratedAssistantController(AssistantController):
         logger.info(f"🔥 Smart hotkey handling result: {action}")
         
         if action == 'show_chat':
-            # 先显示聊天窗口
+            # 立即设置游戏窗口信息到assistant（只更新UI，不初始化RAG）
+            if current_game_window:
+                logger.info(f"🎮 Pre-setting game window for UI: '{current_game_window}'")
+                self.current_game_window = current_game_window
+                # 立即更新main_window的按钮（如果窗口已存在）
+                if self.main_window:
+                    self.main_window.current_game_window = current_game_window
+                    self.main_window._update_task_flow_button()
+            
+            # 先显示聊天窗口（按钮已经更新）
             self.show_chat_window()
-            logger.info("💬 Show chat window requested - executed before game window setting")
+            logger.info("💬 Show chat window requested - executed with button pre-configured")
             
             # 检查是否需要自动开启语音输入
             if (self.settings_manager.settings.auto_voice_on_hotkey and 
@@ -2032,10 +2041,10 @@ class IntegratedAssistantController(AssistantController):
                 QTimer.singleShot(150, lambda: self._auto_start_voice_input())
                 logger.info("🎤 Auto voice input scheduled after hotkey trigger")
             
-            # 然后异步设置游戏窗口（避免阻塞UI）
+            # 然后异步初始化RAG（分离按钮显示和RAG初始化）
             if current_game_window:
-                logger.info(f"🎮 Setting current game window after chat display: '{current_game_window}'")
-                # 使用QTimer异步设置游戏窗口，避免阻塞UI
+                logger.info(f"🎮 Async RAG initialization for: '{current_game_window}'")
+                # 使用QTimer异步初始化RAG，避免阻塞UI
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(50, lambda: self._delayed_set_game_window(current_game_window))
             else:
@@ -2087,21 +2096,10 @@ class IntegratedAssistantController(AssistantController):
         try:
             logger.info(f"🎮 [DEBUG] About to set current game window (delayed): '{game_window_title}'")
             logger.info(f"📋 [DEBUG] Main window exists: {self.main_window is not None}")
-            if self.main_window:
-                logger.info(f"📋 [DEBUG] Main window task buttons count before: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
-            
+
             # 设置游戏窗口并确保task flow按钮正确显示
             self.set_current_game_window(game_window_title)
-            
-            # Debug: Log after setting game window
-            if self.main_window:
-                logger.info(f"📋 [DEBUG] Main window task buttons count after: {len(getattr(self.main_window, 'game_task_buttons', {}))}")
-                # Log visibility of each button
-                for game_name, button in getattr(self.main_window, 'game_task_buttons', {}).items():
-                    if button:
-                        is_visible = button.isVisible()
-                        logger.info(f"    📋 [DEBUG] {game_name} task button visible: {is_visible}")
-            
+
             # 标记游戏窗口已经设置
             self._game_window_already_set = True
             logger.info(f"🏁 [DEBUG] Game window already set flag: True (delayed)")
@@ -2131,6 +2129,15 @@ class IntegratedAssistantController(AssistantController):
         # 标记窗口刚刚显示，激活保护期
         if hasattr(self, 'smart_interaction') and self.smart_interaction:
             self.smart_interaction.mark_window_just_shown()
+        
+        # 如果已知游戏窗口，立即更新task flow按钮（不等待延迟）
+        if hasattr(self, 'current_game_window') and self.current_game_window and self.main_window:
+            logger.info(f"🎮 Pre-setting game window for immediate button display: {self.current_game_window}")
+            self.main_window.current_game_window = self.current_game_window
+            self.main_window._update_task_flow_button()
+            # 强制UI更新
+            from PyQt6.QtWidgets import QApplication
+            QApplication.processEvents()
 
         # 先决定显示哪种形态
         if not self.main_window.has_switched_state:

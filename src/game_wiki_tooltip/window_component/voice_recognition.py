@@ -233,23 +233,112 @@ def is_voice_recognition_available():
 
 
 def get_audio_input_devices():
-    """Get list of available audio input devices."""
+    """Get list of available audio input devices, filtering duplicates and invalid devices."""
     if not VOSK_AVAILABLE:
         return []
     
+    import re
     devices = []
+    seen_base_names = {}  # Track unique device base names
+    
+    # System/virtual devices to filter out
+    SYSTEM_DEVICES = [
+        "Microsoft Sound Mapper",
+        "Microsoft 声音映射器", 
+        "主声音捕获驱动程序",
+        "Primary Sound Capture Driver",
+        "Microphone Array (Intel® Smart Sound Technology",  # Often problematic
+    ]
+    
+    # API type indicators in device names
+    API_PATTERNS = r'\s*\((MME|DirectSound|WASAPI|WDM-KS|Windows DirectSound|Windows WASAPI|Windows WDM-KS)\)'
+    
     try:
         p = pyaudio.PyAudio()
+        
         for i in range(p.get_device_count()):
-            device_info = p.get_device_info_by_index(i)
-            if device_info['maxInputChannels'] > 0:
-                devices.append({
-                    'index': i,
-                    'name': device_info['name'],
-                    'channels': device_info['maxInputChannels'],
-                    'default_sample_rate': device_info['defaultSampleRate']
-                })
+            try:
+                device_info = p.get_device_info_by_index(i)
+                
+                # Only process input devices
+                if device_info['maxInputChannels'] <= 0:
+                    continue
+                
+                name = device_info['name']
+                
+                # Skip system/mapper devices
+                if any(sys_dev in name for sys_dev in SYSTEM_DEVICES):
+                    continue
+                
+                # Test if device is actually available
+                # Try to open a stream briefly to check if device works
+                try:
+                    test_stream = p.open(
+                        format=pyaudio.paInt16,
+                        channels=min(1, device_info['maxInputChannels']),
+                        rate=int(device_info['defaultSampleRate']),
+                        input=True,
+                        input_device_index=i,
+                        frames_per_buffer=1024,
+                        start=False  # Don't actually start the stream
+                    )
+                    test_stream.close()
+                except:
+                    # Device not actually available, skip it
+                    logger.debug(f"Skipping unavailable device: {name} (index {i})")
+                    continue
+                
+                # Extract base name (remove API type suffix)
+                clean_name = re.sub(API_PATTERNS, '', name).strip()
+                
+                # Remove index numbers that Windows sometimes adds
+                clean_name = re.sub(r'\s*\(\d+\)$', '', clean_name)
+                clean_name = re.sub(r'\s*\[\d+\]$', '', clean_name)
+                
+                # Check if we've seen this base device name
+                if clean_name in seen_base_names:
+                    # Keep the one with better properties (higher sample rate or more channels)
+                    existing = seen_base_names[clean_name]
+                    if (device_info['defaultSampleRate'] > existing['default_sample_rate'] or
+                        device_info['maxInputChannels'] > existing['channels']):
+                        # This version is better, replace
+                        seen_base_names[clean_name] = {
+                            'index': i,
+                            'name': clean_name,
+                            'channels': device_info['maxInputChannels'],
+                            'default_sample_rate': device_info['defaultSampleRate'],
+                            'original_name': name  # Keep original for debugging
+                        }
+                else:
+                    # First time seeing this device
+                    seen_base_names[clean_name] = {
+                        'index': i,
+                        'name': clean_name,
+                        'channels': device_info['maxInputChannels'],
+                        'default_sample_rate': device_info['defaultSampleRate'],
+                        'original_name': name
+                    }
+                    
+            except Exception as e:
+                logger.debug(f"Error processing device {i}: {e}")
+                continue
+        
+        # Convert to list, removing debug info
+        for device_data in seen_base_names.values():
+            devices.append({
+                'index': device_data['index'],
+                'name': device_data['name'],
+                'channels': device_data['channels'],
+                'default_sample_rate': device_data['default_sample_rate']
+            })
+        
+        # Sort by name for consistent display
+        devices.sort(key=lambda d: d['name'])
+        
         p.terminate()
+        
+        logger.info(f"Found {len(devices)} unique audio input devices")
+        
     except Exception as e:
         logger.error(f"Error getting audio devices: {e}")
     

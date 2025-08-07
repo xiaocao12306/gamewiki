@@ -558,10 +558,18 @@ class GameWikiApp(QObject):
             self.settings_window.settings_applied.connect(self._on_settings_applied)
             
             # 移除initial_setup处理逻辑，因为现在不会因为没有API key而强制退出
-                
+        
+        # Ensure window has correct size before showing
+        self.settings_window.resize(600, 500)
         self.settings_window.show()
         self.settings_window.raise_()
         self.settings_window.activateWindow()
+        
+        # Force proper size after showing
+        from PyQt6.QtWidgets import QApplication
+        QApplication.processEvents()
+        if self.settings_window.size().width() < 600 or self.settings_window.size().height() < 500:
+            self.settings_window.resize(600, 500)
             
     def _on_settings_applied(self):
         """Handle settings applied"""
@@ -990,46 +998,12 @@ def main():
     # Step 2: Show splash screen IMMEDIATELY
     splash = None
     try:
-        from src.game_wiki_tooltip.splash_screen import SplashScreen, FirstRunSplashScreen
-        import sys
-        import os
+        from src.game_wiki_tooltip.splash_screen import SplashScreen
         
-        # Check if this is first run (for onedir mode)
-        if hasattr(sys, '_MEIPASS'):
-            # Running from PyInstaller bundle
-            # For onedir mode, check if settings file exists (more reliable indicator)
-            from src.game_wiki_tooltip.core.utils import APPDATA_DIR
-            settings_path = APPDATA_DIR / "settings.json"
-            marker_file = APPDATA_DIR / '.first_run_complete'
-            
-            # First run if neither settings nor marker file exists
-            is_first_run = not settings_path.exists() and not marker_file.exists()
-            
-            if is_first_run:
-                # Show special first-run splash screen
-                splash = FirstRunSplashScreen()
-                splash.show()
-                qapp.processEvents()
-                
-                # Create APPDATA directory if it doesn't exist
-                APPDATA_DIR.mkdir(parents=True, exist_ok=True)
-                
-                # Create marker file in APPDATA (persistent location)
-                try:
-                    marker_file.write_text('1')
-                    logger.info(f"Created first run marker at: {marker_file}")
-                except Exception as e:
-                    logger.warning(f"Failed to create first run marker: {e}")
-            else:
-                # Normal splash screen
-                splash = SplashScreen()
-                splash.show()
-                qapp.processEvents()
-        else:
-            # Development mode - normal splash
-            splash = SplashScreen()
-            splash.show()
-            qapp.processEvents()
+        # Show normal splash screen for all cases (OneDir mode doesn't need special first-run handling)
+        splash = SplashScreen()
+        splash.show()
+        qapp.processEvents()
             
     except Exception as e:
         print(f"Failed to show splash screen: {e}")

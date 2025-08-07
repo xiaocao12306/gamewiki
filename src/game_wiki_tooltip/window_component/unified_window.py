@@ -1958,11 +1958,7 @@ class UnifiedAssistantWindow(QMainWindow):
         if game_window_title is None:
             logger.info("🧹 Clearing game window context in main window")
             self.current_game_window = None
-            
-            # Hide all task flow buttons
-            for button in getattr(self, 'game_task_buttons', {}).values():
-                button.setVisible(False)
-            
+
             logger.info("✅ Game context cleared in main window, all task buttons hidden")
             return
         
@@ -1974,16 +1970,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Debug: Log current state before change
         old_game_window = getattr(self, 'current_game_window', None)
         logger.info(f"🔄 [DEBUG] Game window change: '{old_game_window}' -> '{game_window_title}'")
-        
-        # Debug: Check if task buttons are initialized
-        button_count = len(getattr(self, 'game_task_buttons', {}))
-        logger.info(f"📋 [DEBUG] Current task buttons count: {button_count}")
-        
-        # Critical fix: Ensure task buttons are created before trying to update visibility
-        if button_count == 0:
-            logger.warning(f"⚠️ [DEBUG] Task buttons not created yet, creating them first")
-            logger.warning(f"⚠️ [DEBUG] Game task layout not available, buttons will be created later")
-        
+
         # Set the new game window
         self.current_game_window = game_window_title
         
@@ -2046,6 +2033,12 @@ class UnifiedAssistantWindow(QMainWindow):
             config = game_configs[matched_game]
             self.task_flow_button.setText(config['display_name'])
             self.task_flow_button.show()
+            
+            # Force UI update to show button immediately
+            self.task_flow_button.update()
+            self.task_flow_button.repaint()
+            from PyQt6.QtWidgets import QApplication
+            QApplication.processEvents()
             
             # Disconnect previous handler if any
             try:

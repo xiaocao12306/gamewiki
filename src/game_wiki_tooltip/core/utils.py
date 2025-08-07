@@ -7,7 +7,7 @@ def package_file(relative_path: str) -> Path:
     Supports both development environment and PyInstaller packaged environment.
     """
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # PyInstaller packaged environment - 匹配spec文件中的打包路径
+        # PyInstaller packaged environment - matches the spec file packaging path
         base_path = Path(sys._MEIPASS) / "src" / "game_wiki_tooltip" / "assets"
         return base_path / relative_path
     else:

@@ -29,17 +29,17 @@ def get_resource_path(relative_path: str) -> Path:
     Get absolute path for resource files, compatible with development and PyInstaller packaging
     
     Args:
-        relative_path: Path relative to project root or temporary directory
+        relative_path: Path relative to project root
         
     Returns:
         Absolute path for resource files
     """
     try:
-        # PyInstaller packaged temporary directory
+        # PyInstaller packaged environment
         base_path = Path(sys._MEIPASS)
-        # 在PyInstaller环境中，assets被打包到src/game_wiki_tooltip/路径下
+        # In PyInstaller environment, assets are packaged under src/game_wiki_tooltip/ path
         resource_path = base_path / "src" / "game_wiki_tooltip" / relative_path
-        print(f"🔧 [RAG-DEBUG] Using PyInstaller temp directory: {base_path}")
+        print(f"🔧 [RAG-DEBUG] Using PyInstaller environment: {base_path}")
         print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
     except AttributeError:
         # Development environment: find project root from current file location
