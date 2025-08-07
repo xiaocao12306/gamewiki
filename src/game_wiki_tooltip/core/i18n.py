@@ -318,7 +318,11 @@ class TranslationManager:
             "bm25_search_execution_failed": "BM25 search execution failed: {error}",
             "enhanced_bm25_load_failed": "Enhanced BM25 index loading failed: {error}",
             "bm25_index_build_failed": "BM25 index build failed: {error}",
-            "enhanced_bm25_index_build_failed": "Enhanced BM25 index build failed: {error}"
+            "enhanced_bm25_index_build_failed": "Enhanced BM25 index build failed: {error}",
+            
+            # Game detection messages
+            "game_not_detected": "No game detected. Please trigger the hotkey while in a game, or add the game to settings if it's not in the default list.",
+            "game_not_supported": "The current window '{window}' is not a supported game. Please switch to a supported game or add it in settings."
         }
     
     def _create_language_translations(self, language: str) -> Dict[str, str]:
@@ -494,7 +498,11 @@ class TranslationManager:
                 "bm25_search_execution_failed": "BM25搜索执行失败: {error}",
                 "enhanced_bm25_load_failed": "增强BM25索引加载失败: {error}",
                 "bm25_index_build_failed": "构建BM25索引失败: {error}",
-                "enhanced_bm25_index_build_failed": "构建增强BM25索引失败: {error}"
+                "enhanced_bm25_index_build_failed": "构建增强BM25索引失败: {error}",
+                
+                # 游戏检测消息
+                "game_not_detected": "未检测到游戏。请在游戏中触发热键，或如果游戏不在默认列表中，请在设置中添加。",
+                "game_not_supported": "当前窗口 '{window}' 不是支持的游戏。请切换到支持的游戏或在设置中添加。"
             }
         else:
             # 对于其他语言，返回英语翻译作为基础

@@ -1,320 +1,127 @@
-# GameWikiTooltip - 游戏Wiki悬浮窗工具
+# GameWikiTooltip - AI游戏智能助手 🎮🤖
 
-一个专为游戏玩家设计的智能Wiki悬浮窗工具，支持自动识别当前游戏并快速打开对应的Wiki页面，为部分游戏集成了AI RAG（检索增强生成）功能，为游戏玩家提供智能问答服务。
+> **你的专属游戏AI伙伴** - 游戏内Wiki悬浮窗 + AI知识库问答，游戏中即时获取攻略
 
-## 功能特性
+![Windows](https://img.shields.io/badge/平台-Windows%2010%2F11-blue?logo=windows)
+![Python](https://img.shields.io/badge/Python-3.8%2B-green?logo=python)
+![Games](https://img.shields.io/badge/AI游戏-4款支持-orange?logo=gamepad)
+![License](https://img.shields.io/badge/许可证-MIT-yellow)
+[![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
 
-- **全局热键激活** - 使用自定义热键组合快速呼出对话框
-- **智能游戏识别** - 自动检测当前活跃的游戏窗口
-- **悬浮窗显示** - 在游戏上方显示Wiki内容
-- **AI智能问答** - 集成Google Gemini AI和本地向量搜索的智能游戏助手
-- **多游戏支持** - 内置Wiki配置和AI知识库
+👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/latest)**
 
-## 支持的游戏
+## ✨ 为什么选择GameWikiTooltip？
 
-###  AI增强游戏（完整知识库支持）
-这些游戏具备先进的AI问答功能和完整的知识库：
+再也不用切出游戏查攻略！一键呼出AI助手，在游戏内直接获取Wiki信息、装备推荐、Boss攻略。
 
-- **地狱潜兵2 (HELLDIVERS 2)**
-- **艾尔登法环 (Elden Ring)**
-- **饥荒联机版 (Don't Starve Together)**
-- **文明6 (Civilization VI)** 
+### 🎯 核心功能
 
-###  Wiki访问游戏
-提供基础Wiki悬浮窗支持，便于快速查阅：
+- **🔥 一键呼出，即问即答** - 按下`Ctrl+X`，无需切屏即可查询攻略
+- **🤖 AI游戏专家** - 基于Google Gemini + 本地知识库的智能问答
+- **🎮 自动识别游戏** - 智能检测当前游戏，自动加载相关内容
+- **💬 语音输入支持** - 内置Vosk语音识别，语音提问更方便
+- **📚 离线知识库** - 预构建向量数据库，无网也能查攻略
 
-- **怪物猎人系列** 
-- **星露谷物语** 
-- **无人深空** 
-- 等等百款游戏
+## 🚀 快速安装
 
-##  AI功能
+### 方式一：下载便携版（推荐）
+1. **[⬇️ 下载最新版本](https://github.com/rimulu030/gamewiki/releases/latest/download/GameWikiAssistant_Portable.zip)**
+2. 解压ZIP文件
+3. 运行`GameWikiAssistant.exe`
+4. 设置热键，开始游戏！
 
-### 智能问答系统
-- **自然语言处理** - 支持中英文自然语言提问
-- **快速向量搜索** - 毫秒级响应的FAISS数据库
-- **混合搜索** - 结合语义向量搜索和BM25关键词匹配
-- **全面覆盖** - 武器、道具、策略、角色和游戏机制
-- **来源引用** - 每个答案都包含相关的资料来源
+### 方式二：源码运行
+```bash
+# 克隆并安装
+git clone https://github.com/rimulu030/gamewiki.git
+cd gamewiki
+pip install -r requirements.txt
 
-### AI知识库管理
-- **向量库构建器** - 构建FAISS向量索引用于语义搜索
-- **BM25索引构建器** - 使用bm25s创建高性能关键词搜索索引
-- **多语言支持** - 智能文本处理，支持中文和英文
-- **游戏特定优化** - 针对不同游戏类型的定制化处理
+# 配置AI功能的API密钥（可选）
+set GEMINI_API_KEY=your_key_here  # Windows
+export GEMINI_API_KEY=your_key_here  # Linux/Mac
 
-##  快速开始
-
-### 系统要求
-
-- Windows 10/11
-- Python 3.8+
-- 网络连接
-- Google Cloud账户（可选，用于RAG功能）
-
-### 安装方法
-
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/rimulu030/gamewiki.git
-   ```
-
-2. **安装依赖**
-   ```bash
-   pip install -r requirements.txt
-   ```
-   
-3. **建立环境变量**
-   ```bash
-   # Set your GEMINI API key for vector embeddings and AI rag function
-   GEMINI_API_KEY="your_gemini_api_key_here"
-   ```
-   
-5. **运行程序**
-   ```bash
-   python -m src.game_wiki_tooltip
-   ```
-
-### 首次使用
-
-1. 启动程序后，会弹出热键设置窗口
-2. 设置您喜欢的热键组合（默认：Ctrl + X）
-3. 设置完成后，程序会在系统托盘显示图标
-4. 在游戏中按热键即可呼出Wiki悬浮窗
-
-## ⚙️ 配置说明
-
-### 热键设置
-
-程序支持自定义热键组合：
-- 修饰键：Ctrl、Alt、Shift、Win
-- 功能键：A-Z
-
-### 游戏配置
-
-游戏配置文件位于：`src/game_wiki_tooltip/assets/games.json`
-
-支持多语言配置：
-- `games_en.json` - 英文游戏配置
-- `games_zh.json` - 中文游戏配置
-- `games.json` - 主配置文件
-
-每个游戏配置包含：
-```json
-{
-    "游戏名称": {
-        "BaseUrl": "Wiki基础URL",
-        "NeedsSearch": true/false
-    }
-}
+# 运行
+python -m src.game_wiki_tooltip
 ```
 
-### AI RAG配置
+## 🎮 支持的游戏
 
-1. **设置Google AI API密钥**
-   ```bash
-   # 设置环境变量
-   export GOOGLE_API_KEY="your-api-key"
-   ```
+### 🤖 AI增强游戏（完整知识库）
+| 游戏 | 功能特性 | 知识库状态 |
+|------|----------|------------|
+| **地狱潜兵2** | 武器数据、战略配置、敌人弱点 | ✅ 完整 |
+| **艾尔登法环** | 物品装备、Boss攻略、Build推荐 | ✅ 完整 |
+| **饥荒联机版** | 合成配方、角色指南、生存技巧 | ✅ 完整 |
+| **文明6** | 文明特性、单位数据、胜利策略 | ✅ 完整 |
 
-2. **配置RAG系统**
-   系统使用统一的RAG配置管理器，配置位于：
-   ```
-   src/game_wiki_tooltip/ai/rag_config.py
-   ```
+### 📖 Wiki支持游戏
+支持100+款游戏的Wiki快速访问，包括：瓦洛兰特、CS2、怪物猎人、星露谷物语等！
 
-3. **构建构建自定义知识库/向量索引**
+## 📸 功能演示
 
-#### 知识库格式
-知识库应为 `data/knowledge_chunk/` 目录下的JSON文件，具有以下结构：
-```json
-[
-  {
-    "video_info": { "url": "...", "title": "...", "game": "..." },
-    "knowledge_chunks": [
-      {
-        "chunk_id": "unique_id",
-        "topic": "主题标题",
-        "summary": "详细描述...",
-        "keywords": ["关键词1", "关键词2"],
-        "type": "Build_Recommendation",
-        "build": { "name": "...", "focus": "..." },
-        "structured_data": { "enemy_name": "...", "weak_points": [...] }
-      }
-    ]
-  }
-]
-```
+<!-- TODO: 添加GIF/视频演示 -->
+![演示](https://via.placeholder.com/800x400/0d1117/58a6ff?text=演示GIF即将添加)
 
-   ```bash
-   # 构建FAISS向量索引
-   python src/game_wiki_tooltip/ai/build_vector_index.py --game 游戏名称
-   ```
+## 🔧 配置说明
 
-### 添加新游戏wiki
+### 首次启动设置
+1. **热键设置**：选择你喜欢的激活键（默认：`Ctrl+X`）
+2. **API密钥**（可选）：添加Gemini API密钥以启用AI功能
+3. **游戏检测**：自动检测 - 直接启动游戏即可！
 
-1. 编辑 `games.json` 文件
-2. 添加新游戏配置
-3. 重启程序
+### 高级设置
+- 自定义热键组合
+- 语言偏好设置（中/英）
+- Wiki源配置
+- 语音识别设置
 
-示例配置：
-```json
-{
-    "新游戏名称": {
-        "BaseUrl": "https://wiki.example.com",
-        "NeedsSearch": true
-    }
-}
-```
+## 📚 文档
 
-## 🛠️ 项目结构
-
-```
-gamewiki/
-├── src/
-│   ├── game_wiki_tooltip/       # 主应用程序模块
-│   │   ├── ai/                  # AI和RAG相关功能
-│   │   │   ├── vectorstore/     # FAISS向量索引存储
-│   │   │   ├── build_vector_index.py  # 向量索引构建器
-│   │   │   ├── enhanced_bm25_indexer.py # 增强BM25索引器
-│   │   │   ├── batch_embedding.py    # 批量嵌入处理器
-│   │   │   ├── gemini_embedding.py   # Gemini嵌入服务
-│   │   │   ├── gemini_summarizer.py  # Gemini摘要生成
-│   │   │   ├── hybrid_retriever.py   # 混合检索系统
-│   │   │   ├── intent_aware_reranker.py # 意图感知重排序器
-│   │   │   ├── unified_query_processor.py # 统一查询处理器
-│   │   │   ├── rag_config.py         # RAG配置管理器
-│   │   │   └── rag_query.py          # RAG查询接口
-│   │   ├── assets/              # 静态资源文件
-│   │   │   ├── games.json       # 游戏配置
-│   │   │   ├── games_en.json    # 英文游戏配置
-│   │   │   ├── games_zh.json    # 中文游戏配置
-│   │   │   ├── settings.json    # 应用程序设置
-│   │   │   ├── vector_mappings.json # 向量映射配置
-│   │   │   ├── html/            # 游戏任务流程HTML
-│   │   │   ├── icons/           # 图标资源
-│   │   │   └── vosk_models/     # 语音识别模型
-│   │   ├── core/                # 核心功能模块
-│   │   │   ├── config.py        # 配置管理
-│   │   │   ├── graphics_compatibility.py # 图形兼容性
-│   │   │   ├── i18n.py          # 国际化支持
-│   │   │   ├── smart_interaction_manager.py # 智能交互管理
-│   │   │   └── utils.py         # 工具函数
-│   │   ├── window_component/    # 窗口组件
-│   │   │   ├── chat_messages.py      # 聊天消息处理
-│   │   │   ├── chat_view.py          # 聊天视图组件
-│   │   │   ├── chat_widgets.py       # 聊天UI小部件
-│   │   │   ├── enums.py              # 枚举定义
-│   │   │   ├── history_manager.py    # 历史记录管理
-│   │   │   ├── markdown_converter.py # Markdown转换器
-│   │   │   ├── quick_access_popup.py # 快速访问弹窗
-│   │   │   ├── svg_icon.py           # SVG图标处理器
-│   │   │   ├── unified_window.py     # 统一窗口系统
-│   │   │   ├── voice_recognition.py  # 语音识别
-│   │   │   ├── wiki_view.py          # Wiki视图组件
-│   │   │   └── window_controller.py  # 窗口控制器
-│   │   ├── webview2/            # WebView2组件
-│   │   │   └── lib/             # WebView2库文件
-│   │   ├── qt_app.py            # Qt应用主入口
-│   │   ├── qt_hotkey_manager.py # 全局热键管理
-│   │   ├── qt_settings_window.py # 设置窗口
-│   │   ├── qt_tray_icon.py      # 系统托盘图标
-│   │   ├── assistant_integration.py  # AI助手集成
-│   │   ├── preloader.py         # 应用程序预加载器
-│   │   ├── splash_screen.py     # 启动画面
-│   │   ├── webview_widget.py    # WebView组件
-│   │   ├── webview2_setup.py    # WebView2设置
-│   │   └── webview2_simple.py   # 简单WebView2组件
-│   ├── live_api/                # 实时API模块
-│   │   ├── config.py            # 实时API配置
-│   │   ├── main.py              # 实时API主入口
-│   │   └── requirements.txt     # 实时API依赖
-│   └── live_api_in_progress/    # 实时API开发模块
-│       ├── audio_player.py      # 音频播放器
-│       ├── conversation_manager.py # 对话管理器
-│       ├── live_api_client.py   # 实时API客户端
-│       └── voice_listener.py    # 语音监听服务
-├── data/
-│   ├── knowledge_chunk/         # 游戏知识库JSON文件
-│   │   ├── helldiver2.json     # 地狱潜兵2知识库
-│   │   ├── eldenring.json      # 艾尔登法环知识库
-│   │   ├── dst.json            # 饥荒联机版知识库
-│   │   └── civilization6.json  # 文明6知识库
-│   └── LLM_prompt/             # LLM提示词模板
-├── requirements.txt             # Python依赖
-├── CLAUDE.md                   # Claude AI开发指南
-├── README.md                   # 英文说明文档
-└── README.zh-CN.md             # 中文说明文档
-```
+- **[快速上手指南](docs/QUICKSTART.md)** - 5分钟快速开始
+- **[常见问题](docs/FAQ.md)** - 常见问题和解决方案
+- **[构建指南](docs/BUILD.md)** - 构建自己的可执行文件
+- **[技术架构](docs/ARCHITECTURE.md)** - 技术深度解析
+- **[AI模块文档](src/game_wiki_tooltip/ai/README.zh-CN.md)** - AI系统详情
 
 ## 🐛 故障排除
 
-### 常见问题
+| 问题 | 快速解决 |
+|------|----------|
+| **热键不响应** | 以管理员身份运行 / 更换热键组合 |
+| **游戏无法识别** | 查看[支持的游戏列表](docs/FAQ.md#supported-games) |
+| **AI不响应** | 在设置中验证API密钥 |
+| **悬浮窗不显示** | 安装WebView2运行时（安装包内已包含） |
 
-1. **热键不响应**
-   - 检查热键是否与其他程序冲突
-   - 尝试更换热键组合
-   - Qt版本提供更好的热键管理
+更多解决方案，请查看[常见问题](docs/FAQ.md)或[提交问题](https://github.com/rimulu030/gamewiki/issues)。
 
-2. **游戏无法识别**
-   - 确认游戏窗口标题包含在配置中
-   - 手动添加游戏配置
-   - 检查多语言配置文件
+## 🤝 贡献
 
-3. **Wiki页面无法加载**
-   - 检查网络连接
-   - 确认Wiki网站可访问
+欢迎各种形式的贡献！无论是：
+- 🎮 添加新游戏支持
+- 🐛 修复Bug
+- 📚 改进文档
+- 🌐 翻译本地化
 
-4. **AI功能无法使用**
-   - 检查Google AI API密钥设置
-   - 确认网络连接正常
-   - 验证向量索引文件是否存在
-   - 检查知识库数据文件完整性
-
-5. **搜索结果不准确**
-   - 检查知识库数据是否最新
-   - 调整RAG配置参数
-   - 运行质量评估工具
-   - 重新构建向量索引
-   - 使用自适应检索优化
-
-6. **性能问题**
-   - 运行向量数据库诊断
-   - 检查批量嵌入处理设置
-   - 优化混合搜索参数
-   - 清理和重建索引
-
-### 日志查看
-
-程序运行日志位于：`%APPDATA%/game_wiki_tooltip/`
-
-
-#### 文档
-- **英文**: [AI Module README](src/game_wiki_tooltip/ai/README.md)
-- **中文**: [AI模块文档](src/game_wiki_tooltip/ai/README.zh-CN.md)
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request！
-
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 发起Pull Request
+详见[贡献指南](docs/CONTRIBUTING.md)。
 
 ## 📄 许可证
 
-本项目采用MIT许可证 - 详见 [LICENSE](LICENSE) 文件
+MIT许可证 - 详见[LICENSE](LICENSE)文件
 
 ## 🙏 致谢
 
-感谢所有为游戏Wiki社区做出贡献的开发者们！
-
-特别感谢：
-- Google Gemini AI 提供强大的AI能力
-- FAISS 提供高效的向量搜索引擎
-- 游戏社区贡献的Wiki内容和数据
+- **Google Gemini AI** - 提供智能响应能力
+- **FAISS** - 超快向量搜索引擎
+- **游戏社区** - 提供Wiki内容和知识
+- **贡献者们** - 让这个工具越来越好
 
 ---
 
-**注意**：本工具支持Windows系统，推荐使用Qt版本以获得最佳体验。AI功能需要Google AI API密钥。推荐使用Python 3.8+版本以确保最佳兼容性。部分功能可能需要管理员权限运行。
+<div align="center">
+
+**⭐ 如果这个工具帮助了你的游戏体验，请给我们Star！**
+
+[报告问题](https://github.com/rimulu030/gamewiki/issues) · [功能请求](https://github.com/rimulu030/gamewiki/discussions) · [Discord社区](https://discord.gg/gamewiki)
+
+</div>

@@ -171,6 +171,10 @@ class VoiceRecognitionThread(QThread):
     
     def stop_recording(self):
         """Stop the recording."""
+        if not self.is_recording:
+            logger.debug("Recording already stopped")
+            return
+            
         self.is_recording = False
         logger.info("Voice recording stopped")
         

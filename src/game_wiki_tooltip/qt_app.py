@@ -446,6 +446,12 @@ class GameWikiApp(QObject):
             if hasattr(self.assistant_ctrl, '_on_ai_modules_loaded'):
                 # Find the AI loader if it exists
                 if hasattr(self.assistant_ctrl, '_ai_loader') and self.assistant_ctrl._ai_loader:
+                    # Disconnect any existing connections to prevent duplicates
+                    try:
+                        self.assistant_ctrl._ai_loader.load_completed.disconnect()
+                    except:
+                        pass  # No existing connection, which is fine
+                    
                     self.assistant_ctrl._ai_loader.load_completed.connect(
                         lambda success: self._on_ai_ready(success)
                     )
@@ -454,6 +460,12 @@ class GameWikiApp(QObject):
                     # If AI loader hasn't started yet, wait for it
                     def check_ai_loader():
                         if hasattr(self.assistant_ctrl, '_ai_loader') and self.assistant_ctrl._ai_loader:
+                            # Disconnect any existing connections to prevent duplicates
+                            try:
+                                self.assistant_ctrl._ai_loader.load_completed.disconnect()
+                            except:
+                                pass  # No existing connection, which is fine
+                                
                             self.assistant_ctrl._ai_loader.load_completed.connect(
                                 lambda success: self._on_ai_ready(success)
                             )

@@ -7,6 +7,7 @@ import sys
 import logging
 import time
 import pathlib
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -113,9 +114,15 @@ class UnifiedAssistantWindow(QMainWindow):
         # Voice recognition
         self.voice_thread = None
         self.is_voice_recording = False
+        self._cleanup_in_progress = False  # Flag to prevent multiple cleanup operations
         self.original_placeholder = ""
         self._voice_completed_text = ""  # Store completed sentences
         self._voice_current_sentence = ""  # Track current partial sentence
+        
+        # Recording cooldown timer to prevent rapid clicks
+        self._recording_cooldown = QTimer()
+        self._recording_cooldown.setSingleShot(True)
+        self._recording_cooldown_active = False
         self._cached_chat_only_size = None  # Cache for chat_only size to avoid recalculation
         
         # Default WebView size (landscape orientation) - defer calculation to avoid GUI initialization issues
@@ -628,12 +635,12 @@ class UnifiedAssistantWindow(QMainWindow):
         
         /* Send button special states */
         #sendBtn[stop_mode="true"] {
-            background-color: rgba(255, 77, 79, 200);
+            background-color: rgba(204, 102, 104, 180);
             border-radius: 4px;
         }
         
         #sendBtn[stop_mode="true"]:hover {
-            background-color: rgba(255, 120, 117, 200);
+            background-color: rgba(220, 128, 130, 180);
         }
         
         /* Chat view styles - updated background */
@@ -1938,7 +1945,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 f"Unable to open {game_name} task flow"
             )
 
-    def set_current_game_window(self, game_window_title: str):
+    def set_current_game_window(self, game_window_title: Optional[str]):
         """Set current game window title and update task flow button visibility"""
         import logging
         import traceback
@@ -1946,6 +1953,19 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Debug: Log method call with stack trace to identify caller
         logger.info(f"🎮 [DEBUG] set_current_game_window called with: '{game_window_title}'")
+        
+        # Handle None value - clear game context
+        if game_window_title is None:
+            logger.info("🧹 Clearing game window context in main window")
+            self.current_game_window = None
+            
+            # Hide all task flow buttons
+            for button in getattr(self, 'game_task_buttons', {}).values():
+                button.setVisible(False)
+            
+            logger.info("✅ Game context cleared in main window, all task buttons hidden")
+            return
+        
         logger.debug(f"🔍 [DEBUG] Call stack (last 3 frames):")
         stack = traceback.extract_stack()
         for i, frame in enumerate(stack[-4:-1]):  # Skip current frame, show last 3
@@ -2104,17 +2124,53 @@ class UnifiedAssistantWindow(QMainWindow):
                 self.query_submitted.emit(text, self.current_mode)
     
     def toggle_voice_input(self):
-        """Toggle voice recording on/off."""
+        """Toggle voice recording on/off with debouncing and state protection."""
+        # Prevent rapid clicks with cooldown
+        if self._recording_cooldown_active:
+            logger.debug("Voice toggle ignored due to cooldown")
+            return
+            
+        # Prevent operations during cleanup
+        if self._cleanup_in_progress:
+            logger.debug("Voice toggle ignored due to cleanup in progress")
+            return
+            
+        # Start cooldown period
+        self._recording_cooldown_active = True
+        self._recording_cooldown.timeout.connect(self._reset_recording_cooldown)
+        self._recording_cooldown.start(500)  # 500ms cooldown
+        
         if not self.is_voice_recording:
             self.start_voice_recording()
         else:
             self.stop_voice_recording()
     
+    def _reset_recording_cooldown(self):
+        """Reset the recording cooldown flag."""
+        self._recording_cooldown_active = False
+        self._recording_cooldown.timeout.disconnect()
+    
     def start_voice_recording(self):
-        """Start voice recording."""
+        """Start voice recording with comprehensive state validation."""
+        # Check if voice recognition is available
         if not is_voice_recognition_available():
             self.chat_view.show_status("Voice recognition not available. Please install vosk and pyaudio.")
             return
+        
+        # Prevent starting if already recording
+        if self.is_voice_recording:
+            logger.debug("Recording already in progress, ignoring start request")
+            return
+            
+        # Prevent starting during cleanup
+        if self._cleanup_in_progress:
+            logger.debug("Cannot start recording: cleanup in progress")
+            return
+            
+        # Ensure no existing thread is running
+        if self.voice_thread is not None:
+            logger.warning("Existing voice thread detected, stopping before starting new one")
+            self._force_stop_voice_thread()
             
         self.is_voice_recording = True
         
@@ -2126,12 +2182,12 @@ class UnifiedAssistantWindow(QMainWindow):
         self.voice_button.setObjectName("voiceBtnActive")
         self.voice_button.setStyleSheet("""
             QPushButton#voiceBtnActive {
-                background-color: #4444ff;
-                border: 2px solid #0000ff;
+                background-color: #7a6ee6;
+                border: 2px solid #5c5cb8;
                 border-radius: 16px;
             }
             QPushButton#voiceBtnActive:hover {
-                background-color: #6666ff;
+                background-color: #8a7fee;
             }
         """)
         
@@ -2155,9 +2211,22 @@ class UnifiedAssistantWindow(QMainWindow):
         self.voice_thread.start()
     
     def stop_voice_recording(self):
-        """Stop voice recording."""
+        """Stop voice recording with asynchronous cleanup."""
+        if not self.is_voice_recording and not self.voice_thread:
+            logger.debug("No recording to stop")
+            return
+            
         self.is_voice_recording = False
         
+        # Immediately update UI state
+        self._restore_voice_ui()
+        
+        # Start asynchronous cleanup
+        if self.voice_thread:
+            self._cleanup_voice_thread_async()
+    
+    def _restore_voice_ui(self):
+        """Restore UI to normal state immediately."""
         # Restore UI state
         self.voice_button.setObjectName("voiceBtn")
         self.voice_button.setStyleSheet("")  # Reset to default style
@@ -2169,12 +2238,51 @@ class UnifiedAssistantWindow(QMainWindow):
         mic_icon_path = str(base_path / "assets" / "icons" / "microphone-alt-1-svgrepo-com.svg")
         mic_icon = load_svg_icon(mic_icon_path, color="#111111", size=18)
         self.voice_button.setIcon(mic_icon)
+    
+    def _cleanup_voice_thread_async(self):
+        """Clean up voice thread asynchronously to prevent UI blocking."""
+        if self._cleanup_in_progress:
+            logger.debug("Cleanup already in progress")
+            return
+            
+        self._cleanup_in_progress = True
         
-        # Stop voice thread
+        # Use QTimer to run cleanup in next event loop iteration
+        QTimer.singleShot(0, self._perform_voice_cleanup)
+    
+    def _perform_voice_cleanup(self):
+        """Perform the actual voice thread cleanup."""
+        try:
+            if self.voice_thread:
+                logger.debug("Stopping voice thread")
+                self.voice_thread.stop_recording()
+                
+                # Wait for thread with timeout to prevent infinite blocking
+                if not self.voice_thread.wait(3000):  # 3 second timeout
+                    logger.warning("Voice thread did not stop gracefully, forcing termination")
+                    if self.voice_thread.isRunning():
+                        self.voice_thread.terminate()
+                        self.voice_thread.wait(1000)  # Wait 1 more second
+                        
+                self.voice_thread = None
+                logger.debug("Voice thread cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during voice thread cleanup: {e}")
+        finally:
+            self._cleanup_in_progress = False
+    
+    def _force_stop_voice_thread(self):
+        """Force stop existing voice thread (synchronous for emergency use)."""
         if self.voice_thread:
-            self.voice_thread.stop_recording()
-            self.voice_thread.wait()
-            self.voice_thread = None
+            try:
+                self.voice_thread.stop_recording()
+                if not self.voice_thread.wait(1000):  # 1 second timeout
+                    self.voice_thread.terminate()
+                    self.voice_thread.wait(500)
+            except Exception as e:
+                logger.error(f"Error force stopping voice thread: {e}")
+            finally:
+                self.voice_thread = None
     
     def on_voice_partial_result(self, text: str):
         """Handle partial voice recognition results."""
@@ -2209,11 +2317,25 @@ class UnifiedAssistantWindow(QMainWindow):
         self.input_field.setText(self._voice_completed_text)
     
     def on_voice_error(self, error_msg: str):
-        """Handle voice recognition errors."""
+        """Handle voice recognition errors with robust cleanup."""
         logger.error(f"Voice recognition error: {error_msg}")
-        self.stop_voice_recording()
+        
+        # Force immediate cleanup on error to prevent resource conflicts
+        try:
+            self.is_voice_recording = False
+            self._restore_voice_ui()
+            
+            # Force synchronous cleanup on error for immediate resource release
+            if self.voice_thread:
+                self._force_stop_voice_thread()
+        except Exception as e:
+            logger.error(f"Error during voice error cleanup: {e}")
+        
         # Show error to user
         self.chat_view.show_status(f"Voice error: {error_msg}")
+        
+        # Reset cleanup state in case it was stuck
+        self._cleanup_in_progress = False
     
     def set_generating_state(self, is_generating: bool, streaming_msg=None):
         """Set generation state"""

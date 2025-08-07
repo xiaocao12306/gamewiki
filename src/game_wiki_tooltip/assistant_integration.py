@@ -1020,34 +1020,14 @@ class RAGIntegration(QObject):
                     logger.info(f"📋 Window '{game_context}' does not support guide queries")
                     
                     # Use internationalized error information
-                    from src.game_wiki_tooltip.core.i18n import get_current_language
-                    current_lang = get_current_language()
-                    
-                    if current_lang == 'zh':
-                        error_msg = (
-                            f"🎮 窗口 '{game_context}' 暂时不支持攻略查询\n\n"
-                            "💡 建议：您可以尝试使用Wiki搜索功能查找相关信息\n\n"
-                            "📚 目前支持攻略查询的游戏：\n"
-                            "• 地狱潜兵2 (HELLDIVERS 2) - 武器配装、敌人攻略等\n"
-                            "• 艾尔登法环 (Elden Ring) - Boss攻略、装备推荐等\n"
-                            "• 饥荒联机版 (Don't Starve Together) - 生存技巧、角色攻略等\n"
-                            "• 文明6 (Civilization VI) - 文明特色、胜利策略等"
-                        )
-                    else:
-                        error_msg = (
-                            f"🎮 Window '{game_context}' doesn't support guide queries yet\n\n"
-                            "💡 Suggestion: You can try using the Wiki search function to find related information\n\n"
-                            "📚 Games currently supporting guide queries:\n"
-                            "• HELLDIVERS 2 - Weapon builds, enemy guides, etc.\n"
-                            "• Elden Ring - Boss guides, equipment recommendations, etc.\n"
-                            "• Don't Starve Together - Survival tips, character guides, etc.\n"
-                            "• Civilization VI - Civilization features, victory strategies, etc."
-                        )
+                    from src.game_wiki_tooltip.core.i18n import t
+                    error_msg = t("game_not_supported", window=game_context)
                     
                     self.error_occurred.emit(error_msg)
                     return
             else:
-                self.error_occurred.emit("RAG engine not initialized and no game context provided")
+                from src.game_wiki_tooltip.core.i18n import t
+                self.error_occurred.emit(t("game_not_detected"))
                 return
             
         try:
@@ -1283,7 +1263,14 @@ class IntegratedAssistantController(AssistantController):
         self._ai_loader.load_completed.connect(self._on_ai_modules_loaded)
         self._ai_loader.start()
         
-        logger.info("📋 AI modules loading started in background thread")
+        # Verify thread started successfully
+        if not self._ai_loader.isRunning():
+            logger.warning("⚠️ AI loader thread failed to start, trying direct loading")
+            # Fallback to direct loading if thread fails
+            success = _lazy_load_ai_modules()
+            self._on_ai_modules_loaded(success)
+        else:
+            logger.info("📋 AI modules loading started in background thread")
         
     def handle_stop_generation(self):
         """Handle stop generation request from UI"""
@@ -1302,6 +1289,11 @@ class IntegratedAssistantController(AssistantController):
         
     def _on_ai_modules_loaded(self, success: bool):
         """Callback when AI modules are loaded"""
+        # Add thread safety check
+        if not hasattr(self, '_ai_loader') or not self._ai_loader:
+            logger.warning("AI loader already cleaned up, ignoring signal")
+            return
+            
         if success:
             logger.info("✅ AI module background loading completed")
             # Record loading success status
@@ -1321,8 +1313,20 @@ class IntegratedAssistantController(AssistantController):
         else:
             logger.warning("⚠️ AI module background loading failed")
             
-        # Clean up loader reference
-        self._ai_loader = None
+        # Safely clean up loader thread
+        if self._ai_loader:
+            try:
+                if self._ai_loader.isRunning():
+                    logger.debug("Waiting for AI loader thread to finish...")
+                    self._ai_loader.quit()
+                    if not self._ai_loader.wait(1000):  # Wait max 1 second
+                        logger.warning("AI loader thread did not finish in time")
+                self._ai_loader.deleteLater()  # Use Qt's deferred deletion mechanism
+                logger.debug("AI loader thread cleanup scheduled")
+            except Exception as e:
+                logger.error(f"Error during AI loader cleanup: {e}")
+            finally:
+                self._ai_loader = None
         
     def __del__(self):
         """Destructor, clean up global instance reference"""
@@ -1364,6 +1368,10 @@ class IntegratedAssistantController(AssistantController):
                 logger.info(f"✓ Game not switched, continue using current RAG engine: {vector_game_name}")
         else:
             logger.info(f"⚠️ Window '{game_window_title}' is not a supported game")
+            # Clear current game context if window changed to unsupported game
+            if hasattr(self, '_current_vector_game'):
+                logger.info(f"🔄 Clearing game context due to unsupported window")
+                self._current_vector_game = None
     
     def _setup_connections(self):
         """Setup signal connections"""
@@ -2030,6 +2038,11 @@ class IntegratedAssistantController(AssistantController):
                 # 使用QTimer异步设置游戏窗口，避免阻塞UI
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(50, lambda: self._delayed_set_game_window(current_game_window))
+            else:
+                # 清除之前的游戏窗口设置
+                logger.info(f"🎮 No game window detected, clearing previous game context")
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(50, lambda: self._clear_game_context())
                 
             return True
         elif action == 'hide_chat':
@@ -2051,6 +2064,23 @@ class IntegratedAssistantController(AssistantController):
         # Clear the flag if no action was taken
         self._game_window_already_set = False
         return False
+    
+    def _clear_game_context(self):
+        """清除游戏上下文（当检测到非游戏窗口时）"""
+        logger.info("🧹 Clearing game context due to non-game window")
+        
+        # 清除记录的游戏窗口
+        self.current_game_window = None
+        
+        # 清除 RAG 引擎的当前游戏
+        if hasattr(self, '_current_vector_game'):
+            self._current_vector_game = None
+            logger.info("🧹 Cleared RAG engine game context")
+        
+        # 更新主窗口的游戏上下文
+        if self.main_window:
+            self.main_window.set_current_game_window(None)
+            logger.info("🧹 Cleared main window game context")
     
     def _delayed_set_game_window(self, game_window_title: str):
         """延迟设置游戏窗口，避免阻塞UI"""
