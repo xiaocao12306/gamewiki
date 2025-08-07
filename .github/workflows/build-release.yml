@@ -217,7 +217,7 @@ jobs:
     
     - name: Upload artifacts for debugging (optional)
       if: failure()  # Only upload if build fails
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-logs
         path: |
