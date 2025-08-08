@@ -136,8 +136,6 @@ class UnifiedAssistantWindow(QMainWindow):
         # History manager will be initialized lazily
         self.history_manager = None
         
-        # History tracking moved to show_chat_view() method
-        
         self.init_ui()
         
         # Apply BlurWindow effect
@@ -810,41 +808,7 @@ class UnifiedAssistantWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Failed to restore window geometry: {e}")
             self._apply_safe_default_geometry()
-    
-    def _final_geometry_check(self, x, y, width, height, screen):
-        """
-        Final geometry check, ensure the window is fully visible and operable
-        
-        Args:
-            x, y, width, height: Window geometry parameters
-            screen: Screen available area
-            
-        Returns:
-            tuple: Adjusted (x, y, width, height)
-        """
-        # Ensure Minimum size
-        min_width, min_height = 300, 200
-        width = max(min_width, width)
-        height = max(min_height, height)
-        
-        # Ensure Maximum size does not exceed screen
-        max_width = screen.width() - 20
-        max_height = screen.height() - 40
-        width = min(width, max_width)
-        height = min(height, max_height)
-        
-        # Ensure position is within visible range
-        margin = 10
-        max_x = screen.x() + screen.width() - width - margin
-        max_y = screen.y() + screen.height() - height - margin
-        min_x = screen.x() + margin
-        min_y = screen.y() + margin
-        
-        x = max(min_x, min(x, max_x))
-        y = max(min_y, min(y, max_y))
-        
-        return x, y, width, height
-    
+
     def _apply_safe_default_geometry(self):
         """Apply safe default geometry configuration"""
         try:
@@ -863,22 +827,7 @@ class UnifiedAssistantWindow(QMainWindow):
             self.setGeometry(100, 100, 600, 500)
         
         self.reset_size_constraints()
-    
-    def _save_initial_geometry_config(self, popup_config):
-        """
-        Save initial geometry configuration to settings file
-        
-        Args:
-            popup_config: PopupConfig instance
-        """
-        try:
-            from dataclasses import asdict
-            popup_dict = asdict(popup_config)
-            self.settings_manager.update({'popup': popup_dict})
-            logging.info("Saved smart default window configuration to settings file")
-        except Exception as e:
-            logging.warning(f"Failed to save initial geometry configuration: {e}")
-    
+
     def save_geometry(self):
         """Save current window geometry to settings based on window state"""
         if not self.settings_manager:
@@ -1331,8 +1280,8 @@ class UnifiedAssistantWindow(QMainWindow):
                 # Get current URL before switching
                 current_url = getattr(self.wiki_view, 'current_url', None)
                 
-                # Check if we should record history (not task flow HTML)
-                if current_url and not self._is_task_flow_url(current_url):
+                # Check if we should record history (not task flow HTML and not Quick Access URL)
+                if current_url and not self._is_task_flow_url(current_url) and not self._is_quick_access_url(current_url):
                     # Record history with actual page title
                     self._record_history_before_leaving_wiki()
                 
@@ -1347,7 +1296,6 @@ class UnifiedAssistantWindow(QMainWindow):
         # Show input area and shortcuts in chat mode
         if hasattr(self, 'input_container'):
             self.input_container.show()
-        # Shortcut container is now hidden - shortcuts are in popup
         # Reset size constraints when switching to chat view
         self.reset_size_constraints()
         # Ensure message width is correct and trigger full layout update
@@ -1430,6 +1378,23 @@ class UnifiedAssistantWindow(QMainWindow):
         # Check if URL ends with .html and contains any of the patterns
         if url_lower.endswith('.html'):
             return any(pattern in url_lower for pattern in task_flow_patterns)
+        
+        return False
+    
+    def _is_quick_access_url(self, url: str) -> bool:
+        """Check if URL exactly matches any Quick Access shortcut URL"""
+        # Get shortcuts from settings
+        from src.game_wiki_tooltip.core.config import SettingsManager
+        settings_manager = SettingsManager()
+        shortcuts = settings_manager.get('shortcuts', [])
+        
+        # Check if URL exactly matches any shortcut URL
+        for shortcut in shortcuts:
+            shortcut_url = shortcut.get('url', '')
+            if shortcut_url and url == shortcut_url:
+                logger = logging.getLogger(__name__)
+                logger.debug(f"URL {url} matches Quick Access shortcut: {shortcut.get('name', 'Unknown')}")
+                return True
         
         return False
     
@@ -1576,9 +1541,6 @@ class UnifiedAssistantWindow(QMainWindow):
         # Switch to WEBVIEW state
         self.switch_to_webview()
         
-        # History recording moved to show_chat_view() - record when user clicks "back to chat"
-        # This ensures we get the actual page title from JavaScript
-        
         self.wiki_view.load_wiki(url, title)
         self.content_stack.setCurrentWidget(self.wiki_view)
         
@@ -1657,9 +1619,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Open a URL in the wiki view"""
         # Switch to webview window form first
         self.switch_to_webview()
-        
-        # History recording moved to show_chat_view() - record when user clicks "back to chat"
-        
+
         # Extract domain as temporary title
         try:
             from urllib.parse import urlparse

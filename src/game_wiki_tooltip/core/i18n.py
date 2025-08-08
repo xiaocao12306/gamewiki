@@ -188,6 +188,11 @@ class TranslationManager:
                            "• Wiki sources will be adjusted according to the selected language\n"
                            "• Requires restart to fully apply language changes",
             
+            # Audio settings
+            "audio_title": "Audio Settings",
+            "audio_input_device_label": "Audio Input Device:",
+            "refresh_devices_button": "Refresh Devices",
+            
             # Wiki settings
             "wiki_title": "Wiki URL Configuration",
             "wiki_description": "When searching for wiki content, we restrict the search to these wiki sites to prevent interference from other content.",
@@ -366,6 +371,11 @@ class TranslationManager:
                                "• 更改语言将影响整个应用程序界面\n"
                                "• Wiki源将根据所选语言进行调整\n"
                                "• 需要重启程序以完全应用语言更改",
+                
+                # Audio settings
+                "audio_title": "音频设置",
+                "audio_input_device_label": "音频输入设备：",
+                "refresh_devices_button": "刷新设备",
                 
                 # Wiki settings
                 "wiki_title": "Wiki网址配置",

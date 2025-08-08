@@ -87,8 +87,6 @@ datas = [
     (str(src_path / "game_wiki_tooltip" / "assets"), "src/game_wiki_tooltip/assets"),
     # Vector database files - maintain consistent path with rag_query.py get_resource_path
     (str(src_path / "game_wiki_tooltip" / "ai" / "vectorstore"), "src/game_wiki_tooltip/ai/vectorstore"),
-    # Knowledge data
-    ("data", "data"),
     # WebView2 SDK files
     ("src/game_wiki_tooltip/webview2/lib", "src/game_wiki_tooltip/webview2/lib"),
 ]
@@ -218,6 +216,19 @@ excludes = [
     'tests',    # Application test modules
 ]
 
+# Exclude unnecessary files from being collected
+exclude_patterns = [
+    '*.env',       # Environment files with API keys
+    '.env*',       # All .env variants
+    '*.pyc',       # Python bytecode files
+    '__pycache__', # Python cache directories
+    '*.pyo',       # Python optimized bytecode
+    '*.pyd',       # Python extension modules (will be handled separately)
+    'data/**/*',   # Exclude entire data folder (knowledge chunks, prompts)
+    '*.log',       # Log files
+    '*.tmp',       # Temporary files
+]
+
 a = Analysis(
     [str(src_path / "game_wiki_tooltip" / "qt_app.py")],
     pathex=[str(project_root), str(src_path)],
@@ -232,6 +243,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=None,
     noarchive=False,
+    excludedatas=exclude_patterns,  # Apply file exclusion patterns
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)

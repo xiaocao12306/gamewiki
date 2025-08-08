@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
 
-👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/latest)**
+👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/latest)** |  **[Join Our Discord](https://discord.gg/WdZVcnQ2)**
 
 ## ✨ Why GameWikiTooltip?
 
@@ -23,15 +23,15 @@ Never alt-tab out of your game again! Get instant answers, build guides, and wik
 
 ## 📸 Screenshots
 
-<!-- TODO: Add GIF/Video demonstration here -->
-![Demo](https://via.placeholder.com/800x400/0d1117/58a6ff?text=Demo+GIF+Coming+Soon)
+![Demo](data/demo.gif)
+**[View use video](https://your-video-or-doc-link)**
 
 ## 🚀 Quick Install
 
 ### Option 1: Download Ready-to-Use Package (Recommended)
-1. **[⬇️ Download Latest Release](https://github.com/rimulu030/gamewiki/releases/latest/download/GameWikiAssistant_Portable.zip)**
+1. **[⬇️ Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)**
 2. Extract the ZIP file
-3. Run `GameWikiAssistant.exe`
+3. Run `GameWikiAssistant/GameWikiAssistant.exe`
 4. Set your hotkey and start gaming!
 
 ### Option 2: Run from Source
@@ -51,12 +51,12 @@ python -m src.game_wiki_tooltip
 ## 🎮 Supported Games
 
 ### 🤖 AI-Enhanced Games (Full Knowledge Base)
-| Game | Features | Knowledge Base |
-|------|----------|----------------|
-| **HELLDIVERS 2** | Weapons, Stratagems, Enemy Weaknesses | ✅ Complete |
-| **Elden Ring** | Items, Bosses, Build Guides | ✅ Complete |
-| **Don't Starve Together** | Crafting, Characters, Survival Tips | ✅ Complete |
-| **Civilization VI** | Civs, Units, Victory Strategies | ✅ Complete |
+| Game | Features |
+|------|----------|
+| **HELLDIVERS 2** | Weapons, Stratagems, Enemy Weaknesses |
+| **Elden Ring** | Items, Bosses, Build Guides |
+| **Don't Starve Together** | Crafting, Characters, Survival Tips |
+| **Civilization VI** | Civs, Units, Victory Strategies |
 
 ### 📖 Wiki-Supported Games
 Quick wiki access for 100+ games including: VALORANT, CS2, Monster Hunter, Stardew Valley, and more!
@@ -87,7 +87,7 @@ Quick wiki access for 100+ games including: VALORANT, CS2, Monster Hunter, Stard
 | Issue                   | Quick Fix |
 |-------------------------|-----------|
 | **Hotkey not working**  | Run as Administrator / Change hotkey combination |
-| **Game not detected**   | Check [supported games list](docs/FAQ.md#supported-games) |
+| **Game not detected**   | Check supported games list|
 | **AI not responding**   | Verify API key in settings |
 | **Website not showing** | Install WebView2 Runtime (included in package) |
 
@@ -99,9 +99,7 @@ We love contributions! Whether it's:
 - 🎮 Adding new game support
 - 🐛 Bug fixes
 - 📚 Documentation improvements
-- 🌐 Translations
-
-See [Contributing Guide](docs/CONTRIBUTING.md) for details.
+- Project Optimization
 
 ## 📄 License
 
@@ -120,6 +118,6 @@ MIT License - See [LICENSE](LICENSE) file
 
 **⭐ Star us if this helps your gaming experience!**
 
-[Report Issue](https://github.com/rimulu030/gamewiki/issues) · [Request Feature](https://github.com/rimulu030/gamewiki/discussions) · [Discord](https://discord.gg/gamewiki)
+[Report Issue](https://github.com/rimulu030/gamewiki/issues) · [Join Our Discord](https://discord.gg/WdZVcnQ2)
 
 </div>

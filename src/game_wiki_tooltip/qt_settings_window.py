@@ -270,13 +270,13 @@ class QtSettingsWindow(QMainWindow):
         layout.addWidget(lang_group)
         
         # Audio Device group
-        audio_group = QGroupBox("Audio Settings")
-        audio_group_layout = QVBoxLayout(audio_group)
+        self.audio_group = QGroupBox(t("audio_title"))
+        audio_group_layout = QVBoxLayout(self.audio_group)
         
         # Audio device selection
         audio_layout = QHBoxLayout()
-        audio_label = QLabel("Audio Input Device:")
-        audio_layout.addWidget(audio_label)
+        self.audio_label = QLabel(t("audio_input_device_label"))
+        audio_layout.addWidget(self.audio_label)
         
         self.audio_device_combo = QComboBox()
         self.audio_device_combo.setFixedWidth(300)
@@ -290,10 +290,10 @@ class QtSettingsWindow(QMainWindow):
         
         # Refresh devices button
         refresh_layout = QHBoxLayout()
-        refresh_button = QPushButton("Refresh Devices")
-        refresh_button.clicked.connect(self._refresh_audio_devices)
-        refresh_button.setFixedWidth(120)
-        refresh_layout.addWidget(refresh_button)
+        self.refresh_button = QPushButton(t("refresh_devices_button"))
+        self.refresh_button.clicked.connect(self._refresh_audio_devices)
+        self.refresh_button.setFixedWidth(120)
+        refresh_layout.addWidget(self.refresh_button)
         refresh_layout.addStretch()
         audio_group_layout.addLayout(refresh_layout)
         
@@ -305,7 +305,7 @@ class QtSettingsWindow(QMainWindow):
         auto_voice_layout.addStretch()
         audio_group_layout.addLayout(auto_voice_layout)
         
-        layout.addWidget(audio_group)
+        layout.addWidget(self.audio_group)
         
         # Tips
         tips_label = QLabel(t("language_tips"))
@@ -829,6 +829,14 @@ class QtSettingsWindow(QMainWindow):
             language_widgets[0].setText(t("language_title"))  # Title
             language_widgets[1].setText(t("language_label"))  # Language label
             language_widgets[2].setText(t("language_tips"))   # Tips
+            
+        # Audio Settings - Update all audio-related UI elements
+        if hasattr(self, 'audio_group'):
+            self.audio_group.setTitle(t("audio_title"))
+        if hasattr(self, 'audio_label'):
+            self.audio_label.setText(t("audio_input_device_label"))
+        if hasattr(self, 'refresh_button'):
+            self.refresh_button.setText(t("refresh_devices_button"))
         
         # Update placeholders
         self.google_api_input.setPlaceholderText(t("google_api_placeholder"))

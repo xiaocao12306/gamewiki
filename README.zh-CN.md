@@ -25,7 +25,7 @@
 ## 🚀 快速安装
 
 ### 方式一：下载便携版（推荐）
-1. **[⬇️ 下载最新版本](https://github.com/rimulu030/gamewiki/releases/latest/download/GameWikiAssistant_Portable.zip)**
+1. **[⬇️ 下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)**
 2. 解压ZIP文件
 3. 运行`GameWikiAssistant.exe`
 4. 设置热键，开始游戏！
@@ -60,8 +60,8 @@ python -m src.game_wiki_tooltip
 
 ## 📸 功能演示
 
-<!-- TODO: 添加GIF/视频演示 -->
-![演示](https://via.placeholder.com/800x400/0d1117/58a6ff?text=演示GIF即将添加)
+![Demo](data/demo.gif)
+**[观看使用视频](https://your-video-or-doc-link)**
 
 ## 🔧 配置说明
 
@@ -89,7 +89,7 @@ python -m src.game_wiki_tooltip
 | 问题 | 快速解决 |
 |------|----------|
 | **热键不响应** | 以管理员身份运行 / 更换热键组合 |
-| **游戏无法识别** | 查看[支持的游戏列表](docs/FAQ.md#supported-games) |
+| **游戏无法识别** | 查看支持的游戏列表|
 | **AI不响应** | 在设置中验证API密钥 |
 | **悬浮窗不显示** | 安装WebView2运行时（安装包内已包含） |
 
