@@ -48,11 +48,11 @@
         }
     },
     "shortcuts": [
-        {"name": "Google", "url": "https://www.google.com", "icon": "assets/icons/google.ico", "visible": true},
-        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "assets/icons/youtube.png", "visible": true},
-        {"name": "Instagram", "url": "https://www.instagram.com", "icon": "assets/icons/instagram.png", "visible": true},
-        {"name": "Reddit", "url": "https://www.reddit.com", "icon": "assets/icons/reddit.ico", "visible": true},
+        {"name": "Google", "url": "https://www.google.com/", "icon": "assets/icons/google.ico", "visible": true},
+        {"name": "YouTube", "url": "https://www.youtube.com/", "icon": "assets/icons/youtube.png", "visible": true},
+        {"name": "Instagram", "url": "https://www.instagram.com/", "icon": "assets/icons/instagram.png", "visible": true},
+        {"name": "Reddit", "url": "https://www.reddit.com/", "icon": "assets/icons/reddit.ico", "visible": true},
         {"name": "Nexusmods", "url": "https://www.nexusmods.com/", "icon": "assets/icons/nexusmods.ico", "visible": true},
-        {"name": "Bilibili", "url": "https://www.bilibili.com", "icon": "assets/icons/bilibili.ico", "visible": true}
+        {"name": "Bilibili", "url": "https://www.bilibili.com/", "icon": "assets/icons/bilibili.ico", "visible": true}
     ]
 }

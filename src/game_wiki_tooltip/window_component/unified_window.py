@@ -1281,7 +1281,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 current_url = getattr(self.wiki_view, 'current_url', None)
                 
                 # Check if we should record history (not task flow HTML and not Quick Access URL)
-                if current_url and not self._is_task_flow_url(current_url) and not self._is_quick_access_url(current_url):
+                if current_url and not self._is_task_flow_url(current_url):
                     # Record history with actual page title
                     self._record_history_before_leaving_wiki()
                 
@@ -1380,24 +1380,7 @@ class UnifiedAssistantWindow(QMainWindow):
             return any(pattern in url_lower for pattern in task_flow_patterns)
         
         return False
-    
-    def _is_quick_access_url(self, url: str) -> bool:
-        """Check if URL exactly matches any Quick Access shortcut URL"""
-        # Get shortcuts from settings
-        from src.game_wiki_tooltip.core.config import SettingsManager
-        settings_manager = SettingsManager()
-        shortcuts = settings_manager.get('shortcuts', [])
-        
-        # Check if URL exactly matches any shortcut URL
-        for shortcut in shortcuts:
-            shortcut_url = shortcut.get('url', '')
-            if shortcut_url and url == shortcut_url:
-                logger = logging.getLogger(__name__)
-                logger.debug(f"URL {url} matches Quick Access shortcut: {shortcut.get('name', 'Unknown')}")
-                return True
-        
-        return False
-    
+
     def _record_history_before_leaving_wiki(self):
         """Record browsing history before leaving wiki view using JavaScript to get actual page title"""
         logger = logging.getLogger(__name__)
@@ -1481,28 +1464,7 @@ class UnifiedAssistantWindow(QMainWindow):
             logger.info(f"Using cached title from WikiView: {title}")
             self._save_to_history(current_url, title)
         else:
-            # Try one more time with direct JavaScript execution
-            try:
-                # Simple script to get title
-                simple_script = "document.title || '';"
-                web_view.runJavaScript(simple_script)
-                
-                # Since WebView2 doesn't return values properly, use a different approach
-                # Set a timer to check for title after giving the page more time to load
-                QTimer.singleShot(500, lambda: self._final_title_attempt(current_url))
-                
-            except Exception as e:
-                logger.error(f"Final JavaScript attempt failed: {e}")
-    
-    def _final_title_attempt(self, current_url):
-        """Final attempt to get title after delay"""
-        logger = logging.getLogger(__name__)
-        
-        # Check if WikiView has updated title
-        if hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
-            title = self.wiki_view.current_title
-            logger.info(f"Got title after delay: {title}")
-            self._save_to_history(current_url, title)
+            logger.error(f"Final JavaScript attempt failed")
 
     def _save_to_history(self, url: str, title: str):
         """Save URL and title to browsing history"""

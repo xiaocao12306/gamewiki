@@ -22,9 +22,16 @@ Never alt-tab out of your game again! Get instant answers, build guides, and wik
 - **💬 Voice Input Support** - Ask questions using voice commands (built-in Vosk recognition)
 
 ## 📸 Screenshots
+- Use as AI assitant
 
-![Demo](data/demo.gif)
+![Demo](data/demo1.gif)
+
 **[View use video](https://your-video-or-doc-link)**
+
+- Use as an web browser
+
+![Demo](data/demo2.gif)
+
 
 ## 🚀 Quick Install
 

@@ -968,8 +968,6 @@ def main():
     # Set critical Qt attributes before QApplication
     try:
         from PyQt6.QtCore import Qt
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
     except:
         pass
     
