@@ -17,10 +17,9 @@ Never alt-tab out of your game again! Get instant answers, build guides, and wik
 ### 🎯 Key Features
 
 - **🔥 One Hotkey, All Answers** - Press `Ctrl+Q` to instantly overlay wiki/AI chat without leaving your game
-- **🤖 AI Game Expert** - Powered by Google Gemini with local knowledge bases for smart Q&A
-- **🎮 Auto Game Detection** - Automatically recognizes your active game and loads relevant content
-- **💬 Voice Input Support** - Ask questions using voice commands (built-in Vosk recognition)
+- **🤖 AI Game Expert** - Powered by Google Gemini with local knowledge bases for smart Q&A. 
 
+_"The Gemini API "free tier" is offered through the API service with lower rate limits for testing purposes. Google AI Studio usage is **completely free** in all available countries" - according to Gemini API docs_
 ## 📸 Screenshots
 - Use as AI assitant
 
@@ -115,9 +114,7 @@ MIT License - See [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **Google Gemini AI** - Powering intelligent responses
-- **FAISS** - Lightning-fast vector search
 - **Gaming Communities** - For wiki content and knowledge
-- **Contributors** - Making this tool better every day
 
 ---
 
