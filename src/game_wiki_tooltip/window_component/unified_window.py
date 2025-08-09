@@ -1302,8 +1302,13 @@ class UnifiedAssistantWindow(QMainWindow):
         QTimer.singleShot(50, self.chat_view.update_all_message_widths)
         # Delay executing full layout update, ensure content is fully displayed
         QTimer.singleShot(100, self.chat_view._performDelayedResize)
-        # Set focus to input field when returning to chat view
-        QTimer.singleShot(150, self._set_chat_input_focus)
+        # Set focus to input field when returning to chat view (only if auto voice is not enabled)
+        if hasattr(self, 'settings_manager') and self.settings_manager:
+            if not self.settings_manager.settings.auto_voice_on_hotkey:
+                QTimer.singleShot(150, self._set_chat_input_focus)
+        else:
+            # If no settings_manager, maintain original behavior
+            QTimer.singleShot(150, self._set_chat_input_focus)
         # Also try to restore scroll position again after all layout updates
         if hasattr(self, '_was_at_bottom'):
             QTimer.singleShot(250, self._restore_chat_scroll_position)
@@ -1453,11 +1458,7 @@ class UnifiedAssistantWindow(QMainWindow):
     def _retrieve_webview2_title(self, web_view, current_url):
         """Retrieve the stored title from WebView2"""
         logger = logging.getLogger(__name__)
-        
-        # For now, since WebView2's runJavaScript doesn't return values properly,
-        # we'll use a workaround by checking if we have a cached title
-        # or use the document title if available
-        
+
         # Try to get title from WikiView's current_title attribute
         if hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
             title = self.wiki_view.current_title
@@ -2350,6 +2351,15 @@ class UnifiedAssistantWindow(QMainWindow):
     def showEvent(self, event):
         """Handle show event - defer loading non-critical content"""
         super().showEvent(event)
+        
+        # Adjust focus policy based on auto voice setting
+        if hasattr(self, 'settings_manager') and self.settings_manager:
+            if self.settings_manager.settings.auto_voice_on_hotkey:
+                # When voice input is enabled, prevent auto-focus
+                self.input_field.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+            else:
+                # Normal behavior - allow auto-focus
+                self.input_field.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         
         # Load shortcuts and history after window is shown
         if not self.shortcuts_loaded:

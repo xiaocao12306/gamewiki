@@ -266,8 +266,13 @@ class ChatView(QScrollArea):
             parent_window = self.parent()
             if (parent_window and hasattr(parent_window, 'input_field') and
                     hasattr(parent_window, 'isActiveWindow') and parent_window.isActiveWindow()):
-                # Restore focus to input field if window is active
-                parent_window.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
+                # Only restore focus if auto voice is not enabled
+                if hasattr(parent_window, 'settings_manager') and parent_window.settings_manager:
+                    if not parent_window.settings_manager.settings.auto_voice_on_hotkey:
+                        parent_window.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
+                else:
+                    # If no settings_manager, maintain original behavior
+                    parent_window.input_field.setFocus(Qt.FocusReason.OtherFocusReason)
 
             # Reset minimum height after a short delay
             QTimer.singleShot(10, lambda: self.setMinimumHeight(0))

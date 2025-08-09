@@ -2152,15 +2152,22 @@ class IntegratedAssistantController(AssistantController):
         # 最后显示窗口
         self.main_window.show()
         self.main_window.raise_()
-        self.main_window.activateWindow()
+        
+        # 仅在未启用自动语音输入时激活窗口
+        if not self.settings_manager.settings.auto_voice_on_hotkey:
+            self.main_window.activateWindow()
+        else:
+            # 语音输入模式：窗口显示但不抢夺焦点
+            logger.info("🎤 Voice input mode: showing window without stealing focus")
         
         # 关键：确保窗口显示时是可交互的
         # 使用小延迟确保窗口完全显示后再设置
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(50, self._ensure_window_interactable)
 
-        # 设置输入框焦点
-        QTimer.singleShot(100, self.main_window._set_chat_input_focus)
+        # 设置输入框焦点（仅在未启用自动语音输入时）
+        if not self.settings_manager.settings.auto_voice_on_hotkey:
+            QTimer.singleShot(100, self.main_window._set_chat_input_focus)
 
         logger.info("💬 Chat window shown")
     
@@ -2191,7 +2198,8 @@ class IntegratedAssistantController(AssistantController):
             # 1. 先激活聊天窗口，确保它获得焦点
             if self.main_window and self.main_window.isVisible():
                 logger.info("🎯 Activating chat window first")
-                self.main_window.activateWindow()
+                if not self.settings_manager.settings.auto_voice_on_hotkey:
+                    self.main_window.activateWindow()
                 self.main_window.raise_()
             
             # 2. 在显示鼠标之前，先设置鼠标位置到窗口中心
