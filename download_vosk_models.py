@@ -3,6 +3,7 @@
 
 import os
 import sys
+import argparse
 import requests
 import zipfile
 from pathlib import Path
@@ -38,14 +39,26 @@ def download_file(url, dest_path):
             print()  # New line after download
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Download Vosk voice recognition models')
+    parser.add_argument('--chinese', '-c', action='store_true', 
+                        help='Download Chinese model (42 MB)')
+    parser.add_argument('--all', action='store_true',
+                        help='Download all models (English + Chinese, ~80 MB)')
+    parser.add_argument('--list', action='store_true',
+                        help='List available models and their status')
+    args = parser.parse_args()
+    
     models = {
         'vosk-model-small-cn-0.22': {
             'url': 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip',
-            'desc': 'Chinese voice model (42 MB)'
+            'desc': 'Chinese voice model (42 MB)',
+            'lang': 'zh'
         },
         'vosk-model-small-en-us-0.15': {
             'url': 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip',
-            'desc': 'English voice model (40 MB)'
+            'desc': 'English voice model (40 MB)',
+            'lang': 'en'
         }
     }
     
@@ -53,13 +66,41 @@ def main():
     models_dir = Path("src/game_wiki_tooltip/assets/vosk_models")
     models_dir.mkdir(parents=True, exist_ok=True)
     
-    print("=== Vosk Voice Recognition Model Downloader ===")
-    print("This will download voice recognition models for GameWiki Assistant")
-    print("Total download size: ~80 MB\n")
+    # Handle --list argument
+    if args.list:
+        print("=== Available Vosk Models ===")
+        for model_name, info in models.items():
+            model_path = models_dir / model_name
+            status = "✓ Installed" if model_path.exists() else "✗ Not installed"
+            print(f"{info['desc']} [{info['lang']}]: {status}")
+        print(f"\nModels location: {models_dir.absolute()}")
+        return
+    
+    # Determine which models to download
+    models_to_download = {}
+    if args.all:
+        models_to_download = models
+        print("=== Vosk Voice Recognition Model Downloader ===")
+        print("Downloading ALL models (English + Chinese)")
+        print("Total download size: ~80 MB\n")
+    elif args.chinese:
+        # Only Chinese model
+        models_to_download = {k: v for k, v in models.items() if v['lang'] == 'zh'}
+        print("=== Vosk Voice Recognition Model Downloader ===")
+        print("Downloading Chinese model only")
+        print("Total download size: ~42 MB\n")
+    else:
+        # Default: only English model
+        models_to_download = {k: v for k, v in models.items() if v['lang'] == 'en'}
+        print("=== Vosk Voice Recognition Model Downloader ===")
+        print("Downloading English model only (default)")
+        print("Total download size: ~40 MB")
+        print("To download Chinese model, use: python download_vosk_models.py --chinese")
+        print("To download all models, use: python download_vosk_models.py --all\n")
     
     success_count = 0
     
-    for model_name, info in models.items():
+    for model_name, info in models_to_download.items():
         model_path = models_dir / model_name
         
         if model_path.exists():
@@ -100,14 +141,25 @@ def main():
                 zip_path.unlink()
     
     print("\n" + "="*50)
-    if success_count == len(models):
-        print("✅ All models downloaded successfully!")
-        print("Voice recognition is now ready to use.")
+    total_requested = len(models_to_download)
+    if total_requested == 0:
+        print("No models were selected for download.")
+        return
+        
+    if success_count == total_requested:
+        print(f"✅ All requested models ({success_count}/{total_requested}) downloaded successfully!")
+        print("Voice recognition is ready for the installed languages.")
     else:
-        print(f"⚠️  {success_count}/{len(models)} models installed.")
-        print("Some models failed to download. Voice recognition may not work for all languages.")
+        print(f"⚠️  {success_count}/{total_requested} models installed.")
+        print("Some models failed to download. Voice recognition may not work for those languages.")
     
     print("\nModels location:", models_dir.absolute())
+    
+    # Check if Chinese model is missing and user is using Chinese
+    chinese_model = 'vosk-model-small-cn-0.22'
+    if chinese_model not in models_to_download and not (models_dir / chinese_model).exists():
+        print("\nNote: Chinese model not installed. To download it, run:")
+        print("  python download_vosk_models.py --chinese")
 
 if __name__ == "__main__":
     main()

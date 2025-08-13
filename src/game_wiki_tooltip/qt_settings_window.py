@@ -352,10 +352,11 @@ class QtSettingsWindow(QMainWindow):
     def _download_chinese_model(self):
         """Download Chinese voice model"""
         try:
-            from src.game_wiki_tooltip.window_component import WhisperModelManager
+            from src.game_wiki_tooltip.window_component.vosk_model_manager import VoskModelManager
             
-            if WhisperModelManager is None:
-                QMessageBox.warning(self, "Error", "Voice recognition not available. Please install faster-whisper.")
+            manager = VoskModelManager()
+            if not manager:
+                QMessageBox.warning(self, "Error", "Voice recognition not available. Please install vosk.")
                 return
             
             # Disable button and show progress
@@ -372,11 +373,11 @@ class QtSettingsWindow(QMainWindow):
                 finished = pyqtSignal(bool, str)
                 
                 def run(self):
-                    manager = WhisperModelManager()
+                    manager = VoskModelManager()
                     def progress_callback(progress, status):
                         self.progress.emit(int(progress), status)
                     
-                    success = manager.download_model('base', progress_callback)
+                    success = manager.download_model('chinese', progress_callback)
                     if success:
                         self.finished.emit(True, "Chinese voice model installed successfully")
                     else:
@@ -416,18 +417,17 @@ class QtSettingsWindow(QMainWindow):
     def _check_chinese_model_status(self):
         """Check if Chinese model is installed"""
         try:
-            from src.game_wiki_tooltip.window_component import WhisperModelManager
+            from src.game_wiki_tooltip.window_component.vosk_model_manager import VoskModelManager
             
-            if WhisperModelManager is not None:
-                manager = WhisperModelManager()
-                if manager.is_model_available('base'):
-                    self.chinese_model_status.setText("Chinese voice model installed")
-                    self.chinese_model_status.setStyleSheet("color: #2f9e44; font-weight: bold;")
-                    self.download_chinese_btn.setText("Re-download Chinese Model")
-                else:
-                    self.chinese_model_status.setText("Chinese voice model not installed")
-                    self.chinese_model_status.setStyleSheet("color: #ff6b6b; font-weight: bold;")
-                    self.download_chinese_btn.setText("Download Chinese Voice Model (~140MB)")
+            manager = VoskModelManager()
+            if manager.is_model_available('chinese'):
+                self.chinese_model_status.setText("Chinese voice model installed")
+                self.chinese_model_status.setStyleSheet("color: #2f9e44; font-weight: bold;")
+                self.download_chinese_btn.setText("Re-download Chinese Model")
+            else:
+                self.chinese_model_status.setText("Chinese voice model not installed")
+                self.chinese_model_status.setStyleSheet("color: #ff6b6b; font-weight: bold;")
+                self.download_chinese_btn.setText("Download Chinese Voice Model (~42MB)")
         except Exception as e:
             logger.error(f"Failed to check Chinese model status: {e}")
     
