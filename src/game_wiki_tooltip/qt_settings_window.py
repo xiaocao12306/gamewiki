@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QLabel, QPushButton, QCheckBox, QComboBox, QLineEdit,
     QFrame, QMessageBox, QGroupBox, QDialog,
-    QListWidget, QListWidgetItem, QInputDialog
+    QListWidget, QListWidgetItem, QInputDialog, QProgressBar
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
@@ -305,17 +305,131 @@ class QtSettingsWindow(QMainWindow):
         auto_voice_layout.addStretch()
         audio_group_layout.addLayout(auto_voice_layout)
         
-        layout.addWidget(self.audio_group)
+        # Chinese voice model download section (only shown when language is Chinese)
+        self.chinese_model_widget = self._create_chinese_model_section()
+        audio_group_layout.addWidget(self.chinese_model_widget)
+        self.chinese_model_widget.hide()  # Initially hidden
         
-        # Tips
-        tips_label = QLabel(t("language_tips"))
-        tips_label.setWordWrap(True)
-        tips_label.setStyleSheet("color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 6px;")
-        layout.addWidget(tips_label)
+        layout.addWidget(self.audio_group)
         
         layout.addStretch()
         
         self.tab_widget.addTab(tab, "General")
+    
+    def _create_chinese_model_section(self):
+        """Create Chinese voice model download section"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 10, 0, 0)
+        
+        # Model status label
+        self.chinese_model_status = QLabel("Chinese voice model not installed")
+        self.chinese_model_status.setStyleSheet("color: #ff6b6b; font-weight: bold;")
+        layout.addWidget(self.chinese_model_status)
+        
+        # Download button and progress
+        download_layout = QHBoxLayout()
+        
+        self.download_chinese_btn = QPushButton("Download Chinese Voice Model (~140MB)")
+        self.download_chinese_btn.clicked.connect(self._download_chinese_model)
+        download_layout.addWidget(self.download_chinese_btn)
+        
+        self.download_progress = QProgressBar()
+        self.download_progress.setVisible(False)
+        self.download_progress.setMaximum(100)
+        download_layout.addWidget(self.download_progress)
+        
+        layout.addLayout(download_layout)
+        
+        # Info label
+        info_label = QLabel("Required for Chinese voice input. Download once and use offline.")
+        info_label.setStyleSheet("color: #666; font-size: 11px;")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+        
+        return widget
+    
+    def _download_chinese_model(self):
+        """Download Chinese voice model"""
+        try:
+            from src.game_wiki_tooltip.window_component import WhisperModelManager
+            
+            if WhisperModelManager is None:
+                QMessageBox.warning(self, "Error", "Voice recognition not available. Please install faster-whisper.")
+                return
+            
+            # Disable button and show progress
+            self.download_chinese_btn.setEnabled(False)
+            self.download_progress.setVisible(True)
+            self.chinese_model_status.setText("Downloading Chinese voice model...")
+            self.chinese_model_status.setStyleSheet("color: #1971c2;")
+            
+            # Create download thread
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class DownloadThread(QThread):
+                progress = pyqtSignal(int, str)
+                finished = pyqtSignal(bool, str)
+                
+                def run(self):
+                    manager = WhisperModelManager()
+                    def progress_callback(progress, status):
+                        self.progress.emit(int(progress), status)
+                    
+                    success = manager.download_model('base', progress_callback)
+                    if success:
+                        self.finished.emit(True, "Chinese voice model installed successfully")
+                    else:
+                        self.finished.emit(False, "Failed to download Chinese voice model")
+            
+            self.download_thread = DownloadThread()
+            self.download_thread.progress.connect(self._update_download_progress)
+            self.download_thread.finished.connect(self._download_finished)
+            self.download_thread.start()
+            
+        except Exception as e:
+            logger.error(f"Failed to start Chinese model download: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to download: {str(e)}")
+            self.download_chinese_btn.setEnabled(True)
+            self.download_progress.setVisible(False)
+    
+    def _update_download_progress(self, progress, status):
+        """Update download progress"""
+        self.download_progress.setValue(progress)
+        self.chinese_model_status.setText(status)
+    
+    def _download_finished(self, success, message):
+        """Handle download completion"""
+        self.download_progress.setVisible(False)
+        self.download_chinese_btn.setEnabled(True)
+        
+        if success:
+            self.chinese_model_status.setText("Chinese voice model installed")
+            self.chinese_model_status.setStyleSheet("color: #2f9e44; font-weight: bold;")
+            self.download_chinese_btn.setText("Re-download Chinese Model")
+            QMessageBox.information(self, "Success", message)
+        else:
+            self.chinese_model_status.setText("Chinese voice model not installed")
+            self.chinese_model_status.setStyleSheet("color: #ff6b6b; font-weight: bold;")
+            QMessageBox.warning(self, "Error", message)
+    
+    def _check_chinese_model_status(self):
+        """Check if Chinese model is installed"""
+        try:
+            from src.game_wiki_tooltip.window_component import WhisperModelManager
+            
+            if WhisperModelManager is not None:
+                manager = WhisperModelManager()
+                if manager.is_model_available('base'):
+                    self.chinese_model_status.setText("Chinese voice model installed")
+                    self.chinese_model_status.setStyleSheet("color: #2f9e44; font-weight: bold;")
+                    self.download_chinese_btn.setText("Re-download Chinese Model")
+                else:
+                    self.chinese_model_status.setText("Chinese voice model not installed")
+                    self.chinese_model_status.setStyleSheet("color: #ff6b6b; font-weight: bold;")
+                    self.download_chinese_btn.setText("Download Chinese Voice Model (~140MB)")
+        except Exception as e:
+            logger.error(f"Failed to check Chinese model status: {e}")
     
     def _populate_audio_devices(self):
         """Populate audio device combo box"""
@@ -325,7 +439,7 @@ class QtSettingsWindow(QMainWindow):
         self.audio_device_combo.addItem("System Default", None)
         
         try:
-            from src.game_wiki_tooltip.window_component.voice_recognition import get_audio_input_devices
+            from src.game_wiki_tooltip.window_component import get_audio_input_devices
             devices = get_audio_input_devices()
             
             for device in devices:
@@ -787,6 +901,13 @@ class QtSettingsWindow(QMainWindow):
             
             # Update all UI text
             self._update_ui_text()
+            
+            # Show/hide Chinese model download section
+            if selected_language == 'zh':
+                self.chinese_model_widget.show()
+                self._check_chinese_model_status()
+            else:
+                self.chinese_model_widget.hide()
     
     def _update_ui_text(self):
         """Update all UI text with current language"""
@@ -851,6 +972,13 @@ class QtSettingsWindow(QMainWindow):
             if self.language_combo.itemData(i) == current_language:
                 self.language_combo.setCurrentIndex(i)
                 break
+        
+        # Check Chinese model status if language is Chinese
+        if current_language == 'zh':
+            self.chinese_model_widget.show()
+            self._check_chinese_model_status()
+        else:
+            self.chinese_model_widget.hide()
         
         # Load audio device settings
         audio_device_index = settings.get('audio_device_index')
