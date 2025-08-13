@@ -29,8 +29,7 @@ _"The Gemini API "free tier" is offered through the API service with lower rate 
 
 - Use as an web browser
 
-
-https://github.com/user-attachments/assets/8c207707-964d-4877-981a-d5c129729831
+![Demo](data/demo2.gif)
 
 
 ## 🚀 Quick Install
