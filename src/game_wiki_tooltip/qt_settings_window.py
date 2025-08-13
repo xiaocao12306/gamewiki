@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QLabel, QPushButton, QCheckBox, QComboBox, QLineEdit,
     QFrame, QMessageBox, QGroupBox, QDialog,
-    QListWidget, QListWidgetItem, QInputDialog, QProgressBar
+    QListWidget, QListWidgetItem, QInputDialog, QProgressBar, QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
@@ -170,12 +170,11 @@ class QtSettingsWindow(QMainWindow):
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
         
-        # Create tabs - hotkey first, language last
-        self._create_hotkey_tab()
+        # Create tabs - hotkey first (now includes language and audio settings)
+        self._create_hotkey_tab()  # General Settings tab
         self._create_shortcuts_tab()  # Add shortcuts tab as second
         self._create_wiki_tab()  # Add wiki tab as third
         self._create_api_tab()
-        self._create_language_tab()
         
         # Set default tab to hotkey (first tab)
         self.tab_widget.setCurrentIndex(0)
@@ -230,91 +229,6 @@ class QtSettingsWindow(QMainWindow):
         QApplication.processEvents()
         self.updateGeometry()
         
-    def _create_language_tab(self):
-        """Create general settings configuration tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # Title
-        title = QLabel("General Settings")
-        title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
-        layout.addWidget(title)
-        
-        # Language group
-        lang_group = QGroupBox("Language Settings")
-        lang_group_layout = QVBoxLayout(lang_group)
-        
-        # Language selection
-        lang_layout = QHBoxLayout()
-        lang_label = QLabel(t("language_label"))
-        lang_layout.addWidget(lang_label)
-        
-        self.language_combo = QComboBox()
-        self.language_combo.setFixedWidth(200)
-        
-        # Populate language options
-        from src.game_wiki_tooltip.core.i18n import get_supported_languages
-        supported_languages = get_supported_languages()
-        for lang_code, lang_name in supported_languages.items():
-            self.language_combo.addItem(lang_name, lang_code)
-        
-        # Connect language change signal
-        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
-        
-        lang_layout.addWidget(self.language_combo)
-        lang_layout.addStretch()
-        lang_group_layout.addLayout(lang_layout)
-        
-        layout.addWidget(lang_group)
-        
-        # Audio Device group
-        self.audio_group = QGroupBox(t("audio_title"))
-        audio_group_layout = QVBoxLayout(self.audio_group)
-        
-        # Audio device selection
-        audio_layout = QHBoxLayout()
-        self.audio_label = QLabel(t("audio_input_device_label"))
-        audio_layout.addWidget(self.audio_label)
-        
-        self.audio_device_combo = QComboBox()
-        self.audio_device_combo.setFixedWidth(300)
-        
-        # Populate audio device options
-        self._populate_audio_devices()
-        
-        audio_layout.addWidget(self.audio_device_combo)
-        audio_layout.addStretch()
-        audio_group_layout.addLayout(audio_layout)
-        
-        # Refresh devices button
-        refresh_layout = QHBoxLayout()
-        self.refresh_button = QPushButton(t("refresh_devices_button"))
-        self.refresh_button.clicked.connect(self._refresh_audio_devices)
-        self.refresh_button.setFixedWidth(120)
-        refresh_layout.addWidget(self.refresh_button)
-        refresh_layout.addStretch()
-        audio_group_layout.addLayout(refresh_layout)
-        
-        # Auto voice on hotkey checkbox
-        auto_voice_layout = QHBoxLayout()
-        self.auto_voice_checkbox = QCheckBox(t("auto_voice_on_hotkey") if hasattr(self, 't') else "Auto-start voice input on hotkey")
-        self.auto_voice_checkbox.setToolTip("When enabled, voice input will automatically start when opening the window with hotkey")
-        auto_voice_layout.addWidget(self.auto_voice_checkbox)
-        auto_voice_layout.addStretch()
-        audio_group_layout.addLayout(auto_voice_layout)
-        
-        # Chinese voice model download section (only shown when language is Chinese)
-        self.chinese_model_widget = self._create_chinese_model_section()
-        audio_group_layout.addWidget(self.chinese_model_widget)
-        self.chinese_model_widget.hide()  # Initially hidden
-        
-        layout.addWidget(self.audio_group)
-        
-        layout.addStretch()
-        
-        self.tab_widget.addTab(tab, "General")
     
     def _create_chinese_model_section(self):
         """Create Chinese voice model download section"""
@@ -679,24 +593,30 @@ class QtSettingsWindow(QMainWindow):
         return shortcuts
     
     def _create_hotkey_tab(self):
-        """Create hotkey configuration tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        """Create general settings configuration tab"""
+        # Create scroll area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        # Create content widget
+        content_widget = QWidget()
+        layout = QVBoxLayout(content_widget)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        # Title
-        title = QLabel(t("hotkey_title"))
-        title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
-        layout.addWidget(title)
+        # === Hotkey Settings ===
+        hotkey_title = QLabel(t("hotkey_title"))
+        hotkey_title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
+        layout.addWidget(hotkey_title)
         
         # Hotkey group
-        group = QGroupBox()
-        group_layout = QVBoxLayout(group)
+        hotkey_group = QGroupBox()
+        hotkey_group_layout = QVBoxLayout(hotkey_group)
         
         # Modifiers
         mod_label = QLabel(t("modifiers_label"))
-        group_layout.addWidget(mod_label)
+        hotkey_group_layout.addWidget(mod_label)
         
         mod_layout = QHBoxLayout()
         self.ctrl_check = QCheckBox("Ctrl")
@@ -709,7 +629,7 @@ class QtSettingsWindow(QMainWindow):
         mod_layout.addWidget(self.alt_check)
         mod_layout.addWidget(self.win_check)
         mod_layout.addStretch()
-        group_layout.addLayout(mod_layout)
+        hotkey_group_layout.addLayout(mod_layout)
         
         # Main key
         key_layout = QHBoxLayout()
@@ -723,19 +643,118 @@ class QtSettingsWindow(QMainWindow):
             self.key_combo.addItem(chr(ord('A') + i))
         key_layout.addWidget(self.key_combo)
         key_layout.addStretch()
-        group_layout.addLayout(key_layout)
+        hotkey_group_layout.addLayout(key_layout)
         
-        layout.addWidget(group)
+        layout.addWidget(hotkey_group)
         
-        # Tips
-        tips_label = QLabel(t("hotkey_tips"))
-        tips_label.setWordWrap(True)
-        tips_label.setStyleSheet("color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 6px;")
-        layout.addWidget(tips_label)
+        # Hotkey tips
+        hotkey_tips_label = QLabel(t("hotkey_tips"))
+        hotkey_tips_label.setWordWrap(True)
+        hotkey_tips_label.setStyleSheet("color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 6px;")
+        layout.addWidget(hotkey_tips_label)
+        
+        # === Language Settings ===
+        lang_title = QLabel(t("language_title"))
+        lang_title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
+        lang_title.setStyleSheet("margin-top: 20px;")
+        layout.addWidget(lang_title)
+        
+        # Language group
+        lang_group = QGroupBox()
+        lang_group_layout = QVBoxLayout(lang_group)
+        
+        # Language selection
+        lang_layout = QHBoxLayout()
+        lang_label = QLabel(t("language_label"))
+        lang_layout.addWidget(lang_label)
+        
+        self.language_combo = QComboBox()
+        self.language_combo.setFixedWidth(200)
+        
+        # Populate language options
+        from src.game_wiki_tooltip.core.i18n import get_supported_languages
+        supported_languages = get_supported_languages()
+        for lang_code, lang_name in supported_languages.items():
+            self.language_combo.addItem(lang_name, lang_code)
+        
+        # Connect language change signal
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+        
+        lang_layout.addWidget(self.language_combo)
+        lang_layout.addStretch()
+        lang_group_layout.addLayout(lang_layout)
+        
+        # Language tips
+        lang_tips_label = QLabel(t("language_tips"))
+        lang_tips_label.setWordWrap(True)
+        lang_tips_label.setStyleSheet("color: #666; margin-top: 5px;")
+        lang_group_layout.addWidget(lang_tips_label)
+        
+        layout.addWidget(lang_group)
+        
+        # === Audio Settings ===
+        audio_title = QLabel(t("audio_title"))
+        audio_title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
+        audio_title.setStyleSheet("margin-top: 20px;")
+        layout.addWidget(audio_title)
+        
+        self.audio_group = QGroupBox()
+        audio_group_layout = QVBoxLayout(self.audio_group)
+        
+        # Audio device selection
+        audio_layout = QHBoxLayout()
+        self.audio_label = QLabel(t("audio_input_device_label"))
+        audio_layout.addWidget(self.audio_label)
+        
+        self.audio_device_combo = QComboBox()
+        self.audio_device_combo.setFixedWidth(300)
+        
+        # Populate audio device options
+        self._populate_audio_devices()
+        
+        audio_layout.addWidget(self.audio_device_combo)
+        audio_layout.addStretch()
+        audio_group_layout.addLayout(audio_layout)
+        
+        # Refresh devices button
+        refresh_layout = QHBoxLayout()
+        self.refresh_button = QPushButton(t("refresh_devices_button"))
+        self.refresh_button.clicked.connect(self._refresh_audio_devices)
+        self.refresh_button.setFixedWidth(120)
+        refresh_layout.addWidget(self.refresh_button)
+        refresh_layout.addStretch()
+        audio_group_layout.addLayout(refresh_layout)
+        
+        # Auto voice on hotkey checkbox
+        auto_voice_layout = QHBoxLayout()
+        self.auto_voice_checkbox = QCheckBox(t("auto_voice_on_hotkey") if hasattr(self, 't') else "Auto-start voice input on hotkey")
+        self.auto_voice_checkbox.setToolTip("When enabled, voice input will automatically start when opening the window with hotkey")
+        auto_voice_layout.addWidget(self.auto_voice_checkbox)
+        auto_voice_layout.addStretch()
+        audio_group_layout.addLayout(auto_voice_layout)
+        
+        # Auto-send voice input checkbox
+        auto_send_layout = QHBoxLayout()
+        self.auto_send_checkbox = QCheckBox("Auto-send voice input when recording stops")
+        self.auto_send_checkbox.setToolTip("When enabled, voice input will automatically be sent when you stop recording")
+        auto_send_layout.addWidget(self.auto_send_checkbox)
+        auto_send_layout.addStretch()
+        audio_group_layout.addLayout(auto_send_layout)
+        
+        # Chinese voice model download section (only shown when language is Chinese)
+        self.chinese_model_widget = self._create_chinese_model_section()
+        audio_group_layout.addWidget(self.chinese_model_widget)
+        self.chinese_model_widget.hide()  # Initially hidden
+        
+        layout.addWidget(self.audio_group)
         
         layout.addStretch()
         
-        self.tab_widget.addTab(tab, t("hotkey_tab"))
+        # Set content widget to scroll area
+        scroll_area.setWidget(content_widget)
+        
+        # Add scroll area to tab
+        self.tab_widget.addTab(scroll_area, "General Settings")
         
     def _create_wiki_tab(self):
         """Create wiki URL configuration tab"""
@@ -915,11 +934,10 @@ class QtSettingsWindow(QMainWindow):
         self.setWindowTitle(t("settings_title"))
         
         # Tab titles
-        self.tab_widget.setTabText(0, t("hotkey_tab"))
+        self.tab_widget.setTabText(0, "General Settings")  # General Settings tab
         self.tab_widget.setTabText(1, "Quick Access")  # Shortcuts tab
         self.tab_widget.setTabText(2, t("wiki_tab"))
         self.tab_widget.setTabText(3, t("api_tab"))
-        self.tab_widget.setTabText(4, t("language_tab"))
         
         # Buttons
         self.apply_button.setText(t("apply_button"))
@@ -993,6 +1011,11 @@ class QtSettingsWindow(QMainWindow):
         auto_voice_on_hotkey = settings.get('auto_voice_on_hotkey', False)
         if hasattr(self, 'auto_voice_checkbox'):
             self.auto_voice_checkbox.setChecked(auto_voice_on_hotkey)
+        
+        # Load auto send voice input setting
+        auto_send_voice_input = settings.get('auto_send_voice_input', False)
+        if hasattr(self, 'auto_send_checkbox'):
+            self.auto_send_checkbox.setChecked(auto_send_voice_input)
         
         # Load hotkey settings
         hotkey = settings.get('hotkey', {})
@@ -1105,6 +1128,10 @@ class QtSettingsWindow(QMainWindow):
         # Add auto voice on hotkey setting
         if hasattr(self, 'auto_voice_checkbox'):
             settings_update['auto_voice_on_hotkey'] = self.auto_voice_checkbox.isChecked()
+        
+        # Add auto send voice input setting
+        if hasattr(self, 'auto_send_checkbox'):
+            settings_update['auto_send_voice_input'] = self.auto_send_checkbox.isChecked()
         
         self.settings_manager.update(settings_update)
         

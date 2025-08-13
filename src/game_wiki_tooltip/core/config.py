@@ -90,6 +90,7 @@ class AppSettings:
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
     audio_device_index: Optional[int] = None  # Audio device index for voice recognition
     auto_voice_on_hotkey: bool = False  # Auto-start voice input when hotkey triggers window
+    auto_send_voice_input: bool = False  # Auto-send voice input when recording stops
 
 
 class SettingsManager:

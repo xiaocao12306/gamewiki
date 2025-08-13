@@ -326,6 +326,9 @@ class UnifiedAssistantWindow(QMainWindow):
         self.input_field.setPlaceholderText(" | ".join(placeholder_texts[:3]))  # Show first 3 examples
         self.input_field.returnPressed.connect(self.on_input_return_pressed)
         
+        # Add focus event to stop voice recording when clicking input field
+        self.input_field.focusInEvent = self._handle_input_focus
+        
         input_row_layout.addWidget(self.input_field)
         
         # Bottom row: Quick access buttons
@@ -469,6 +472,23 @@ class UnifiedAssistantWindow(QMainWindow):
         
         layout.addStretch()
         
+        # Settings button
+        self.settings_btn = QPushButton()
+        self.settings_btn.setObjectName("settingsBtn")
+        self.settings_btn.setFixedSize(30, 25)
+        self.settings_btn.setToolTip("Settings")
+        self.settings_btn.clicked.connect(self.open_settings)
+        
+        # Load settings icon
+        import pathlib
+        base_path = pathlib.Path(__file__).parent.parent
+        settings_icon_path = str(base_path / "assets" / "icons" / "setting-svgrepo-com.svg")
+        settings_icon = load_svg_icon(settings_icon_path, color="#111111", size=16)
+        self.settings_btn.setIcon(settings_icon)
+        self.settings_btn.setIconSize(QSize(16, 16))
+        
+        layout.addWidget(self.settings_btn)
+        
         # Close button
         close_btn = QPushButton("×")
         close_btn.setObjectName("closeBtn")
@@ -543,7 +563,7 @@ class UnifiedAssistantWindow(QMainWindow):
             font-family: "Segoe UI", "Microsoft YaHei", Arial;
         }
         
-        #minBtn, #closeBtn {
+        #minBtn, #closeBtn, #settingsBtn {
             background: rgba(255, 255, 255, 150);
             border: none;
             border-radius: 5px;
@@ -552,7 +572,7 @@ class UnifiedAssistantWindow(QMainWindow):
             font-family: "Segoe UI", "Microsoft YaHei", Arial;
         }
         
-        #minBtn:hover, #closeBtn:hover {
+        #minBtn:hover, #closeBtn:hover, #settingsBtn:hover {
             background: rgba(220, 220, 220, 180);
         }
         
@@ -2140,6 +2160,13 @@ class UnifiedAssistantWindow(QMainWindow):
         # Start asynchronous cleanup
         if self.voice_thread:
             self._cleanup_voice_thread_async()
+        
+        # Check if auto-send is enabled after stopping recording
+        if hasattr(self, 'settings_manager') and self.settings_manager:
+            if hasattr(self.settings_manager.settings, 'auto_send_voice_input'):
+                if self.settings_manager.settings.auto_send_voice_input:
+                    # Auto-send the input after a short delay
+                    QTimer.singleShot(200, self._auto_send_voice_input)
     
     def _restore_voice_ui(self):
         """Restore UI to normal state immediately."""
@@ -2231,6 +2258,19 @@ class UnifiedAssistantWindow(QMainWindow):
         # Clear current sentence and update display
         self._voice_current_sentence = ""
         self.input_field.setText(self._voice_completed_text)
+        
+        # Check if auto-send is enabled when voice recording stops
+        if hasattr(self, 'settings_manager') and self.settings_manager:
+            if hasattr(self.settings_manager.settings, 'auto_send_voice_input'):
+                if self.settings_manager.settings.auto_send_voice_input and not self.is_voice_recording:
+                    # Auto-send the input after a short delay to ensure recording is fully stopped
+                    QTimer.singleShot(100, self._auto_send_voice_input)
+    
+    def _auto_send_voice_input(self):
+        """Auto-send voice input if there's content"""
+        if self.input_field.text().strip() and not self.is_voice_recording:
+            logger.debug("Auto-sending voice input")
+            self.on_send_clicked()
     
     def on_voice_error(self, error_msg: str):
         """Handle voice recognition errors with robust cleanup."""
@@ -2390,6 +2430,40 @@ class UnifiedAssistantWindow(QMainWindow):
             import traceback
             traceback.print_exc()
         
+    def open_settings(self):
+        """Open the settings window"""
+        try:
+            # Import here to avoid circular imports
+            from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
+            
+            # Create settings window if it doesn't exist
+            if not hasattr(self, 'settings_window') or not self.settings_window:
+                self.settings_window = QtSettingsWindow(self.settings_manager)
+                self.settings_window.settings_applied.connect(self._on_settings_changed)
+            
+            # Show the settings window
+            self.settings_window.show()
+            self.settings_window.raise_()
+            self.settings_window.activateWindow()
+        except Exception as e:
+            logger.error(f"Failed to open settings window: {e}")
+    
+    def _on_settings_changed(self):
+        """Handle settings changed signal"""
+        # Reload settings if needed
+        if self.settings_manager:
+            self.settings_manager.reload()
+    
+    def _handle_input_focus(self, event):
+        """Handle input field focus event - stop voice recording if active"""
+        # Stop voice recording if it's active when user clicks on input field
+        if self.is_voice_recording:
+            logger.debug("Stopping voice recording due to input field focus")
+            self.stop_voice_recording()
+        
+        # Call the original focusInEvent
+        QLineEdit.focusInEvent(self.input_field, event)
+    
     def closeEvent(self, event):
         """Handle close event - just hide the window"""
         event.ignore()  # Don't actually close the window
