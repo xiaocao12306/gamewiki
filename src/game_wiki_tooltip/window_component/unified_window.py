@@ -67,6 +67,7 @@ class UnifiedAssistantWindow(QMainWindow):
     wiki_page_found = pyqtSignal(str, str)  # New signal: pass real wiki page information to controller
     visibility_changed = pyqtSignal(bool)  # Signal for visibility state changes
     stop_generation_requested = pyqtSignal()  # New signal: stop generation request
+    settings_requested = pyqtSignal()  # Signal to request settings window from main app
 
     def __init__(self, settings_manager=None):
         super().__init__()
@@ -2441,26 +2442,13 @@ class UnifiedAssistantWindow(QMainWindow):
     def open_settings(self):
         """Open the settings window"""
         try:
-            # Import here to avoid circular imports
-            from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
-            
-            # Create settings window if it doesn't exist
-            if not hasattr(self, 'settings_window') or not self.settings_window:
-                self.settings_window = QtSettingsWindow(self.settings_manager)
-                self.settings_window.settings_applied.connect(self._on_settings_changed)
-            
-            # Show the settings window
-            self.settings_window.show()
-            self.settings_window.raise_()
-            self.settings_window.activateWindow()
+            # Emit signal to request settings window from main app
+            # This ensures we use the same settings window instance as the tray icon
+            logger.info("Requesting settings window from main app")
+            self.settings_requested.emit()
         except Exception as e:
-            logger.error(f"Failed to open settings window: {e}")
+            logger.error(f"Failed to request settings window: {e}")
     
-    def _on_settings_changed(self):
-        """Handle settings changed signal"""
-        # Reload settings if needed
-        if self.settings_manager:
-            self.settings_manager.reload()
     
     def _handle_input_focus(self, event):
         """Handle input field focus event - stop voice recording if active"""

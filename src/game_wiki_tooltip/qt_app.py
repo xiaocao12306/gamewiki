@@ -378,6 +378,9 @@ class GameWikiApp(QObject):
             # Initialize assistant controller with limited mode flag
             self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
             
+            # Set callback for settings window request from chat window
+            self.assistant_ctrl.set_settings_window_callback(self._show_settings)
+            
             # Initialize tray icon
             self.tray_icon = QtTrayIcon()
             self.tray_icon.settings_requested.connect(self._show_settings)

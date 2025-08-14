@@ -1214,6 +1214,7 @@ class IntegratedAssistantController(AssistantController):
         self._setup_connections()
         self._current_worker = None
         self._current_wiki_message = None  # Store current wiki link message component
+        self._settings_window_callback = None  # Callback to show settings window from main app
         
         # Initialize smart interaction manager (pass None as parent, but pass self as controller reference)
         self.smart_interaction = SmartInteractionManager(parent=None, controller=self, game_config_manager=self.rag_integration.game_cfg_mgr)
@@ -1401,6 +1402,19 @@ class IntegratedAssistantController(AssistantController):
         )
         
         # 移除窗口状态变化的信号连接 - 改为热键触发时按需检测
+    
+    def handle_settings_requested(self):
+        """Handle settings window request from chat window"""
+        logger.info("Settings window requested from chat window")
+        # Call the callback if it's set
+        if self._settings_window_callback:
+            self._settings_window_callback()
+        else:
+            logger.warning("No settings window callback set")
+    
+    def set_settings_window_callback(self, callback):
+        """Set the callback function to show settings window"""
+        self._settings_window_callback = callback
     
     def handle_query(self, query: str, mode: str = "auto"):
         """Override to handle query with RAG integration"""

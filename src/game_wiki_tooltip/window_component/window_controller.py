@@ -83,6 +83,11 @@ class AssistantController:
                 self.main_window.stop_generation_requested.connect(self.handle_stop_generation)
                 logger.info("✅ Connected stop_generation_requested signal")
             
+            # Connect settings requested signal if handler exists
+            if hasattr(self, 'handle_settings_requested'):
+                self.main_window.settings_requested.connect(self.handle_settings_requested)
+                logger.info("✅ Connected settings_requested signal")
+            
             # CRITICAL FIX: Ensure task buttons are created during pre-creation
             logger.info(f"🔍 [DEBUG] Force loading shortcuts for pre-created window...")
             try:
