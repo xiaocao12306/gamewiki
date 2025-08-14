@@ -6,9 +6,9 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-green?logo=python)
 ![Games](https://img.shields.io/badge/AI%20Games-4%20Supported-orange?logo=gamepad)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-[![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)
 
-👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/latest)** |  **[Join Our Discord](https://discord.gg/WdZVcnQ2)**
+👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)** |  **[Join Our Discord](https://discord.gg/WdZVcnQ2)**
 
 ## ✨ Why GameWikiTooltip?
 

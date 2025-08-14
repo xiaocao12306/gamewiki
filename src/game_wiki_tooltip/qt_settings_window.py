@@ -365,7 +365,8 @@ class QtSettingsWindow(QMainWindow):
         
         try:
             from src.game_wiki_tooltip.window_component import get_audio_input_devices
-            devices = get_audio_input_devices(force_refresh=force_refresh)
+            # Pass settings manager to enable cache saving
+            devices = get_audio_input_devices(force_refresh=force_refresh, settings_manager=self.settings_manager)
             
             for device in devices:
                 device_name = device['name']
@@ -960,8 +961,14 @@ class QtSettingsWindow(QMainWindow):
             from src.game_wiki_tooltip.core.i18n import set_language
             set_language(selected_language)
             
+            # Update settings manager's language to track current language
+            self.settings_manager.settings.language = selected_language
+            
             # Update all UI text
             self._update_ui_text()
+            
+            # Reload wiki URLs for the new language
+            self._load_wiki_urls()
             
             # Show/hide Chinese model download section
             if selected_language == 'zh':
@@ -1003,14 +1010,6 @@ class QtSettingsWindow(QMainWindow):
             api_widgets[2].setText(f'<a href="https://makersuite.google.com/app/apikey">{t("google_api_help")}</a>')
             api_widgets[5].setText(t("api_tips"))             # Tips
         
-        # Language tab (index 4)
-        language_tab = self.tab_widget.widget(4)
-        language_widgets = language_tab.findChildren(QLabel)
-        if len(language_widgets) >= 2:
-            language_widgets[0].setText(t("language_title"))  # Title
-            language_widgets[1].setText(t("language_label"))  # Language label
-            language_widgets[2].setText(t("language_tips"))   # Tips
-            
         # Audio Settings - Update all audio-related UI elements
         if hasattr(self, 'audio_group'):
             self.audio_group.setTitle(t("audio_title"))
@@ -1018,6 +1017,22 @@ class QtSettingsWindow(QMainWindow):
             self.audio_label.setText(t("audio_input_device_label"))
         if hasattr(self, 'refresh_button'):
             self.refresh_button.setText(t("refresh_devices_button"))
+        
+        # Wiki tab - Update wiki-related UI elements
+        if hasattr(self, 'wiki_search_input'):
+            self.wiki_search_input.setPlaceholderText(t("wiki_search_placeholder"))
+        if hasattr(self, 'reset_wiki_button'):
+            self.reset_wiki_button.setText(t("wiki_reset_button"))
+        
+        # Update wiki tips label to show the restart reminder
+        wiki_tab = self.tab_widget.widget(2)  # Wiki tab is at index 2
+        if wiki_tab:
+            wiki_labels = wiki_tab.findChildren(QLabel)
+            for label in wiki_labels:
+                # Find the tips label (it has RichText format)
+                if label.textFormat() == Qt.TextFormat.RichText:
+                    label.setText(t("wiki_tips_with_warning"))
+                    break
         
         # Update placeholders
         self.google_api_input.setPlaceholderText(t("google_api_placeholder"))

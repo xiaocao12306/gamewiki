@@ -327,6 +327,7 @@ class GameWikiApp(QObject):
         # 修改逻辑：强制显示设置窗口的情况
         if self.force_settings:
             logger.info("Settings window forced by command line argument")
+            self.need_show_settings_after_splash = False  # Don't show twice
             self._show_settings(initial_setup=False)
         elif not has_api_key:
             # 没有API key时，显示信息但不强制退出
@@ -336,13 +337,16 @@ class GameWikiApp(QObject):
             # 显示通知告知用户功能受限
             self._initialize_components(limited_mode=True)
             
-            # 如果用户没有选择"不再提醒"，自动打开设置界面
+            # 如果用户没有选择"不再提醒"，标记需要在splash后打开设置界面
             if not dont_remind:
-                logger.info("Auto-opening settings window for API key configuration")
-                self._show_settings(initial_setup=True)
+                logger.info("Will open settings window after splash screen")
+                self.need_show_settings_after_splash = True
+            else:
+                self.need_show_settings_after_splash = False
         else:
             # 同时有两个API key，initialize components normally
             logger.info("Found both Google/Gemini and Jina API keys, initializing components with full functionality")
+            self.need_show_settings_after_splash = False
             self._initialize_components(limited_mode=False)
             
     def _initialize_components(self, limited_mode=False):
@@ -352,12 +356,26 @@ class GameWikiApp(QObject):
             try:
                 from src.game_wiki_tooltip.window_component.voice_recognition import initialize_audio_devices
                 import threading
+                
+                # Pass settings manager to audio init
+                settings_mgr = self.settings_mgr
+                
+                def safe_audio_init():
+                    """Wrapper to ensure audio init doesn't crash the thread"""
+                    try:
+                        initialize_audio_devices(settings_manager=settings_mgr)
+                    except Exception as e:
+                        logger.error(f"Audio device initialization failed in thread: {e}")
+                        import traceback
+                        logger.debug(f"Audio init thread traceback: {traceback.format_exc()}")
+                
                 # Run audio device initialization in background thread to avoid blocking
-                audio_init_thread = threading.Thread(target=initialize_audio_devices, daemon=True)
+                audio_init_thread = threading.Thread(target=safe_audio_init, daemon=True, name="AudioInit")
                 audio_init_thread.start()
                 logger.info("Started audio device initialization in background")
             except Exception as e:
-                logger.warning(f"Failed to initialize audio devices: {e}")
+                logger.warning(f"Failed to start audio device initialization: {e}")
+                # Continue without audio device initialization
             
             # Ensure cleanup of existing assistant controller before initializing new one
             if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
@@ -549,6 +567,12 @@ class GameWikiApp(QObject):
             logger.info("Closing splash screen after mini window displayed")
             self.splash_screen.close_and_cleanup()
             self.splash_screen = None
+            
+        # Now that splash is closed, show settings if needed
+        if hasattr(self, 'need_show_settings_after_splash') and self.need_show_settings_after_splash:
+            logger.info("Auto-opening settings window after splash screen closed")
+            self.need_show_settings_after_splash = False
+            QTimer.singleShot(200, lambda: self._show_settings(initial_setup=True))
             
     def _on_ai_ready(self, success: bool):
         """Called when AI modules are loaded"""

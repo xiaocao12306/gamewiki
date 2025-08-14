@@ -295,6 +295,111 @@ def update_spec_for_webview2():
     print_success("spec file updated to support WebView2")
     return True
 
+def build_uninstaller(output_dir):
+    """Build uninstaller exe using PyInstaller
+    
+    Args:
+        output_dir: Directory to place the uninstaller exe
+    """
+    print_status("Building uninstaller...")
+    
+    # Check if uninstaller.py exists
+    if not Path("uninstaller.py").exists():
+        print_error("uninstaller.py not found")
+        return False
+    
+    # Check if uninstaller.spec exists, if not create it
+    if not Path("uninstaller.spec").exists():
+        print_status("Creating uninstaller.spec...")
+        spec_content = '''# -*- mode: python ; coding: utf-8 -*-
+"""
+PyInstaller spec file for GameWikiTooltip Uninstaller
+"""
+
+a = Analysis(
+    ['uninstaller.py'],
+    pathex=[],
+    binaries=[],
+    datas=[
+        # Include the app icon for the uninstaller
+        ('src/game_wiki_tooltip/assets/app.ico', '.')
+    ],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=None,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='Uninstall',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,  # GUI application, no console
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='src\\\\game_wiki_tooltip\\\\assets\\\\app.ico',
+    uac_admin=False,  # Don't force admin, let user choose
+    uac_uiaccess=False,
+)'''
+        try:
+            with open("uninstaller.spec", "w", encoding="utf-8") as f:
+                f.write(spec_content)
+        except Exception as e:
+            print_error(f"Failed to create uninstaller.spec: {e}")
+            return False
+    
+    # Build the uninstaller to a temporary directory first
+    temp_dist = "dist_uninstaller"
+    success, output = run_command(f"pyinstaller uninstaller.spec --clean --noconfirm --distpath {temp_dist}")
+    
+    if not success:
+        print_error(f"Uninstaller build failed: {output}")
+        return False
+    
+    # Check if uninstaller was built successfully
+    uninstaller_exe = Path(temp_dist) / "GameWikiUninstaller.exe"
+    if not uninstaller_exe.exists():
+        print_error("Uninstaller exe not found after build")
+        return False
+    
+    # Copy uninstaller to the output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    target_exe = output_path / "Uninstall.exe"
+    
+    try:
+        shutil.copy2(uninstaller_exe, target_exe)
+        print_success(f"Uninstaller created: {target_exe}")
+        
+        # Clean up temporary build directory
+        if Path(temp_dist).exists():
+            shutil.rmtree(temp_dist, ignore_errors=True)
+        
+        return True
+    except Exception as e:
+        print_error(f"Failed to copy uninstaller: {e}")
+        return False
+
 def build_exe(mode='onedir'):
     """Build exe file using PyInstaller
     
@@ -374,6 +479,17 @@ def create_portable_package(mode='onedir'):
 3. 如果程序无法启动或显示白屏，请安装 WebView2 Runtime。
 4. 首次运行需要配置 API 密钥（可选）。
 5. 使用快捷键 Ctrl+Q 或设置新的快捷键来激活游戏助手功能。
+
+## 卸载说明
+
+**便携版卸载**：
+1. 运行 Uninstall.exe 卸载程序
+2. 程序会自动清理：
+   - 用户数据文件夹 (%APPDATA%\\GameWikiTooltip)
+   - 桌面和开始菜单快捷方式
+   - 临时文件
+   - 程序文件夹（可选）
+3. 或者您可以直接删除整个便携版文件夹
 
 ## 系统要求
 
@@ -666,6 +782,7 @@ def main():
         # Add build and packaging steps
         steps.extend([
             ("Build exe", lambda: build_exe(args.mode)),
+            ("Build uninstaller", lambda: build_uninstaller(f"GameWikiAssistant_Portable_{args.mode}")),
             ("Add portable package files", lambda: create_portable_package(args.mode)),
             ("Create WebView2 Runtime installer", lambda: create_webview2_runtime_installer(f"GameWikiAssistant_Portable_{args.mode}")),
         ])
@@ -688,6 +805,7 @@ def main():
             print(f"  - {portable_dir}/GameWikiAssistant/ (application directory)")
         else:
             print(f"  - {portable_dir}/GameWikiAssistant.exe (standalone exe file)")
+        print(f"  - {portable_dir}/Uninstall.exe (uninstaller)")
         print(f"  - {portable_dir}/README.txt (user guide)")
         print(f"  - {portable_dir}/runtime/ (WebView2 installer)")
         

@@ -286,11 +286,12 @@ def is_voice_recognition_available():
     return VOSK_AVAILABLE
 
 
-def get_audio_input_devices(force_refresh=False):
+def get_audio_input_devices(force_refresh=False, settings_manager=None):
     """Get list of available audio input devices, filtering duplicates and invalid devices.
     
     Args:
         force_refresh: Force re-enumeration of devices, bypassing cache
+        settings_manager: Optional SettingsManager instance to save cache to settings
         
     Returns:
         List of audio device dictionaries
@@ -301,6 +302,19 @@ def get_audio_input_devices(force_refresh=False):
         return []
     
     current_time = time.time()
+    
+    # Try to load from settings cache first (if not forcing refresh)
+    if not force_refresh and settings_manager:
+        settings = settings_manager.get()
+        cache_time = settings.get('audio_devices_cache_time', 0)
+        cache_data = settings.get('audio_devices_cache', [])
+        
+        # Use settings cache if it's less than 7 days old
+        if cache_data and cache_time and (current_time - cache_time < 7 * 24 * 3600):
+            logger.info(f"Using audio devices from settings cache (age: {(current_time - cache_time) / 3600:.1f} hours)")
+            _audio_devices_cache = cache_data
+            _cache_timestamp = cache_time
+            return cache_data
     
     # Check for refresh cooldown if force_refresh is requested
     if force_refresh:
@@ -313,10 +327,10 @@ def get_audio_input_devices(force_refresh=False):
             else:
                 _last_refresh_time = current_time
     
-    # Return cached devices if available and not forcing refresh
+    # Return memory cache if available and not forcing refresh
     if not force_refresh and _audio_devices_cache is not None:
         if current_time - _cache_timestamp < CACHE_DURATION:
-            logger.info("Using cached audio devices")
+            logger.info("Using memory cached audio devices")
             return _audio_devices_cache
     
     logger.info("Enumerating audio devices...")
@@ -324,6 +338,7 @@ def get_audio_input_devices(force_refresh=False):
     import re
     devices = []
     seen_base_names = {}  # Track unique device base names
+    test_streams = []  # Keep track of test streams to ensure they're closed
     
     # System/virtual devices to filter out
     SYSTEM_DEVICES = [
@@ -337,6 +352,7 @@ def get_audio_input_devices(force_refresh=False):
     # API type indicators in device names
     API_PATTERNS = r'\s*\((MME|DirectSound|WASAPI|WDM-KS|Windows DirectSound|Windows WASAPI|Windows WDM-KS)\)'
     
+    p = None
     try:
         p = pyaudio.PyAudio()
         
@@ -356,6 +372,7 @@ def get_audio_input_devices(force_refresh=False):
                 
                 # Test if device is actually available
                 # Try to open a stream briefly to check if device works
+                test_stream = None
                 try:
                     test_stream = p.open(
                         format=pyaudio.paInt16,
@@ -366,10 +383,16 @@ def get_audio_input_devices(force_refresh=False):
                         frames_per_buffer=1024,
                         start=False  # Don't actually start the stream
                     )
-                    test_stream.close()
-                except:
+                    # Add to list for cleanup
+                    test_streams.append(test_stream)
+                except Exception as e:
                     # Device not actually available, skip it
-                    logger.debug(f"Skipping unavailable device: {name} (index {i})")
+                    logger.debug(f"Skipping unavailable device: {name} (index {i}): {e}")
+                    if test_stream:
+                        try:
+                            test_stream.close()
+                        except:
+                            pass
                     continue
                 
                 # Extract base name (remove API type suffix)
@@ -419,13 +442,22 @@ def get_audio_input_devices(force_refresh=False):
         # Sort by name for consistent display
         devices.sort(key=lambda d: d['name'])
         
-        p.terminate()
-        
         logger.info(f"Found {len(devices)} unique audio input devices")
         
-        # Update cache
+        # Update memory cache
         _audio_devices_cache = devices
         _cache_timestamp = current_time
+        
+        # Save to settings if manager provided
+        if settings_manager:
+            try:
+                settings_manager.update({
+                    'audio_devices_cache': devices,
+                    'audio_devices_cache_time': current_time
+                })
+                logger.info("Audio devices cache saved to settings")
+            except Exception as e:
+                logger.warning(f"Failed to save audio devices cache to settings: {e}")
         
     except Exception as e:
         logger.error(f"Error getting audio devices: {e}")
@@ -433,21 +465,72 @@ def get_audio_input_devices(force_refresh=False):
         if _audio_devices_cache is not None:
             logger.info("Returning cached devices due to enumeration error")
             return _audio_devices_cache
+    finally:
+        # Ensure all test streams are closed
+        for stream in test_streams:
+            try:
+                if stream and not stream.is_stopped():
+                    stream.stop_stream()
+                if stream:
+                    stream.close()
+            except Exception as e:
+                logger.debug(f"Error closing test stream: {e}")
+        
+        # Safely terminate PyAudio
+        if p:
+            try:
+                # Small delay to ensure all streams are fully closed
+                time.sleep(0.1)
+                p.terminate()
+                logger.debug("PyAudio terminated successfully")
+            except Exception as e:
+                logger.warning(f"Error terminating PyAudio (non-critical): {e}")
     
     return devices
 
 
-def initialize_audio_devices():
+def initialize_audio_devices(settings_manager=None):
     """Initialize audio device cache on program startup.
-    This ensures devices are enumerated once at startup."""
+    
+    This function checks if audio devices are cached in settings.
+    If cache exists and is recent (< 7 days), skip enumeration.
+    Otherwise, enumerate devices and save to cache.
+    
+    Args:
+        settings_manager: Optional SettingsManager instance to load/save cache
+    """
     if not VOSK_AVAILABLE:
         logger.info("Voice recognition not available, skipping audio device initialization")
         return
     
-    logger.info("Initializing audio devices on startup...")
+    # Check if we have a recent cache in settings
+    if settings_manager:
+        settings = settings_manager.get()
+        cache_time = settings.get('audio_devices_cache_time', 0)
+        cache_data = settings.get('audio_devices_cache', [])
+        
+        if cache_data and cache_time:
+            age_days = (time.time() - cache_time) / (24 * 3600)
+            if age_days < 7:
+                logger.info(f"Audio devices cache found in settings (age: {age_days:.1f} days), skipping enumeration")
+                # Load cache into memory
+                global _audio_devices_cache, _cache_timestamp
+                _audio_devices_cache = cache_data
+                _cache_timestamp = cache_time
+                return
+            else:
+                logger.info(f"Audio devices cache is stale (age: {age_days:.1f} days), will enumerate")
+    
+    # Add a small delay to ensure Qt/system is ready
+    time.sleep(0.5)
+    
+    logger.info("Initializing audio devices (first run or stale cache)...")
     try:
-        # Force refresh to populate cache
-        devices = get_audio_input_devices(force_refresh=True)
+        # Enumerate devices and save to cache
+        devices = get_audio_input_devices(force_refresh=True, settings_manager=settings_manager)
         logger.info(f"Audio device initialization complete. Found {len(devices)} devices.")
     except Exception as e:
         logger.error(f"Failed to initialize audio devices: {e}")
+        # Don't let audio initialization failure crash the app
+        import traceback
+        logger.debug(f"Audio initialization traceback: {traceback.format_exc()}")

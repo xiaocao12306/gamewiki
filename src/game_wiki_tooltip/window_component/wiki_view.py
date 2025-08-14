@@ -2,10 +2,7 @@
 Wiki view widget for displaying web content.
 """
 
-import os
-import logging
 import time
-from typing import Optional
 
 from PyQt6.QtCore import (
     Qt, QTimer, QUrl, pyqtSignal

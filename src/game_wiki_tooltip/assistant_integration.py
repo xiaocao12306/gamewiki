@@ -228,6 +228,10 @@ class QueryWorker(QThread):
     
     async def _wait_for_ai_modules(self) -> bool:
         """Wait for AI modules to load with timeout"""
+        # In limited mode, skip AI module check
+        if self.rag_integration.limited_mode:
+            return True  # Skip AI module loading in limited mode
+            
         max_wait = 5.0  # Maximum 5 seconds
         check_interval = 0.1
         elapsed = 0.0
@@ -328,16 +332,16 @@ class RAGIntegration(QObject):
         
         # Get current language settings
         settings = self.settings_manager.get()
-        current_language = settings.get('language', 'zh')  # Default to Chinese
+        current_language = settings.get('language', 'en')
         
         # Select configuration file based on language
-        if current_language == 'en':
-            games_config_path = APPDATA_DIR / "games_en.json"
-            logger.info(f"🌐 Using English game configuration: {games_config_path}")
-        else:
-            # Default to Chinese configuration (zh or other)
+        if current_language == 'zh':
             games_config_path = APPDATA_DIR / "games_zh.json"
             logger.info(f"🌐 Using Chinese game configuration: {games_config_path}")
+        else:
+            # Default to English configuration (other)
+            games_config_path = APPDATA_DIR / "games_en.json"
+            logger.info(f"🌐 Using English game configuration: {games_config_path}")
             
         # Check if configuration file exists, fallback to default games.json if not
         if not games_config_path.exists():
@@ -894,17 +898,27 @@ class RAGIntegration(QObject):
             skip_query_processing: 是否跳过RAG内部的查询处理
             unified_query_result: 预处理的统一查询结果（来自process_query_unified）
         """
-        # If in limited mode, display corresponding prompt information
+        # If in limited mode, automatically switch to wiki search
         if self.limited_mode:
-            logger.info("🚨 In limited mode, AI guide features are unavailable")
-            self.error_occurred.emit(
-                "🚨 AI Guide Features Unavailable\n\n"
-                "Currently running in limited mode with Wiki search only.\n\n"
-                "To use AI guide features, please configure both API keys (both required):\n"
-                "• Google/Gemini API Key (required) - for AI reasoning\n"
-                "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-                "Restart the program after configuration to enable full functionality."
-            )
+            logger.info("📚 In limited mode, switching to wiki search")
+            # 直接切换到wiki搜索，不显示错误
+            from src.game_wiki_tooltip.core.i18n import get_current_language
+            current_lang = get_current_language()
+            
+            # 发送提示消息
+            if current_lang == 'zh':
+                self.streaming_chunk_ready.emit("💡 正在为您切换到Wiki搜索模式...\n\n")
+            else:
+                self.streaming_chunk_ready.emit("💡 Switching to Wiki search mode...\n\n")
+            
+            # 准备wiki搜索
+            search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+            self.wiki_result_ready.emit(search_url, search_title)
+            
+            if current_lang == 'zh':
+                self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+            else:
+                self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
             return
             
         if not self.rag_engine:
@@ -989,32 +1003,25 @@ class RAGIntegration(QObject):
                         
                         return
                     else:
-                        missing_keys = []
-                        if not gemini_api_key:
-                            missing_keys.append("Gemini API Key")
-                        
-                        # Use internationalized error information
+                        # No API key available, switch to wiki search
+                        logger.info("No API key configured, switching to wiki search")
                         from src.game_wiki_tooltip.core.i18n import get_current_language
                         current_lang = get_current_language()
                         
+                        # 发送提示消息
                         if current_lang == 'zh':
-                            error_msg = (
-                                f"❌ 缺少必需的API密钥: {', '.join(missing_keys)}\n\n"
-                                "AI攻略功能需要同时配置两个API密钥：\n"
-                                "• Google/Gemini API Key - 用于AI推理\n"
-                                "⚠️ 注意：仅有Gemini API无法提供高质量的RAG功能。\n"
-                                "请在设置中配置完整的API密钥并重试。"
-                            )
+                            self.streaming_chunk_ready.emit("💡 正在为您切换到Wiki搜索模式...\n\n")
                         else:
-                            error_msg = (
-                                f"❌ Missing required API keys: {', '.join(missing_keys)}\n\n"
-                                "AI guide features require both API keys to be configured:\n"
-                                "• Google/Gemini API Key - for AI reasoning\n"
-                                "⚠️ Note: Gemini API alone cannot provide high-quality RAG functionality.\n"
-                                "Please configure complete API keys in settings and try again."
-                            )
+                            self.streaming_chunk_ready.emit("💡 Switching to Wiki search mode...\n\n")
                         
-                        self.error_occurred.emit(error_msg)
+                        # 准备wiki搜索
+                        search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+                        self.wiki_result_ready.emit(search_url, search_title)
+                        
+                        if current_lang == 'zh':
+                            self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+                        else:
+                            self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
                         return
                 else:
                     logger.info(f"📋 Window '{game_context}' does not support guide queries")

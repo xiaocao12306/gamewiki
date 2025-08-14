@@ -91,6 +91,8 @@ class AppSettings:
     audio_device_index: Optional[int] = None  # Audio device index for voice recognition
     auto_voice_on_hotkey: bool = False  # Auto-start voice input when hotkey triggers window
     auto_send_voice_input: bool = False  # Auto-send voice input when recording stops
+    audio_devices_cache: List[Dict[str, Any]] = field(default_factory=list)  # Cached audio device list
+    audio_devices_cache_time: Optional[float] = None  # Timestamp when cache was last updated
 
 
 class SettingsManager:
@@ -154,6 +156,12 @@ class SettingsManager:
         # Update auto send voice input setting
         if 'auto_send_voice_input' in new_settings:
             self._settings.auto_send_voice_input = new_settings['auto_send_voice_input']
+        # Update audio devices cache
+        if 'audio_devices_cache' in new_settings:
+            self._settings.audio_devices_cache = new_settings['audio_devices_cache']
+        # Update audio devices cache time
+        if 'audio_devices_cache_time' in new_settings:
+            self._settings.audio_devices_cache_time = new_settings['audio_devices_cache_time']
         self.save()
 
     # ---- internal ----
@@ -219,7 +227,9 @@ class SettingsManager:
                 shortcuts=merged_data.get('shortcuts', []),
                 audio_device_index=merged_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False),
-                auto_send_voice_input=merged_data.get('auto_send_voice_input', False)
+                auto_send_voice_input=merged_data.get('auto_send_voice_input', False),
+                audio_devices_cache=merged_data.get('audio_devices_cache', []),
+                audio_devices_cache_time=merged_data.get('audio_devices_cache_time', None)
             )
         except Exception as e:
             print(f"Error processing settings file: {e}")
@@ -244,7 +254,9 @@ class SettingsManager:
                 shortcuts=default_data.get('shortcuts', []),
                 audio_device_index=default_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False),
-                auto_send_voice_input=default_data.get('auto_send_voice_input', False)
+                auto_send_voice_input=default_data.get('auto_send_voice_input', False),
+                audio_devices_cache=default_data.get('audio_devices_cache', []),
+                audio_devices_cache_time=default_data.get('audio_devices_cache_time', None)
             )
 
 # ---------- Game-configs ----------

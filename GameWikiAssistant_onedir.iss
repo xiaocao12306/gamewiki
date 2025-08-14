@@ -78,6 +78,14 @@ begin
 end;
 
 [UninstallDelete]
-; Clean up any remaining temporary files during uninstall
-Type: filesandordirs; Name: "{localappdata}\Temp\_MEI*"
+; Clean up all application data and temporary files during uninstall
+; Main AppData folder containing all user settings and data
+Type: filesandordirs; Name: "{userappdata}\GameWikiTooltip"
+; Legacy folder name (if exists)
 Type: filesandordirs; Name: "{userappdata}\game_wiki_tooltip"
+; PyInstaller temporary files
+Type: filesandordirs; Name: "{localappdata}\Temp\_MEI*"
+; Desktop shortcut (in case it wasn't removed)
+Type: files; Name: "{userdesktop}\{#MyAppName}.lnk"
+; Quick Launch shortcut
+Type: files; Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}.lnk"
