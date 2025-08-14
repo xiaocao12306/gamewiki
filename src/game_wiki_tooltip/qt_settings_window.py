@@ -14,13 +14,20 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QInputDialog, QProgressBar, QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtGui import QFont, QIcon, QWheelEvent
 
 from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.core.utils import package_file, APPDATA_DIR
 from src.game_wiki_tooltip.core.i18n import init_translations, t
 
 logger = logging.getLogger(__name__)
+
+
+class NoScrollComboBox(QComboBox):
+    """ComboBox that ignores wheel events to prevent accidental value changes"""
+    def wheelEvent(self, event: QWheelEvent):
+        # Ignore wheel event to prevent scrolling
+        event.ignore()
 
 
 class ApiKeyMissingDialog(QDialog):
@@ -636,7 +643,7 @@ class QtSettingsWindow(QMainWindow):
         key_label = QLabel(t("main_key_label"))
         key_layout.addWidget(key_label)
         
-        self.key_combo = QComboBox()
+        self.key_combo = NoScrollComboBox()
         self.key_combo.setFixedWidth(100)
         # Add A-Z
         for i in range(26):
@@ -668,7 +675,7 @@ class QtSettingsWindow(QMainWindow):
         lang_label = QLabel(t("language_label"))
         lang_layout.addWidget(lang_label)
         
-        self.language_combo = QComboBox()
+        self.language_combo = NoScrollComboBox()
         self.language_combo.setFixedWidth(200)
         
         # Populate language options
@@ -706,7 +713,7 @@ class QtSettingsWindow(QMainWindow):
         self.audio_label = QLabel(t("audio_input_device_label"))
         audio_layout.addWidget(self.audio_label)
         
-        self.audio_device_combo = QComboBox()
+        self.audio_device_combo = NoScrollComboBox()
         self.audio_device_combo.setFixedWidth(300)
         
         # Populate audio device options

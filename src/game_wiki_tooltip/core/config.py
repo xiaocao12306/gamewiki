@@ -151,6 +151,9 @@ class SettingsManager:
         # Update auto voice on hotkey setting
         if 'auto_voice_on_hotkey' in new_settings:
             self._settings.auto_voice_on_hotkey = new_settings['auto_voice_on_hotkey']
+        # Update auto send voice input setting
+        if 'auto_send_voice_input' in new_settings:
+            self._settings.auto_send_voice_input = new_settings['auto_send_voice_input']
         self.save()
 
     # ---- internal ----
@@ -215,7 +218,8 @@ class SettingsManager:
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
                 shortcuts=merged_data.get('shortcuts', []),
                 audio_device_index=merged_data.get('audio_device_index', None),
-                auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False)
+                auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False),
+                auto_send_voice_input=merged_data.get('auto_send_voice_input', False)
             )
         except Exception as e:
             print(f"Error processing settings file: {e}")
@@ -239,7 +243,8 @@ class SettingsManager:
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
                 shortcuts=default_data.get('shortcuts', []),
                 audio_device_index=default_data.get('audio_device_index', None),
-                auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False)
+                auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False),
+                auto_send_voice_input=default_data.get('auto_send_voice_input', False)
             )
 
 # ---------- Game-configs ----------

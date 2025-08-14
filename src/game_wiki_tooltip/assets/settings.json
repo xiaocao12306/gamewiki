@@ -54,5 +54,6 @@
         {"name": "Reddit", "url": "https://www.reddit.com/", "icon": "assets/icons/reddit.ico", "visible": true},
         {"name": "Nexusmods", "url": "https://www.nexusmods.com/", "icon": "assets/icons/nexusmods.ico", "visible": true},
         {"name": "Bilibili", "url": "https://www.bilibili.com/", "icon": "assets/icons/bilibili.ico", "visible": true}
-    ]
+    ],
+    "auto_send_voice_input": false
 }

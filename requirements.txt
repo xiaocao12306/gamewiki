@@ -20,8 +20,10 @@ langchain-text-splitters>=0.0.1
 
 # AI和RAG相关
 google-generativeai>=0.3.0
+google-genai>=0.1.0  # 新版Google GenAI SDK，支持from google import genai
 bm25s>=0.2.13  # 新的BM25实现，更快更稳定
 scikit-learn>=1.5.0
+jieba>=0.42.1
 
 # 向量存储
 faiss-cpu>=1.7.4

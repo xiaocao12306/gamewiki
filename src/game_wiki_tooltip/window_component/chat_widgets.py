@@ -938,3 +938,9 @@ class StreamingMessageWidget(MessageWidget):
             self.typing_timer.start(1)  # 1ms per character, extremely fast speed
         else:
             print(f"✅ [STREAMING] Remaining {remaining_chars} characters, keep current speed")
+        
+        # Force update message width and height after content is fully displayed
+        chat_view = self.get_chat_view()
+        if chat_view:
+            # Delay call to ensure content is fully displayed
+            QTimer.singleShot(200, lambda: chat_view._update_message_width(self))

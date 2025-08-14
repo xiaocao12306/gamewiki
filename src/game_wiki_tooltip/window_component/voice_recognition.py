@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import threading
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -35,8 +36,9 @@ class VoiceRecognitionThread(QThread):
     partial_result = pyqtSignal(str)  # Real-time partial text
     final_result = pyqtSignal(str)    # Complete sentence
     error_occurred = pyqtSignal(str)  # Error messages
+    silence_detected = pyqtSignal()   # Emitted when silence is detected
     
-    def __init__(self, device_index: Optional[int] = None):
+    def __init__(self, device_index: Optional[int] = None, silence_threshold: float = 2.0):
         super().__init__()
         self.is_recording = False
         self.model = None
@@ -44,6 +46,9 @@ class VoiceRecognitionThread(QThread):
         self.audio_stream = None
         self.pyaudio_instance = None
         self.device_index = device_index  # Allow specifying audio device
+        self.silence_threshold = silence_threshold  # Seconds of silence before auto-stop
+        self.last_activity_time = time.time()
+        self._last_text = ""  # Track text changes for activity detection
         
         # Model paths - use package_file for consistency
         try:
@@ -84,8 +89,7 @@ class VoiceRecognitionThread(QThread):
                 
             logger.info(f"Loading voice model: {model_name}")
             self.model = Model(str(model_path))
-            self.recognizer = KaldiRecognizer(self.model, 16000)
-            self.recognizer.SetWords(True)
+            # Note: recognizer sample rate will be set when opening audio stream
             return True
             
         except Exception as e:
@@ -130,17 +134,43 @@ class VoiceRecognitionThread(QThread):
                     self.error_occurred.emit("No microphone found. Please check your audio input devices.")
                     return
             
-            self.audio_stream = self.pyaudio_instance.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=16000,
-                input=True,
-                input_device_index=device_index,
-                frames_per_buffer=4000
-            )
+            # Try multiple sample rates for better compatibility
+            SAMPLE_RATES = [16000, 44100, 48000, 22050, 8000]
+            audio_opened = False
+            used_sample_rate = None
+            
+            for sample_rate in SAMPLE_RATES:
+                try:
+                    self.audio_stream = self.pyaudio_instance.open(
+                        format=pyaudio.paInt16,
+                        channels=1,
+                        rate=sample_rate,
+                        input=True,
+                        input_device_index=device_index,
+                        frames_per_buffer=4000
+                    )
+                    # Successfully opened stream, create recognizer with this sample rate
+                    self.recognizer = KaldiRecognizer(self.model, sample_rate)
+                    self.recognizer.SetWords(True)
+                    used_sample_rate = sample_rate
+                    audio_opened = True
+                    logger.info(f"Audio stream opened successfully with sample rate: {sample_rate} Hz")
+                    break
+                except Exception as e:
+                    logger.debug(f"Failed to open audio stream with {sample_rate} Hz: {e}")
+                    if sample_rate == SAMPLE_RATES[-1]:
+                        # Last sample rate failed
+                        self.error_occurred.emit(f"Could not open audio stream. Tried sample rates: {SAMPLE_RATES}")
+                        return
+                    continue
+            
+            if not audio_opened:
+                self.error_occurred.emit("Failed to open audio stream with any supported sample rate.")
+                return
             
             self.is_recording = True
             logger.info("Voice recording started")
+            self.last_activity_time = time.time()  # Reset activity timer
             
             while self.is_recording:
                 try:
@@ -152,12 +182,27 @@ class VoiceRecognitionThread(QThread):
                         text = result.get('text', '').strip()
                         if text:
                             self.final_result.emit(text)
+                            # Update activity time when we get actual speech
+                            self.last_activity_time = time.time()
+                            self._last_text = text
                     else:
                         # Partial result
                         partial = json.loads(self.recognizer.PartialResult())
                         text = partial.get('partial', '').strip()
                         if text:
                             self.partial_result.emit(text)
+                            # Update activity time if text has changed (indicating speech)
+                            if text != self._last_text:
+                                self.last_activity_time = time.time()
+                                self._last_text = text
+                    
+                    # Check for silence timeout
+                    current_time = time.time()
+                    if current_time - self.last_activity_time > self.silence_threshold:
+                        logger.info(f"Silence detected for {self.silence_threshold} seconds, auto-stopping recording")
+                        self.silence_detected.emit()
+                        self.is_recording = False
+                        break
                             
                 except Exception as e:
                     if self.is_recording:  # Only log if we're still supposed to be recording

@@ -2140,10 +2140,11 @@ class UnifiedAssistantWindow(QMainWindow):
         
         # Create and start voice thread with configured audio device
         device_index = self.settings_manager.settings.audio_device_index
-        self.voice_thread = VoiceRecognitionThread(device_index=device_index)
+        self.voice_thread = VoiceRecognitionThread(device_index=device_index, silence_threshold=2.0)
         self.voice_thread.partial_result.connect(self.on_voice_partial_result)
         self.voice_thread.final_result.connect(self.on_voice_final_result)
         self.voice_thread.error_occurred.connect(self.on_voice_error)
+        self.voice_thread.silence_detected.connect(self.on_voice_silence_detected)
         self.voice_thread.start()
     
     def stop_voice_recording(self):
@@ -2271,6 +2272,13 @@ class UnifiedAssistantWindow(QMainWindow):
         if self.input_field.text().strip() and not self.is_voice_recording:
             logger.debug("Auto-sending voice input")
             self.on_send_clicked()
+    
+    def on_voice_silence_detected(self):
+        """Handle silence detection - auto-stop recording."""
+        logger.info("Silence detected, auto-stopping voice recording")
+        
+        # Stop recording (this will trigger auto-send if enabled)
+        self.stop_voice_recording()
     
     def on_voice_error(self, error_msg: str):
         """Handle voice recognition errors with robust cleanup."""
