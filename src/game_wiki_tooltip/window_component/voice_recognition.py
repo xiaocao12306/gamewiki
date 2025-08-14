@@ -8,6 +8,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Optional
+from threading import Lock
 
 try:
     import pyaudio
@@ -27,6 +28,14 @@ logger = logging.getLogger(__name__)
 # Suppress Vosk logging
 if VOSK_AVAILABLE:
     SetLogLevel(-1)
+
+# Global cache variables for audio devices
+_audio_devices_cache = None
+_cache_timestamp = 0
+_last_refresh_time = 0
+_refresh_lock = Lock()
+CACHE_DURATION = 3600  # Cache for 1 hour
+REFRESH_COOLDOWN = 2  # Refresh cooldown time in seconds
 
 
 class VoiceRecognitionThread(QThread):
@@ -277,10 +286,40 @@ def is_voice_recognition_available():
     return VOSK_AVAILABLE
 
 
-def get_audio_input_devices():
-    """Get list of available audio input devices, filtering duplicates and invalid devices."""
+def get_audio_input_devices(force_refresh=False):
+    """Get list of available audio input devices, filtering duplicates and invalid devices.
+    
+    Args:
+        force_refresh: Force re-enumeration of devices, bypassing cache
+        
+    Returns:
+        List of audio device dictionaries
+    """
+    global _audio_devices_cache, _cache_timestamp, _last_refresh_time
+    
     if not VOSK_AVAILABLE:
         return []
+    
+    current_time = time.time()
+    
+    # Check for refresh cooldown if force_refresh is requested
+    if force_refresh:
+        with _refresh_lock:
+            if current_time - _last_refresh_time < REFRESH_COOLDOWN:
+                logger.info(f"Refresh cooldown active ({REFRESH_COOLDOWN}s), using cached devices")
+                if _audio_devices_cache is not None:
+                    return _audio_devices_cache
+                force_refresh = False  # Downgrade to normal request
+            else:
+                _last_refresh_time = current_time
+    
+    # Return cached devices if available and not forcing refresh
+    if not force_refresh and _audio_devices_cache is not None:
+        if current_time - _cache_timestamp < CACHE_DURATION:
+            logger.info("Using cached audio devices")
+            return _audio_devices_cache
+    
+    logger.info("Enumerating audio devices...")
     
     import re
     devices = []
@@ -384,7 +423,31 @@ def get_audio_input_devices():
         
         logger.info(f"Found {len(devices)} unique audio input devices")
         
+        # Update cache
+        _audio_devices_cache = devices
+        _cache_timestamp = current_time
+        
     except Exception as e:
         logger.error(f"Error getting audio devices: {e}")
+        # Return cached devices if available on error
+        if _audio_devices_cache is not None:
+            logger.info("Returning cached devices due to enumeration error")
+            return _audio_devices_cache
     
     return devices
+
+
+def initialize_audio_devices():
+    """Initialize audio device cache on program startup.
+    This ensures devices are enumerated once at startup."""
+    if not VOSK_AVAILABLE:
+        logger.info("Voice recognition not available, skipping audio device initialization")
+        return
+    
+    logger.info("Initializing audio devices on startup...")
+    try:
+        # Force refresh to populate cache
+        devices = get_audio_input_devices(force_refresh=True)
+        logger.info(f"Audio device initialization complete. Found {len(devices)} devices.")
+    except Exception as e:
+        logger.error(f"Failed to initialize audio devices: {e}")

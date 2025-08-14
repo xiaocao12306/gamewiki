@@ -348,6 +348,17 @@ class GameWikiApp(QObject):
     def _initialize_components(self, limited_mode=False):
         """Initialize all components"""
         try:
+            # Initialize audio devices on startup (non-blocking)
+            try:
+                from src.game_wiki_tooltip.window_component.voice_recognition import initialize_audio_devices
+                import threading
+                # Run audio device initialization in background thread to avoid blocking
+                audio_init_thread = threading.Thread(target=initialize_audio_devices, daemon=True)
+                audio_init_thread.start()
+                logger.info("Started audio device initialization in background")
+            except Exception as e:
+                logger.warning(f"Failed to initialize audio devices: {e}")
+            
             # Ensure cleanup of existing assistant controller before initializing new one
             if hasattr(self, 'assistant_ctrl') and self.assistant_ctrl:
                 logger.info("Detected existing assistant controller, cleaning up first...")

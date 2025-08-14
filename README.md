@@ -25,10 +25,13 @@ _"The Gemini API "free tier" is offered through the API service with lower rate 
 
 ![Demo](data/demo1.gif)
 
-**[View use video](https://your-video-or-doc-link)**
+**[View use video(coming soon)](https://your-video-or-doc-link)**
 
 - Use as an web browser
 
+Quick access to Wikis 
+![Demo](data/demo3.gif)
+Quick access to webs
 ![Demo](data/demo2.gif)
 
 

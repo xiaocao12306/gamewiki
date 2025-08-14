@@ -192,6 +192,9 @@ class TranslationManager:
             "audio_title": "Audio Settings",
             "audio_input_device_label": "Audio Input Device:",
             "refresh_devices_button": "Refresh Devices",
+            "refreshing_devices": "Refreshing...",
+            "refresh_cooldown": "Too fast! Wait...",
+            "refresh_complete": "Refreshed!",
             
             # Wiki settings
             "wiki_title": "Wiki URL Configuration",
@@ -376,6 +379,9 @@ class TranslationManager:
                 "audio_title": "音频设置",
                 "audio_input_device_label": "音频输入设备：",
                 "refresh_devices_button": "刷新设备",
+                "refreshing_devices": "正在刷新...",
+                "refresh_cooldown": "太快了！请稍等...",
+                "refresh_complete": "刷新完成！",
                 
                 # Wiki settings
                 "wiki_title": "Wiki网址配置",

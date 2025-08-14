@@ -62,11 +62,15 @@ python -m src.game_wiki_tooltip
 
 ![Demo](data/demo1.gif)
 
+**[观看使用视频](https://your-video-or-doc-link)**
 - 作为置顶浏览器
 
 ![Demo](data/demo2.gif)
+Quick access to Wikis 
+![Demo](data/demo3.gif)
+Quick access to webs
+![Demo](data/demo2.gif)
 
-**[观看使用视频](https://your-video-or-doc-link)**
 
 ## 🔧 配置说明
 

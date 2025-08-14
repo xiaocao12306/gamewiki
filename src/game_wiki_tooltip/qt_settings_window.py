@@ -352,8 +352,12 @@ class QtSettingsWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to check Chinese model status: {e}")
     
-    def _populate_audio_devices(self):
-        """Populate audio device combo box"""
+    def _populate_audio_devices(self, force_refresh=False):
+        """Populate audio device combo box
+        
+        Args:
+            force_refresh: Force re-enumeration of devices, bypassing cache
+        """
         self.audio_device_combo.clear()
         
         # Add default option
@@ -361,7 +365,7 @@ class QtSettingsWindow(QMainWindow):
         
         try:
             from src.game_wiki_tooltip.window_component import get_audio_input_devices
-            devices = get_audio_input_devices()
+            devices = get_audio_input_devices(force_refresh=force_refresh)
             
             for device in devices:
                 device_name = device['name']
@@ -375,9 +379,37 @@ class QtSettingsWindow(QMainWindow):
             self.audio_device_combo.addItem("Audio devices unavailable", None)
     
     def _refresh_audio_devices(self):
-        """Refresh audio device list"""
+        """Refresh audio device list with anti-bounce and status feedback"""
+        from PyQt6.QtCore import QTimer
+        
+        # Disable refresh button to prevent rapid clicking
+        self.refresh_button.setEnabled(False)
+        self.refresh_button.setText(t("refreshing_devices", "Refreshing..."))
+        
+        # Save current selection
         current_selection = self.audio_device_combo.currentData()
-        self._populate_audio_devices()
+        
+        # Force refresh (internal anti-bounce will be applied)
+        self._populate_audio_devices(force_refresh=True)
+        
+        # Check if refresh was throttled by examining the last refresh time
+        try:
+            from src.game_wiki_tooltip.window_component.voice_recognition import _last_refresh_time, REFRESH_COOLDOWN
+            import time
+            current_time = time.time()
+            
+            if current_time - _last_refresh_time < REFRESH_COOLDOWN:
+                # Refresh was throttled, show cooldown message
+                self.refresh_button.setText(t("refresh_cooldown", "Too fast! Wait..."))
+                QTimer.singleShot(1500, lambda: self.refresh_button.setText(t("refresh_devices_button")))
+            else:
+                # Refresh succeeded
+                self.refresh_button.setText(t("refresh_complete", "Refreshed!"))
+                QTimer.singleShot(1000, lambda: self.refresh_button.setText(t("refresh_devices_button")))
+        except:
+            # Fallback if we can't check status
+            self.refresh_button.setText(t("refresh_complete", "Refreshed!"))
+            QTimer.singleShot(1000, lambda: self.refresh_button.setText(t("refresh_devices_button")))
         
         # Try to restore previous selection
         if current_selection is not None:
@@ -385,6 +417,9 @@ class QtSettingsWindow(QMainWindow):
                 if self.audio_device_combo.itemData(i) == current_selection:
                     self.audio_device_combo.setCurrentIndex(i)
                     break
+        
+        # Re-enable button after 2 seconds (matching the cooldown)
+        QTimer.singleShot(2000, lambda: self.refresh_button.setEnabled(True))
         
     def switch_to_api_tab(self):
         """Switch to API configuration tab"""
