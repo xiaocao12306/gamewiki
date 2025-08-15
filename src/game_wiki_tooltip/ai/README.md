@@ -7,6 +7,8 @@ This module provides tools for building and managing vector stores and BM25 sear
 ### File Structure
 Your knowledge base file should be a JSON file located in `data/knowledge_chunk/` with the following structure:
 
+- Ask GPT/GEMINI to generate a json file for you. [LLM prompt for your reference](../../../data/LLM_prompt/prompt_using_videourl_collect_knowledgechunk.txt)
+
 ```json
 [
   {

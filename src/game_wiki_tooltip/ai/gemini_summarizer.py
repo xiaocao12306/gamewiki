@@ -246,7 +246,7 @@ class GeminiSummarizer:
    - 如果没有明确要求，根据问题复杂度提供适中长度的回答
 6. **利用structured_data**：优先使用结构化数据中的具体数值、名称、配置等信息
 7. **Google搜索使用指南**：
-   - 当提供的知识块无法充分回答用户问题时，主动使用Google搜索工具
+   - 必须在进行回答前主动使用Google搜索工具收集[game context]下的[原始查询]的相关信息
    - 如果用户询问的内容明显超出知识库范围（如游戏机制外的内容），使用Google搜索
    - 结合知识库和Google搜索结果提供全面答案
 
@@ -284,7 +284,7 @@ Response guidelines:
    - If no explicit requirement, provide moderate length response based on question complexity
 6. **Utilize structured_data**: Prioritize specific values, names, configurations from structured data
 7. **Google Search usage guide**:
-   - Proactively use Google Search tool when provided knowledge chunks cannot adequately answer the user's question
+   - You must use Google Search tool in every response to gather information about the [Original Query] related to the [game context]
    - If user asks about content clearly outside knowledge base scope (like non-game-mechanic content), use Google Search
    - Combine knowledge base and Google Search results to provide comprehensive answers
 

@@ -4,7 +4,7 @@
   "game_name": "dst",
   "model": "gemini-embedding-001",
   "output_dim": 768,
-  "chunk_count": 81,
+  "chunk_count": 62,
   "index_path": "dst_vectors",
   "bm25_index_path": "dst_vectors/enhanced_bm25_index.pkl",
   "hybrid_search_enabled": true

@@ -513,16 +513,32 @@ class EnhancedRagQuery:
             return []
         
         try:
-            # Get query vector
-            query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
-            print(f"📄 [VECTOR-DEBUG] Building query text: '{query_text[:100]}...'")
+            # Get query vector - use query directly without duplication
+            query_text = query
+            print(f"📄 [VECTOR-DEBUG] Query text for embedding: '{query_text[:100]}...'")
             
             # Use Gemini embeddings with QUESTION_ANSWERING task type for queries
-            if hasattr(self.processor, 'embedding_client'):
-                query_vectors = [self.processor.embedding_client.embed_query(query_text)]
-            else:
-                query_vectors = self.processor.embed_batch([query_text])
-            query_vector = np.array(query_vectors[0], dtype=np.float32).reshape(1, -1)
+            try:
+                if hasattr(self.processor, 'embedding_client'):
+                    query_vectors = [self.processor.embedding_client.embed_query(query_text)]
+                else:
+                    query_vectors = self.processor.embed_batch([query_text])
+                query_vector = np.array(query_vectors[0], dtype=np.float32).reshape(1, -1)
+            except RuntimeError as e:
+                if "EMBEDDING_OVERLOAD" in str(e):
+                    # Return a special result to notify user about overload
+                    logger.warning(f"Embedding service overloaded: {e}")
+                    return [{
+                        "chunk": {
+                            "topic": "System Notice",
+                            "summary": "⚠️ The AI service is currently busy. This happens when you hit a free-tier limit per minute or per day. Please try again in one minute. If this continues to happen, try again tomorrow.",
+                            "keywords": [],
+                            "chunk_id": "system_overload_notice"
+                        },
+                        "score": 0.0,
+                        "error": "model_overload"
+                    }]
+                raise
             print(f"🔢 [VECTOR-DEBUG] Query vector dimension: {query_vector.shape}, first 5 values: {query_vector[0][:5]}")
             
             # Build correct index file path
@@ -618,9 +634,9 @@ class EnhancedRagQuery:
             return []
         
         try:
-            # Get query vector
-            query_text = self.processor.build_text({"topic": query, "summary": query, "keywords": []})
-            print(f"📄 [VECTOR-DEBUG] Building query text: '{query_text[:100]}...'")
+            # Get query vector - use query directly without duplication
+            query_text = query
+            print(f"📄 [VECTOR-DEBUG] Query text for embedding: '{query_text[:100]}...'")
             
             # Use Gemini embeddings with QUESTION_ANSWERING task type for queries
             if hasattr(self.processor, 'embedding_client'):

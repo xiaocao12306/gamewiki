@@ -85,8 +85,16 @@ class GeminiEmbeddingClient:
             return embeddings
             
         except Exception as e:
-            logger.error(f"Gemini embedding API call failed: {e}")
-            raise
+            error_msg = str(e).lower()
+            # Check for model overload or rate limit errors
+            if "overload" in error_msg or "resource_exhausted" in error_msg or "429" in str(e):
+                # Log specific overload error
+                logger.error(f"Gemini embedding API overloaded: {e}")
+                # Raise specific exception type for upper layer handling
+                raise RuntimeError(f"EMBEDDING_OVERLOAD: {e}")
+            else:
+                logger.error(f"Gemini embedding API call failed: {e}")
+                raise
     
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """

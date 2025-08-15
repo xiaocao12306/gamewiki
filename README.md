@@ -105,7 +105,7 @@ For more solutions, see [FAQ](docs/FAQ.md) or [report an issue](https://github.c
 ## 🤝 Contributing
 
 We love contributions! Whether it's:
-- 🎮 Adding new game support
+- 🎮 Adding new game support/Knowledge data base. [How to build a new knowledge base](src/game_wiki_tooltip/ai/README.md)
 - 🐛 Bug fixes
 - 📚 Documentation improvements
 - Project Optimization

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Don't Starve Together - The Ultimate Survival Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
@@ -43,15 +42,19 @@
         .task-header {
             background-color: #F9F2E5; /* Slightly darker parchment for header */
         }
-        .chart-container {
+        /* Aspect ratio wrapper for responsive video */
+        .aspect-w-16 {
             position: relative;
-            width: 100%;
-            height: 300px;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
         }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 400px;
-            }
+        .aspect-w-16 > * {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
         }
         .styled-table {
             width: 100%;
@@ -93,10 +96,16 @@
             <p class="text-lg text-stone-600 mt-2">A Detailed Seasonal Roadmap from Surviving to Thriving</p>
         </header>
 
-        <section id="overview-section" class="mb-12 bg-white/50 p-4 sm:p-6 rounded-2xl shadow-sm">
-            <h2 class="text-2xl font-bold text-center mb-4 text-[#8C5A32]">Core Activity Priorities Throughout the Year</h2>
-            <div class="chart-container">
-                <canvas id="seasonalPriorityChart"></canvas>
+        <!-- Video Embed & Info Section -->
+        <section class="mb-12 bg-white/50 rounded-2xl shadow-sm overflow-hidden">
+            <div class="aspect-w-16">
+                <iframe src="https://www.youtube.com/embed/E07HsDmpG60" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full"></iframe>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap items-center text-sm text-gray-600">
+                    <span class="mr-4">By: <strong>Unknown</strong></span>
+                    <span>Duration: <strong>~70 min</strong></span>
+                </div>
             </div>
         </section>
 
@@ -163,7 +172,7 @@
                             },
                             {
                                 title: "Crafting Core Gear (Day 3)",
-                                details: "Build a Science Machine as soon as possible with the resources you've gathered. Immediately unlock and craft four core items: a Backpack (greatly increases carrying capacity), a Spear (for self-defense), a Log Suit (provides 80% damage reduction, key for early survival), and a Shovel (for transplanting resources).",
+                                details: "Build a Science Machine as soon as possible with the resources you've gathered. Immediately unlock and craft four core items: a Backpack (greatly increases carrying capacity), a Spear (for self-defense), a Log Suit (provides 80% damage reduction, key for early survival), and a Shovel (for transplanting resources). Hammer the Science Machine to take away the materials",
                             },
                             {
                                 title: "Transplanting & Continued Exploration (Days 4-7)",
@@ -468,25 +477,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             renderContent('autumn');
-
-            const ctx = document.getElementById('seasonalPriorityChart').getContext('2d');
-            const seasonalPriorityChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['🍂 Autumn', '❄️ Winter', '🌸 Spring', '☀️ Summer'],
-                    datasets: [
-                        { label: 'Exploration & Base Building', data: [9, 2, 4, 3], backgroundColor: '#A87C53' },
-                        { label: 'Food & Resources', data: [8, 9, 7, 6], backgroundColor: '#D5A062' },
-                        { label: 'Combat & Bosses', data: [4, 8, 7, 5], backgroundColor: '#E5C9A9' }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, max: 10, title: { display: true, text: 'Priority (out of 10)' } }, x: { grid: { display: false } } },
-                    plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } }
-                }
-            });
         });
     </script>
 </body>
