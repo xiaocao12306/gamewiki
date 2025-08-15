@@ -11,12 +11,14 @@ from typing import Optional
 from threading import Lock
 
 try:
-    import pyaudio
+    import sounddevice as sd
+    import numpy as np
+    import queue
     from vosk import Model, KaldiRecognizer, SetLogLevel
     VOSK_AVAILABLE = True
 except ImportError:
     VOSK_AVAILABLE = False
-    logging.warning("Vosk or PyAudio not available. Voice input will be disabled.")
+    logging.warning("Vosk or sounddevice not available. Voice input will be disabled.")
 
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
@@ -53,7 +55,7 @@ class VoiceRecognitionThread(QThread):
         self.model = None
         self.recognizer = None
         self.audio_stream = None
-        self.pyaudio_instance = None
+        self.audio_queue = None
         self.device_index = device_index  # Allow specifying audio device
         self.silence_threshold = silence_threshold  # Seconds of silence before auto-stop
         self.last_activity_time = time.time()
@@ -71,7 +73,7 @@ class VoiceRecognitionThread(QThread):
     def initialize_model(self):
         """Initialize Vosk model based on current language."""
         if not VOSK_AVAILABLE:
-            self.error_occurred.emit("Voice recognition not available. Please install vosk and pyaudio.")
+            self.error_occurred.emit("Voice recognition not available. Please install vosk and sounddevice.")
             return False
             
         current_lang = get_current_language()
@@ -107,116 +109,141 @@ class VoiceRecognitionThread(QThread):
             return False
     
     def run(self):
-        """Main voice recognition loop."""
+        """Main voice recognition loop using sounddevice."""
         if not self.initialize_model():
             return
             
         try:
-            # Initialize PyAudio
-            self.pyaudio_instance = pyaudio.PyAudio()
+            # Get device information
+            device_index = self.device_index
             
-            # Use specified device or find a working input device
-            if self.device_index is not None:
-                # Validate specified device
+            # Validate or find input device
+            if device_index is not None:
                 try:
-                    device_info = self.pyaudio_instance.get_device_info_by_index(self.device_index)
-                    if device_info['maxInputChannels'] > 0:
-                        device_index = self.device_index
-                        logger.info(f"Using specified audio input device: {device_info['name']}")
-                    else:
-                        self.error_occurred.emit(f"Specified device {self.device_index} is not an input device.")
-                        return
+                    device_info = sd.query_devices(device_index, 'input')
+                    logger.info(f"Using specified audio input device: {device_info['name']}")
                 except Exception as e:
-                    self.error_occurred.emit(f"Invalid device index {self.device_index}: {str(e)}")
+                    self.error_occurred.emit(f"Invalid device index {device_index}: {str(e)}")
                     return
             else:
-                # Try to find a working input device
-                device_index = None
-                for i in range(self.pyaudio_instance.get_device_count()):
-                    device_info = self.pyaudio_instance.get_device_info_by_index(i)
-                    if device_info['maxInputChannels'] > 0:
-                        device_index = i
-                        logger.info(f"Using audio input device: {device_info['name']}")
-                        break
-                        
-                if device_index is None:
+                # Find default input device
+                try:
+                    device_index = sd.default.device[0] if isinstance(sd.default.device, tuple) else sd.default.device
+                    if device_index is None:
+                        # Get default input device
+                        device_info = sd.query_devices(kind='input')
+                        device_index = device_info['index'] if isinstance(device_info, dict) else None
+                    
+                    if device_index is not None:
+                        device_info = sd.query_devices(device_index, 'input')
+                        logger.info(f"Using default audio input device: {device_info['name']}")
+                except Exception:
                     self.error_occurred.emit("No microphone found. Please check your audio input devices.")
                     return
             
-            # Try multiple sample rates for better compatibility
-            SAMPLE_RATES = [16000, 44100, 48000, 22050, 8000]
+            # Get device info and determine sample rate
+            try:
+                device_info = sd.query_devices(device_index, 'input')
+                # Try to use device's default sample rate first
+                default_sr = int(device_info['default_samplerate'])
+                SAMPLE_RATES = [16000, default_sr, 44100, 48000, 22050, 8000]
+                # Remove duplicates while preserving order
+                SAMPLE_RATES = list(dict.fromkeys(SAMPLE_RATES))
+            except Exception as e:
+                logger.warning(f"Could not get device info: {e}")
+                SAMPLE_RATES = [16000, 44100, 48000, 22050, 8000]
+            
+            # Create audio queue for thread-safe audio data transfer
+            self.audio_queue = queue.Queue()
+            
+            # Try different sample rates
             audio_opened = False
             used_sample_rate = None
             
             for sample_rate in SAMPLE_RATES:
                 try:
-                    self.audio_stream = self.pyaudio_instance.open(
-                        format=pyaudio.paInt16,
-                        channels=1,
-                        rate=sample_rate,
-                        input=True,
-                        input_device_index=device_index,
-                        frames_per_buffer=4000
-                    )
-                    # Successfully opened stream, create recognizer with this sample rate
+                    # Test if this sample rate works
+                    sd.check_input_settings(device=device_index, channels=1, samplerate=sample_rate)
+                    
+                    # Create recognizer with this sample rate
                     self.recognizer = KaldiRecognizer(self.model, sample_rate)
                     self.recognizer.SetWords(True)
                     used_sample_rate = sample_rate
                     audio_opened = True
-                    logger.info(f"Audio stream opened successfully with sample rate: {sample_rate} Hz")
+                    logger.info(f"Audio configuration successful with sample rate: {sample_rate} Hz")
                     break
                 except Exception as e:
-                    logger.debug(f"Failed to open audio stream with {sample_rate} Hz: {e}")
-                    if sample_rate == SAMPLE_RATES[-1]:
-                        # Last sample rate failed
-                        self.error_occurred.emit(f"Could not open audio stream. Tried sample rates: {SAMPLE_RATES}")
-                        return
+                    logger.debug(f"Sample rate {sample_rate} Hz not supported: {e}")
                     continue
             
             if not audio_opened:
-                self.error_occurred.emit("Failed to open audio stream with any supported sample rate.")
+                self.error_occurred.emit(f"Could not configure audio. Tried sample rates: {SAMPLE_RATES}")
                 return
             
-            self.is_recording = True
-            logger.info("Voice recording started")
-            self.last_activity_time = time.time()  # Reset activity timer
+            # Define audio callback
+            def audio_callback(indata, frames, time_info, status):
+                """Callback for audio stream."""
+                if status:
+                    logger.warning(f"Audio stream status: {status}")
+                if self.is_recording:
+                    # Convert float32 to int16 for Vosk
+                    audio_data = (indata[:, 0] * 32767).astype(np.int16).tobytes()
+                    self.audio_queue.put(audio_data)
             
-            while self.is_recording:
-                try:
-                    data = self.audio_stream.read(4000, exception_on_overflow=False)
-                    
-                    if self.recognizer.AcceptWaveform(data):
-                        # Complete result
-                        result = json.loads(self.recognizer.Result())
-                        text = result.get('text', '').strip()
-                        if text:
-                            self.final_result.emit(text)
-                            # Update activity time when we get actual speech
-                            self.last_activity_time = time.time()
-                            self._last_text = text
-                    else:
-                        # Partial result
-                        partial = json.loads(self.recognizer.PartialResult())
-                        text = partial.get('partial', '').strip()
-                        if text:
-                            self.partial_result.emit(text)
-                            # Update activity time if text has changed (indicating speech)
-                            if text != self._last_text:
+            # Start audio stream
+            self.audio_stream = sd.InputStream(
+                samplerate=used_sample_rate,
+                channels=1,
+                dtype='float32',
+                device=device_index,
+                blocksize=4000,
+                callback=audio_callback
+            )
+            
+            with self.audio_stream:
+                self.is_recording = True
+                logger.info("Voice recording started")
+                self.last_activity_time = time.time()
+                
+                while self.is_recording:
+                    try:
+                        # Get audio data from queue with timeout
+                        data = self.audio_queue.get(timeout=0.1)
+                        
+                        if self.recognizer.AcceptWaveform(data):
+                            # Complete result
+                            result = json.loads(self.recognizer.Result())
+                            text = result.get('text', '').strip()
+                            if text:
+                                self.final_result.emit(text)
                                 self.last_activity_time = time.time()
                                 self._last_text = text
-                    
-                    # Check for silence timeout
-                    current_time = time.time()
-                    if current_time - self.last_activity_time > self.silence_threshold:
-                        logger.info(f"Silence detected for {self.silence_threshold} seconds, auto-stopping recording")
-                        self.silence_detected.emit()
-                        self.is_recording = False
-                        break
-                            
-                except Exception as e:
-                    if self.is_recording:  # Only log if we're still supposed to be recording
-                        logger.error(f"Audio processing error: {e}")
+                        else:
+                            # Partial result
+                            partial = json.loads(self.recognizer.PartialResult())
+                            text = partial.get('partial', '').strip()
+                            if text:
+                                self.partial_result.emit(text)
+                                if text != self._last_text:
+                                    self.last_activity_time = time.time()
+                                    self._last_text = text
                         
+                        # Check for silence timeout
+                        current_time = time.time()
+                        if current_time - self.last_activity_time > self.silence_threshold:
+                            logger.info(f"Silence detected for {self.silence_threshold} seconds, auto-stopping")
+                            self.silence_detected.emit()
+                            self.is_recording = False
+                            break
+                            
+                    except queue.Empty:
+                        # No audio data available, check if we should stop
+                        if not self.is_recording:
+                            break
+                    except Exception as e:
+                        if self.is_recording:
+                            logger.error(f"Audio processing error: {e}")
+                            
         except Exception as e:
             self.error_occurred.emit(f"Recording error: {str(e)}")
             logger.error(f"Voice recording error: {e}")
@@ -236,65 +263,72 @@ class VoiceRecognitionThread(QThread):
         """Clean up audio resources."""
         if self.audio_stream:
             try:
-                self.audio_stream.stop_stream()
+                self.audio_stream.stop()
                 self.audio_stream.close()
             except Exception as e:
                 logger.error(f"Error closing audio stream: {e}")
-                
-        if self.pyaudio_instance:
+        
+        # Clear the queue
+        if self.audio_queue:
             try:
-                self.pyaudio_instance.terminate()
-            except Exception as e:
-                logger.error(f"Error terminating PyAudio: {e}")
-
-
-def check_voice_models():
-    """Check if voice models are installed."""
-    try:
-        # Use package_file for consistency
-        models_dir = package_file("vosk_models")
-    except Exception:
-        # Fallback
-        base_path = Path(__file__).parent.parent.parent
-        models_dir = base_path / "assets" / "vosk_models"
-    
-    model_info = {
-        'zh': {
-            'name': 'vosk-model-small-cn-0.22',
-            'url': 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip',
-            'size': '42 MB'
-        },
-        'en': {
-            'name': 'vosk-model-small-en-us-0.15',
-            'url': 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip',
-            'size': '40 MB'
-        }
-    }
-    
-    current_lang = get_current_language()
-    model_name = model_info[current_lang]['name']
-    model_path = models_dir / model_name
-    
-    if not model_path.exists():
-        return False, model_info[current_lang]
-    
-    return True, None
-
+                while not self.audio_queue.empty():
+                    self.audio_queue.get_nowait()
+            except:
+                pass
 
 def is_voice_recognition_available():
     """Check if voice recognition is available."""
     return VOSK_AVAILABLE
 
 
-def get_audio_input_devices(force_refresh=False, settings_manager=None):
-    """Get list of available audio input devices, filtering duplicates and invalid devices.
+def test_device_availability(device_index, sample_rate=None):
+    """Test if an audio input device is actually available and working.
+    
+    Args:
+        device_index: Device index to test
+        sample_rate: Sample rate to test with (uses device default if None)
+        
+    Returns:
+        bool: True if device is available and working, False otherwise
+    """
+    if not VOSK_AVAILABLE:
+        return False
+    
+    try:
+        # Get device info to determine appropriate sample rate
+        device_info = sd.query_devices(device_index, 'input')
+        if sample_rate is None:
+            sample_rate = int(device_info.get('default_samplerate', 16000))
+        
+        # Try to open a short audio stream to test if device is really available
+        stream = sd.InputStream(
+            device=device_index,
+            channels=1,
+            samplerate=sample_rate,
+            blocksize=512,
+            dtype='float32'
+        )
+        stream.start()
+        # Brief test - just check if we can start the stream
+        time.sleep(0.02)  # 20ms test
+        stream.stop()
+        stream.close()
+        return True
+    except Exception as e:
+        logger.debug(f"Device {device_index} availability test failed: {e}")
+        return False
+
+
+def get_audio_input_devices(force_refresh=False, settings_manager=None, test_availability=True):
+    """Get list of available audio input devices using sounddevice.
     
     Args:
         force_refresh: Force re-enumeration of devices, bypassing cache
         settings_manager: Optional SettingsManager instance to save cache to settings
+        test_availability: Test if devices are actually available (default True)
         
     Returns:
-        List of audio device dictionaries
+        List of audio device dictionaries (only includes actually available devices if test_availability=True)
     """
     global _audio_devices_cache, _cache_timestamp, _last_refresh_time
     
@@ -333,12 +367,11 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
             logger.info("Using memory cached audio devices")
             return _audio_devices_cache
     
-    logger.info("Enumerating audio devices...")
+    logger.info("Enumerating audio devices using sounddevice...")
     
     import re
     devices = []
     seen_base_names = {}  # Track unique device base names
-    test_streams = []  # Keep track of test streams to ensure they're closed
     
     # System/virtual devices to filter out
     SYSTEM_DEVICES = [
@@ -352,47 +385,26 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
     # API type indicators in device names
     API_PATTERNS = r'\s*\((MME|DirectSound|WASAPI|WDM-KS|Windows DirectSound|Windows WASAPI|Windows WDM-KS)\)'
     
-    p = None
     try:
-        p = pyaudio.PyAudio()
+        # Get all devices from sounddevice with timeout protection
+        logger.debug("Calling sd.query_devices()...")
+        try:
+            all_devices = sd.query_devices()
+            logger.debug(f"sd.query_devices() returned {len(all_devices) if all_devices else 0} devices")
+        except Exception as sd_error:
+            logger.error(f"sounddevice.query_devices() failed: {sd_error}")
+            raise RuntimeError(f"Audio system query failed: {str(sd_error)}")
         
-        for i in range(p.get_device_count()):
+        for i, device_info in enumerate(all_devices):
             try:
-                device_info = p.get_device_info_by_index(i)
-                
                 # Only process input devices
-                if device_info['maxInputChannels'] <= 0:
+                if device_info['max_input_channels'] <= 0:
                     continue
                 
                 name = device_info['name']
                 
                 # Skip system/mapper devices
                 if any(sys_dev in name for sys_dev in SYSTEM_DEVICES):
-                    continue
-                
-                # Test if device is actually available
-                # Try to open a stream briefly to check if device works
-                test_stream = None
-                try:
-                    test_stream = p.open(
-                        format=pyaudio.paInt16,
-                        channels=min(1, device_info['maxInputChannels']),
-                        rate=int(device_info['defaultSampleRate']),
-                        input=True,
-                        input_device_index=i,
-                        frames_per_buffer=1024,
-                        start=False  # Don't actually start the stream
-                    )
-                    # Add to list for cleanup
-                    test_streams.append(test_stream)
-                except Exception as e:
-                    # Device not actually available, skip it
-                    logger.debug(f"Skipping unavailable device: {name} (index {i}): {e}")
-                    if test_stream:
-                        try:
-                            test_stream.close()
-                        except:
-                            pass
                     continue
                 
                 # Extract base name (remove API type suffix)
@@ -406,14 +418,14 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
                 if clean_name in seen_base_names:
                     # Keep the one with better properties (higher sample rate or more channels)
                     existing = seen_base_names[clean_name]
-                    if (device_info['defaultSampleRate'] > existing['default_sample_rate'] or
-                        device_info['maxInputChannels'] > existing['channels']):
+                    if (device_info['default_samplerate'] > existing['default_sample_rate'] or
+                        device_info['max_input_channels'] > existing['channels']):
                         # This version is better, replace
                         seen_base_names[clean_name] = {
                             'index': i,
                             'name': clean_name,
-                            'channels': device_info['maxInputChannels'],
-                            'default_sample_rate': device_info['defaultSampleRate'],
+                            'channels': device_info['max_input_channels'],
+                            'default_sample_rate': device_info['default_samplerate'],
                             'original_name': name  # Keep original for debugging
                         }
                 else:
@@ -421,8 +433,8 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
                     seen_base_names[clean_name] = {
                         'index': i,
                         'name': clean_name,
-                        'channels': device_info['maxInputChannels'],
-                        'default_sample_rate': device_info['defaultSampleRate'],
+                        'channels': device_info['max_input_channels'],
+                        'default_sample_rate': device_info['default_samplerate'],
                         'original_name': name
                     }
                     
@@ -430,19 +442,52 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
                 logger.debug(f"Error processing device {i}: {e}")
                 continue
         
-        # Convert to list, removing debug info
-        for device_data in seen_base_names.values():
-            devices.append({
-                'index': device_data['index'],
-                'name': device_data['name'],
-                'channels': device_data['channels'],
-                'default_sample_rate': device_data['default_sample_rate']
-            })
+        # Convert to list, removing debug info and optionally testing availability
+        if test_availability:
+            logger.info("Testing device availability...")
+            tested_devices = []
+            
+            for device_data in seen_base_names.values():
+                device_index = device_data['index']
+                device_name = device_data['name']
+                
+                # Test if device is actually available
+                logger.debug(f"Testing device '{device_name}' (index {device_index})...")
+                is_available = test_device_availability(
+                    device_index, 
+                    device_data['default_sample_rate']
+                )
+                
+                if is_available:
+                    logger.debug(f"Device '{device_name}' is available")
+                    tested_devices.append({
+                        'index': device_index,
+                        'name': device_name,
+                        'channels': device_data['channels'],
+                        'default_sample_rate': device_data['default_sample_rate']
+                    })
+                else:
+                    logger.info(f"Device '{device_name}' is not available, filtering out")
+            
+            devices = tested_devices
+        else:
+            # Skip availability testing
+            devices = []
+            for device_data in seen_base_names.values():
+                devices.append({
+                    'index': device_data['index'],
+                    'name': device_data['name'],
+                    'channels': device_data['channels'],
+                    'default_sample_rate': device_data['default_sample_rate']
+                })
         
         # Sort by name for consistent display
         devices.sort(key=lambda d: d['name'])
         
-        logger.info(f"Found {len(devices)} unique audio input devices")
+        if test_availability:
+            logger.info(f"Found {len(devices)} available audio input devices (filtered from {len(seen_base_names)} total)")
+        else:
+            logger.info(f"Found {len(devices)} audio input devices (availability not tested)")
         
         # Update memory cache
         _audio_devices_cache = devices
@@ -465,26 +510,6 @@ def get_audio_input_devices(force_refresh=False, settings_manager=None):
         if _audio_devices_cache is not None:
             logger.info("Returning cached devices due to enumeration error")
             return _audio_devices_cache
-    finally:
-        # Ensure all test streams are closed
-        for stream in test_streams:
-            try:
-                if stream and not stream.is_stopped():
-                    stream.stop_stream()
-                if stream:
-                    stream.close()
-            except Exception as e:
-                logger.debug(f"Error closing test stream: {e}")
-        
-        # Safely terminate PyAudio
-        if p:
-            try:
-                # Small delay to ensure all streams are fully closed
-                time.sleep(0.1)
-                p.terminate()
-                logger.debug("PyAudio terminated successfully")
-            except Exception as e:
-                logger.warning(f"Error terminating PyAudio (non-critical): {e}")
     
     return devices
 

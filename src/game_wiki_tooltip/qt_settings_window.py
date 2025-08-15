@@ -20,6 +20,16 @@ from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.core.utils import package_file, APPDATA_DIR
 from src.game_wiki_tooltip.core.i18n import init_translations, t
 
+# Import get_audio_input_devices at module level to catch import errors early
+try:
+    from src.game_wiki_tooltip.window_component import get_audio_input_devices
+    AUDIO_DEVICES_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Could not import get_audio_input_devices: {e}")
+    AUDIO_DEVICES_AVAILABLE = False
+    get_audio_input_devices = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -358,69 +368,146 @@ class QtSettingsWindow(QMainWindow):
         Args:
             force_refresh: Force re-enumeration of devices, bypassing cache
         """
-        self.audio_device_combo.clear()
-        
-        # Add default option
-        self.audio_device_combo.addItem("System Default", None)
+        logger.debug(f"_populate_audio_devices called with force_refresh={force_refresh}")
         
         try:
-            from src.game_wiki_tooltip.window_component import get_audio_input_devices
+            self.audio_device_combo.clear()
+            
+            # Add default option
+            self.audio_device_combo.addItem("System Default", None)
+            
+            # Check if audio devices function is available
+            if not AUDIO_DEVICES_AVAILABLE or get_audio_input_devices is None:
+                logger.warning("Audio device enumeration not available - module import failed")
+                self.audio_device_combo.addItem("Audio devices unavailable (import error)", None)
+                return
+            
+            logger.debug("Calling get_audio_input_devices...")
             # Pass settings manager to enable cache saving
             devices = get_audio_input_devices(force_refresh=force_refresh, settings_manager=self.settings_manager)
+            logger.debug(f"get_audio_input_devices returned {len(devices) if devices else 0} devices")
             
-            for device in devices:
-                device_name = device['name']
-                device_index = device['index']
-                # Use clean device name without index for better readability
-                self.audio_device_combo.addItem(device_name, device_index)
+            if devices:
+                for device in devices:
+                    device_name = device['name']
+                    device_index = device['index']
+                    # Use clean device name without index for better readability
+                    self.audio_device_combo.addItem(device_name, device_index)
+                logger.info(f"Populated combo box with {len(devices)} audio devices")
+            else:
+                logger.warning("No audio devices returned")
+                self.audio_device_combo.addItem("No audio devices found", None)
                 
         except Exception as e:
-            logger.error(f"Failed to get audio devices: {e}")
+            logger.error(f"Failed to populate audio devices: {e}", exc_info=True)
             # Add error indicator
-            self.audio_device_combo.addItem("Audio devices unavailable", None)
+            try:
+                self.audio_device_combo.addItem(f"Error: {str(e)[:50]}", None)
+            except:
+                pass
+    
+    def _safe_refresh_audio_devices(self):
+        """Safe wrapper for refresh button click to prevent application crashes"""
+        try:
+            logger.debug("Safe refresh wrapper called")
+            self._refresh_audio_devices()
+        except Exception as e:
+            logger.critical(f"Unhandled exception in refresh button click: {e}", exc_info=True)
+            try:
+                # Try to show error dialog
+                QMessageBox.critical(
+                    self,
+                    "Critical Error",
+                    f"An unexpected error occurred:\n{str(e)}\n\nThe application may be unstable."
+                )
+            except:
+                # Even dialog failed, just log it
+                logger.critical("Failed to show error dialog")
     
     def _refresh_audio_devices(self):
         """Refresh audio device list with anti-bounce and status feedback"""
-        from PyQt6.QtCore import QTimer
+        logger.info("Refresh devices button clicked")
         
-        # Disable refresh button to prevent rapid clicking
-        self.refresh_button.setEnabled(False)
-        self.refresh_button.setText(t("refreshing_devices", "Refreshing..."))
-        
-        # Save current selection
-        current_selection = self.audio_device_combo.currentData()
-        
-        # Force refresh (internal anti-bounce will be applied)
-        self._populate_audio_devices(force_refresh=True)
-        
-        # Check if refresh was throttled by examining the last refresh time
         try:
-            from src.game_wiki_tooltip.window_component.voice_recognition import _last_refresh_time, REFRESH_COOLDOWN
-            import time
-            current_time = time.time()
+            from PyQt6.QtCore import QTimer
             
-            if current_time - _last_refresh_time < REFRESH_COOLDOWN:
-                # Refresh was throttled, show cooldown message
-                self.refresh_button.setText(t("refresh_cooldown", "Too fast! Wait..."))
-                QTimer.singleShot(1500, lambda: self.refresh_button.setText(t("refresh_devices_button")))
-            else:
-                # Refresh succeeded
-                self.refresh_button.setText(t("refresh_complete", "Refreshed!"))
+            # Disable refresh button to prevent rapid clicking
+            self.refresh_button.setEnabled(False)
+            self.refresh_button.setText("Refreshing...")
+            logger.debug("Button disabled, text changed to 'Refreshing...'")
+            
+            # Save current selection
+            current_selection = self.audio_device_combo.currentData()
+            logger.debug(f"Current device selection saved: {current_selection}")
+            
+            try:
+                # Check if audio devices are available
+                if not AUDIO_DEVICES_AVAILABLE:
+                    logger.error("Cannot refresh - audio devices module not available")
+                    QMessageBox.warning(
+                        self, 
+                        "Audio Unavailable",
+                        "Audio device enumeration is not available.\nPlease check that sounddevice is installed."
+                    )
+                    self.refresh_button.setText("Unavailable")
+                    QTimer.singleShot(1500, lambda: self.refresh_button.setText(t("refresh_devices_button")))
+                    return
+                
+                logger.debug("Starting device refresh...")
+                # Force refresh (internal anti-bounce will be applied)
+                self._populate_audio_devices(force_refresh=True)
+                logger.debug("Device refresh completed successfully")
+                
+                # Show success message
+                self.refresh_button.setText("Refreshed!")
                 QTimer.singleShot(1000, lambda: self.refresh_button.setText(t("refresh_devices_button")))
-        except:
-            # Fallback if we can't check status
-            self.refresh_button.setText(t("refresh_complete", "Refreshed!"))
-            QTimer.singleShot(1000, lambda: self.refresh_button.setText(t("refresh_devices_button")))
+                
+                # Try to restore previous selection
+                if current_selection is not None:
+                    for i in range(self.audio_device_combo.count()):
+                        if self.audio_device_combo.itemData(i) == current_selection:
+                            self.audio_device_combo.setCurrentIndex(i)
+                            logger.debug(f"Restored device selection to index {i}")
+                            break
+                
+            except Exception as e:
+                # Handle any errors during refresh
+                logger.error(f"Error during device refresh: {e}", exc_info=True)
+                self.refresh_button.setText("Refresh failed")
+                QTimer.singleShot(1500, lambda: self.refresh_button.setText(t("refresh_devices_button")))
+                
+                # Show error dialog to user
+                QMessageBox.critical(
+                    self,
+                    "Refresh Error",
+                    f"Failed to refresh audio devices:\n{str(e)}\n\nCheck the log for details."
+                )
+            
+        except Exception as outer_e:
+            # Handle any errors in the outer try block (like QTimer import)
+            logger.error(f"Critical error in _refresh_audio_devices: {outer_e}", exc_info=True)
+            try:
+                QMessageBox.critical(
+                    self,
+                    "Critical Error", 
+                    f"A critical error occurred:\n{str(outer_e)}"
+                )
+            except:
+                pass
         
-        # Try to restore previous selection
-        if current_selection is not None:
-            for i in range(self.audio_device_combo.count()):
-                if self.audio_device_combo.itemData(i) == current_selection:
-                    self.audio_device_combo.setCurrentIndex(i)
-                    break
-        
-        # Re-enable button after 2 seconds (matching the cooldown)
-        QTimer.singleShot(2000, lambda: self.refresh_button.setEnabled(True))
+        finally:
+            # Re-enable button after 2 seconds
+            try:
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(2000, lambda: self.refresh_button.setEnabled(True))
+                logger.debug("Button re-enable timer set for 2 seconds")
+            except Exception as e:
+                logger.error(f"Failed to set re-enable timer: {e}")
+                # Try to re-enable immediately as fallback
+                try:
+                    self.refresh_button.setEnabled(True)
+                except:
+                    pass
         
     def switch_to_api_tab(self):
         """Switch to API configuration tab"""
@@ -762,7 +849,8 @@ class QtSettingsWindow(QMainWindow):
         # Refresh devices button
         refresh_layout = QHBoxLayout()
         self.refresh_button = QPushButton(t("refresh_devices_button"))
-        self.refresh_button.clicked.connect(self._refresh_audio_devices)
+        # Use a safe wrapper for the button click to prevent crashes
+        self.refresh_button.clicked.connect(self._safe_refresh_audio_devices)
         self.refresh_button.setFixedWidth(120)
         refresh_layout.addWidget(self.refresh_button)
         refresh_layout.addStretch()

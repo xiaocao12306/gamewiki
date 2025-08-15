@@ -30,4 +30,4 @@ BlurWindow>=1.0.0
 
 # Voice input support
 vosk>=0.3.45
-pyaudio>=0.2.13
+sounddevice>=0.5.0

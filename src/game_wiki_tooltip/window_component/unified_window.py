@@ -398,7 +398,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Disable voice button if voice recognition not available
         if not is_voice_recognition_available():
             self.voice_button.setEnabled(False)
-            self.voice_button.setToolTip("Voice input not available. Install vosk and pyaudio.")
+            self.voice_button.setToolTip("Voice input not available. Install vosk and sounddevice.")
         
         # Send button
         self.send_button = QPushButton()
@@ -2091,7 +2091,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Start voice recording with comprehensive state validation."""
         # Check if voice recognition is available
         if not is_voice_recognition_available():
-            self.chat_view.show_status("Voice recognition not available. Please install vosk and pyaudio.")
+            self.chat_view.show_status("Voice recognition not available. Please install vosk and sounddevice.")
             return
         
         # Prevent starting if already recording
