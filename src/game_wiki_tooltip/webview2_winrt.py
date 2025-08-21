@@ -145,6 +145,11 @@ class WebView2WinRTWidget(QWidget):
         # Event tokens for cleanup
         self._event_tokens = {}
         
+        # Resize debounce timer (200ms delay)
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self._update_bounds)
+        
         # Set size policy
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
@@ -219,7 +224,7 @@ class WebView2WinRTWidget(QWidget):
         QTimer.singleShot(0, self._do_async_init)
     
     def _do_async_init(self):
-        """Initialize WebView2 asynchronously using asyncio.create_task (like test_webview2.py)"""
+        """Initialize WebView2 asynchronously using asyncio.create_task"""
         logger.info("Starting async initialization using asyncio...")
         
         # Start timeout watchdog
@@ -766,25 +771,40 @@ class WebView2WinRTWidget(QWidget):
             logger.error(f"Error handling new window request: {e}")
     
     def _update_bounds(self):
-        """Update WebView2 bounds to match widget size"""
+        """Update WebView2 bounds to match widget size with DPI scaling"""
         if not self.controller:
             return
         
         try:
             rect = self.rect()
-            logger.info(f"Updating bounds to {rect.width()}x{rect.height()}")
             
-            # Create Rect with position and size (prefer WinRT Rect if available)
+            # Get DPI scaling factor
+            screen = self.screen()
+            dpi_scale = screen.devicePixelRatio() if screen else 1.0
+            
+            # For WebView2, we typically use logical coordinates, not physical
+            # The WebView2 control handles DPI scaling internally
+            # But we log both for debugging
+            logical_width = rect.width()
+            logical_height = rect.height()
+            physical_width = int(logical_width * dpi_scale)
+            physical_height = int(logical_height * dpi_scale)
+            
+            logger.info(f"Updating bounds: logical {logical_width}x{logical_height}, "
+                       f"physical {physical_width}x{physical_height} (DPI scale: {dpi_scale})")
+            
+            # WebView2 WinRT expects physical pixels, not logical coordinates
+            # Use physical dimensions for pixel-perfect rendering
             if Rect is not None and hasattr(Rect, '__call__'):
                 try:
-                    # Use WinRT Rect constructor
-                    bounds = Rect(0, 0, rect.width(), rect.height())
-                    logger.info(f"✓ Created WinRT Rect: {bounds}")
+                    # Use WinRT Rect constructor with physical pixel dimensions
+                    bounds = Rect(0, 0, physical_width, physical_height)
+                    logger.info(f"✓ Created WinRT Rect with physical pixels: {bounds}")
                 except Exception as e:
                     logger.warning(f"WinRT Rect creation failed: {e}, using fallback")
-                    bounds = FallbackRect(0, 0, rect.width(), rect.height())
+                    bounds = FallbackRect(0, 0, physical_width, physical_height)
             else:
-                bounds = FallbackRect(0, 0, rect.width(), rect.height())
+                bounds = FallbackRect(0, 0, physical_width, physical_height)
             
             # Try both naming conventions for setting bounds
             success = False
@@ -959,10 +979,16 @@ class WebView2WinRTWidget(QWidget):
                 callback(None)
             return
         
-        # Execute script asynchronously
+        # Execute script asynchronously with compatibility for both naming conventions
         async def execute():
             try:
-                result = await self.webview.ExecuteScriptAsync(script)
+                # Try both PascalCase and snake_case naming
+                if hasattr(self.webview, 'ExecuteScriptAsync'):
+                    result = await self.webview.ExecuteScriptAsync(script)
+                elif hasattr(self.webview, 'execute_script_async'):
+                    result = await self.webview.execute_script_async(script)
+                else:
+                    raise AttributeError("CoreWebView2 has no ExecuteScriptAsync/execute_script_async method")
                 return result
             except Exception as e:
                 logger.error(f"Failed to execute JavaScript: {e}")
@@ -989,9 +1015,11 @@ class WebView2WinRTWidget(QWidget):
     # Qt event handlers
     
     def resizeEvent(self, event):
-        """Handle widget resize"""
+        """Handle widget resize with debouncing"""
         super().resizeEvent(event)
-        self._update_bounds()
+        # Debounce resize events - restart timer for 200ms delay
+        self._resize_timer.stop()
+        self._resize_timer.start(200)
     
     def showEvent(self, event):
         """Handle widget show"""

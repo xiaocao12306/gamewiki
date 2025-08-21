@@ -196,36 +196,38 @@ def check_ai_modules():
     return True
 
 def check_webview2_requirements():
-    """Check WebView2 requirements"""
-    print_status("Checking WebView2 requirements...")
+    """Check WebView2 WinRT requirements"""
+    print_status("Checking WebView2 WinRT requirements...")
     
-    # Check pythonnet
-    try:
-        import clr
-        print("  ✓ pythonnet installed")
-    except ImportError:
-        print_error("pythonnet not installed, please run: pip install pythonnet")
-        return False
-    
-    # Check WebView2 SDK files
-    webview2_lib_path = Path("src/game_wiki_tooltip/webview2/lib")
-    required_dlls = [
-        "Microsoft.Web.WebView2.Core.dll",
-        "Microsoft.Web.WebView2.WinForms.dll", 
-        "WebView2Loader.dll"
+    # Check WinRT packages
+    required_packages = [
+        ('winrt', 'winrt-runtime'),
+        ('webview2.microsoft.web.webview2.core', 'webview2-Microsoft.Web.WebView2.Core'),
+        ('winrt.windows.foundation', 'winrt-Windows.Foundation'),
+        ('qasync', 'qasync')
     ]
     
-    missing_dlls = []
-    for dll in required_dlls:
-        if not (webview2_lib_path / dll).exists():
-            missing_dlls.append(dll)
+    missing_packages = []
+    for module_name, package_name in required_packages:
+        try:
+            # Try to import the module
+            if '.' in module_name:
+                # For nested modules, use __import__ with fromlist
+                parts = module_name.split('.')
+                __import__(module_name, fromlist=[parts[-1]])
+            else:
+                __import__(module_name)
+            print(f"  ✓ {package_name} installed")
+        except ImportError:
+            missing_packages.append(package_name)
+            print(f"  ✗ {package_name} not installed")
     
-    if missing_dlls:
-        print_error(f"Missing WebView2 SDK files: {', '.join(missing_dlls)}")
-        print("Please run: python src/game_wiki_tooltip/webview2_setup.py")
+    if missing_packages:
+        print_error(f"Missing WinRT packages: {', '.join(missing_packages)}")
+        print("Please run: pip install -r requirements.txt")
         return False
     
-    print("  ✓ WebView2 SDK files exist")
+    print("  ✓ All WinRT packages installed")
     
     # Check WebView2 Runtime (optional check, because it may be installed on the target machine)
     try:
@@ -238,12 +240,12 @@ def check_webview2_requirements():
     except:
         print("  ⚠️  WebView2 Runtime not detected, but user may need to install it on the target machine")
     
-    print_success("WebView2 requirements checked")
+    print_success("WebView2 WinRT requirements checked")
     return True
 
-def update_spec_for_webview2():
-    """Update spec file to support WebView2"""
-    print_status("Updating PyInstaller configuration to support WebView2...")
+def verify_spec_for_webview2():
+    """Verify spec file has correct WinRT WebView2 configuration"""
+    print_status("Verifying PyInstaller configuration for WinRT WebView2...")
     
     spec_file = "game_wiki_tooltip.spec"
     if not os.path.exists(spec_file):
@@ -254,45 +256,27 @@ def update_spec_for_webview2():
     with open(spec_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Check if WebView2 configuration is already included
-    if "pythonnet" in content and "webview2" in content.lower():
-        print("  ✓ spec file includes WebView2 configuration")
-        return True
+    # Check if WinRT WebView2 configuration is included
+    required_imports = ['winrt', 'webview2', 'qasync']
+    missing_imports = []
     
-    # Add WebView2 related hiddenimports
-    webview2_imports = """
-    # WebView2 related imports
-    'pythonnet',
-    'clr',
-    'System',
-    'System.Windows.Forms',
-    'System.Threading',
-    'Microsoft.Web.WebView2.Core',
-    'Microsoft.Web.WebView2.WinForms',"""
+    for import_name in required_imports:
+        if f"'{import_name}" not in content and f'"{import_name}' not in content:
+            missing_imports.append(import_name)
     
-    # Replace PyQt6-WebEngine with WebView2
-    updated_content = content.replace(
-        "'PyQt6.QtWebEngineWidgets',\n    'PyQt6.QtWebEngineCore',",
-        "'pywebview[edgechromium]'," + webview2_imports
-    )
+    if missing_imports:
+        print_error(f"Spec file missing WinRT imports: {', '.join(missing_imports)}")
+        print("Please update your spec file to include WinRT WebView2 imports")
+        return False
     
-    # Add WebView2 DLL files to datas
-    webview2_datas = '''
-    # WebView2 SDK files
-    ("src/game_wiki_tooltip/webview2/lib", "webview2/lib"),'''
+    print("  ✓ Spec file includes WinRT WebView2 configuration")
     
-    # Add after datas section
-    if "# Knowledge data" in updated_content:
-        updated_content = updated_content.replace(
-            '("data", "data"),',
-            '("data", "data"),' + webview2_datas
-        )
+    # Verify old pythonnet references are removed
+    if "pythonnet" in content or "clr" in content:
+        print("  ⚠️  Warning: Spec file still contains old pythonnet references")
+        print("     Consider removing pythonnet/clr imports from hiddenimports")
     
-    # Write back to file
-    with open(spec_file, 'w', encoding='utf-8') as f:
-        f.write(updated_content)
-    
-    print_success("spec file updated to support WebView2")
+    print_success("Spec file verified for WinRT WebView2")
     return True
 
 def build_uninstaller(output_dir):
@@ -771,8 +755,8 @@ def main():
             ("Clean build", clean_build),
             ("Check resources", check_assets),
             ("Check AI modules", check_ai_modules),
-            ("Check WebView2 requirements", check_webview2_requirements),
-            ("Update spec file", update_spec_for_webview2),
+            ("Check WebView2 WinRT requirements", check_webview2_requirements),
+            ("Verify spec file", verify_spec_for_webview2),
         ]
         
         # Skip dependency installation if requested

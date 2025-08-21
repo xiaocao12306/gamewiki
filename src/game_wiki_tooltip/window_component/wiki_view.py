@@ -33,15 +33,9 @@ if USE_WEBVIEW2:
     except ImportError as e:
         print(f"Warning: WebView2WinRTWidget not available: {e}")
         # Fallback to simple implementation if available
-        try:
-            from src.game_wiki_tooltip.webview2_simple import SimpleWebView2Widget as WebView2Widget
-            from src.game_wiki_tooltip.webview_widget import check_webview2_runtime
-            WEBVIEW2_AVAILABLE = True
-            print("Falling back to simplified WebView2 implementation")
-        except ImportError:
-            print(f"Warning: No WebView2 implementation available")
-            WEBVIEW2_AVAILABLE = False
-            USE_WEBVIEW2 = False  # WebView2 failed to initialize
+        print(f"Warning: No WebView2 implementation available")
+        WEBVIEW2_AVAILABLE = False
+        USE_WEBVIEW2 = False  # WebView2 failed to initialize
 else:
     WEBVIEW2_AVAILABLE = False
 

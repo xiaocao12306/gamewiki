@@ -94,8 +94,30 @@ datas = [
     # Note: WebView2 SDK files no longer needed with WinRT implementation
 ]
 
-# Add Vosk library files and models
+# Add WebView2 Core DLL for WinRT
 import site
+webview2_dll_found = False
+for site_dir in site.getsitepackages():
+    webview2_dll_path = Path(site_dir) / "webview2" / "microsoft" / "web" / "webview2" / "core" / "Microsoft.Web.WebView2.Core.dll"
+    if webview2_dll_path.exists():
+        # Add the DLL to maintain the same relative path structure
+        datas.append((str(webview2_dll_path.parent), "webview2/microsoft/web/webview2/core"))
+        print(f"[INFO] Added WebView2 Core DLL from: {webview2_dll_path}")
+        webview2_dll_found = True
+        break
+
+if not webview2_dll_found:
+    print("[WARNING] WebView2 Core DLL not found in site-packages")
+    # Try virtual environment
+    venv_path = Path(".venv") / "Lib" / "site-packages" / "webview2" / "microsoft" / "web" / "webview2" / "core" / "Microsoft.Web.WebView2.Core.dll"
+    if venv_path.exists():
+        datas.append((str(venv_path.parent), "webview2/microsoft/web/webview2/core"))
+        print(f"[INFO] Added WebView2 Core DLL from venv: {venv_path}")
+    else:
+        print("[ERROR] Could not locate WebView2 Core DLL - packaged exe may fail")
+
+# Add Vosk library files and models
+# Note: site is already imported above
 site_packages = site.getsitepackages()[0] if site.getsitepackages() else None
 if not site_packages:
     # Try to find venv site-packages
@@ -238,7 +260,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[],
+    hookspath=[str(project_root)],  # Add project root to find hook-webview2.py
     hooksconfig={},
     runtime_hooks=[],
     excludes=excludes,
@@ -264,7 +286,7 @@ exe = EXE(
     upx=False,  # Disable UPX for onedir mode (doesn't help much)
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Hide console window for better user experience
+    console=True,  # Hide console window for better user experience
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

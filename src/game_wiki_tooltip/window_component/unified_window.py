@@ -1428,8 +1428,17 @@ class UnifiedAssistantWindow(QMainWindow):
             
         logger.info(f"🔍 Recording history for URL: {current_url}")
         
-        # WebView2 specific handling
-        if hasattr(web_view, 'webview2') and web_view.webview2:
+        # First try to get title directly from WikiView's current_title
+        current_title = getattr(self.wiki_view, 'current_title', None)
+        if current_title and current_title != current_url:
+            logger.info(f"Using WikiView's current title: {current_title}")
+            self._save_to_history(current_url, current_title)
+        # WebView2 specific handling as fallback
+        # Check if web_view is WebView2WinRTWidget (has 'webview' attribute when initialized)
+        elif hasattr(web_view, 'webview') and web_view.webview:
+            self._get_title_from_webview2(web_view, current_url)
+        # Also check for runJavaScript method which WebView2WinRTWidget has
+        elif hasattr(web_view, 'runJavaScript'):
             self._get_title_from_webview2(web_view, current_url)
         else:
             logger.warning("WebView2 not available, using URL as title")
@@ -1480,13 +1489,22 @@ class UnifiedAssistantWindow(QMainWindow):
         """Retrieve the stored title from WebView2"""
         logger = logging.getLogger(__name__)
 
-        # Try to get title from WikiView's current_title attribute
-        if hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
-            title = self.wiki_view.current_title
+        # Try to get title from web_view's parent WikiView's current_title attribute
+        # web_view is the WebView2WinRTWidget, its parent should be WikiView
+        wiki_view = web_view.parent() if hasattr(web_view, 'parent') else None
+        
+        if wiki_view and hasattr(wiki_view, 'current_title') and wiki_view.current_title and wiki_view.current_title != current_url:
+            title = wiki_view.current_title
             logger.info(f"Using cached title from WikiView: {title}")
             self._save_to_history(current_url, title)
+        # Also check if self.wiki_view exists (the actual WikiView widget)
+        elif hasattr(self, 'wiki_view') and hasattr(self.wiki_view, 'current_title') and self.wiki_view.current_title and self.wiki_view.current_title != current_url:
+            title = self.wiki_view.current_title
+            logger.info(f"Using cached title from self.wiki_view: {title}")
+            self._save_to_history(current_url, title)
         else:
-            logger.error(f"Final JavaScript attempt failed")
+            logger.warning(f"Could not retrieve title, using URL as fallback")
+            self._save_to_history(current_url, current_url)
 
     def _save_to_history(self, url: str, title: str):
         """Save URL and title to browsing history"""
