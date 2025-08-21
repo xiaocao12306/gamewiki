@@ -22,9 +22,8 @@ import win32con
 
 logger = logging.getLogger(__name__)
 
-# Initialize COM for WebView2
-ole32 = ctypes.windll.ole32
-ole32.CoInitialize(None)
+# COM will be initialized on-demand by WebView2 runtime
+# Removed automatic COM initialization to avoid conflicts with Qt event loop
 
 # Lazy imports to avoid circular dependency
 WINRT_AVAILABLE = False
@@ -220,25 +219,229 @@ class WebView2WinRTWidget(QWidget):
         QTimer.singleShot(0, self._do_async_init)
     
     def _do_async_init(self):
-        """Run async initialization without blocking Qt's event loop"""
+        """Initialize WebView2 asynchronously using asyncio.create_task (like test_webview2.py)"""
+        logger.info("Starting async initialization using asyncio...")
+        
+        # Start timeout watchdog
+        self._init_timeout_timer = QTimer(self)
+        self._init_timeout_timer.setSingleShot(True)
+        self._init_timeout_timer.timeout.connect(self._on_init_timeout)
+        self._init_timeout_timer.start(30000)  # 30 second timeout
+        
         async def init_task():
+            """Async initialization task"""
             try:
-                await asyncio.wait_for(self._async_initialize(), timeout=30.0)
-                # Call _on_initialized in Qt main thread
-                QTimer.singleShot(0, self._on_initialized)
-            except asyncio.TimeoutError:
-                logger.error("WebView2 initialization timed out")
-                QTimer.singleShot(0, lambda: self._show_error("WebView2 initialization timed out"))
-                self._webview_initializing = False
+                logger.info("Beginning async initialization task...")
+                # Call the async initialization method
+                result = await self._async_initialize()
+                
+                if result:
+                    logger.info("✅ WebView2 initialization successful!")
+                    # Ensure _on_initialized is called in the main thread
+                    loop.call_soon_threadsafe(self._on_initialized)
+                else:
+                    logger.error("WebView2 initialization returned False")
+                    QTimer.singleShot(0, self._fallback_sync_init)
+                    
             except Exception as e:
-                logger.error(f"WebView2 initialization failed: {e}")
+                logger.error(f"Async initialization failed: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                QTimer.singleShot(0, lambda: self._show_error(f"WebView2 initialization failed: {e}"))
-                self._webview_initializing = False
+                self._cancel_init_timeout()
+                QTimer.singleShot(0, self._fallback_sync_init)
         
-        # Run in qasync event loop - non-blocking
-        asyncio.create_task(init_task())
+        # Schedule the async task on the event loop
+        # Use loop.call_soon_threadsafe to avoid "no running event loop" error
+        # when called from Qt callback context
+        try:
+            loop = asyncio.get_event_loop()  # qasync has already set this as default loop
+            # Schedule task creation in the loop's context
+            loop.call_soon_threadsafe(lambda: loop.create_task(init_task()))
+            logger.info("Async initialization task scheduled on event loop")
+        except Exception as e:
+            logger.error(f"Failed to schedule async init: {e}")
+            self._cancel_init_timeout()
+            QTimer.singleShot(0, self._fallback_sync_init)
+    
+    def _fallback_sync_init(self):
+        """Fallback synchronous initialization if async fails"""
+        logger.warning("All initialization attempts failed")
+        try:
+            # Show error but don't block the UI
+            self._show_error("WebView2 initialization failed. Web features will be unavailable.")
+            self._webview_initializing = False
+        except Exception as e:
+            logger.error(f"Error showing fallback message: {e}")
+            self._webview_initializing = False
+    
+    # Removed callback-based methods - now using async/await in _async_initialize
+    
+    def _setup_controller(self):
+        """Setup controller properties"""
+        try:
+            # Set initial bounds
+            self._update_bounds()
+            
+            # Set visibility
+            if hasattr(self.controller, 'IsVisible'):
+                self.controller.IsVisible = True
+            elif hasattr(self.controller, 'is_visible'):
+                self.controller.is_visible = True
+            elif hasattr(self.controller, 'put_IsVisible'):
+                self.controller.put_IsVisible(True)
+            
+            # Set zoom factor
+            if hasattr(self.controller, 'ZoomFactor'):
+                self.controller.ZoomFactor = 1.0
+            elif hasattr(self.controller, 'zoom_factor'):
+                self.controller.zoom_factor = 1.0
+            elif hasattr(self.controller, 'put_ZoomFactor'):
+                self.controller.put_ZoomFactor(1.0)
+                
+            logger.info("Controller properties configured")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup controller properties: {e}")
+    
+    def _on_init_timeout(self):
+        """Handle initialization timeout"""
+        logger.error("WebView2 initialization timed out after 30 seconds")
+        self._webview_initializing = False
+        self._show_error("WebView2 initialization timed out")
+        self._fallback_sync_init()
+    
+    def _cancel_init_timeout(self):
+        """Cancel the initialization timeout timer"""
+        if hasattr(self, '_init_timeout_timer') and self._init_timeout_timer:
+            self._init_timeout_timer.stop()
+            self._init_timeout_timer = None
+            logger.debug("Initialization timeout timer cancelled")
+    
+    async def _await_winrt(self, op, timeout=30.0):
+        """
+        Wait for WinRT IAsyncOperation to complete:
+        - Primary: Use Completed property (if projection supports Python callback to delegate conversion)
+        - Fallback: Use Status polling (avoids delegate conversion errors)
+        """
+        from winrt.windows.foundation import AsyncStatus
+        
+        loop = asyncio.get_event_loop()
+
+        # Try to use Completed callback (may throw NotImplementedError if projection doesn't support delegate conversion)
+        try:
+            fut = loop.create_future()
+
+            # Keep reference to prevent GC
+            if not hasattr(self, "_pending_ops"):
+                self._pending_ops = []
+            self._pending_ops.append(op)
+
+            def _done(o, status):
+                try:
+                    if status == AsyncStatus.Completed:
+                        res = o.get_results()
+                        loop.call_soon_threadsafe(fut.set_result, res)
+                    else:
+                        try:
+                            o.get_results()  # Trigger specific exception
+                        except Exception as e:
+                            loop.call_soon_threadsafe(fut.set_exception, e)
+                finally:
+                    try:
+                        self._pending_ops.remove(o)
+                    except Exception:
+                        pass
+
+            if hasattr(op, "Completed"):
+                op.Completed = _done
+            elif hasattr(op, "completed"):
+                op.completed = _done
+            else:
+                raise NotImplementedError("No Completed/completed on this IAsyncOperation")
+
+            return await asyncio.wait_for(fut, timeout=timeout)
+
+        except (NotImplementedError, TypeError) as e:
+            # Fallback to QTimer-based polling (avoids asyncio.sleep and get_running_loop issues)
+            logger.debug(f"Callback approach failed ({e}), falling back to QTimer polling")
+            
+            from PyQt6.QtCore import QTimer
+            from time import monotonic
+            
+            # Create future for result
+            fut = loop.create_future()
+            
+            status_attr = "Status" if hasattr(op, "Status") else ("status" if hasattr(op, "status") else None)
+            if not status_attr:
+                raise RuntimeError("IAsyncOperation has neither Status nor status attribute")
+
+            # Get enum constants, compatible with different naming (uppercase/camelCase)
+            # Windows.Foundation.AsyncStatus: Started=0, Completed=1, Canceled=2, Error=3
+            COMPLETED = getattr(AsyncStatus, "COMPLETED", getattr(AsyncStatus, "Completed", 1))
+            CANCELED = getattr(AsyncStatus, "CANCELED", getattr(AsyncStatus, "Canceled", 2))
+            ERROR = getattr(AsyncStatus, "ERROR", getattr(AsyncStatus, "Error", 3))
+
+            # Use Qt timer for polling instead of asyncio.sleep
+            timer = QTimer(self)
+            timer.setInterval(10)  # 10ms polling interval
+            
+            start = monotonic()
+            
+            def tick():
+                try:
+                    status = getattr(op, status_attr)
+                    try:
+                        code = int(status)
+                    except Exception:
+                        code = getattr(status, "value", status)
+                    
+                    if code == int(COMPLETED):
+                        try:
+                            res = op.get_results()
+                            loop.call_soon_threadsafe(fut.set_result, res)
+                        except Exception as ex:
+                            loop.call_soon_threadsafe(fut.set_exception, ex)
+                        finally:
+                            timer.stop()
+                        return
+                    
+                    if code in (int(ERROR), int(CANCELED)):
+                        try:
+                            op.get_results()  # Trigger specific exception
+                        except Exception as ex:
+                            loop.call_soon_threadsafe(fut.set_exception, ex)
+                        else:
+                            loop.call_soon_threadsafe(
+                                fut.set_exception, RuntimeError(f"Operation finished with status code: {code}")
+                            )
+                        timer.stop()
+                        return
+                    
+                    if monotonic() - start > timeout:
+                        timer.stop()
+                        loop.call_soon_threadsafe(
+                            fut.set_exception, TimeoutError(f"IAsyncOperation timed out after {timeout} seconds")
+                        )
+                        return
+                        
+                except Exception as ex:
+                    timer.stop()
+                    loop.call_soon_threadsafe(fut.set_exception, ex)
+            
+            # Keep references to prevent GC
+            if not hasattr(self, "_pending_ops"):
+                self._pending_ops = []
+            self._pending_ops.append(op)
+            if not hasattr(self, "_await_timers"):
+                self._await_timers = []
+            self._await_timers.append(timer)
+            
+            # Start polling
+            timer.timeout.connect(tick)
+            timer.start()
+            
+            # Return the future (await will work correctly)
+            return await fut
     
     async def _async_initialize(self):
         """Async initialization of WebView2 components"""
@@ -257,28 +460,16 @@ class WebView2WinRTWidget(QWidget):
             os.makedirs(user_data_folder, exist_ok=True)
             logger.info(f"User data folder: {user_data_folder}")
             
-            # 2. Create CoreWebView2Environment using create_async()
+            # 2. Create CoreWebView2Environment using bridge to avoid get_running_loop() issues
             logger.info("Creating CoreWebView2Environment...")
             try:
-                # Create environment with default settings
-                self.environment = await CoreWebView2Environment.create_async()
-                logger.info("Environment created successfully")
+                # Only use zero-parameter version - current projection doesn't support parameter overloads
+                env_op = CoreWebView2Environment.create_async()
+                self.environment = await self._await_winrt(env_op)
+                logger.info("✓ Environment created successfully")
             except Exception as e:
-                # If that fails, try alternative approaches
-                logger.warning(f"Default environment creation failed: {e}")
-                try:
-                    # Try with just user data folder
-                    self.environment = await CoreWebView2Environment.create_async(user_data_folder)
-                    logger.info("Environment created with user data folder")
-                except Exception as e2:
-                    logger.warning(f"Failed with user data folder: {e2}")
-                    # Last attempt: try with empty string for browser path and user data folder
-                    try:
-                        self.environment = await CoreWebView2Environment.create_async("", user_data_folder)
-                        logger.info("Environment created with empty browser path and user data folder")
-                    except Exception as e3:
-                        logger.error(f"All environment creation attempts failed: {e3}")
-                        raise
+                logger.error(f"Environment creation failed: {e}")
+                raise
             
             # 3. Verify window handle is valid
             logger.info(f"Creating window reference for HWND: {self.hwnd}")
@@ -327,10 +518,25 @@ class WebView2WinRTWidget(QWidget):
             # Pass window_ref directly - this is the correct way
             logger.info("Calling create_core_webview2_controller_async with window_ref")
             
-            # Create controller - the timeout is handled in the caller
-            self.controller = await self.environment.create_core_webview2_controller_async(window_ref)
-            
-            logger.info("Controller created successfully")
+            try:
+                # Create controller with bridge (timeout handled by _await_winrt itself)
+                logger.info("About to call create_core_webview2_controller_async...")
+                ctrl_op = self.environment.create_core_webview2_controller_async(window_ref)
+                # Let _await_winrt handle the timeout directly
+                self.controller = await self._await_winrt(ctrl_op, timeout=20.0)
+                logger.info("✓ Controller created successfully!")
+            except TimeoutError:
+                logger.error("✗ Controller creation timed out after 20 seconds")
+                raise Exception("Controller creation timed out")
+            except Exception as e:
+                logger.error(f"✗ Controller creation failed: {e}")
+                # List environment methods for debugging
+                try:
+                    env_methods = [m for m in dir(self.environment) if not m.startswith('_')]
+                    logger.info(f"Available environment methods: {env_methods}")
+                except:
+                    pass
+                raise
             
             # 5. Get CoreWebView2 from controller
             if hasattr(self.controller, 'CoreWebView2'):
@@ -361,18 +567,7 @@ class WebView2WinRTWidget(QWidget):
             # 8. Setup event handlers
             self._setup_events()
             
-            # Mark as initialized
-            self._is_initialized = True
-            
-            # Hide placeholder
-            QTimer.singleShot(0, self.placeholder.hide)
-            
-            # Process any pending navigations
-            if self._pending_navigations:
-                url = self._pending_navigations.pop(0)
-                self.navigate(url)
-            
-            logger.info("WebView2 initialization completed successfully")
+            logger.info("WebView2 async initialization completed successfully")
             return True
             
         except Exception as e:
@@ -424,36 +619,70 @@ class WebView2WinRTWidget(QWidget):
             return
         
         try:
-            # Navigation events
-            token = self.webview.add_NavigationStarting(self._on_navigation_starting)
-            self._event_tokens['NavigationStarting'] = token
+            # Navigation events (使用正确的下划线命名法)
+            if hasattr(self.webview, 'add_navigation_starting'):
+                token = self.webview.add_navigation_starting(self._on_navigation_starting)
+                self._event_tokens['navigation_starting'] = token
+                logger.info("✓ navigation_starting event configured")
+            else:
+                logger.warning("⚠ navigation_starting event not available")
             
-            token = self.webview.add_NavigationCompleted(self._on_navigation_completed)
-            self._event_tokens['NavigationCompleted'] = token
+            if hasattr(self.webview, 'add_navigation_completed'):
+                token = self.webview.add_navigation_completed(self._on_navigation_completed)
+                self._event_tokens['navigation_completed'] = token
+                logger.info("✓ navigation_completed event configured")
+            else:
+                logger.warning("⚠ navigation_completed event not available")
             
-            token = self.webview.add_SourceChanged(self._on_source_changed)
-            self._event_tokens['SourceChanged'] = token
+            if hasattr(self.webview, 'add_source_changed'):
+                token = self.webview.add_source_changed(self._on_source_changed)
+                self._event_tokens['source_changed'] = token
+                logger.info("✓ source_changed event configured")
+            else:
+                logger.warning("⚠ source_changed event not available")
             
-            token = self.webview.add_DocumentTitleChanged(self._on_title_changed)
-            self._event_tokens['DocumentTitleChanged'] = token
+            if hasattr(self.webview, 'add_document_title_changed'):
+                token = self.webview.add_document_title_changed(self._on_title_changed)
+                self._event_tokens['document_title_changed'] = token
+                logger.info("✓ document_title_changed event configured")
+            else:
+                logger.warning("⚠ document_title_changed event not available")
             
             # New window handling
-            token = self.webview.add_NewWindowRequested(self._on_new_window_requested)
-            self._event_tokens['NewWindowRequested'] = token
+            if hasattr(self.webview, 'add_new_window_requested'):
+                token = self.webview.add_new_window_requested(self._on_new_window_requested)
+                self._event_tokens['new_window_requested'] = token
+                logger.info("✓ new_window_requested event configured")
+            else:
+                logger.warning("⚠ new_window_requested event not available")
             
-            logger.info("WebView2 event handlers configured")
+            # 列出所有可用的事件方法以供调试
+            event_methods = [m for m in dir(self.webview) if m.startswith('add_')]
+            logger.info(f"Available event methods: {event_methods}")
+            
+            logger.info("WebView2 event handlers setup completed")
             
         except Exception as e:
             logger.error(f"Failed to setup events: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def _on_initialized(self):
         """Called when initialization is complete"""
+        logger.info(">>> _on_initialized called <<<")
+        self._is_initialized = True  # ★ 必须有！
         self.placeholder.hide()
         self._webview_initializing = False
         
-        # Process pending navigations
-        if self._pending_navigations:
+        # Cancel the timeout timer since initialization succeeded
+        self._cancel_init_timeout()
+        
+        logger.info("✅ WebView2 initialization complete, ready for navigation")
+        
+        # Process all pending navigations
+        while self._pending_navigations:
             url = self._pending_navigations.pop(0)
+            logger.info(f"Processing pending navigation: {url}")
             self.navigate(url)
     
     # Event handlers
@@ -463,17 +692,34 @@ class WebView2WinRTWidget(QWidget):
     
     def _on_navigation_completed(self, sender, args):
         """Handle navigation completed event"""
-        success = args.IsSuccess if hasattr(args, 'IsSuccess') else True
-        QTimer.singleShot(0, lambda: self.loadFinished.emit(success))
+        try:
+            # 尝试不同的属性名
+            success = True
+            if hasattr(args, 'IsSuccess'):
+                success = args.IsSuccess
+            elif hasattr(args, 'is_success'):
+                success = args.is_success
+            
+            logger.info(f"Navigation completed: {'success' if success else 'failed'}")
+            QTimer.singleShot(0, lambda: self.loadFinished.emit(success))
+        except Exception as e:
+            logger.error(f"Error in navigation completed handler: {e}")
+            QTimer.singleShot(0, lambda: self.loadFinished.emit(True))
     
     def _on_source_changed(self, sender, args):
         """Handle source (URL) changed event"""
         try:
             if self.webview:
-                # Get current URI
-                uri = self.webview.Source
+                # Get current URI - try different property names
+                uri = None
+                if hasattr(self.webview, 'Source'):
+                    uri = self.webview.Source
+                elif hasattr(self.webview, 'source'):
+                    uri = self.webview.source
+                
                 if uri:
                     self.current_url = str(uri)
+                    logger.info(f"URL changed to: {self.current_url}")
                     QTimer.singleShot(0, lambda: self.urlChanged.emit(QUrl(self.current_url)))
         except Exception as e:
             logger.error(f"Error in source changed handler: {e}")
@@ -482,9 +728,16 @@ class WebView2WinRTWidget(QWidget):
         """Handle document title changed event"""
         try:
             if self.webview:
-                title = self.webview.DocumentTitle
+                # Try different property names
+                title = None
+                if hasattr(self.webview, 'DocumentTitle'):
+                    title = self.webview.DocumentTitle
+                elif hasattr(self.webview, 'document_title'):
+                    title = self.webview.document_title
+                
                 if title:
                     self.current_title = str(title)
+                    logger.info(f"Title changed to: {self.current_title}")
                     QTimer.singleShot(0, lambda: self.titleChanged.emit(self.current_title))
         except Exception as e:
             logger.error(f"Error in title changed handler: {e}")
@@ -492,14 +745,22 @@ class WebView2WinRTWidget(QWidget):
     def _on_new_window_requested(self, sender, args):
         """Handle new window request - open in current window instead"""
         try:
-            # Prevent new window
-            args.Handled = True
+            # Prevent new window - try different property names
+            if hasattr(args, 'Handled'):
+                args.Handled = True
+            elif hasattr(args, 'handled'):
+                args.handled = True
             
-            # Navigate in current window
-            if args.Uri:
-                self.navigate(str(args.Uri))
+            # Navigate in current window - try different property names
+            uri = None
+            if hasattr(args, 'Uri'):
+                uri = args.Uri
+            elif hasattr(args, 'uri'):
+                uri = args.uri
             
-            logger.info(f"Intercepted new window request, navigating to: {args.Uri}")
+            if uri:
+                self.navigate(str(uri))
+                logger.info(f"Intercepted new window request, navigating to: {uri}")
             
         except Exception as e:
             logger.error(f"Error handling new window request: {e}")
@@ -511,28 +772,53 @@ class WebView2WinRTWidget(QWidget):
         
         try:
             rect = self.rect()
-            # Create Rect with position and size (use fallback if needed)
-            rect_class = Rect if Rect is not None else FallbackRect
-            bounds = rect_class(0, 0, rect.width(), rect.height())
+            logger.info(f"Updating bounds to {rect.width()}x{rect.height()}")
+            
+            # Create Rect with position and size (prefer WinRT Rect if available)
+            if Rect is not None and hasattr(Rect, '__call__'):
+                try:
+                    # Use WinRT Rect constructor
+                    bounds = Rect(0, 0, rect.width(), rect.height())
+                    logger.info(f"✓ Created WinRT Rect: {bounds}")
+                except Exception as e:
+                    logger.warning(f"WinRT Rect creation failed: {e}, using fallback")
+                    bounds = FallbackRect(0, 0, rect.width(), rect.height())
+            else:
+                bounds = FallbackRect(0, 0, rect.width(), rect.height())
             
             # Try both naming conventions for setting bounds
-            if hasattr(self.controller, 'Bounds'):
-                self.controller.Bounds = bounds
-            elif hasattr(self.controller, 'bounds'):
+            success = False
+            if hasattr(self.controller, 'bounds'):
                 self.controller.bounds = bounds
-            elif hasattr(self.controller, 'put_Bounds'):
-                self.controller.put_Bounds(bounds)
+                logger.info("✓ Set bounds using 'bounds' property")
+                success = True
+            elif hasattr(self.controller, 'Bounds'):
+                self.controller.Bounds = bounds
+                logger.info("✓ Set bounds using 'Bounds' property")
+                success = True
             elif hasattr(self.controller, 'put_bounds'):
                 self.controller.put_bounds(bounds)
+                logger.info("✓ Set bounds using 'put_bounds' method")
+                success = True
+            elif hasattr(self.controller, 'put_Bounds'):
+                self.controller.put_Bounds(bounds)
+                logger.info("✓ Set bounds using 'put_Bounds' method")
+                success = True
             elif hasattr(self.controller, 'set_bounds'):
                 self.controller.set_bounds(bounds)
-            else:
-                logger.warning("No bounds property/method found on controller")
-                
-            logger.debug(f"Updated bounds to {rect.width()}x{rect.height()}")
+                logger.info("✓ Set bounds using 'set_bounds' method")
+                success = True
+            
+            if not success:
+                logger.warning("⚠ No bounds property/method found on controller")
+                # List available methods for debugging
+                attrs = [attr for attr in dir(self.controller) if not attr.startswith('_') and 'bound' in attr.lower()]
+                logger.info(f"Available bounds-related methods: {attrs}")
             
         except Exception as e:
-            logger.error(f"Failed to update bounds: {e}")
+            logger.error(f"✗ Failed to update bounds: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def _show_error(self, message: str):
         """Show error message in placeholder"""
@@ -682,25 +968,23 @@ class WebView2WinRTWidget(QWidget):
                 logger.error(f"Failed to execute JavaScript: {e}")
                 return None
         
-        if self.async_runner:
-            # Use threading approach
-            def handle_result(result):
-                if callback:
-                    callback(result)
-            
-            # Temporarily connect handler
-            self.async_runner.result_ready.connect(handle_result)
-            self.async_runner.run_async(execute())
-        else:
-            # Use qasync or direct execution
-            try:
-                future = asyncio.run_coroutine_threadsafe(execute(), asyncio.get_event_loop())
-                if callback:
-                    future.add_done_callback(lambda f: callback(f.result()))
-            except Exception as e:
-                logger.error(f"Failed to execute JavaScript: {e}")
-                if callback:
-                    callback(None)
+        # 使用正确的事件循环调度方式
+        try:
+            loop = asyncio.get_event_loop()
+            task = loop.create_task(execute())
+            if callback:
+                def handle_done(future):
+                    try:
+                        result = future.result()
+                        callback(result)
+                    except Exception as e:
+                        logger.error(f"JavaScript execution error: {e}")
+                        callback(None)
+                task.add_done_callback(handle_done)
+        except Exception as e:
+            logger.error(f"Failed to execute JavaScript: {e}")
+            if callback:
+                callback(None)
     
     # Qt event handlers
     

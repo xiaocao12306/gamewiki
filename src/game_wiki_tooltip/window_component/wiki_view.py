@@ -245,18 +245,41 @@ class WikiView(QWidget):
         self.current_url = ""
         self.current_title = ""
 
-        # Start WebView2 initialization immediately in background
-        QTimer.singleShot(0, self._initialize_webview_async)
+        # WebView2 initialization will be started when needed or when event loop is running
+        self._webview_init_requested = False  # Track if initialization was requested
+
+    def ensure_webview_ready(self):
+        """Ensure WebView2 is initialized and ready - safe to call anytime"""
+        if self._webview_initialized:
+            logger.info("WebView2 already initialized and ready")
+            return
+        if self._webview_initializing or self._webview_init_requested:
+            logger.info("WebView2 initialization already requested/in progress")
+            return
+        logger.info("Ensuring WebView2 is ready, triggering initialization")
+        self._webview_init_requested = True
+        QTimer.singleShot(200, self._initialize_webview_async)
 
     def load_url(self, url: str):
         """Load a URL in the web view"""
-        if self.web_view and self._webview_initialized:
-            self.web_view.setUrl(QUrl(url))
-            self.current_url = url
+        if self.web_view:  # Don't wait for _webview_initialized - let inner widget handle queuing
+            try:
+                # Use the load method which is compatible with WebView2WinRTWidget
+                if hasattr(self.web_view, 'load'):
+                    self.web_view.load(QUrl(url))
+                elif hasattr(self.web_view, 'setUrl'):
+                    self.web_view.setUrl(QUrl(url))
+                else:
+                    print(f"WebView has no load or setUrl method")
+                self.current_url = url
+            except Exception as e:
+                print(f"Failed to load URL: {e}")
         else:
             # Store pending URL, will be loaded when WebView is ready
             self._pending_url = url
-            # WebView should already be initializing, just wait
+            print(f"WebView2 not ready, storing URL for later: {url}")
+            # Ensure WebView initialization is triggered
+            self.ensure_webview_ready()
 
     def _connect_navigation_signals(self):
         """Connect navigation-related signals"""
@@ -536,7 +559,7 @@ class WikiView(QWidget):
         if self._webview_initialized or self._webview_initializing:
             return
 
-        self._webview_initializing = True
+        self._webview_initializing = True  # 开始创建就置True（不要立刻清掉）
 
         # WebView2 must be created in main thread due to COM requirements
         # Use QTimer to defer creation to avoid blocking current event
@@ -594,9 +617,10 @@ class WikiView(QWidget):
             # self._connect_navigation_signals()  # Will be called after init
 
             # Don't mark as initialized yet - wait for actual WebView2 init
+            # 重要：不要重置_webview_initializing，保持它为True直到首次loadFinished
             self._webview_ready = False
             self._webview_initialized = False
-            self._webview_initializing = False
+            # self._webview_initializing = False  # 删除这行！
 
             print("✅ WebView2 widget applied, waiting for initialization...")
             
@@ -605,6 +629,8 @@ class WikiView(QWidget):
                 def on_first_load():
                     if not self._webview_initialized:
                         self._webview_initialized = True
+                        self._webview_initializing = False  # 在"首次加载完成"才清掉
+                        self._webview_init_requested = False  # 释放闸门
                         self._webview_ready = True
                         self._connect_navigation_signals()
                         print("✅ WebView2 fully initialized and ready")
@@ -615,10 +641,23 @@ class WikiView(QWidget):
                             pass
                 web_view.loadFinished.connect(on_first_load)
 
-            # If there's a pending URL to load
-            if hasattr(self, '_pending_url'):
-                self.load_url(self._pending_url)
-                delattr(self, '_pending_url')
+            # If there's a pending URL to load (from load_wiki or load_url)
+            if hasattr(self, '_pending_url') and self._pending_url:
+                url = self._pending_url
+                title = getattr(self, '_pending_title', '')
+                
+                # Clear pending attributes
+                self._pending_url = None
+                self._pending_title = None
+                
+                # Load the pending wiki page
+                if title:
+                    print(f"Loading pending wiki page: {url}")
+                    # Use QTimer to ensure we're in the right context
+                    QTimer.singleShot(100, lambda: self.load_wiki(url, title))
+                else:
+                    print(f"Loading pending URL: {url}")
+                    QTimer.singleShot(100, lambda: self.load_url(url))
 
         except Exception as e:
             print(f"❌ Failed to apply WebView2: {e}")
@@ -631,13 +670,22 @@ class WikiView(QWidget):
         self.current_title = title
         self.url_bar.setText(url)  # Update URL bar instead of title label
         
+        # Always load if we have a web_view instance - let inner widget handle queuing
+        if not self.web_view:
+            print(f"WebView2 not created yet, saving URL for later: {url}")
+            self._pending_url = url
+            self._pending_title = title
+            # Ensure WebView2 initialization is triggered
+            self.ensure_webview_ready()
+            return
+        
         # Always ensure page is in interactive state when loading
         if self._is_paused:
             print("📝 Page was paused, resuming before load")
             self.resume_page()
         
         # Additional safeguard: force restore pointer events
-        if self.web_view:
+        if self.web_view and hasattr(self.web_view, 'page'):
             try:
                 self.web_view.page().runJavaScript("""
                     document.body.style.pointerEvents = '';
@@ -650,6 +698,7 @@ class WikiView(QWidget):
         if any(engine in url.lower() for engine in ['duckduckgo.com', 'google.com', 'bing.com']):
             self._start_wiki_monitoring(url)
 
+        # Always load if we have web_view - don't wait for _webview_initialized
         if self.web_view:
             try:
                 # For local files, use load method directly to preserve external resource loading capability
@@ -664,22 +713,31 @@ class WikiView(QWidget):
                 else:
                     # Non-local files, normal loading
                     self.web_view.load(QUrl(url))
+                    print(f"🌐 Loading URL: {url}")
             except Exception as e:
                 print(f"❌ Failed to load wiki page: {e}")
                 import traceback
                 traceback.print_exc()
-                # Display error message
-                self.web_view.setHtml(f"<h2>Error</h2><p>Failed to load page: {str(e)}</p>")
+                # Display error message - only if web_view is a real webview
+                if hasattr(self.web_view, 'setHtml'):
+                    self.web_view.setHtml(f"<h2>Error</h2><p>Failed to load page: {str(e)}</p>")
+                else:
+                    print(f"Cannot display error in web view - WebView2 not ready")
         else:
-            # Show fallback message
-            fallback_text = f"""
-                <h2>{title}</h2>
-                <p><strong>URL:</strong> <a href="{url}">{url}</a></p>
-                <hr>
-                <p>WebView2 is not available. Please click "Open in Browser" to view this page in your default browser.</p>
-                <p>Alternatively, you can copy and paste the URL above into your browser.</p>
-                """
-            self.content_widget.setHtml(fallback_text)
+            # Show fallback message - check if we have a label to display it
+            if hasattr(self, 'placeholder_widget') and self.placeholder_widget:
+                # Update placeholder label text
+                placeholder_layout = self.placeholder_widget.layout()
+                if placeholder_layout and placeholder_layout.count() > 0:
+                    label = placeholder_layout.itemAt(0).widget()
+                    if isinstance(label, QLabel):
+                        label.setText(f"WebView2 not ready.\nURL: {url}\n\nClick 'Open in Browser' to view in external browser.")
+            else:
+                print(f"WebView2 not available to load: {url}")
+                print(f"Title: {title}")
+            
+            # Trigger WebView2 initialization if not already started
+            self.ensure_webview_ready()
 
     def open_in_browser(self):
         """Open the current URL in default browser"""
@@ -964,9 +1022,10 @@ class WikiView(QWidget):
         """When WikiView is displayed, restore page activity"""
         super().showEvent(event)
 
-        # Ensure WebView2 is initialized when showing
+        # Ensure WebView2 is initialized when showing (with proper timing)
         if not self._webview_initialized and not self._webview_initializing:
-            self._initialize_webview_async()
+            # 延迟初始化以确保事件循环已经运行
+            QTimer.singleShot(100, self._initialize_webview_async)
 
         # Delay restore, ensure the page is fully displayed
         QTimer.singleShot(100, self.resume_page)

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView2 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .status {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        .test-button:hover {
+            background-color: #45a049;
+        }
+        .timestamp {
+            font-family: monospace;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 WebView2 测试成功!</h1>
+        
+        <div class="status">
+            ✅ 页面已成功加载
+        </div>
+        
+        <div class="info">
+            <h3>📊 测试信息</h3>
+            <p><strong>加载时间:</strong> <span class="timestamp" id="loadTime"></span></p>
+            <p><strong>用户代理:</strong> <span id="userAgent"></span></p>
+            <p><strong>页面URL:</strong> <span id="pageUrl"></span></p>
+            <p><strong>屏幕分辨率:</strong> <span id="screenRes"></span></p>
+        </div>
+        
+        <div class="info">
+            <h3>🔧 交互测试</h3>
+            <button class="test-button" onclick="testAlert()">测试弹窗</button>
+            <button class="test-button" onclick="testConsole()">测试控制台</button>
+            <button class="test-button" onclick="changeColor()">改变颜色</button>
+        </div>
+        
+        <div class="info">
+            <h3>📝 JavaScript 测试结果</h3>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载完成时执行
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('WebView2测试页面加载完成');
+            
+            // 显示加载时间
+            document.getElementById('loadTime').textContent = new Date().toLocaleString();
+            
+            // 显示用户代理
+            document.getElementById('userAgent').textContent = navigator.userAgent;
+            
+            // 显示页面URL
+            document.getElementById('pageUrl').textContent = window.location.href;
+            
+            // 显示屏幕分辨率
+            document.getElementById('screenRes').textContent = 
+                screen.width + ' x ' + screen.height + ' (' + window.innerWidth + ' x ' + window.innerHeight + ')';
+        });
+
+        function testAlert() {
+            alert('WebView2 JavaScript 弹窗测试成功!');
+            addTestResult('✅ 弹窗功能正常');
+        }
+
+        function testConsole() {
+            console.log('WebView2 控制台输出测试');
+            console.info('这是一条信息日志');
+            console.warn('这是一条警告日志');
+            console.error('这是一条错误日志（仅用于测试）');
+            addTestResult('✅ 控制台输出功能正常（查看开发者工具）');
+        }
+
+        function changeColor() {
+            const colors = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+            ];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            document.body.style.background = randomColor;
+            addTestResult('✅ 动态样式修改功能正常');
+        }
+
+        function addTestResult(message) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultItem = document.createElement('div');
+            resultItem.style.cssText = 'margin: 5px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 5px;';
+            resultItem.innerHTML = '<span class="timestamp">' + new Date().toLocaleTimeString() + '</span> - ' + message;
+            resultsDiv.appendChild(resultItem);
+        }
+
+        // 自动添加初始测试结果
+        setTimeout(function() {
+            addTestResult('✅ 页面DOM渲染完成');
+            addTestResult('✅ JavaScript执行正常');
+        }, 100);
+    </script>
+</body>
+</html>
