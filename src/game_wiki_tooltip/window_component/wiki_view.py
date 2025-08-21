@@ -3,6 +3,9 @@ Wiki view widget for displaying web content.
 """
 
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 from PyQt6.QtCore import (
     Qt, QTimer, QUrl, pyqtSignal
@@ -18,19 +21,27 @@ USE_WEBVIEW2 = True
 # Import WebView2Widget if enabled
 if USE_WEBVIEW2:
     try:
-        # Try the simple implementation first
-        from src.game_wiki_tooltip.webview2_simple import SimpleWebView2Widget as WebView2Widget
-        from src.game_wiki_tooltip.webview_widget import check_webview2_runtime
+        # Try the new WinRT implementation first
+        from src.game_wiki_tooltip.webview2_winrt import WebView2WinRTWidget as WebView2Widget
+        from src.game_wiki_tooltip.webview2_winrt import check_webview2_runtime
         WEBVIEW2_AVAILABLE = True
-        print("Using simplified WebView2 implementation")
+        print("Using PyWinRT WebView2 implementation")
         # Check if WebView2 Runtime is installed
         if not check_webview2_runtime():
             print("Warning: WebView2 Runtime not installed. Video playback may be limited.")
             print("Visit https://go.microsoft.com/fwlink/p/?LinkId=2124703 to install WebView2 Runtime.")
     except ImportError as e:
-        print(f"Warning: WebView2Widget not available: {e}")
-        WEBVIEW2_AVAILABLE = False
-        USE_WEBVIEW2 = False  # WebView2 failed to initialize
+        print(f"Warning: WebView2WinRTWidget not available: {e}")
+        # Fallback to simple implementation if available
+        try:
+            from src.game_wiki_tooltip.webview2_simple import SimpleWebView2Widget as WebView2Widget
+            from src.game_wiki_tooltip.webview_widget import check_webview2_runtime
+            WEBVIEW2_AVAILABLE = True
+            print("Falling back to simplified WebView2 implementation")
+        except ImportError:
+            print(f"Warning: No WebView2 implementation available")
+            WEBVIEW2_AVAILABLE = False
+            USE_WEBVIEW2 = False  # WebView2 failed to initialize
 else:
     WEBVIEW2_AVAILABLE = False
 
@@ -529,22 +540,35 @@ class WikiView(QWidget):
 
         # WebView2 must be created in main thread due to COM requirements
         # Use QTimer to defer creation to avoid blocking current event
-        def create_webview():
+        def create_and_init_webview():
             try:
                 if USE_WEBVIEW2 and WEBVIEW2_AVAILABLE:
-                    print("🔧 Creating WebView2...")
+                    print("🔧 Creating WebView2 widget...")
                     start_time = time.time()
                     web_view = WebView2Widget()
                     elapsed = time.time() - start_time
-                    print(f"✅ WebView2 created in {elapsed:.2f}s")
+                    print(f"✅ WebView2 widget created in {elapsed:.2f}s")
+                    
+                    # Apply the widget first
                     self._apply_webview(web_view)
+                    
+                    # Mark that we should auto-init on show
+                    web_view._auto_init_on_show = True
+                    
+                    # If already visible, initialize now
+                    if self.isVisible():
+                        logger.info("WikiView is visible, initializing WebView2 now")
+                        QTimer.singleShot(100, web_view.initialize)
+                    else:
+                        print("✅ WebView2 widget ready, will initialize when shown")
                 else:
                     print("⚠️ WebView2 not available")
             except Exception as e:
                 print(f"❌ WebView2 creation failed: {e}")
+                self._webview_initializing = False
 
         # Defer to next event loop iteration to avoid blocking
-        QTimer.singleShot(10, create_webview)
+        QTimer.singleShot(10, create_and_init_webview)
 
     def _apply_webview(self, web_view):
         """Apply WebView2 widget (must be called in main thread)"""
@@ -552,24 +576,44 @@ class WikiView(QWidget):
             return
 
         try:
-            # Remove placeholder
+            # Get layout first
             layout = self.layout()
-            layout.removeWidget(self.placeholder_widget)
-            self.placeholder_widget.deleteLater()
+            
+            # Remove placeholder safely
+            if self.placeholder_widget is not None:
+                layout.removeWidget(self.placeholder_widget)
+                self.placeholder_widget.deleteLater()
+                self.placeholder_widget = None  # Prevent further access
 
             # Apply WebView2
             self.web_view = web_view
             self.content_widget = self.web_view
             layout.addWidget(self.content_widget)
 
-            # Connect signals
-            self._connect_navigation_signals()
+            # Don't connect signals yet - wait for WebView2 to be initialized
+            # self._connect_navigation_signals()  # Will be called after init
 
-            self._webview_ready = True
-            self._webview_initialized = True
+            # Don't mark as initialized yet - wait for actual WebView2 init
+            self._webview_ready = False
+            self._webview_initialized = False
             self._webview_initializing = False
 
-            print("✅ WebView2 applied successfully")
+            print("✅ WebView2 widget applied, waiting for initialization...")
+            
+            # Connect to the WebView2's initialization signals
+            if hasattr(web_view, 'loadFinished'):
+                def on_first_load():
+                    if not self._webview_initialized:
+                        self._webview_initialized = True
+                        self._webview_ready = True
+                        self._connect_navigation_signals()
+                        print("✅ WebView2 fully initialized and ready")
+                        # Disconnect this handler
+                        try:
+                            web_view.loadFinished.disconnect(on_first_load)
+                        except:
+                            pass
+                web_view.loadFinished.connect(on_first_load)
 
             # If there's a pending URL to load
             if hasattr(self, '_pending_url'):

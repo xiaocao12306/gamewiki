@@ -18,10 +18,14 @@ hiddenimports = [
     'PyQt6.QtWidgets',
     'PyQt6.sip',
     
-    # WebView2 related imports
-    'pythonnet',
-    'clr',
-    'pywebview',
+    # WebView2 WinRT related imports
+    'winrt',  # winrt-runtime package provides 'winrt' module
+    'winrt.runtime',  # winrt runtime submodule
+    'winrt.system',  # winrt system submodule
+    'webview2',  # webview2-Microsoft.Web.WebView2.Core package
+    'webview2.microsoft.web.webview2.core',  # Correct module path
+    'webview2._webview2_microsoft_web_webview2_core',  # Internal module
+    'qasync',
     
     # AI related libraries
     'google.generativeai',
@@ -87,8 +91,7 @@ datas = [
     (str(src_path / "game_wiki_tooltip" / "assets"), "src/game_wiki_tooltip/assets"),
     # Vector database files - maintain consistent path with rag_query.py get_resource_path
     (str(src_path / "game_wiki_tooltip" / "ai" / "vectorstore"), "src/game_wiki_tooltip/ai/vectorstore"),
-    # WebView2 SDK files
-    ("src/game_wiki_tooltip/webview2/lib", "src/game_wiki_tooltip/webview2/lib"),
+    # Note: WebView2 SDK files no longer needed with WinRT implementation
 ]
 
 # Add Vosk library files and models

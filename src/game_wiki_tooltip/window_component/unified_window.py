@@ -51,7 +51,7 @@ except ImportError:
 try:
     from BlurWindow.blurWindow import GlobalBlur
     BLUR_WINDOW_AVAILABLE = True
-    print("✅ BlurWindow module loaded successfully")
+    logger.debug("BlurWindow module loaded successfully")
 except ImportError:
     print("Warning: BlurWindow module not found, will use default transparency effect")
     BLUR_WINDOW_AVAILABLE = False
@@ -144,8 +144,8 @@ class UnifiedAssistantWindow(QMainWindow):
         
         self.restore_geometry()
         
-        # Debug: print size after initialization
-        print(f"🏠 UnifiedAssistantWindow initialized, size: {self.size()}")
+        # Debug: log size after initialization
+        logger.debug(f"UnifiedAssistantWindow initialized, size: {self.size()}")
 
     def apply_blur_effect(self):
         """Apply BlurWindow transparency effect"""
@@ -166,13 +166,13 @@ class UnifiedAssistantWindow(QMainWindow):
                     Dark=False,      # Light theme
                     QWidget=self
                 )
-                print("✅ Win10 Aero effect applied")
+                logger.debug("Win10 Aero effect applied")
                     
             except Exception as e:
-                print(f"❌ BlurWindow application failed: {e}")
-                print("Will use default transparency effect")
+                logger.debug(f"BlurWindow application failed: {e}")
+                logger.debug("Will use default transparency effect")
         else:
-            print("⚠️ BlurWindow not available, using default transparency effect")
+            logger.debug("BlurWindow not available, using default transparency effect")
             
     def set_window_rounded_corners(self):
         """Set window rounded corners"""
@@ -198,19 +198,19 @@ class UnifiedAssistantWindow(QMainWindow):
             )
             
             if result == 0:
-                print("✅ Window rounded corners set successfully")
+                logger.debug("Window rounded corners set successfully")
             else:
                 print(f"⚠️ Window rounded corners setting failed: {result}")
                 
         except Exception as e:
-            print(f"❌ Failed to set window rounded corners: {e}")
+            logger.debug(f"Failed to set window rounded corners: {e}")
         
     def _ensure_history_manager(self):
         """Ensure history manager is initialized"""
         if self.history_manager is None:
             from src.game_wiki_tooltip.window_component.history_manager import WebHistoryManager
             self.history_manager = WebHistoryManager()
-            print("📚 History manager initialized")
+            logger.debug("History manager initialized")
         
     def init_ui(self):
         """Initialize the main window UI"""
@@ -2344,12 +2344,12 @@ class UnifiedAssistantWindow(QMainWindow):
         try:
             # First restore UI state, avoid user seeing stuck state
             self.set_generating_state(False)
-            print("✅ UI state restored")
+            logger.debug("UI state restored")
             
             # Hide status information
             try:
                 self.chat_view.hide_status()
-                print("✅ Status information hidden")
+                logger.debug("Status information hidden")
             except Exception as e:
                 print(f"⚠️ Error hiding status information: {e}")
             
@@ -2357,17 +2357,17 @@ class UnifiedAssistantWindow(QMainWindow):
             if self.streaming_widget:
                 try:
                     self.streaming_widget.mark_as_stopped()
-                    print("✅ Streaming message marked as stopped")
+                    logger.debug("Streaming message marked as stopped")
                 except Exception as e:
                     print(f"⚠️ Error marking streaming message as stopped: {e}")
             
             # Finally emit stop signal, use QTimer.singleShot to avoid possible deadlock
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, lambda: self._emit_stop_signal_safe())
-            print("✅ Stop signal scheduled to be sent")
+            logger.debug("Stop signal scheduled to be sent")
             
         except Exception as e:
-            print(f"❌ Error during stop generation: {e}")
+            logger.error(f"Error during stop generation: {e}")
             # Even if error occurs, try to restore UI state
             try:
                 self.set_generating_state(False)
@@ -2378,7 +2378,7 @@ class UnifiedAssistantWindow(QMainWindow):
         """Safely emit stop signal"""
         try:
             self.stop_generation_requested.emit()
-            print("✅ Stop signal sent")
+            logger.debug("Stop signal sent")
         except Exception as e:
             print(f"⚠️ Error sending stop signal: {e}")
     
@@ -2420,22 +2420,22 @@ class UnifiedAssistantWindow(QMainWindow):
         """Load non-critical content after window is shown"""
         try:
             # Load shortcuts
-            print("📌 Loading shortcuts...")
+            logger.debug("Loading shortcuts...")
             start_time = time.time()
             self.load_shortcuts()
-            print(f"✅ Shortcuts loaded in {time.time() - start_time:.2f}s")
+            logger.debug(f"Shortcuts loaded in {time.time() - start_time:.2f}s")
             
             # Initialize history manager
-            print("📌 Initializing history manager...")
+            logger.debug("Initializing history manager...")
             start_time = time.time()
             self._ensure_history_manager()
-            print(f"✅ History manager initialized in {time.time() - start_time:.2f}s")
+            logger.debug(f"History manager initialized in {time.time() - start_time:.2f}s")
             
             # Load other deferred content
             # Add more deferred loading here if needed
             
         except Exception as e:
-            print(f"❌ Error loading deferred content: {e}")
+            logger.error(f"Error loading deferred content: {e}")
             import traceback
             traceback.print_exc()
         

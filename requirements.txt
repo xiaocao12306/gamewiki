@@ -5,6 +5,12 @@ PyQt6>=6.4.0
 python-dotenv>=1.0.0
 markdown>=3.5.0
 
+# WebView2 WinRT support (replaces pythonnet)
+winrt-runtime>=3.2
+webview2-Microsoft.Web.WebView2.Core>=3.1
+winrt-Windows.Foundation>=3.2  # Windows Foundation types for WebView2
+qasync>=0.27
+
 # 批量嵌入和向量库相关依赖
 # NumPy 2.x 兼容性：使用支持 NumPy 2.x 的 FAISS 版本
 numpy>=1.25.0,<3.0
@@ -21,9 +27,6 @@ jieba>=0.42.1
 
 # 打包工具
 pyinstaller>=6.0.0
-
-# WebView2 支持
-pythonnet>=3.0.0  # WebView2 支持已启用
 
 # BlurWindow半透明效果依赖
 BlurWindow>=1.0.0

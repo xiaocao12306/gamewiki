@@ -197,3 +197,5 @@ build_temp/
 # Vosk voice recognition models (large binary files)
 src/game_wiki_tooltip/assets/vosk_models/
 *.vosk
+
+nul

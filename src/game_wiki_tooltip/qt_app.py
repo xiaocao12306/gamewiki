@@ -6,6 +6,7 @@ import sys
 import logging
 import os
 import argparse
+import asyncio
 
 import win32con
 import win32gui
@@ -13,6 +14,9 @@ import win32gui
 from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox
 from PyQt6.QtCore import QTimer, QObject, QAbstractNativeEventFilter, Qt
 from PyQt6.QtGui import QIcon
+
+# Import qasync for event loop integration
+import qasync
 
 from src.game_wiki_tooltip.core.config import SettingsManager, GameConfigManager
 from src.game_wiki_tooltip.qt_tray_icon import QtTrayIcon
@@ -990,11 +994,16 @@ def run_main_app(qapp, splash_screen=None):
     except Exception as e:
         logger.error(f"Failed to set Qt application attributes: {e}")
     
+    # Set up qasync event loop integration
+    loop = qasync.QEventLoop(qapp)
+    asyncio.set_event_loop(loop)
+    
     # Create main application (pass splash screen reference)
     app = GameWikiApp(splash_screen=splash_screen, force_settings=args.settings)
     
-    # Run application (splash screen will be closed when mini window is shown)
-    sys.exit(app.run())
+    # Run application with qasync loop
+    with loop:
+        sys.exit(app.run())
 
 def main():
     import sys
