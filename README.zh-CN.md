@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/许可证-MIT-yellow)
 [![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
 
-👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/latest)**
+👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)**
 
 ## ✨ 为什么选择GameWikiTooltip？
 
@@ -19,7 +19,9 @@
 - **🔥 一键呼出，即问即答** - 按下`Ctrl+Q`，无需切屏即可查询攻略
 - **🤖 AI游戏专家** - 基于Google Gemini + 本地知识库的智能问答
 
-_“Gemini API“免费层级”通过 API 服务提供，具有较低的速率限制，仅用于测试目的。在所有支持的国家/地区，Google AI Studio 的使用**完全免费**。”_ -根据Gemini API文档
+为使用AI问答功能，你需要一个谷歌账号并从Google AI Studio获取GEMINI API
+
+_“Gemini API“免费层级”通过 API 服务提供，具有较低的[速率限制](https://ai.google.dev/gemini-api/docs/rate-limits#free-tier)，仅用于测试目的。在所有支持的国家/地区，Google AI Studio 的使用**完全免费**。”_ -根据[Gemini API文档](https://ai.google.dev/gemini-api/docs/pricing)
 
 ## 🚀 快速安装
 
@@ -28,6 +30,8 @@ _“Gemini API“免费层级”通过 API 服务提供，具有较低的速率�
 2. 解压ZIP文件
 3. 运行`GameWikiAssistant.exe`
 4. 设置热键，开始游戏！
+
+💡 **无游戏试用AI对话功能**：如果你想试用AI对话功能但电脑上没有支持的游戏，可以创建一个文件夹，并重命名为存在知识库的游戏名称（如"饥荒联机版"或"地狱潜兵2"），然后将焦点放在对应名称的文件夹上并触发热键即可访问AI助手。示例"how can I catch a rabbit?"
 
 ### 方式二：源码运行
 ```bash
@@ -63,13 +67,15 @@ python -m src.game_wiki_tooltip
 ![Demo](data/demo1.gif)
 
 **[观看使用视频](https://your-video-or-doc-link)**
-- 作为置顶浏览器
 
-![Demo](data/demo2.gif)
-Quick access to Wikis 
+- 快速查询wiki结果
 ![Demo](data/demo3.gif)
-Quick access to webs
+![Demo](data/demo4.png)
+
+- 作为置顶浏览器
 ![Demo](data/demo2.gif)
+
+
 
 
 ## 🔧 配置说明
@@ -116,7 +122,7 @@ Quick access to webs
 
 ## 📄 许可证
 
-MIT许可证 - 详见[LICENSE](LICENSE)文件
+根据pyqt6库的使用要求，我们使用了GPL3.0许可证 - 详见[LICENSE](LICENSE)文件
 
 ## 🙏 致谢
 

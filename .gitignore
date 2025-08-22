@@ -198,4 +198,5 @@ build_temp/
 src/game_wiki_tooltip/assets/vosk_models/
 *.vosk
 
+src/live_api_in_progress
 nul

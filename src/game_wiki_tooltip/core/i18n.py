@@ -204,7 +204,7 @@ class TranslationManager:
             "wiki_edit_button": "Edit",
             "wiki_reset_button": "Reset to Default",
             "wiki_tips": "Tip: Edit the base URL for each game to use your preferred wiki source.",
-            "wiki_tips_with_warning": "Tip: Edit the base URL for each game to use your preferred wiki source.<br><br><b>Important: The game name must exactly match the game window title for wiki search to work!</b><br><br><b>Note: Requires restart to fully apply language changes to wiki URLs.</b>",
+            "wiki_tips_with_warning": "Tip: Edit the base URL for each game to use your preferred wiki source.<br><b>Important: The game name must exactly match the game window title!</b><br><b>Note: Requires restart to fully apply language changes to wiki URLs.</b>",
             "wiki_select_game": "Please select a game to edit",
             "wiki_select_game_remove": "Please select a game to remove",
             "wiki_edit_title": "Edit Wiki URL",

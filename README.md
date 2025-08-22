@@ -19,7 +19,9 @@ Never alt-tab out of your game again! Get instant answers, build guides, and wik
 - **🔥 One Hotkey, All Answers** - Press `Ctrl+Q` to instantly overlay wiki/AI chat without leaving your game
 - **🤖 AI Game Expert** - Powered by Google Gemini with local knowledge bases for smart Q&A. 
 
-_"The Gemini API "free tier" is offered through the API service with lower rate limits for testing purposes. Google AI Studio usage is **completely free** in all available countries" - according to Gemini API docs_
+To use the AI chatbot feature, you will need to have a google account and get gemini API from Google AI Studio.
+
+_"The **Gemini API** "free tier" is offered through the API service with lower [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits#free-tier) for testing purposes. Google AI Studio usage is **completely free** in all available countries" - according to [Gemini API docs](https://ai.google.dev/gemini-api/docs/pricing)_
 ## 📸 Screenshots
 - Use as AI assitant
 
@@ -27,12 +29,12 @@ _"The Gemini API "free tier" is offered through the API service with lower rate 
 
 **[View use video(coming soon)](https://your-video-or-doc-link)**
 
-- Use as an web browser
-
-Quick access to Wikis 
+- Quick access to Wikis
 ![Demo](data/demo3.gif)
-Quick access to webs
+![Demo](data/demo4.png)
+- Use as an web browser
 ![Demo](data/demo2.gif)
+
 
 
 ## 🚀 Quick Install
@@ -42,6 +44,8 @@ Quick access to webs
 2. Extract the ZIP file
 3. Run `GameWikiAssistant/GameWikiAssistant.exe`
 4. Set your hotkey and start gaming!
+
+💡 **Try AI Chat Features Without Games**: If you want to test the AI conversation feature but don't have any supported games installed, you can create a folder and rename it to any game with an existing knowledge base (like "Don't Starve Together" or "HELLDIVERS™ 2"). Then, focus on that folder and trigger the hotkey to access the AI assistant. Try ask question like "how can I catch a rabbit?"
 
 ### Option 2: Run from Source
 ```bash
@@ -112,7 +116,7 @@ We love contributions! Whether it's:
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) file
+With the usage of Pyqt6, we use GPL3.0 License - See [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 

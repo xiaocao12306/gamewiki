@@ -1,6 +1,0 @@
-[project]
-name = "game-wiki-tooltip"
-...
-
-[tool.setuptools.package-data]
-"src.game_wiki_tooltip.assets" = ["*.json", "*.ico"]

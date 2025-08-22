@@ -891,25 +891,27 @@ class QtSettingsWindow(QMainWindow):
         """Create wiki URL configuration tab"""
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
+        layout.setContentsMargins(20, 20, 20, 10)  # Reduced bottom margin
+        layout.setSpacing(15)  # Reduced spacing between sections
         
         # Title
         title = QLabel(t("wiki_title"))
         title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
         layout.addWidget(title)
         
-        # Description with search box
+        # Description with search box - compact layout
         desc_search_layout = QHBoxLayout()
+        desc_search_layout.setSpacing(10)  # Reduced spacing
         
         # Description
         desc_label = QLabel(t("wiki_description"))
         desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("color: #666;")
+        desc_label.setStyleSheet("color: #666; font-size: 12px;")  # Slightly smaller font
         desc_search_layout.addWidget(desc_label, 1)
         
         # Search box
         search_label = QLabel(t("wiki_search_label"))
+        search_label.setStyleSheet("font-size: 12px;")  # Consistent font size
         desc_search_layout.addWidget(search_label)
         
         self.wiki_search_input = QLineEdit()
@@ -920,8 +922,11 @@ class QtSettingsWindow(QMainWindow):
         
         layout.addLayout(desc_search_layout)
         
-        # Wiki URL list widget
+        # Wiki URL list widget with increased height
         self.wiki_list = QListWidget()
+        self.wiki_list.setMinimumHeight(150)  # Increased height for better visibility
+        self.wiki_list.setSizePolicy(self.wiki_list.sizePolicy().horizontalPolicy(), 
+                                   self.wiki_list.sizePolicy().Policy.Expanding)
         self.wiki_list.setStyleSheet("""
             QListWidget {
                 border: 1px solid #ccc;
@@ -940,11 +945,11 @@ class QtSettingsWindow(QMainWindow):
                 color: #1976d2;
             }
         """)
-        layout.addWidget(self.wiki_list)
+        layout.addWidget(self.wiki_list, 1)  # Give more weight to the list widget
         
-        # Buttons layout
+        # Buttons layout - reduced spacing
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(10)
+        button_layout.setSpacing(8)  # Reduced button spacing
         
         # Add button
         self.add_wiki_button = QPushButton("Add")
@@ -969,15 +974,13 @@ class QtSettingsWindow(QMainWindow):
         button_layout.addStretch()
         layout.addLayout(button_layout)
         
-        # Tips with bold warning
+        # Tips with bold warning - reduced spacing
         tips_html = t("wiki_tips_with_warning")
         tips_label = QLabel(tips_html)
         tips_label.setWordWrap(True)
-        tips_label.setStyleSheet("color: #666; font-size: 11px;")
+        tips_label.setStyleSheet("color: #666; font-size: 11px; margin-top: 5px;")
         tips_label.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(tips_label)
-        
-        layout.addStretch()
         
         # Initialize search filter state
         self.wiki_search_filter = ""
