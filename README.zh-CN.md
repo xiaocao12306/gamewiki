@@ -5,7 +5,7 @@
 ![Windows](https://img.shields.io/badge/平台-Windows%2010%2F11-blue?logo=windows)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-green?logo=python)
 ![Games](https://img.shields.io/badge/AI游戏-4款支持-orange?logo=gamepad)
-![License](https://img.shields.io/badge/许可证-MIT-yellow)
+![License](https://img.shields.io/badge/许可证-GPL3.0-yellow)
 [![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
 
 👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant_Portable_onedir.zip)**
@@ -75,9 +75,7 @@ python -m src.game_wiki_tooltip
 - 作为置顶浏览器
 ![Demo](data/demo2.gif)
 
-
-
-
+  
 ## 🔧 配置说明
 
 ### 首次启动设置
