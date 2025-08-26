@@ -66,7 +66,7 @@ python -m src.game_wiki_tooltip
 
 ![Demo](data/demo1.gif)
 
-**[观看使用视频](https://your-video-or-doc-link)**
+**[观看使用视频](https://www.youtube.com/watch?v=9QPJ6KVg7gE)**
 
 - 快速查询wiki结果
 ![Demo](data/demo3.gif)

@@ -27,7 +27,7 @@ _"The **Gemini API** "free tier" is offered through the API service with lower [
 
 ![Demo](data/demo1.gif)
 
-**[View use video(coming soon)](https://your-video-or-doc-link)**
+**[View use video](https://www.youtube.com/watch?v=9QPJ6KVg7gE)**
 
 - Quick access to Wikis
 ![Demo](data/demo3.gif)
