@@ -125,10 +125,12 @@ python -m src.game_wiki_tooltip
 ## 🙏 致谢
 
 - **Google Gemini AI** - 提供智能响应能力
-- **FAISS** - 超快向量搜索引擎
 - **游戏社区** - 提供Wiki内容和知识
-- **贡献者们** - 让这个工具越来越好
 
+## 联系方式
+
+- Weizhen Chu
+- chu.weizhen04@gmail.com
 ---
 
 <div align="center">

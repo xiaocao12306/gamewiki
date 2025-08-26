@@ -123,6 +123,10 @@ With the usage of Pyqt6, we use GPL3.0 License - See [LICENSE](LICENSE) file
 - **Google Gemini AI** - Powering intelligent responses
 - **Gaming Communities** - For wiki content and knowledge
 
+## Contact me 
+
+- Weizhen Chu
+- chu.weizhen04@gmail.com
 ---
 
 <div align="center">
