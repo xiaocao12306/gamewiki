@@ -15,7 +15,6 @@ __all__ = [
     'unified_query_processor',
     'gemini_embedding',
     'gemini_summarizer',
-    'google_search_grounding',
     'intent_aware_reranker',
     # Note: 'intent' module is deprecated, functionality moved to unified_query_processor
 ]

@@ -5,7 +5,8 @@ import os
 import json
 import logging
 from typing import List, Dict, Optional, Any, AsyncGenerator
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,17 +36,8 @@ class GeminiSummarizer:
             self.config = config
             self.rag_config = None
         
-        # Configure Gemini API
-        genai.configure(api_key=self.config.api_key)
-        
-        # Initialize model with safety settings (no max_output_tokens limit)
-        self.model = genai.GenerativeModel(
-            model_name=self.config.model_name,
-            generation_config={
-                "temperature": self.config.temperature,
-                # Let the model decide output length based on query requirements
-            }
-        )
+        # API key will be used when creating the client instance
+        # Model will be configured per request using the client API
         
         logger.info(f"Initialized GeminiSummarizer with model: {self.config.model_name}")
     
@@ -102,125 +94,74 @@ class GeminiSummarizer:
             complete_response = ""
             
             # Use new Client API for streaming calls
-            import google.generativeai as genai
             try:
-                from google import genai as new_genai
-                from google.genai import types as new_types
-                NEW_GENAI_AVAILABLE = True
-            except ImportError:
-                NEW_GENAI_AVAILABLE = False
-            
-            if NEW_GENAI_AVAILABLE:
-                try:
-                    # Try to use new Client API (recommended way)
-                    client = new_genai.Client(api_key=self.config.api_key)
-                    
-                    # Configure Google Search tool if enabled
-                    tools = []
-                    if self.config.enable_google_search:
-                        print(f"🔍 [STREAM-DEBUG] Enabling Google Search tool (new API)")
-                        grounding_tool = new_types.Tool(
-                            google_search=new_types.GoogleSearch()
-                        )
-                        tools = [grounding_tool]
-                    
-                    # Build config with system instruction
-                    config = new_types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        tools=tools if tools else None,
-                        # Allow model to generate appropriate length based on query
-                        temperature=self.config.temperature,
-                        thinking_config=new_types.ThinkingConfig(thinking_budget=self.config.thinking_budget)
-                    )
-                    
-                    # Stream content generation
-                    response = client.models.generate_content_stream(
-                        model=self.config.model_name,
-                        contents=[prompt],
-                        config=config
-                    )
+                # Configure the client
+                client = genai.Client(api_key=self.config.api_key)
                 
-                    print(f"✅ [STREAM-DEBUG] Started receiving streaming response (new Client API)")
-                    
-                    # Real-time streaming content output
-                    for chunk in response:
-                        if chunk.text:
-                            print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
-                            complete_response += chunk.text
-                            yield chunk.text
-                        
-                    print(f"🎉 [STREAM-DEBUG] Streaming response completed (new Client API)")
-                    
-                except Exception as e:
-                    print(f"❌ [STREAM-DEBUG] New Client API failed: {e}")
-                    raise e
-            else:
-                # If new API is not available, fallback to old API
-                print(f"⚠️ [STREAM-DEBUG] New Client API not available, trying old API method")
-                
-                # Configure generation parameters
-                generation_config = genai.types.GenerationConfig(
-                    temperature=self.config.temperature,
-                    max_output_tokens=8192,
-                )
-                
-                # Configure Google Search tool if enabled  
+                # Configure Google Search tool if enabled
                 tools = []
                 if self.config.enable_google_search:
-                    print(f"🔍 [STREAM-DEBUG] Google Search not supported in old API, using knowledge base only")
-                    # Note: Old API may not support Google Search in the same way
-                    tools = []
+                    logger.debug("Enabling Google Search tool")
+                    grounding_tool = types.Tool(
+                        google_search=types.GoogleSearch()
+                    )
+                    tools = [grounding_tool]
                 
-                # Use old GenerativeModel API
-                model = genai.GenerativeModel(
-                    model_name=self.config.model_name,
-                    generation_config=generation_config,
-                    tools=tools if tools else None
+                # Build config with system instruction
+                config = types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    tools=tools if tools else None,
+                    temperature=self.config.temperature,
+                    thinking_config=types.ThinkingConfig(thinking_budget=self.config.thinking_budget)
                 )
                 
-                # Check if streaming method exists
-                if hasattr(model, 'generate_content_stream'):
-                    print(f"✅ [STREAM-DEBUG] Using old API streaming method")
-                    response = model.generate_content_stream(prompt)
-                    
-                    for chunk in response:
-                        if chunk.text:
-                            print(f"📝 [STREAM-DEBUG] Received streaming chunk: {len(chunk.text)} characters")
-                            complete_response += chunk.text
-                            yield chunk.text
-                    
-                else:
-                    print(f"❌ [STREAM-DEBUG] Old API doesn't support streaming, fallback to sync method")
-                    # Complete fallback to sync method
-                    response = model.generate_content(prompt)
-                    if response and response.text:
-                        complete_response = response.text
-                        yield response.text
-                        
+                # Stream content generation
+                response = client.models.generate_content_stream(
+                    model=self.config.model_name,
+                    contents=[prompt],
+                    config=config
+                )
             
-            # After streaming output completes, add video source information
-            print(f"🎬 [STREAM-DEBUG] Streaming output completed, starting video source extraction")
-            video_sources_text = self._extract_video_sources(chunks, complete_response)
-            if video_sources_text:
-                print(f"✅ [STREAM-DEBUG] Found video sources, adding to streaming output")
-                # Add separator to ensure proper identification
-                separator = "\n\n---\n"
-                yield separator + video_sources_text
-            else:
-                print(f"❌ [STREAM-DEBUG] No video sources found")
+                logger.debug("Started receiving streaming response")
+                
+                # Real-time streaming content output
+                for chunk in response:
+                    if chunk.text:
+                        logger.debug(f"Received streaming chunk: {len(chunk.text)} characters")
+                        complete_response += chunk.text
+                        yield chunk.text
+                    
+                logger.debug("Streaming response completed")
+                
+                # After streaming output completes, add video source information
+                logger.debug("Streaming output completed, starting video source extraction")
+                video_sources_text = self._extract_video_sources(chunks, complete_response)
+                if video_sources_text:
+                    logger.debug("Found video sources, adding to streaming output")
+                    # Add separator to ensure proper identification
+                    separator = "\n\n---\n"
+                    yield separator + video_sources_text
+                else:
+                    logger.debug("No video sources found")
+                        
+            except Exception as e:
+                logger.error(f"Streaming API call failed: {e}")
+                logger.debug(f"Fallback to sync method")
+                
+                # Check if it's an API key issue
+                error_msg = str(e).lower()
+                if 'api_key' in error_msg or 'authentication' in error_msg or 'unauthorized' in error_msg or 'inputs argument' in error_msg:
+                    logger.debug("Detected API key related error")
+                    yield "API key configuration issue, please check if Gemini API key is correctly configured.\n\n"
+                    return
+                else:
+                    yield f"An error occurred while generating response: {str(e)}\n\n"
+                    return
                     
         except Exception as e:
-            print(f"❌ [STREAM-DEBUG] Streaming API call failed: {e}")
-            print(f"🔄 [STREAM-DEBUG] Fallback to sync method")
-            import traceback
-            print(f"❌ [STREAM-DEBUG] Detailed error info: {traceback.format_exc()}")
-            
-            # Check if it's an API key issue
-            error_msg = str(e).lower()
-            if 'api_key' in error_msg or 'authentication' in error_msg or 'unauthorized' in error_msg or 'inputs argument' in error_msg:
-                print(f"🔑 [STREAM-DEBUG] Detected API key related error")
-                yield "❌ API key configuration issue, please check if Gemini API key is correctly configured.\n\n"
-                return
+            logger.error(f"Overall streaming process failed: {e}")
+            yield f"An error occurred during content generation: {str(e)}\n\n"
+            return
     
     def _build_system_instruction(self, language: str = "auto") -> str:
         """Build system instruction for Gemini"""

@@ -437,6 +437,59 @@ class StreamingMessageWidget(MessageWidget):
                 print(f"⚠️ [STREAMING] Failed to connect linkActivated signal during initialization: {e}")
                 self.link_signal_connected = False
 
+    def _is_non_streaming_content(self, content: str) -> bool:
+        """
+        检测是否是非流式内容（如来自FallbackGuideHandler的内容）
+        非流式内容的特征：
+        1. 以NOTICE开头的fallback内容
+        2. 包含完整结构的长内容（>1000字符且包含多个段落）
+        """
+        if not content:
+            return False
+        
+        # 检测NOTICE标记（FallbackGuideHandler的标志）
+        if content.strip().startswith("NOTICE:"):
+            return True
+            
+        # 检测长内容且结构完整（可能是非流式API返回的完整内容）
+        if len(content) > 1000 and content.count('\n\n') >= 3:
+            return True
+            
+        return False
+
+    def _display_complete_content(self, content: str):
+        """直接显示完整内容，不使用打字机效果"""
+        print(f"📋 [NON-STREAMING] Displaying complete content directly, length: {len(content)}")
+        
+        # 停止所有动画
+        self.typing_timer.stop()
+        self.dots_timer.stop()
+        
+        # 检测格式并直接显示
+        if detect_markdown_content(content):
+            html_content = convert_markdown_to_html(content)
+            self.content_label.setTextFormat(Qt.TextFormat.RichText)
+            self.content_label.setText(html_content)
+            self.current_format = Qt.TextFormat.RichText
+            
+            # 确保链接处理正确配置
+            if not self.link_signal_connected:
+                self.content_label.linkActivated.connect(self.on_link_clicked)
+                self.link_signal_connected = True
+            self.content_label.setOpenExternalLinks(False)
+        else:
+            self.content_label.setTextFormat(Qt.TextFormat.PlainText)
+            self.content_label.setText(content)
+            self.current_format = Qt.TextFormat.PlainText
+        
+        # 标记为完成
+        self.display_index = len(content)
+        self.message.type = MessageType.AI_RESPONSE
+        self.streaming_finished.emit()
+        
+        # 恢复灵活宽度
+        self._restore_flexible_width()
+
     def _optimize_for_streaming(self):
         """Optimize streaming message layout to prevent flickering"""
         # Find message bubble
@@ -586,6 +639,13 @@ class StreamingMessageWidget(MessageWidget):
         timer_was_active = self.typing_timer.isActive()
 
         self.full_text += chunk
+        
+        # 检测是否是非流式内容（如来自FallbackGuideHandler的内容）
+        if self._is_non_streaming_content(self.full_text):
+            print(f"📋 [NON-STREAMING] Detected non-streaming content, skipping typewriter effect")
+            self._display_complete_content(self.full_text)
+            return
+
         print(f"✅ [STREAMING-WIDGET] Full text updated, new length: {len(self.full_text)}")
 
         # Improved initial detection logic:

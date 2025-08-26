@@ -663,25 +663,8 @@ class RAGIntegration(QObject):
                 translated_query=query
             )
         
-        # ✅ New: Before calling LLM, check if the game window supports RAG guide query (has vector library)
-        if game_context:
-            # 1. Check if RAG guide query is supported (has vector library)
-            from .ai.rag_query import map_window_title_to_game_name
-            game_name = map_window_title_to_game_name(game_context)
-            
-            # 2. Check if it is supported in games.json configuration (supports wiki query)
-            is_wiki_supported = self._is_game_supported_for_wiki(game_context)
-            
-            # If neither RAG guide query nor wiki query is supported, return unsupported
-            if not game_name and not is_wiki_supported:
-                logger.info(f"📋 Window '{game_context}' does not support guide query")
-                return QueryIntent(
-                    intent_type='unsupported',
-                    confidence=1.0,
-                    rewritten_query=query,
-                    translated_query=query
-                )
-        else:
+        # Check if we have game context, if not use simple intent detection
+        if not game_context:
             # If there is no game context (no recorded game window), skip unified query processing, use simple intent detection
             logger.info("📋 No recorded game window, skip unified query processing, use simple intent detection")
             return self._simple_intent_detection(query)
@@ -974,7 +957,44 @@ class RAGIntegration(QObject):
                         
                         # Check if vector store exists before attempting initialization
                         if not self._check_vector_store_exists(vector_game_name):
-                            logger.info(f"No vector store found for game '{vector_game_name}', showing not supported message")
+                            logger.info(f"No vector store found for game '{vector_game_name}', checking intent for fallback")
+                            
+                            # Check if intent is guide and use fallback handler
+                            if unified_query_result and unified_query_result.intent == "guide":
+                                logger.info("🌐 Using fallback guide handler for game without vector store")
+                                
+                                try:
+                                    # Import fallback handler
+                                    from .ai.fallback_guide_handler import create_fallback_guide_handler
+                                    
+                                    # Create fallback handler
+                                    fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                    
+                                    # Determine language
+                                    from src.game_wiki_tooltip.core.i18n import get_current_language
+                                    current_lang = get_current_language()
+                                    
+                                    # Use fallback handler for streaming guide generation
+                                    async for chunk in fallback_handler.generate_guide_stream(
+                                        query=query,
+                                        game_context=game_context,
+                                        language=current_lang,
+                                        original_query=original_query
+                                    ):
+                                        # Check stop flag if provided
+                                        if stop_flag and stop_flag():
+                                            logger.info("🛑 Fallback guide generation stopped by user")
+                                            return
+                                        
+                                        self.streaming_chunk_ready.emit(chunk)
+                                    
+                                    return
+                                    
+                                except Exception as e:
+                                    logger.error(f"Fallback guide handler failed: {e}")
+                                    # Fall through to error message below
+                            
+                            # If not guide intent or fallback failed, show error
                             self.streaming_chunk_ready.emit(self._get_localized_message("game_not_supported"))
                             return
                         
@@ -1024,12 +1044,52 @@ class RAGIntegration(QObject):
                             self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
                         return
                 else:
-                    logger.info(f"📋 Window '{game_context}' does not support guide queries")
+                    logger.info(f"📋 Window '{game_context}' does not have vector store for guide queries")
                     
-                    # Use internationalized error information
+                    # Check if we have unified_query_result to determine intent
+                    if unified_query_result and unified_query_result.intent == "guide":
+                        logger.info("🌐 Using fallback guide handler for unsupported game")
+                        
+                        # Get API settings for fallback handler
+                        settings = self.settings_manager.get()
+                        api_settings = settings.get('api', {})
+                        gemini_api_key = api_settings.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+                        
+                        if gemini_api_key:
+                            try:
+                                # Import fallback handler
+                                from .ai.fallback_guide_handler import create_fallback_guide_handler
+                                
+                                # Create fallback handler
+                                fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                
+                                # Determine language
+                                from src.game_wiki_tooltip.core.i18n import get_current_language
+                                current_lang = get_current_language()
+                                
+                                # Use fallback handler for streaming guide generation
+                                async for chunk in fallback_handler.generate_guide_stream(
+                                    query=query,
+                                    game_context=game_context,
+                                    language=current_lang,
+                                    original_query=original_query
+                                ):
+                                    # Check stop flag if provided
+                                    if stop_flag and stop_flag():
+                                        logger.info("🛑 Fallback guide generation stopped by user")
+                                        return
+                                    
+                                    self.streaming_chunk_ready.emit(chunk)
+                                
+                                return
+                                
+                            except Exception as e:
+                                logger.error(f"Fallback guide handler failed: {e}")
+                                # Fall through to error handling below
+                    
+                    # If not guide intent or fallback failed, show error
                     from src.game_wiki_tooltip.core.i18n import t
                     error_msg = t("game_not_supported", window=game_context)
-                    
                     self.error_occurred.emit(error_msg)
                     return
             else:
