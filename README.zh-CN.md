@@ -135,6 +135,6 @@ python -m src.game_wiki_tooltip
 
 **⭐ 如果这个工具帮助了你的游戏体验，请给我们Star！**
 
-[报告问题](https://github.com/rimulu030/gamewiki/issues) · [Discord社区](https://discord.gg/gamewiki)
+[报告问题](https://github.com/rimulu030/gamewiki/issues) · [Discord社区](https://discord.gg/5HHjNdmYtm)
 
 </div>

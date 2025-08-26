@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/License-GPL3.0-yellow)
 [![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)
 
-👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)** |  **[Join Our Discord](https://discord.gg/WdZVcnQ2)**
+👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)** |  **[Join Our Discord](https://discord.gg/5HHjNdmYtm)**
 
 ## ✨ Why GameWikiTooltip?
 
@@ -129,6 +129,6 @@ With the usage of Pyqt6, we use GPL3.0 License - See [LICENSE](LICENSE) file
 
 **⭐ Star us if this helps your gaming experience!**
 
-[Report Issue](https://github.com/rimulu030/gamewiki/issues) · [Join Our Discord](https://discord.gg/WdZVcnQ2)
+[Report Issue](https://github.com/rimulu030/gamewiki/issues) · [Join Our Discord](https://discord.gg/5HHjNdmYtm)
 
 </div>
