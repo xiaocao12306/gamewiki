@@ -544,6 +544,10 @@ class ChatView(QScrollArea):
     def _updateBubbleHeight(self, widget, bubble, content_label):
         """Delay updating bubble height, ensure content rendering is complete"""
         try:
+            # Check if height has already been calculated for this widget to prevent duplicate calculations
+            if hasattr(widget, '_height_calculated') and widget._height_calculated:
+                return
+            
             # Get the actual height of the content
             # Use multiple methods to get the most accurate height
             height1 = content_label.sizeHint().height()
@@ -557,33 +561,47 @@ class ChatView(QScrollArea):
                 doc.setHtml(content_label.text())
                 doc.setTextWidth(content_label.width())
                 height3 = int(doc.size().height())
+                
+                # Add safety check for QTextDocument height to prevent excessive values
+                # If QTextDocument returns unreasonably large height, cap it
+                reasonable_max_height = content_label.width() * 2  # Assume maximum 2:1 aspect ratio
+                if height3 > reasonable_max_height:
+                    print(f"⚠️ QTextDocument height {height3}px seems excessive, capping to {reasonable_max_height}px")
+                    height3 = min(height3, reasonable_max_height)
             else:
                 height3 = height1
 
-            # Take the maximum value to ensure complete display
+            # Take the maximum value to ensure complete display, but add sanity check
             actual_height = max(height1, height2, height3)
+            
+            # Add minimal padding instead of fixed 20px
+            min_height = actual_height + 8  # Reduced from 20px to 8px
 
-            # Add padding
-            min_height = actual_height + 20  # Increase margin
+            # Set minimum height only if different from current
+            current_min_height = bubble.minimumHeight()
+            if current_min_height != min_height:
+                bubble.setMinimumHeight(min_height)
+                # Mark this widget as height calculated
+                if hasattr(widget, '_height_calculated'):
+                    widget._height_calculated = True
 
-            # Set minimum height
-            bubble.setMinimumHeight(min_height)
-
-            # Force update the entire message widget
-            widget.updateGeometry()
-            widget.update()
+                # Force update the entire message widget
+                widget.updateGeometry()
+                widget.update()
 
         except Exception as e:
             print(f"Error updating bubble height: {e}")
 
     def _finalizeContentDisplay(self):
         """Finalize content display"""
-        # Check the height of all messages again
+        # Check the height of all messages again, but only if not already calculated
         for widget in self.messages:
-            if hasattr(widget, 'content_label'):
-                bubble = widget.findChild(QFrame, "messageBubble")
-                if bubble and widget.content_label:
-                    self._updateBubbleHeight(widget, bubble, widget.content_label)
+            if hasattr(widget, 'content_label') and hasattr(widget, '_height_calculated'):
+                # Only update height if not already calculated
+                if not widget._height_calculated:
+                    bubble = widget.findChild(QFrame, "messageBubble")
+                    if bubble and widget.content_label:
+                        self._updateBubbleHeight(widget, bubble, widget.content_label)
 
     def _force_content_refresh(self):
         """Force refresh all content display (simplified version)"""
@@ -604,12 +622,31 @@ class ChatView(QScrollArea):
     def showEvent(self, event):
         """Update message width when window is displayed"""
         super().showEvent(event)
-        # Delay update, ensure the window is fully displayed
-        QTimer.singleShot(100, self.update_all_message_widths)
+        # Add debounce mechanism to prevent frequent showEvent calls
+        if hasattr(self, '_show_event_timer'):
+            self._show_event_timer.stop()
+        else:
+            self._show_event_timer = QTimer()
+            self._show_event_timer.setSingleShot(True)
+            self._show_event_timer.timeout.connect(self._delayed_show_event_handler)
+        
+        # Delay execution to debounce multiple showEvent calls
+        self._show_event_timer.start(100)
 
-        # Additional content refresh to fix incomplete display issues
-        QTimer.singleShot(150, self._performDelayedResize)
-        QTimer.singleShot(200, self._ensureContentComplete)
+    def _delayed_show_event_handler(self):
+        """Handle showEvent after debounce delay"""
+        # Update message widths first
+        self.update_all_message_widths()
+        
+        # Single delayed content refresh (reduced from multiple timers)
+        # Only perform height calculations if messages don't have _height_calculated flag set
+        needs_height_calc = any(
+            hasattr(widget, '_height_calculated') and not widget._height_calculated 
+            for widget in self.messages
+        )
+        
+        if needs_height_calc:
+            QTimer.singleShot(50, self._ensureContentComplete)
 
 
 

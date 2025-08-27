@@ -155,6 +155,8 @@ class MessageWidget(QFrame):
     def __init__(self, message: ChatMessage, parent=None):
         super().__init__(parent)
         self.message = message
+        # Add height calculation flag to prevent duplicate calculations
+        self._height_calculated = False
         self.init_ui()
 
     def init_ui(self):
