@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/许可证-GPL3.0-yellow)
 [![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases)
 
-👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)**
+👉 **[English](README.md)** | **[快速开始](#-快速安装)** | **[下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)**
 
 ## ✨ 为什么选择GameWikiTooltip？
 
@@ -28,7 +28,7 @@ _“Gemini API“免费层级”通过 API 服务提供，具有较低的[速率
 ## 🚀 快速安装
 
 ### 方式一：下载便携版（推荐）
-1. **[⬇️ 下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)**
+1. **[⬇️ 下载最新版本](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)**
 2. 解压ZIP文件
 3. 运行`GameWikiAssistant.exe`
 4. 设置热键，开始游戏！

@@ -6,9 +6,9 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-green?logo=python)
 ![Games](https://img.shields.io/badge/AI%20Games-4%20Supported-orange?logo=gamepad)
 ![License](https://img.shields.io/badge/License-GPL3.0-yellow)
-[![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)
+[![GitHub Release](https://img.shields.io/github/v/release/rimulu030/gamewiki?include_prereleases)](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)
 
-👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)** |  **[Join Our Discord](https://discord.gg/5HHjNdmYtm)**
+👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)** |  **[Join Our Discord](https://discord.gg/5HHjNdmYtm)**
 
 ## ✨ Why GameWikiTooltip?
 
@@ -40,7 +40,7 @@ _"The **Gemini API** "free tier" is offered through the API service with lower [
 ## 🚀 Quick Install
 
 ### Option 1: Download Ready-to-Use Package (Recommended)
-1. **[⬇️ Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.0.0/GameWikiAssistant.zip)**
+1. **[⬇️ Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)**
 2. Extract the ZIP file
 3. Run `GameWikiAssistant/GameWikiAssistant.exe`
 4. Set your hotkey and start gaming!
