@@ -398,63 +398,21 @@ class WikiView(QWidget):
             print(f"Failed to extract page info for URL: {e}")
 
     def _try_get_page_title(self, url):
-        """Try to get page title using multiple methods"""
+        """Get page title - now relies on WebView2's titleChanged signal"""
         print(f"🔍 Attempting to extract title for: {url}")
-
-        # Method 1: Try JavaScript
-        if hasattr(self.web_view, 'page') and callable(self.web_view.page):
-            try:
-                # More comprehensive title extraction script
-                script = """
-                    (function() {
-                        // First try document.title
-                        var title = document.title;
-                        if (title && title !== '' && title !== 'undefined') {
-                            // Return title as-is without modification
-                            return title;
-                        }
-                        // Fallback to h1
-                        var h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText) {
-                            return h1.innerText.trim();
-                        }
-                        // Fallback to first heading
-                        var heading = document.querySelector('h1, h2, h3');
-                        if (heading && heading.innerText) {
-                            return heading.innerText.trim();
-                        }
-                        return '';
-                    })();
-                    """
-                self.web_view.page().runJavaScript(
-                    script,
-                    lambda title: self._on_title_extracted(url, title)
-                )
-                return
-            except Exception as e:
-                print(f"❌ JavaScript title extraction failed: {e}")
-
-        # Method 2: For WebView2Widget
-        elif hasattr(self.web_view, 'runJavaScript'):
-            try:
-                script = """
-                    (function() {
-                        var title = document.title;
-                        if (title && title !== '' && title !== 'undefined') {
-                            // Return title as-is without modification
-                            return title;
-                        }
-                        var h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText) {
-                            return h1.innerText.trim();
-                        }
-                        return '';
-                    })();
-                    """
-                self.web_view.runJavaScript(script, lambda title: self._on_title_extracted(url, title))
-                return
-            except Exception as e:
-                print(f"❌ WebView2 JavaScript title extraction failed: {e}")
+        
+        # JavaScript title extraction removed - WebView2 titleChanged signal handles this automatically
+        # Use current title if available
+        if hasattr(self, 'current_title') and self.current_title:
+            self._emit_wiki_found(url, self.current_title)
+        else:
+            # Use URL-based fallback if no title available yet
+            print("⚠️ Empty or invalid title extracted, trying fallback")
+            fallback_title = url.split('/')[-1].replace('-', ' ').replace('_', ' ')
+            if not fallback_title:
+                fallback_title = url.split('/')[-2] if len(url.split('/')) > 1 else "Wiki Page"
+            print(f"📝 Using URL-based fallback title: {fallback_title}")
+            self._emit_wiki_found(url, fallback_title)
 
     def _on_title_extracted(self, url, title):
         """Handle extracted title"""
@@ -677,16 +635,6 @@ class WikiView(QWidget):
         if self._is_paused:
             print("📝 Page was paused, resuming before load")
             self.resume_page()
-        
-        # Additional safeguard: force restore pointer events
-        if self.web_view and hasattr(self.web_view, 'page'):
-            try:
-                self.web_view.page().runJavaScript("""
-                    document.body.style.pointerEvents = '';
-                    console.log('✅ Pointer events reset on load');
-                """)
-            except:
-                pass
 
         # Start monitoring for wiki page navigation if loading from search engine
         if any(engine in url.lower() for engine in ['duckduckgo.com', 'google.com', 'bing.com']):
@@ -963,43 +911,9 @@ class WikiView(QWidget):
             print("▶️ WikiView: The page is not in a paused state, skipping restore operation")
     
     def _verify_page_restored(self):
-        """Verify that page interactivity was restored"""
-        if self.web_view:
-            try:
-                script = """
-                (function() {
-                    var pointerEvents = document.body.style.pointerEvents;
-                    if (pointerEvents === 'none') {
-                        // Force restore again
-                        document.body.style.pointerEvents = '';
-                        console.log('⚠️ Pointer events were still disabled, forced restore');
-                    }
-                    
-                    // Also verify media playback functionality
-                    if (HTMLMediaElement.prototype.play.toString().includes('blocked')) {
-                        console.log('⚠️ Media play still blocked, attempting restore');
-                        if (window._originalPlay) {
-                            HTMLMediaElement.prototype.play = window._originalPlay;
-                            delete window._originalPlay;
-                            console.log('✅ Media play restored in verification');
-                        } else {
-                            // Recreate play function
-                            HTMLMediaElement.prototype.play = function() {
-                                var video = document.createElement('video');
-                                var nativePlay = video.play;
-                                return nativePlay.apply(this, arguments);
-                            };
-                            console.log('✅ Media play recreated in verification');
-                        }
-                    }
-                    
-                    console.log('✅ Page verification complete - pointer events: ' + (pointerEvents || 'default'));
-                    return true;
-                })();
-                """
-                self.web_view.page().runJavaScript(script)
-            except Exception as e:
-                print(f"⚠️ Failed to verify page restoration: {e}")
+        """Page restoration verification - function removed to prevent thread errors"""
+        # Verification removed: page restoration works correctly without JavaScript verification
+        pass
 
     def hideEvent(self, event):
         """When WikiView is hidden, automatically pause media playback"""
