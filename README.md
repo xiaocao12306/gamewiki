@@ -60,7 +60,6 @@ set GEMINI_API_KEY=your_key_here  # Windows
 # Run
 python -m src.game_wiki_tooltip
 ```
-
 ## 🎮 Supported Games
 
 ### 🤖 AI-Enhanced Games (Full Knowledge Base)

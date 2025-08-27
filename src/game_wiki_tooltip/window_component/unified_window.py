@@ -1408,7 +1408,7 @@ class UnifiedAssistantWindow(QMainWindow):
         return False
 
     def _record_history_before_leaving_wiki(self):
-        """Record browsing history before leaving wiki view using JavaScript to get actual page title"""
+        """Record browsing history before leaving wiki view with enhanced real-time URL and title detection"""
         logger = logging.getLogger(__name__)
         
         if not hasattr(self, 'wiki_view') or not self.wiki_view:
@@ -1420,29 +1420,56 @@ class UnifiedAssistantWindow(QMainWindow):
         if not web_view:
             logger.debug("No web_view available, skipping history record")
             return
+        
+        # Enhanced URL and title detection - get real-time values from WebView2
+        actual_url = None
+        actual_title = None
+        
+        # Try to get actual current URL from WebView2 first (handles redirects properly)
+        if hasattr(web_view, 'url') and callable(web_view.url):
+            try:
+                qurl = web_view.url()
+                if qurl and not qurl.isEmpty():
+                    actual_url = qurl.toString()
+                    logger.info(f"📍 Got actual URL from WebView2: {actual_url}")
+            except Exception as e:
+                logger.warning(f"Failed to get URL from WebView2: {e}")
+        
+        # Try to get actual current title from WebView2 (handles redirects properly) 
+        if hasattr(web_view, 'current_title'):
+            try:
+                actual_title = getattr(web_view, 'current_title', None)
+                if actual_title:
+                    logger.info(f"📄 Got actual title from WebView2: {actual_title}")
+            except Exception as e:
+                logger.warning(f"Failed to get title from WebView2: {e}")
+        
+        # Fallback to WikiView's stored values if WebView2 values not available
+        if not actual_url:
+            actual_url = getattr(self.wiki_view, 'current_url', None)
+            logger.info(f"📍 Using fallback URL from WikiView: {actual_url}")
             
-        current_url = getattr(self.wiki_view, 'current_url', None)
-        if not current_url:
-            logger.debug("No current_url available, skipping history record")
+        if not actual_title:
+            actual_title = getattr(self.wiki_view, 'current_title', None)  
+            logger.info(f"📄 Using fallback title from WikiView: {actual_title}")
+            
+        if not actual_url:
+            logger.debug("No URL available, skipping history record")
             return
             
-        logger.info(f"🔍 Recording history for URL: {current_url}")
+        logger.info(f"🔍 Recording history for URL: {actual_url}")
         
-        # First try to get title directly from WikiView's current_title
-        current_title = getattr(self.wiki_view, 'current_title', None)
-        if current_title and current_title != current_url:
-            logger.info(f"Using WikiView's current title: {current_title}")
-            self._save_to_history(current_url, current_title)
-        # WebView2 specific handling as fallback
-        # Check if web_view is WebView2WinRTWidget (has 'webview' attribute when initialized)
-        elif hasattr(web_view, 'webview') and web_view.webview:
-            self._get_title_from_webview2(web_view, current_url)
-        # Also check for runJavaScript method which WebView2WinRTWidget has
+        # Use the actual title if available and valid
+        if actual_title and actual_title.strip() and actual_title != actual_url:
+            logger.info(f"✅ Using actual title: {actual_title}")
+            self._save_to_history(actual_url, actual_title)
+        # Try JavaScript-based title extraction as additional fallback
         elif hasattr(web_view, 'runJavaScript'):
-            self._get_title_from_webview2(web_view, current_url)
+            logger.info("📝 Attempting JavaScript title extraction as fallback")
+            self._get_title_from_webview2(web_view, actual_url)
         else:
-            logger.warning("WebView2 not available, using URL as title")
-            self._save_to_history(current_url, current_url)
+            logger.warning("No title available, using URL as title")
+            self._save_to_history(actual_url, actual_url)
     
     def _get_title_from_webview2(self, web_view, current_url):
         """Get title from WebView2 using a workaround"""

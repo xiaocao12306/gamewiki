@@ -329,7 +329,7 @@ class TranslationManager:
             "enhanced_bm25_index_build_failed": "Enhanced BM25 index build failed: {error}",
             
             # Game detection messages
-            "game_not_detected": "No game detected. Please trigger the hotkey while in a game, or add the game to settings if it's not in the default list.",
+            "game_not_detected": "No game detected. Please trigger the hotkey while in a game, or add the game to wiki settings if it's not in the default list.",
             "game_not_supported": "The current window '{window}' is not a supported game. Please switch to a supported game or add it in settings."
         }
     
