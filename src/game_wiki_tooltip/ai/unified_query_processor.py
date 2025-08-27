@@ -80,23 +80,21 @@ class UnifiedQueryProcessor:
     def _initialize_gemini_client(self):
         """Initialize Gemini client"""
         try:
-            import google.generativeai as genai
+            from google import genai
             
             api_key = self.llm_config.get_api_key()
             if not api_key:
                 raise ValueError("Gemini API key not found")
-                
-            genai.configure(api_key=api_key)
             
-            generation_config = genai.types.GenerationConfig(
-                max_output_tokens=self.llm_config.max_tokens,
-                temperature=self.llm_config.temperature,
-            )
+            # Create client instance with API key (new API)
+            self.llm_client = genai.Client(api_key=api_key)
             
-            self.llm_client = genai.GenerativeModel(
-                model_name=self.llm_config.model,
-                generation_config=generation_config,
-            )
+            # Store model configuration for later use
+            self.model_name = self.llm_config.model
+            self.generation_config = {
+                'temperature': self.llm_config.temperature,
+                # max_tokens will be handled in the API call
+            }
             
         except Exception as e:
             logger.error(f"Gemini client initialization failed: {e}")
@@ -237,7 +235,21 @@ This is a specialized query designed to enhance important game terms while prese
         for attempt in range(self.llm_config.max_retries):
             try:
                 if "gemini" in self.llm_config.model.lower():
-                    response = self.llm_client.generate_content(prompt)
+                    # Use new client API
+                    from google.genai import types
+                    
+                    # Build generation config
+                    config = types.GenerateContentConfig(
+                        temperature=self.generation_config['temperature'],
+                        # max_output_tokens can be set here if needed
+                        max_output_tokens=self.llm_config.max_tokens
+                    )
+                    
+                    response = self.llm_client.models.generate_content(
+                        model=self.model_name,
+                        contents=[prompt],
+                        config=config
+                    )
                     response_text = response.text.strip()
                 elif "gpt" in self.llm_config.model.lower():
                     response = self.llm_client.chat.completions.create(
@@ -264,6 +276,42 @@ This is a specialized query designed to enhance important game terms while prese
                     time.sleep(self.llm_config.retry_delay * (2 ** attempt))
                 
         return None
+    
+    def _basic_processing(self, query: str) -> UnifiedQueryResult:
+        """Basic processing without LLM (fallback mode)"""
+        start_time = time.time()
+        
+        # Simple language detection
+        chinese_chars = sum(1 for char in query if '\u4e00' <= char <= '\u9fff')
+        detected_language = "zh" if chinese_chars > len(query) * 0.3 else "en"
+        
+        # Simple translation (keep original if not Chinese)
+        translated_query = query
+        
+        # Simple intent classification (default to guide)
+        intent = "guide"
+        confidence = 0.5
+        
+        # Basic query rewriting (minimal changes)
+        rewritten_query = translated_query
+        bm25_optimized_query = translated_query
+        
+        processing_time = time.time() - start_time
+        
+        return UnifiedQueryResult(
+            original_query=query,
+            detected_language=detected_language,
+            translated_query=translated_query,
+            rewritten_query=rewritten_query,
+            bm25_optimized_query=bm25_optimized_query,
+            intent=intent,
+            confidence=confidence,
+            search_type="hybrid",
+            reasoning="Basic processing (LLM unavailable)",
+            translation_applied=False,
+            rewrite_applied=False,
+            processing_time=processing_time
+        )
     
     def process_query(self, query: str) -> UnifiedQueryResult:
         """

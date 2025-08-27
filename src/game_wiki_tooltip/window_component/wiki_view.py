@@ -348,10 +348,64 @@ class WikiView(QWidget):
         # History recording moved to show_chat_view() in UnifiedAssistantWindow
         # But we still need to update the current title for later use
         if title and title.strip():
+            old_title = self.current_title
             self.current_title = title
             import logging
             logger = logging.getLogger(__name__)
-            logger.info(f"📄 Title updated in WikiView: {title}")
+            
+            # Enhanced logging to track title changes, especially during redirects
+            if old_title != title:
+                logger.info(f"📄 Title changed in WikiView: '{old_title}' -> '{title}'")
+            else:
+                logger.debug(f"📄 Title confirmed in WikiView: {title}")
+            
+            # Emit signal for external components that may need to track title changes
+            # This is especially useful for tracking delayed title updates after redirects
+            if hasattr(self, 'wiki_page_loaded') and hasattr(self, 'current_url'):
+                if self.current_url and title != self.current_url:  # Avoid duplicate events
+                    self.wiki_page_loaded.emit(self.current_url, title)
+    
+    def _sync_webview_state(self):
+        """Sync current URL and title state from WebView after initialization"""
+        if not self.web_view or not self._webview_initialized:
+            return
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Get current URL from WebView
+            current_url = None
+            if hasattr(self.web_view, 'url') and callable(self.web_view.url):
+                qurl = self.web_view.url()
+                if qurl and not qurl.isEmpty():
+                    current_url = qurl.toString()
+            
+            # Get current title from WebView's internal state
+            current_title = None
+            if hasattr(self.web_view, 'current_title'):
+                current_title = getattr(self.web_view, 'current_title', None)
+            
+            # Update WikiView state if we got valid data
+            if current_url and current_url != self.current_url:
+                old_url = self.current_url
+                self.current_url = current_url
+                # Also update URL bar
+                if hasattr(self, 'url_bar'):
+                    self.url_bar.setText(current_url)
+                logger.info(f"🔄 Syncing URL in WikiView: '{old_url}' -> '{current_url}'")
+            
+            if current_title and current_title != self.current_title:
+                old_title = self.current_title  
+                self.current_title = current_title
+                logger.info(f"📝 Syncing title in WikiView: '{old_title}' -> '{current_title}'")
+                
+                # Emit signal for components that track title changes
+                if hasattr(self, 'wiki_page_loaded') and current_url:
+                    self.wiki_page_loaded.emit(current_url, current_title)
+            
+        except Exception as e:
+            logger.error(f"Failed to sync WebView state: {e}")
 
     def _update_navigation_state(self, ok=True):
         """Update navigation button states based on history"""
@@ -365,17 +419,6 @@ class WikiView(QWidget):
             self.nav_forward_button.setEnabled(history.canGoForward())
         except:
             pass
-
-    def _extract_page_info(self):
-        """Extract page title and URL"""
-        if not self.web_view:
-            return
-
-        try:
-            current_url = self.web_view.url().toString()
-            self._try_get_page_title(current_url)
-        except Exception as e:
-            print(f"Failed to extract page info: {e}")
 
     def _emit_wiki_found(self, url, title):
         """Emit wiki page found signal"""
@@ -398,87 +441,21 @@ class WikiView(QWidget):
             print(f"Failed to extract page info for URL: {e}")
 
     def _try_get_page_title(self, url):
-        """Try to get page title using multiple methods"""
+        """Get page title - now relies on WebView2's titleChanged signal"""
         print(f"🔍 Attempting to extract title for: {url}")
-
-        # Method 1: Try JavaScript
-        if hasattr(self.web_view, 'page') and callable(self.web_view.page):
-            try:
-                # More comprehensive title extraction script
-                script = """
-                    (function() {
-                        // First try document.title
-                        var title = document.title;
-                        if (title && title !== '' && title !== 'undefined') {
-                            // Return title as-is without modification
-                            return title;
-                        }
-                        // Fallback to h1
-                        var h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText) {
-                            return h1.innerText.trim();
-                        }
-                        // Fallback to first heading
-                        var heading = document.querySelector('h1, h2, h3');
-                        if (heading && heading.innerText) {
-                            return heading.innerText.trim();
-                        }
-                        return '';
-                    })();
-                    """
-                self.web_view.page().runJavaScript(
-                    script,
-                    lambda title: self._on_title_extracted(url, title)
-                )
-                return
-            except Exception as e:
-                print(f"❌ JavaScript title extraction failed: {e}")
-
-        # Method 2: For WebView2Widget
-        elif hasattr(self.web_view, 'runJavaScript'):
-            try:
-                script = """
-                    (function() {
-                        var title = document.title;
-                        if (title && title !== '' && title !== 'undefined') {
-                            // Return title as-is without modification
-                            return title;
-                        }
-                        var h1 = document.querySelector('h1');
-                        if (h1 && h1.innerText) {
-                            return h1.innerText.trim();
-                        }
-                        return '';
-                    })();
-                    """
-                self.web_view.runJavaScript(script, lambda title: self._on_title_extracted(url, title))
-                return
-            except Exception as e:
-                print(f"❌ WebView2 JavaScript title extraction failed: {e}")
-
-    def _on_title_extracted(self, url, title):
-        """Handle extracted title"""
-        if title and title.strip() and title != "null" and title != "undefined":
-            print(f"✅ Successfully extracted title: {title}")
-            self._emit_wiki_found(url, title)
+        
+        # JavaScript title extraction removed - WebView2 titleChanged signal handles this automatically
+        # Use current title if available
+        if hasattr(self, 'current_title') and self.current_title:
+            self._emit_wiki_found(url, self.current_title)
         else:
-            print(f"⚠️ Empty or invalid title extracted, trying fallback")
-            # Fallback: use the last part of the URL as title
-            try:
-                from urllib.parse import urlparse, unquote
-                parsed = urlparse(url)
-                path_parts = parsed.path.strip('/').split('/')
-                if path_parts and path_parts[-1]:
-                    fallback_title = unquote(path_parts[-1]).replace('_', ' ')
-                    print(f"📝 Using URL-based fallback title: {fallback_title}")
-                    self._emit_wiki_found(url, fallback_title)
-                else:
-                    # Last resort: emit with a generic title
-                    self._emit_wiki_found(url, "Wiki Page")
-            except Exception as e:
-                print(f"❌ Fallback title extraction failed: {e}")
-                # Still emit with a generic title
-                self._emit_wiki_found(url, "Wiki Page")
+            # Use URL-based fallback if no title available yet
+            print("⚠️ Empty or invalid title extracted, trying fallback")
+            fallback_title = url.split('/')[-1].replace('-', ' ').replace('_', ' ')
+            if not fallback_title:
+                fallback_title = url.split('/')[-2] if len(url.split('/')) > 1 else "Wiki Page"
+            print(f"📝 Using URL-based fallback title: {fallback_title}")
+            self._emit_wiki_found(url, fallback_title)
 
     def _is_real_wiki_page(self, url: str) -> bool:
         """Determine if it is a real wiki page (not a search page)"""
@@ -628,6 +605,11 @@ class WikiView(QWidget):
                         self._webview_ready = True
                         self._connect_navigation_signals()
                         print("✅ WebView2 fully initialized and ready")
+                        
+                        # Schedule state synchronization after initialization
+                        # This helps catch any redirects that happened during initialization
+                        QTimer.singleShot(200, self._sync_webview_state)
+                        
                         # Disconnect this handler
                         try:
                             web_view.loadFinished.disconnect(on_first_load)
@@ -677,16 +659,6 @@ class WikiView(QWidget):
         if self._is_paused:
             print("📝 Page was paused, resuming before load")
             self.resume_page()
-        
-        # Additional safeguard: force restore pointer events
-        if self.web_view and hasattr(self.web_view, 'page'):
-            try:
-                self.web_view.page().runJavaScript("""
-                    document.body.style.pointerEvents = '';
-                    console.log('✅ Pointer events reset on load');
-                """)
-            except:
-                pass
 
         # Start monitoring for wiki page navigation if loading from search engine
         if any(engine in url.lower() for engine in ['duckduckgo.com', 'google.com', 'bing.com']):
@@ -812,7 +784,7 @@ class WikiView(QWidget):
                     })();
                     """
 
-                self.web_view.page().runJavaScript(javascript_code)
+                self.web_view.runJavaScript(javascript_code)
                 print("🔇 WikiView: Enhanced media stop script executed")
 
             except Exception as e:
@@ -846,7 +818,7 @@ class WikiView(QWidget):
 
                 # 3. Set the page to an invisible state, some websites will automatically pause media
                 try:
-                    self.web_view.page().runJavaScript("""
+                    self.web_view.runJavaScript("""
                         (function() {
                             // Set the page to an invisible state
                             Object.defineProperty(document, 'hidden', {value: true, writable: false});
@@ -945,7 +917,7 @@ class WikiView(QWidget):
                     })();
                     """
                     
-                    self.web_view.page().runJavaScript(script)
+                    self.web_view.runJavaScript(script)
                     self._is_paused = False
                     print("▶️ WikiView: Page restore attempted")
                     
@@ -963,43 +935,9 @@ class WikiView(QWidget):
             print("▶️ WikiView: The page is not in a paused state, skipping restore operation")
     
     def _verify_page_restored(self):
-        """Verify that page interactivity was restored"""
-        if self.web_view:
-            try:
-                script = """
-                (function() {
-                    var pointerEvents = document.body.style.pointerEvents;
-                    if (pointerEvents === 'none') {
-                        // Force restore again
-                        document.body.style.pointerEvents = '';
-                        console.log('⚠️ Pointer events were still disabled, forced restore');
-                    }
-                    
-                    // Also verify media playback functionality
-                    if (HTMLMediaElement.prototype.play.toString().includes('blocked')) {
-                        console.log('⚠️ Media play still blocked, attempting restore');
-                        if (window._originalPlay) {
-                            HTMLMediaElement.prototype.play = window._originalPlay;
-                            delete window._originalPlay;
-                            console.log('✅ Media play restored in verification');
-                        } else {
-                            // Recreate play function
-                            HTMLMediaElement.prototype.play = function() {
-                                var video = document.createElement('video');
-                                var nativePlay = video.play;
-                                return nativePlay.apply(this, arguments);
-                            };
-                            console.log('✅ Media play recreated in verification');
-                        }
-                    }
-                    
-                    console.log('✅ Page verification complete - pointer events: ' + (pointerEvents || 'default'));
-                    return true;
-                })();
-                """
-                self.web_view.page().runJavaScript(script)
-            except Exception as e:
-                print(f"⚠️ Failed to verify page restoration: {e}")
+        """Page restoration verification - function removed to prevent thread errors"""
+        # Verification removed: page restoration works correctly without JavaScript verification
+        pass
 
     def hideEvent(self, event):
         """When WikiView is hidden, automatically pause media playback"""

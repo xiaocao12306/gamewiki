@@ -276,7 +276,6 @@ class RAGIntegration(QObject):
     # Signals for UI updates
     streaming_chunk_ready = pyqtSignal(str)
     wiki_result_ready = pyqtSignal(str, str)  # url, title
-    wiki_link_updated = pyqtSignal(str, str)  # 新信号：用于更新聊天窗口中的wiki链接
     error_occurred = pyqtSignal(str)
     
     def __init__(self, settings_manager: SettingsManager, limited_mode: bool = False):
@@ -663,25 +662,8 @@ class RAGIntegration(QObject):
                 translated_query=query
             )
         
-        # ✅ New: Before calling LLM, check if the game window supports RAG guide query (has vector library)
-        if game_context:
-            # 1. Check if RAG guide query is supported (has vector library)
-            from .ai.rag_query import map_window_title_to_game_name
-            game_name = map_window_title_to_game_name(game_context)
-            
-            # 2. Check if it is supported in games.json configuration (supports wiki query)
-            is_wiki_supported = self._is_game_supported_for_wiki(game_context)
-            
-            # If neither RAG guide query nor wiki query is supported, return unsupported
-            if not game_name and not is_wiki_supported:
-                logger.info(f"📋 Window '{game_context}' does not support guide query")
-                return QueryIntent(
-                    intent_type='unsupported',
-                    confidence=1.0,
-                    rewritten_query=query,
-                    translated_query=query
-                )
-        else:
+        # Check if we have game context, if not use simple intent detection
+        if not game_context:
             # If there is no game context (no recorded game window), skip unified query processing, use simple intent detection
             logger.info("📋 No recorded game window, skip unified query processing, use simple intent detection")
             return self._simple_intent_detection(query)
@@ -879,9 +861,8 @@ class RAGIntegration(QObject):
                 "status": "found"
             })
             
-            # Emit signal to update link in chat window
-            self.wiki_link_updated.emit(real_url, real_title)
-            logger.info(f"✅ Emitted wiki link update signal: {real_title} -> {real_url}")
+            # Note: wiki_link_updated signal removed - now using direct update mechanism
+            logger.info(f"✅ Wiki link information processed: {real_title} -> {real_url}")
             
             # Clear pending update information
             self._pending_wiki_update = None
@@ -974,7 +955,44 @@ class RAGIntegration(QObject):
                         
                         # Check if vector store exists before attempting initialization
                         if not self._check_vector_store_exists(vector_game_name):
-                            logger.info(f"No vector store found for game '{vector_game_name}', showing not supported message")
+                            logger.info(f"No vector store found for game '{vector_game_name}', checking intent for fallback")
+                            
+                            # Check if intent is guide and use fallback handler
+                            if unified_query_result and unified_query_result.intent == "guide":
+                                logger.info("🌐 Using fallback guide handler for game without vector store")
+                                
+                                try:
+                                    # Import fallback handler
+                                    from .ai.fallback_guide_handler import create_fallback_guide_handler
+                                    
+                                    # Create fallback handler
+                                    fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                    
+                                    # Determine language
+                                    from src.game_wiki_tooltip.core.i18n import get_current_language
+                                    current_lang = get_current_language()
+                                    
+                                    # Use fallback handler for streaming guide generation
+                                    async for chunk in fallback_handler.generate_guide_stream(
+                                        query=query,
+                                        game_context=game_context,
+                                        language=current_lang,
+                                        original_query=original_query
+                                    ):
+                                        # Check stop flag if provided
+                                        if stop_flag and stop_flag():
+                                            logger.info("🛑 Fallback guide generation stopped by user")
+                                            return
+                                        
+                                        self.streaming_chunk_ready.emit(chunk)
+                                    
+                                    return
+                                    
+                                except Exception as e:
+                                    logger.error(f"Fallback guide handler failed: {e}")
+                                    # Fall through to error message below
+                            
+                            # If not guide intent or fallback failed, show error
                             self.streaming_chunk_ready.emit(self._get_localized_message("game_not_supported"))
                             return
                         
@@ -1024,12 +1042,52 @@ class RAGIntegration(QObject):
                             self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
                         return
                 else:
-                    logger.info(f"📋 Window '{game_context}' does not support guide queries")
+                    logger.info(f"📋 Window '{game_context}' does not have vector store for guide queries")
                     
-                    # Use internationalized error information
+                    # Check if we have unified_query_result to determine intent
+                    if unified_query_result and unified_query_result.intent == "guide":
+                        logger.info("🌐 Using fallback guide handler for unsupported game")
+                        
+                        # Get API settings for fallback handler
+                        settings = self.settings_manager.get()
+                        api_settings = settings.get('api', {})
+                        gemini_api_key = api_settings.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+                        
+                        if gemini_api_key:
+                            try:
+                                # Import fallback handler
+                                from .ai.fallback_guide_handler import create_fallback_guide_handler
+                                
+                                # Create fallback handler
+                                fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                
+                                # Determine language
+                                from src.game_wiki_tooltip.core.i18n import get_current_language
+                                current_lang = get_current_language()
+                                
+                                # Use fallback handler for streaming guide generation
+                                async for chunk in fallback_handler.generate_guide_stream(
+                                    query=query,
+                                    game_context=game_context,
+                                    language=current_lang,
+                                    original_query=original_query
+                                ):
+                                    # Check stop flag if provided
+                                    if stop_flag and stop_flag():
+                                        logger.info("🛑 Fallback guide generation stopped by user")
+                                        return
+                                    
+                                    self.streaming_chunk_ready.emit(chunk)
+                                
+                                return
+                                
+                            except Exception as e:
+                                logger.error(f"Fallback guide handler failed: {e}")
+                                # Fall through to error handling below
+                    
+                    # If not guide intent or fallback failed, show error
                     from src.game_wiki_tooltip.core.i18n import t
                     error_msg = t("game_not_supported", window=game_context)
-                    
                     self.error_occurred.emit(error_msg)
                     return
             else:
@@ -1389,9 +1447,6 @@ class IntegratedAssistantController(AssistantController):
         self.rag_integration.wiki_result_ready.connect(
             self._on_wiki_result
         )
-        self.rag_integration.wiki_link_updated.connect(
-            self._on_wiki_link_updated
-        )
         self.rag_integration.error_occurred.connect(
             self._on_error
         )
@@ -1694,48 +1749,51 @@ class IntegratedAssistantController(AssistantController):
             logger.error(f"Wiki result handling error: {e}")
             self._on_error(str(e))
             
-    def _on_wiki_link_updated(self, real_url: str, real_title: str):
-        """Handle wiki link update signal"""
+    # Note: _on_wiki_link_updated method removed - functionality replaced by _update_wiki_message_directly
+    
+    def _update_wiki_message_directly(self, url: str, title: str):
+        """Directly update wiki message in chat view, similar to history record mechanism"""
         try:
-            if self._current_wiki_message:
-                logger.info(f"🔗 Update wiki link in chat window: {real_title} -> {real_url}")
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # Validate URL and title
+            if not url or not title:
+                logger.warning(f"Invalid URL or title for wiki update: url='{url}', title='{title}'")
+                return
                 
-                # Update message content and metadata
-                self._current_wiki_message.message.content = real_title
-                self._current_wiki_message.message.metadata["url"] = real_url
+            # Filter out temporary states
+            if title in ["请稍候…", "Loading...", "Redirecting...", "", "Search:"]:
+                logger.info(f"Skip temporary title: '{title}'")
+                return
+            
+            # Ensure we have a wiki message to update
+            if not hasattr(self, '_current_wiki_message') or not self._current_wiki_message:
+                logger.warning("No current wiki message to update")
+                return
                 
-                # Reset content to refresh display - fix: use real title instead of old content
-                html_content = (
-                    f'[LINK] <a href="{real_url}" style="color: #4096ff;">{real_url}</a><br/>'
-                    f'<span style="color: #666; margin-left: 20px;">{real_title}</span>'
-                )
-                self._current_wiki_message.content_label.setText(html_content)
-                self._current_wiki_message.content_label.setTextFormat(Qt.TextFormat.RichText)
-                
-                # Adjust component size to fit new content
-                self._current_wiki_message.content_label.adjustSize()
-                self._current_wiki_message.adjustSize()
-                
-                # Force redraw
-                self._current_wiki_message.update()
-                
-                logger.info(f"✅ Wiki link in chat window updated to real URL and title")
-                
-                # Only clear reference when title contains meaningful content (avoid premature clearing causing subsequent updates)
-                # Check if title is a temporary loading state
-                temporary_titles = ["请稍候…", "Loading...", "Redirecting...", ""]
-                if real_title and real_title not in temporary_titles:
-                    # Delay clearing reference, allow possible subsequent updates
-                    QTimer.singleShot(2000, lambda: setattr(self, '_current_wiki_message', None))
-                    logger.info(f"📋 Delay clearing wiki message reference, title: '{real_title}'")
-                else:
-                    logger.info(f"📋 Keep wiki message reference, waiting for more complete title (current: '{real_title}')")
-                    
-            else:
-                logger.warning("⚠️ No wiki message component found to update")
-                
+            logger.info(f"🔗 Directly updating wiki message: '{title}' -> {url}")
+            
+            # Update message content and metadata directly
+            self._current_wiki_message.message.content = title
+            self._current_wiki_message.message.metadata["url"] = url
+            
+            # Update display with clean HTML - show title as clickable link
+            html_content = f'[LINK] <a href="{url}" style="color: #4096ff;">{title}</a>'
+            self._current_wiki_message.content_label.setText(html_content)
+            self._current_wiki_message.content_label.setTextFormat(Qt.TextFormat.RichText)
+            
+            # Adjust component size to fit new content
+            self._current_wiki_message.content_label.adjustSize()
+            self._current_wiki_message.adjustSize()
+            
+            # Force redraw
+            self._current_wiki_message.update()
+            
+            logger.info(f"✅ Wiki message directly updated to show real title: '{title}'")
+            
         except Exception as e:
-            logger.error(f"❌ Update wiki link failed: {e}")
+            logger.error(f"❌ Failed to directly update wiki message: {e}")
             
     def _on_streaming_chunk(self, chunk: str):
         # If waiting for RAG output and this is the first content chunk, create streaming message component
@@ -1972,8 +2030,9 @@ class IntegratedAssistantController(AssistantController):
         # Filter out obvious temporary state titles, only process meaningful updates
         if title and title not in ["请稍候…", "Loading...", "Redirecting...", ""]:
             logger.info(f"✅ Accept wiki page update: {title}")
-            # Directly call RAG integration method to handle wiki page discovery
-            self.rag_integration.on_wiki_found(url, title)
+            
+            # Use direct update approach - reliable like the history record mechanism
+            self._update_wiki_message_directly(url, title)
         else:
             logger.info(f"⏳ Skip temporary state wiki page update: {title}")
             # For temporary state, still call, but do not trigger final update in chat window

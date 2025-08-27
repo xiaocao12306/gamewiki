@@ -689,6 +689,10 @@ class WebView2WinRTWidget(QWidget):
             url = self._pending_navigations.pop(0)
             logger.info(f"Processing pending navigation: {url}")
             self.navigate(url)
+        
+        # After processing navigations, sync current URL and title state
+        # This fixes the redirect issue where events were missed during initialization
+        QTimer.singleShot(100, self._sync_current_state)
     
     # Event handlers
     def _on_navigation_starting(self, sender, args):
@@ -1042,6 +1046,43 @@ class WebView2WinRTWidget(QWidget):
         """Provide minimum size hint"""
         return QSize(400, 300)
     
+    def _sync_current_state(self):
+        """Sync current URL and title state after initialization"""
+        if not self.webview:
+            logger.warning("Cannot sync state: webview not available")
+            return
+        
+        try:
+            # Get current URL
+            current_url = None
+            if hasattr(self.webview, 'Source'):
+                current_url = self.webview.Source
+            elif hasattr(self.webview, 'source'):
+                current_url = self.webview.source
+            
+            # Get current title
+            current_title = None
+            if hasattr(self.webview, 'DocumentTitle'):
+                current_title = self.webview.DocumentTitle
+            elif hasattr(self.webview, 'document_title'):
+                current_title = self.webview.document_title
+            
+            # Update internal state and emit signals if values changed
+            if current_url and str(current_url) != self.current_url:
+                old_url = self.current_url
+                self.current_url = str(current_url)
+                logger.info(f"🔄 Syncing URL after initialization: {old_url} -> {self.current_url}")
+                self.urlChanged.emit(QUrl(self.current_url))
+            
+            if current_title and str(current_title) != self.current_title:
+                old_title = self.current_title
+                self.current_title = str(current_title)
+                logger.info(f"📝 Syncing title after initialization: '{old_title}' -> '{self.current_title}'")
+                self.titleChanged.emit(self.current_title)
+                
+        except Exception as e:
+            logger.error(f"Failed to sync current state: {e}")
+
     def closeEvent(self, event):
         """Clean up on close"""
         # Remove event handlers

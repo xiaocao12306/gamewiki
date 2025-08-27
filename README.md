@@ -60,7 +60,6 @@ set GEMINI_API_KEY=your_key_here  # Windows
 # Run
 python -m src.game_wiki_tooltip
 ```
-
 ## 🎮 Supported Games
 
 ### 🤖 AI-Enhanced Games (Full Knowledge Base)
@@ -78,7 +77,7 @@ Quick wiki access for 100+ games including: VALORANT, CS2, Monster Hunter, Stard
 
 ### First Launch Setup
 1. **Hotkey Setup**: Choose your preferred activation key (default: `Ctrl+Q`)
-2. **API Key** (Optional): Add Gemini API key for enhanced AI features
+2. **API Key** (Optional): Add Gemini API key for AI features
 3. **Game Detection**: Automatic - just launch your game!
 
 ### Advanced Settings
