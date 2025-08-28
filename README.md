@@ -1,4 +1,4 @@
-# GameWikiTooltip - AI-Powered In-Game Assistant 
+# GameWiki - AI-Powered In-Game Assistant 
 
 > **Smart game companion that never leaves your side** - Real-time wiki overlay + AI knowledge base for instant answers while gaming
 
@@ -10,7 +10,7 @@
 
 👉 **[中文说明](README.zh-CN.md)** | **[Quick Start](#-quick-install)** | **[Download Latest Release](https://github.com/rimulu030/gamewiki/releases/download/v1.1.0/GameWikiAssistant.zip)** |  **[Join Our Discord](https://discord.gg/5HHjNdmYtm)**
 
-## ✨ Why GameWikiTooltip?
+## ✨ Why GameWiki?
 
 Never alt-tab out of your game again! Get instant answers, build guides, and wiki information directly in your game with our AI-powered overlay.
 
