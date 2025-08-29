@@ -126,6 +126,7 @@ With the usage of Pyqt6, we use GPL3.0 License - See [LICENSE](LICENSE) file
 
 - Weizhen Chu
 - chu.weizhen04@gmail.com
+- X profile: https://x.com/ChengXiang75007
 ---
 
 <div align="center">
