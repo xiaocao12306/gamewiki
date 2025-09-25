@@ -2,7 +2,9 @@
     "language": "en",
     "hotkey": {
         "key": "Q",
-        "modifiers": ["Ctrl"]
+        "modifiers": [
+            "Ctrl"
+        ]
     },
     "window_geometry": {
         "chat_only": {
@@ -48,12 +50,55 @@
         }
     },
     "shortcuts": [
-        {"name": "Google", "url": "https://www.google.com/", "icon": "assets/icons/google.ico", "visible": true},
-        {"name": "YouTube", "url": "https://www.youtube.com/", "icon": "assets/icons/youtube.png", "visible": true},
-        {"name": "Instagram", "url": "https://www.instagram.com/", "icon": "assets/icons/instagram.png", "visible": true},
-        {"name": "Reddit", "url": "https://www.reddit.com/", "icon": "assets/icons/reddit.ico", "visible": true},
-        {"name": "Nexusmods", "url": "https://www.nexusmods.com/", "icon": "assets/icons/nexusmods.ico", "visible": true},
-        {"name": "Bilibili", "url": "https://www.bilibili.com/", "icon": "assets/icons/bilibili.ico", "visible": true}
+        {
+            "name": "Google",
+            "url": "https://www.google.com/",
+            "icon": "assets/icons/google.ico",
+            "visible": true
+        },
+        {
+            "name": "YouTube",
+            "url": "https://www.youtube.com/",
+            "icon": "assets/icons/youtube.png",
+            "visible": true
+        },
+        {
+            "name": "Instagram",
+            "url": "https://www.instagram.com/",
+            "icon": "assets/icons/instagram.png",
+            "visible": true
+        },
+        {
+            "name": "Reddit",
+            "url": "https://www.reddit.com/",
+            "icon": "assets/icons/reddit.ico",
+            "visible": true
+        },
+        {
+            "name": "Nexusmods",
+            "url": "https://www.nexusmods.com/",
+            "icon": "assets/icons/nexusmods.ico",
+            "visible": true
+        },
+        {
+            "name": "Bilibili",
+            "url": "https://www.bilibili.com/",
+            "icon": "assets/icons/bilibili.ico",
+            "visible": true
+        }
     ],
-    "auto_send_voice_input": false
+    "auto_send_voice_input": false,
+    "backend": {
+        "base_url": "http://100.108.63.97:8000",
+        "api_key": "",
+        "config_endpoint": "/api/v1/config",
+        "events_endpoint": "/api/v1/events",
+        "timeout": 10.0
+    },
+    "analytics": {
+        "flush_interval_seconds": 5.0,
+        "max_queue_size": 50,
+        "max_retry": 3,
+        "enabled": true
+    }
 }

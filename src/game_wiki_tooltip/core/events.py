@@ -1,0 +1,11 @@
+"""埋点事件常量"""
+
+PAYWALL_SHOWN = "paywall_shown"
+PURCHASE_INTENT_POINTS_CLICKED = "purchase_intent_points_clicked"
+PURCHASE_INTENT_SUBSCRIPTION_CLICKED = "purchase_intent_subscription_clicked"
+MANAGEMENT_COMMAND_TRIED = "management_command_tried"
+DEEPSEEK_CALL_SUCCESS = "deepseek_call_success"
+DEEPSEEK_CALL_FAILED = "deepseek_call_failed"
+GEMINI_CALL_SUCCESS = "gemini_call_success"
+GEMINI_CALL_FAILED = "gemini_call_failed"
+MODEL_FALLBACK_TRIGGERED = "model_fallback_triggered"

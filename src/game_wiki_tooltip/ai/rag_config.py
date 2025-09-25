@@ -41,6 +41,8 @@ class LLMSettings:
             return self.api_key
         
         # Get API key from environment variable based on model type
+        if "deepseek" in self.model.lower():
+            return os.getenv("DEEPSEEK_API_KEY")
         if "gemini" in self.model.lower():
             return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         elif "gpt" in self.model.lower() or "openai" in self.model.lower():
@@ -63,6 +65,14 @@ class LLMSettings:
             "retry_delay": self.retry_delay,
             "response_language": self.response_language
         }
+
+    def resolved_base_url(self) -> Optional[str]:
+        if self.base_url:
+            return self.base_url
+
+        if "deepseek" in self.model.lower():
+            return os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
+        return self.base_url
     
 
 

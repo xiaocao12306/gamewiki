@@ -19,6 +19,7 @@ from PyQt6.QtGui import QIcon
 import qasync
 
 from src.game_wiki_tooltip.core.config import SettingsManager, GameConfigManager
+from src.game_wiki_tooltip.core.analytics import AnalyticsManager
 from src.game_wiki_tooltip.qt_tray_icon import QtTrayIcon
 from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
 from src.game_wiki_tooltip.qt_hotkey_manager import QtHotkeyManager
@@ -241,6 +242,7 @@ class GameWikiApp(QObject):
             
         # Initialize managers
         self.settings_mgr = SettingsManager(SETTINGS_PATH)
+        self.analytics_mgr = AnalyticsManager(self.settings_mgr)
         self.game_cfg_mgr = GameConfigManager(GAMES_CONFIG_PATH)
         
         # Initialize translation system based on settings
@@ -950,6 +952,13 @@ class GameWikiApp(QObject):
             self.tray_icon.cleanup()
             logger.info("System tray icon cleaned up")
             
+        # 停止埋点
+        if hasattr(self, 'analytics_mgr') and self.analytics_mgr:
+            try:
+                self.analytics_mgr.shutdown()
+            except Exception as exc:
+                logger.warning(f"AnalyticsManager shutdown failed: {exc}")
+
         # Quit
         logger.info("Application exiting...")
         self.app.quit()

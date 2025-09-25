@@ -24,15 +24,28 @@ logger = logging.getLogger(__name__)
 class LLMConfig:
     def get_api_key(self) -> Optional[str]:
         """Get API key, prioritize environment variable"""
-        if self.api_key:
+        if getattr(self, "api_key", None):
             return self.api_key
         
         # Get API key from environment variable based on model type
-        if "gemini" in self.model.lower():
+        model_name = getattr(self, "model", "")
+        if "deepseek" in model_name.lower():
+            return os.getenv("DEEPSEEK_API_KEY")
+        elif "gemini" in model_name.lower():
             return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        elif "gpt" in self.model.lower() or "openai" in self.model.lower():
+        elif "gpt" in model_name.lower() or "openai" in model_name.lower():
             return os.getenv("OPENAI_API_KEY")
-        
+
+        return None
+
+    def resolved_base_url(self) -> Optional[str]:
+        base_url = getattr(self, "base_url", None)
+        if base_url:
+            return base_url
+
+        model_name = getattr(self, "model", "")
+        if "deepseek" in model_name.lower():
+            return os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
         return None
 
 
@@ -80,12 +93,37 @@ class ApiConfig:
 
 
 @dataclass
+class BackendConfig:
+    base_url: str = ""
+    api_key: str = ""
+    config_endpoint: str = "/api/v1/config"
+    events_endpoint: str = "/api/v1/events"
+    timeout: float = 10.0
+
+    def resolved_base_url(self) -> str:
+        return self.base_url or os.getenv("GW_BACKEND_BASE_URL", "")
+
+    def resolved_api_key(self) -> str:
+        return self.api_key or os.getenv("GW_BACKEND_API_KEY", "")
+
+
+@dataclass
+class AnalyticsConfig:
+    flush_interval_seconds: float = 5.0
+    max_queue_size: int = 50
+    max_retry: int = 3
+    enabled: bool = True
+
+
+@dataclass
 class AppSettings:
     """Application settings"""
     language: str = "en"
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
     window_geometry: WindowGeometryConfig = field(default_factory=WindowGeometryConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
+    backend: BackendConfig = field(default_factory=BackendConfig)
+    analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
     audio_device_index: Optional[int] = None  # Audio device index for voice recognition
@@ -141,6 +179,12 @@ class SettingsManager:
         # Update API settings
         if 'api' in new_settings:
             self._settings.api = ApiConfig(**new_settings['api'])
+        # Update backend settings
+        if 'backend' in new_settings:
+            self._settings.backend = BackendConfig(**new_settings['backend'])
+        # Update analytics settings
+        if 'analytics' in new_settings:
+            self._settings.analytics = AnalyticsConfig(**new_settings['analytics'])
         # Update "Don't remind me again" settings
         if 'dont_remind_api_missing' in new_settings:
             self._settings.dont_remind_api_missing = new_settings['dont_remind_api_missing']
@@ -224,6 +268,8 @@ class SettingsManager:
                 window_geometry=window_geometry,
                 api=ApiConfig(**merged_data.get('api', {})),
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
+                backend=BackendConfig(**merged_data.get('backend', {})),
+                analytics=AnalyticsConfig(**merged_data.get('analytics', {})),
                 shortcuts=merged_data.get('shortcuts', []),
                 audio_device_index=merged_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False),
@@ -251,6 +297,8 @@ class SettingsManager:
                 window_geometry=window_geometry,
                 api=ApiConfig(**default_data.get('api', {})),
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
+                backend=BackendConfig(**default_data.get('backend', {})),
+                analytics=AnalyticsConfig(**default_data.get('analytics', {})),
                 shortcuts=default_data.get('shortcuts', []),
                 audio_device_index=default_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False),
