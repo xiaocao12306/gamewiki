@@ -34,7 +34,7 @@ class BackendClient:
         if api_key:
             headers["x-api-key"] = api_key
             masked = f"{api_key[:4]}***{api_key[-2:]}" if len(api_key) > 6 else "***"
-            logger.debug("BackendClient 准备请求，已使用 API Key: %s", masked)
+            logger.info("BackendClient 已加载 API Key: %s", masked)
         else:
             logger.warning("BackendClient 未找到 API Key，将无法访问需要认证的接口")
         return headers
@@ -43,7 +43,7 @@ class BackendClient:
         endpoint = self._backend_config.config_endpoint
         url = self._build_url(endpoint)
         if not url:
-            logger.debug("后端 base_url 未配置，跳过远程配置拉取")
+            logger.warning("后端 base_url 未配置，跳过远程配置拉取")
             return None
 
         try:
