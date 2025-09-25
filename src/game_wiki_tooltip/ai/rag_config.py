@@ -28,6 +28,7 @@ class LLMSettings:
     cache_ttl: int = 3600  # Cache TTL in seconds
     max_retries: int = 3
     retry_delay: float = 1.0
+    response_language: str = "auto"  # AI回复语言设置：auto/zh/en
     
     def is_valid(self) -> bool:
         """Check if configuration is valid"""
@@ -59,7 +60,8 @@ class LLMSettings:
             "enable_cache": self.enable_cache,
             "cache_ttl": self.cache_ttl,
             "max_retries": self.max_retries,
-            "retry_delay": self.retry_delay
+            "retry_delay": self.retry_delay,
+            "response_language": self.response_language
         }
     
 

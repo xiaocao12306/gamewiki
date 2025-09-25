@@ -361,6 +361,9 @@ class RAGIntegration(QObject):
         logger.info("🔄 Language setting change detected, reloading game configuration")
         self._init_game_config_manager()
         
+        # Update AI components language setting
+        self._update_ai_language_setting()
+        
     def _init_ai_components(self):
         """Initialize AI components with settings"""
         # Skip AI component initialization if in limited mode
@@ -410,9 +413,15 @@ class RAGIntegration(QObject):
             if has_api_key:
                 logger.info("✅ Complete API key configuration detected, initializing AI components")
                 
+                # Get current language setting for AI response
+                current_language = settings.get('language', 'en')
+                response_language = current_language if current_language in ['zh', 'en'] else 'en'
+                logger.info(f"🌐 AI language setting: interface={current_language}, response={response_language}")
+                
                 llm_config = LLMSettings(
                     api_key=gemini_api_key,
-                    model='gemini-2.5-flash-lite'
+                    model='gemini-2.5-flash-lite',
+                    response_language=response_language
                 )
                 
                 # Store LLM configuration for other methods
@@ -440,6 +449,40 @@ class RAGIntegration(QObject):
             
         self._ai_initialized = True
         return True
+    
+    def _update_ai_language_setting(self):
+        """Update AI components language setting when interface language changes"""
+        try:
+            if not hasattr(self, '_llm_config') or not self._llm_config:
+                logger.info("🌐 No LLM config available, skipping language update")
+                return
+                
+            # Get current language setting
+            settings = self.settings_manager.get()
+            current_language = settings.get('language', 'en')
+            response_language = current_language if current_language in ['zh', 'en'] else 'en'
+            
+            # Update LLM config language setting
+            old_language = self._llm_config.response_language
+            self._llm_config.response_language = response_language
+            
+            logger.info(f"🌐 Updated AI response language: {old_language} -> {response_language}")
+            
+            # If RAG engine is initialized, update its summarizer language setting
+            if hasattr(self, 'rag_engine') and self.rag_engine and hasattr(self.rag_engine, 'summarizer'):
+                if self.rag_engine.summarizer:
+                    # Update config language setting
+                    if hasattr(self.rag_engine.summarizer, 'config'):
+                        self.rag_engine.summarizer.config.language = response_language
+                        logger.info(f"🌐 Updated RAG summarizer config language setting to: {response_language}")
+                    
+                    # Update LLM config language setting (priority)
+                    if hasattr(self.rag_engine.summarizer, 'llm_config') and self.rag_engine.summarizer.llm_config:
+                        self.rag_engine.summarizer.llm_config.response_language = response_language
+                        logger.info(f"🌐 Updated RAG summarizer LLM config language setting to: {response_language}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to update AI language setting: {e}")
             
     def _init_rag_for_game(self, game_name: str, llm_config: LLMSettings, google_api_key: str, wait_for_init: bool = False):
         """Initialize RAG engine for specific game"""
@@ -965,8 +1008,22 @@ class RAGIntegration(QObject):
                                     # Import fallback handler
                                     from .ai.fallback_guide_handler import create_fallback_guide_handler
                                     
-                                    # Create fallback handler
-                                    fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                    # Get current language setting for AI response
+                                    current_language = settings.get('language', 'en')
+                                    response_language = current_language if current_language in ['zh', 'en'] else 'en'
+                                    
+                                    # Create LLM config for fallback handler
+                                    fallback_llm_config = LLMSettings(
+                                        api_key=gemini_api_key,
+                                        model='gemini-2.5-flash-lite',
+                                        response_language=response_language
+                                    )
+                                    
+                                    # Create fallback handler with LLM config
+                                    fallback_handler = create_fallback_guide_handler(
+                                        api_key=gemini_api_key,
+                                        llm_config=fallback_llm_config
+                                    )
                                     
                                     # Determine language
                                     from src.game_wiki_tooltip.core.i18n import get_current_language
@@ -1058,8 +1115,22 @@ class RAGIntegration(QObject):
                                 # Import fallback handler
                                 from .ai.fallback_guide_handler import create_fallback_guide_handler
                                 
-                                # Create fallback handler
-                                fallback_handler = create_fallback_guide_handler(api_key=gemini_api_key)
+                                # Get current language setting for AI response
+                                current_language = settings.get('language', 'en')
+                                response_language = current_language if current_language in ['zh', 'en'] else 'en'
+                                
+                                # Create LLM config for fallback handler
+                                fallback_llm_config = LLMSettings(
+                                    api_key=gemini_api_key,
+                                    model='gemini-2.5-flash-lite',
+                                    response_language=response_language
+                                )
+                                
+                                # Create fallback handler with LLM config
+                                fallback_handler = create_fallback_guide_handler(
+                                    api_key=gemini_api_key,
+                                    llm_config=fallback_llm_config
+                                )
                                 
                                 # Determine language
                                 from src.game_wiki_tooltip.core.i18n import get_current_language

@@ -27,9 +27,10 @@ class FallbackConfig:
 class FallbackGuideHandler:
     """Handle guide queries for unsupported games using Google Search"""
     
-    def __init__(self, config: FallbackConfig):
+    def __init__(self, config: FallbackConfig, llm_config=None):
         """Initialize fallback guide handler"""
         self.config = config
+        self.llm_config = llm_config  # Store LLM config for language settings
         logger.info(f"Initialized FallbackGuideHandler with model: {config.model_name}")
     
     async def generate_guide_stream(
@@ -69,6 +70,13 @@ class FallbackGuideHandler:
             grounding_tool = types.Tool(
                 google_search=types.GoogleSearch()
             )
+            
+            # Use LLM config response language if available
+            if self.llm_config and hasattr(self.llm_config, 'response_language') and self.llm_config.response_language != "auto":
+                language = self.llm_config.response_language
+                logger.info(f"🌐 Using LLM config response language for fallback guide: {language}")
+            else:
+                logger.info(f"🌐 Using fallback language detection for fallback guide: {language}")
             
             # Build system instruction and prompt
             system_instruction = self._build_system_instruction(language)
@@ -179,7 +187,7 @@ class FallbackGuideHandler:
 - For equipment or builds, explain selection principles rather than specific names and stats
 - Guide users to authoritative sources for detailed data"
 
-Answer in English, focusing on methodology and operational guidance, avoiding direct copying of specific wiki data content."""
+Answer in the same language as the user's query, focusing on methodology and operational guidance, avoiding direct copying of specific wiki data content."""
     
     def _build_user_prompt(
         self,
@@ -321,6 +329,7 @@ Answer in English, focusing on methodology and operational guidance, avoiding di
 def create_fallback_guide_handler(
     api_key: Optional[str] = None,
     model_name: str = "gemini-2.5-flash",
+    llm_config=None,
     **kwargs
 ) -> FallbackGuideHandler:
     """
@@ -329,6 +338,7 @@ def create_fallback_guide_handler(
     Args:
         api_key: Google API key
         model_name: Model to use (gemini-2.5-flash recommended)
+        llm_config: LLM configuration for language settings
         **kwargs: Additional config parameters
         
     Returns:
@@ -345,4 +355,4 @@ def create_fallback_guide_handler(
         **kwargs
     )
     
-    return FallbackGuideHandler(config)
+    return FallbackGuideHandler(config, llm_config=llm_config)

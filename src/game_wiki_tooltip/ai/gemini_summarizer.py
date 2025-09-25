@@ -25,6 +25,7 @@ class GeminiSummarizer:
         # Use RAGConfig if provided, otherwise use SummarizationConfig
         if rag_config:
             self.rag_config = rag_config
+            self.llm_config = rag_config.llm_settings  # Store LLM config for language settings
             # Extract settings from RAGConfig
             # Use api_key from config or fallback to LLM settings
             api_key = rag_config.summarization.api_key or rag_config.llm_settings.get_api_key()
@@ -35,6 +36,7 @@ class GeminiSummarizer:
         else:
             self.config = config
             self.rag_config = None
+            self.llm_config = None
         
         # API key will be used when creating the client instance
         # Model will be configured per request using the client API
@@ -81,8 +83,13 @@ class GeminiSummarizer:
         try:
             print(f"🚀 [STREAM-DEBUG] Calling Gemini streaming API")
             
-            # Detect language from query
-            language = self._detect_language(query) if self.config.language == "auto" else self.config.language
+            # Use LLM config response language if available, otherwise detect from query
+            if self.llm_config and hasattr(self.llm_config, 'response_language') and self.llm_config.response_language != "auto":
+                language = self.llm_config.response_language
+                logger.info(f"🌐 Using LLM config response language for AI reply: {language}")
+            else:
+                language = self._detect_language(query) if self.config.language == "auto" else self.config.language
+                logger.info(f"🌐 Using detected/fallback language for AI reply: {language}")
             
             # Build system instruction
             system_instruction = self._build_system_instruction(language)
@@ -165,9 +172,12 @@ class GeminiSummarizer:
     
     def _build_system_instruction(self, language: str = "auto") -> str:
         """Build system instruction for Gemini"""
-        # Detect language if auto
-        if language == "auto":
-            language = "en"  # Default to Chinese, will be overridden by actual query language
+        # Use LLM config response language if available
+        if self.llm_config and hasattr(self.llm_config, 'response_language') and self.llm_config.response_language != "auto":
+            language = self.llm_config.response_language
+            logger.debug(f"Using LLM config response language: {language}")
+        elif language == "auto":
+            language = "en"  # Default to English if no config available
         
         if language == "zh":
             return """你是一个专业的游戏攻略助手。你的任务是基于提供的游戏知识库内容，为玩家提供准确、有用的游戏攻略信息。

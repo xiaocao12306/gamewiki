@@ -626,6 +626,11 @@ class GameWikiApp(QObject):
             
             logger.info("Components already initialized, updating settings...")
             
+            # Update RAG system language settings when settings are applied
+            if hasattr(self.assistant_ctrl, 'rag_integration') and self.assistant_ctrl.rag_integration:
+                logger.info("🌐 Updating RAG system language settings...")
+                self.assistant_ctrl.rag_integration.reload_for_language_change()
+            
             # 检查当前API key配置，决定是否需要切换模式
             settings = self.settings_mgr.get()
             api_config = settings.get('api', {})

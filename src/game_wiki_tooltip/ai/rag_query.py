@@ -459,27 +459,36 @@ class EnhancedRagQuery:
                 self.enable_summarization = False
                 return
             
-            # Use the config object directly or create from dict for backward compatibility
-            if isinstance(self.summarization_config, SummarizationConfig):
-                # Direct config object from RAGConfig
-                config = self.summarization_config
-                config.api_key = api_key  # Override with actual API key
+            # Use RAGConfig if available, otherwise use individual config
+            if self.rag_config:
+                # Use RAGConfig to get language settings from LLM config
+                self.summarizer = GeminiSummarizer(rag_config=self.rag_config)
             else:
-                # Legacy dict format
-                config = SummarizationConfig(
-                    api_key=api_key,
-                    model_name=self.summarization_config.get("model_name"),
-                    temperature=self.summarization_config.get("temperature"),
-                    include_sources=self.summarization_config.get("include_sources"),
-                    language=self.summarization_config.get("language"),
-                    enable_google_search=self.summarization_config.get("enable_google_search"),
-                    thinking_budget=self.summarization_config.get("thinking_budget")
-                )
+                # Use the config object directly or create from dict for backward compatibility
+                if isinstance(self.summarization_config, SummarizationConfig):
+                    # Direct config object from RAGConfig
+                    config = self.summarization_config
+                    config.api_key = api_key  # Override with actual API key
+                else:
+                    # Legacy dict format
+                    config = SummarizationConfig(
+                        api_key=api_key,
+                        model_name=self.summarization_config.get("model_name"),
+                        temperature=self.summarization_config.get("temperature"),
+                        include_sources=self.summarization_config.get("include_sources"),
+                        language=self.summarization_config.get("language"),
+                        enable_google_search=self.summarization_config.get("enable_google_search"),
+                        thinking_budget=self.summarization_config.get("thinking_budget")
+                    )
+                
+                # Create summarizer using the config
+                self.summarizer = GeminiSummarizer(config=config)
             
-            # Create summarizer using the config
-            self.summarizer = GeminiSummarizer(config=config)
-            
-            logger.info(f"Gemini summarizer initialized successfully: {config.model_name}")
+            # Log successful initialization
+            if self.rag_config:
+                logger.info(f"Gemini summarizer initialized successfully: {self.rag_config.summarization.model_name}")
+            else:
+                logger.info(f"Gemini summarizer initialized successfully: {config.model_name}")
             
         except Exception as e:
             logger.error(f"Gemini summarizer initialization failed: {e}")

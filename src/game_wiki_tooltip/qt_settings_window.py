@@ -1055,6 +1055,9 @@ class QtSettingsWindow(QMainWindow):
             # Update settings manager's language to track current language
             self.settings_manager.settings.language = selected_language
             
+            # Save the language setting immediately
+            self.settings_manager.save()
+            
             # Update all UI text
             self._update_ui_text()
             
