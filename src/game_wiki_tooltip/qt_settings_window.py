@@ -1219,46 +1219,9 @@ class QtSettingsWindow(QMainWindow):
             QMessageBox.warning(self, t("warning"), t("validation_modifier_required"))
             return
             
-        # Validate API keys (check both input and environment variables)
+        # API 密钥现在为可选项，允许用户清空或留空
         gemini_api_key_input = self.google_api_input.text().strip()
-        gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-        gemini_api_key = gemini_api_key_input or gemini_api_key_env
-        
-        # Check if both API keys are available
-        missing_keys = []
-        if not gemini_api_key:
-            missing_keys.append("Gemini API Key")
-        # Only need Gemini API key now
-        
-        if missing_keys:
-            # Check if user previously chose "don't remind me again"
-            current_settings = self.settings_manager.get()
-            dont_remind = current_settings.get('dont_remind_api_missing', False)
-            
-            if not dont_remind:
-                # Show friendly dialog
-                dialog = ApiKeyMissingDialog(missing_keys, parent=self)
-                dialog.exec()
-                
-                # Handle user's choice
-                if dialog.dont_remind:
-                    logger.info("User selected 'Don't remind me again' in settings")
-                    self.settings_manager.update({'dont_remind_api_missing': True})
-                
-                if dialog.open_settings:
-                    # User chose to configure API keys, directly switch to API configuration tab
-                    logger.info("User chose to configure API keys, switching to API tab")
-                    self.switch_to_api_tab()
-                    return
-                else:
-                    # User chose to configure later, continue saving settings but show limited mode info
-                    logger.info("User chose to continue without API keys")
-                    # Continue with settings save logic
-            else:
-                # User previously chose "don't remind me again", silently continue
-                logger.info("User previously chose 'Don't remind me again', proceeding without API key validation")
-                # Continue with settings save logic
-            
+
         # Update settings (only save what user explicitly entered)
         settings_update = {
             'language': selected_language,
@@ -1306,67 +1269,15 @@ class QtSettingsWindow(QMainWindow):
         # Emit signal
         self.settings_applied.emit()
         
-        # Show success message (different based on API key status)
-        if missing_keys:
-            success_msg = (
-                f"Settings saved successfully!\n\n"
-                f"⚠️ Running in limited mode (Wiki search only)\n"
-                f"Missing API keys: {', '.join(missing_keys)}\n\n"
-                f"Configure complete API keys to enable AI guide features."
-            )
-        else:
-            success_msg = t("validation_settings_saved")
-        
-        QMessageBox.information(self, t("success"), success_msg)
+        QMessageBox.information(self, t("success"), t("validation_settings_saved"))
         
         # Close window
         self.close()
         
     def _on_cancel(self):
         """Handle cancel button click with API key validation"""
-        # Check current API key configuration
-        gemini_api_key_input = self.google_api_input.text().strip()
-        gemini_api_key_env = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-        gemini_api_key = gemini_api_key_input or gemini_api_key_env
-
-        # Check if both API keys are available
-        missing_keys = []
-        if not gemini_api_key:
-            missing_keys.append("Gemini API Key")
-        # Only need Gemini API key now
-        
-        if missing_keys:
-            # Check if user previously chose "don't remind me again"
-            current_settings = self.settings_manager.get()
-            dont_remind = current_settings.get('dont_remind_api_missing', False)
-            
-            if not dont_remind:
-                # Show the dialog
-                dialog = ApiKeyMissingDialog(missing_keys, parent=self)
-                dialog.exec()
-                
-                # Handle user's choice
-                if dialog.dont_remind:
-                    logger.info("User selected 'Don't remind me again' when canceling settings")
-                    self.settings_manager.update({'dont_remind_api_missing': True})
-                
-                if dialog.open_settings:
-                    # User chose to configure API keys, switch to API tab and don't close
-                    logger.info("User chose to configure API keys from cancel dialog, switching to API tab")
-                    self.switch_to_api_tab()
-                    return  # Don't close the window
-                else:
-                    # User chose "Maybe Later", close the window
-                    logger.info("User chose to close settings without configuring API keys")
-                    self.close()
-            else:
-                # User previously chose "don't remind me again", close directly
-                logger.info("User previously chose 'Don't remind me again', closing settings directly")
-                self.close()
-        else:
-            # API keys are configured, close normally
-            logger.info("API keys are configured, closing settings normally")
-            self.close()
+        logger.info("Closing settings window without additional validation")
+        self.close()
     
     # Wiki URL management methods
     def _load_wiki_urls(self):

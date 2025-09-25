@@ -6,13 +6,14 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import os
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
 
 from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType, WindowState
+from src.game_wiki_tooltip.core.backend_client import BackendClient
 from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
 from src.game_wiki_tooltip.core.utils import get_foreground_title
@@ -278,9 +279,15 @@ class RAGIntegration(QObject):
     wiki_result_ready = pyqtSignal(str, str)  # url, title
     error_occurred = pyqtSignal(str)
     
-    def __init__(self, settings_manager: SettingsManager, limited_mode: bool = False):
+    def __init__(
+        self,
+        settings_manager: SettingsManager,
+        backend_client: BackendClient,
+        limited_mode: bool = False,
+    ):
         super().__init__()
         self.settings_manager = settings_manager
+        self.backend_client = backend_client
         self.limited_mode = limited_mode
         self.rag_engine = None
         self.query_processor = None
@@ -685,15 +692,10 @@ class RAGIntegration(QObject):
                 translated_query=query
             )
         
-        # If in limited mode, always return wiki intent
+        # In cloud proxy模式下使用简化意图识别，允许继续调用后端模型
         if self.limited_mode:
-            logger.info("🚨 In limited mode, all queries will be treated as wiki queries")
-            return QueryIntent(
-                intent_type='wiki',
-                confidence=0.9,
-                rewritten_query=query,
-                translated_query=query
-            )
+            logger.info("🌐 Limited mode active，using lightweight intent detection")
+            return self._simple_intent_detection(query)
             
         # Ensure AI components are loaded (lazy loading)
         if not self._ensure_ai_components_loaded():
@@ -782,15 +784,6 @@ class RAGIntegration(QObject):
             
     def _simple_intent_detection(self, query: str) -> QueryIntent:
         """Simple keyword-based intent detection"""
-        # If in limited mode, always return wiki intent
-        if self.limited_mode:
-            return QueryIntent(
-                intent_type='wiki',
-                confidence=0.9,
-                rewritten_query=query,
-                translated_query=query
-            )
-            
         query_lower = query.lower()
         
         # Wiki intent keywords
@@ -922,27 +915,9 @@ class RAGIntegration(QObject):
             skip_query_processing: 是否跳过RAG内部的查询处理
             unified_query_result: 预处理的统一查询结果（来自process_query_unified）
         """
-        # If in limited mode, automatically switch to wiki search
+        # Limited mode 下使用后端模型代理
         if self.limited_mode:
-            logger.info("📚 In limited mode, switching to wiki search")
-            # 直接切换到wiki搜索，不显示错误
-            from src.game_wiki_tooltip.core.i18n import get_current_language
-            current_lang = get_current_language()
-            
-            # 发送提示消息
-            if current_lang == 'zh':
-                self.streaming_chunk_ready.emit("💡 正在为您切换到Wiki搜索模式...\n\n")
-            else:
-                self.streaming_chunk_ready.emit("💡 Switching to Wiki search mode...\n\n")
-            
-            # 准备wiki搜索
-            search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
-            self.wiki_result_ready.emit(search_url, search_title)
-            
-            if current_lang == 'zh':
-                self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
-            else:
-                self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
+            await self._generate_via_backend(query, original_query, game_context, stop_flag)
             return
             
         if not self.rag_engine:
@@ -1337,16 +1312,152 @@ class RAGIntegration(QObject):
             self.error_occurred.emit(f"Guide generation failed: {str(e)}")
 
 
+    def _is_stop_requested(self, stop_flag) -> bool:
+        if not stop_flag:
+            return False
+        try:
+            if callable(stop_flag):
+                return bool(stop_flag())
+        except Exception:
+            return False
+
+        if hasattr(stop_flag, "is_set"):
+            try:
+                return bool(stop_flag.is_set())
+            except Exception:
+                return False
+        return False
+
+    async def _generate_via_backend(self, query: str, original_query: Optional[str], game_context: Optional[str], stop_flag) -> None:
+        """Use backend chat proxy to generate responses in limited mode"""
+        if self._is_stop_requested(stop_flag):
+            logger.info("Cloud chat aborted before request (stop flag set)")
+            return
+
+        messages = self._build_chat_messages(query, original_query, game_context)
+        preferred_model, provider = self._resolve_model_preferences()
+
+        loop = asyncio.get_running_loop()
+        try:
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.backend_client.chat_completion(
+                    messages=messages,
+                    model=preferred_model,
+                    provider=provider,
+                ),
+            )
+        except Exception as exc:
+            logger.error(f"Cloud chat request failed: {exc}")
+            await self._fallback_to_wiki(query, game_context)
+            return
+
+        if self._is_stop_requested(stop_flag):
+            logger.info("Cloud chat aborted after request (stop flag set)")
+            return
+
+        if not response or not response.get("content"):
+            logger.warning("Cloud chat returned empty payload, fallback to wiki")
+            await self._fallback_to_wiki(query, game_context)
+            return
+
+        content = response.get("content", "").strip()
+        if not content:
+            logger.warning("Cloud chat content empty, fallback to wiki")
+            await self._fallback_to_wiki(query, game_context)
+            return
+
+        logger.info(
+            "Cloud chat success provider=%s model=%s fallback=%s",
+            response.get("provider"),
+            response.get("model"),
+            response.get("fallback_used"),
+        )
+
+        if self._is_stop_requested(stop_flag):
+            logger.info("Cloud chat aborted before streaming output")
+            return
+
+        self.streaming_chunk_ready.emit(content if content.endswith("\n") else f"{content}\n")
+
+    async def _fallback_to_wiki(self, query: str, game_context: Optional[str]) -> None:
+        from src.game_wiki_tooltip.core.i18n import get_current_language
+
+        current_lang = get_current_language()
+        if current_lang == 'zh':
+            self.streaming_chunk_ready.emit("💡 云端模型暂不可用，已为您切换到 Wiki 搜索模式...\n\n")
+        else:
+            self.streaming_chunk_ready.emit("💡 Cloud model is unavailable, switching to Wiki search...\n\n")
+
+        search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
+        self.wiki_result_ready.emit(search_url, search_title)
+
+        if current_lang == 'zh':
+            self.streaming_chunk_ready.emit(f"🔗 已为您打开Wiki搜索: {search_title}\n")
+        else:
+            self.streaming_chunk_ready.emit(f"🔗 Wiki search opened: {search_title}\n")
+
+    def _resolve_model_preferences(self) -> Tuple[Optional[str], Optional[str]]:
+        remote_config = getattr(self.settings_manager.settings, 'remote_config', {}) or {}
+        strategy = remote_config.get("model_strategy", {}) or {}
+        preferred_model = strategy.get("preferred_model")
+        preferred_provider = strategy.get("preferred_provider")
+
+        if preferred_provider:
+            return preferred_model, preferred_provider
+
+        for endpoint in remote_config.get("models", []):
+            metadata = endpoint.get("metadata", {}) or {}
+            if preferred_model and metadata.get("model") == preferred_model:
+                return preferred_model, endpoint.get("provider")
+
+        return preferred_model, None
+
+    def _build_chat_messages(
+        self,
+        query: str,
+        original_query: Optional[str],
+        game_context: Optional[str],
+    ) -> List[Dict[str, str]]:
+        settings_snapshot = self.settings_manager.get()
+        language = settings_snapshot.get('language', 'zh')
+        remote_config = getattr(self.settings_manager.settings, 'remote_config', {}) or {}
+        strategy = remote_config.get("model_strategy", {}) or {}
+
+        system_prompt = strategy.get(
+            "system_prompt",
+            "You are GameWiki Assistant. Provide concise, helpful answers for gamers.",
+        )
+        if language == 'zh' and "中文" not in system_prompt:
+            system_prompt += "\n请使用简体中文回答用户的问题。"
+
+        user_content = original_query or query
+        if game_context:
+            user_content = f"当前窗口/游戏: {game_context}\n\n{user_content}"
+
+        messages: List[Dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ]
+
+        return messages
+
+
 class IntegratedAssistantController(AssistantController):
     """Enhanced assistant controller with RAG integration"""
     
     # Class-level global instance reference
     _global_instance = None
     
-    def __init__(self, settings_manager: SettingsManager, limited_mode: bool = False):
+    def __init__(self, settings_manager: SettingsManager, backend_client, limited_mode: bool = False):
         super().__init__(settings_manager)
         self.limited_mode = limited_mode
-        self.rag_integration = RAGIntegration(settings_manager, limited_mode=limited_mode)
+        self.backend_client = backend_client
+        self.rag_integration = RAGIntegration(
+            settings_manager,
+            backend_client,
+            limited_mode=limited_mode,
+        )
         self._setup_connections()
         self._current_worker = None
         self._current_wiki_message = None  # Store current wiki link message component
@@ -1362,9 +1473,9 @@ class IntegratedAssistantController(AssistantController):
         
         # If in limited mode, display prompt information
         if limited_mode:
-            logger.info("🚨 Running in limited mode: only Wiki search functionality is supported")
+            logger.info("🚨 运行在云端代理模式：Wiki 搜索 + 远端聊天")
         else:
-            logger.info("✅ Running in full mode: supports Wiki search and AI guide functionality")
+            logger.info("✅ 运行在本地增强模式：支持 Wiki 搜索与本地 RAG 功能")
             # Don't preload AI modules immediately, wait for first window display
             self._ai_preload_scheduled = False
             

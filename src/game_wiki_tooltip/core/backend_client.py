@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+import hashlib
+import platform
+import uuid
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -17,6 +20,10 @@ class BackendClient:
     def __init__(self, settings_manager: SettingsManager) -> None:
         self._settings_manager = settings_manager
         self._session = requests.Session()
+        # Generate a stable device fingerprint to support速率限制
+        raw_device = f"{platform.node()}|{platform.system()}|{platform.release()}|{uuid.getnode()}"
+        self._device_id = hashlib.sha256(raw_device.encode()).hexdigest()[:16]
+        self._client_version = "1.0.0"
 
     @property
     def _backend_config(self):
@@ -29,7 +36,12 @@ class BackendClient:
         return urljoin(f"{base_url}/", path.lstrip("/"))
 
     def _default_headers(self) -> Dict[str, str]:
-        headers: Dict[str, str] = {"User-Agent": "GameWiki-MVP/0.1"}
+        headers: Dict[str, str] = {
+            "User-Agent": "GameWiki-MVP/0.1",
+            "x-device-id": self._device_id,
+            "x-app-version": self._client_version,
+            "x-platform": platform.system().lower(),
+        }
         api_key = self._backend_config.resolved_api_key()
         if api_key:
             headers["x-api-key"] = api_key
@@ -58,6 +70,50 @@ class BackendClient:
             return data
         except Exception as exc:
             logger.warning("远程配置获取失败：%s", exc)
+            return None
+
+    def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        *,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        temperature: Optional[float] = None,
+        include_raw: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """调用后端聊天代理"""
+
+        endpoint = getattr(self._backend_config, "chat_endpoint", "/api/v1/chat")
+        url = self._build_url(endpoint)
+        if not url:
+            logger.error("后端 base_url 未配置，无法调用聊天接口")
+            return None
+
+        payload: Dict[str, Any] = {"messages": messages, "include_raw": include_raw}
+        if model:
+            payload["model"] = model
+        if provider:
+            payload["provider"] = provider
+        if temperature is not None:
+            payload["temperature"] = temperature
+
+        try:
+            response = self._session.post(
+                url,
+                json=payload,
+                headers=self._default_headers(),
+                timeout=max(self._backend_config.timeout, 60.0),
+            )
+            response.raise_for_status()
+            data = response.json()
+            logger.info(
+                "云端模型响应成功 provider=%s model=%s",
+                data.get("provider"),
+                data.get("model"),
+            )
+            return data
+        except Exception as exc:
+            logger.warning("云端模型调用失败：%s", exc)
             return None
 
     def post_events(self, events: List[Dict]) -> bool:

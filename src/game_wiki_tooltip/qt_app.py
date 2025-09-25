@@ -360,31 +360,24 @@ class GameWikiApp(QObject):
         dont_remind = settings.get('dont_remind_api_missing', False)
         logger.info(f"  - API key available: {has_api_key}")
         logger.info(f"  - Don't remind API missing: {dont_remind}")
-        
+
         # 修改逻辑：强制显示设置窗口的情况
         if self.force_settings:
             logger.info("Settings window forced by command line argument")
             self.need_show_settings_after_splash = False  # Don't show twice
             self._show_settings(initial_setup=False)
-        elif not has_api_key:
-            # 没有API key时，显示信息但不强制退出
-            logger.info("Missing Gemini API Key, starting in limited mode")
-            logger.info("User will be able to use wiki search but not AI guide features")
-            
-            # 显示通知告知用户功能受限
-            self._initialize_components(limited_mode=True)
-            
-            # 如果用户没有选择"不再提醒"，标记需要在splash后打开设置界面
-            if not dont_remind:
-                logger.info("Will open settings window after splash screen")
-                self.need_show_settings_after_splash = True
-            else:
-                self.need_show_settings_after_splash = False
-        else:
-            # 同时有两个API key，initialize components normally
-            logger.info("Found both Google/Gemini and Jina API keys, initializing components with full functionality")
+            return
+
+        # 没有 Gemini Key 时默认运行在“云端代理模式”，不再弹出提示
+        if not has_api_key:
+            logger.info("Gemini API Key 未配置，将使用云端模型代理模式启动")
             self.need_show_settings_after_splash = False
-            self._initialize_components(limited_mode=False)
+            self._initialize_components(limited_mode=True)
+            return
+
+        logger.info("Detected Gemini API Key, enabling本地 RAG 功能")
+        self.need_show_settings_after_splash = False
+        self._initialize_components(limited_mode=False)
             
     def _initialize_components(self, limited_mode=False):
         """Initialize all components"""
@@ -442,7 +435,11 @@ class GameWikiApp(QObject):
                 logger.info("Existing assistant controller cleanup completed")
             
             # Initialize assistant controller with limited mode flag
-            self.assistant_ctrl = IntegratedAssistantController(self.settings_mgr, limited_mode=limited_mode)
+            self.assistant_ctrl = IntegratedAssistantController(
+                self.settings_mgr,
+                self.backend_client,
+                limited_mode=limited_mode,
+            )
             
             # Set callback for settings window request from chat window
             self.assistant_ctrl.set_settings_window_callback(self._show_settings)
@@ -467,11 +464,10 @@ class GameWikiApp(QObject):
                     hotkey_string = self.hotkey_mgr.get_hotkey_string()
                     
                     if limited_mode:
-                        # 合并启动通知：热键信息 + 受限模式信息
+                        # 云端代理模式提示
                         notification_msg = (
                             f"{t('hotkey_registered', hotkey=hotkey_string)}\n"
-                            f"Started in limited mode (Wiki search only)\n"
-                            f"Missing API keys for AI guide features\n"
+                            f"Running in cloud proxy mode — Wiki search + remote chat via backend."
                         )
                     else:
                         # 完整功能模式的通知
@@ -689,28 +685,7 @@ class GameWikiApp(QObject):
             logger.info(f"API key status: Gemini={'✓' if gemini_api_key else '✗'}")
             
             # Check if API key missing dialog should be shown (only when switching from full to limited mode)
-            show_api_dialog = (new_limited_mode and not current_limited_mode and not dont_remind)
-            
-            if show_api_dialog:
-                missing_keys = []
-                if not gemini_api_key:
-                    missing_keys.append("Gemini API Key")
-                # Only need Gemini API key now
-                
-                # 显示自定义对话框
-                dialog = ApiKeyMissingDialog(missing_keys, parent=None)
-                dialog.exec()
-                
-                # 处理用户的选择
-                if dialog.dont_remind:
-                    logger.info("User selected 'Don't remind me again'")
-                    self.settings_mgr.update({'dont_remind_api_missing': True})
-                
-                if dialog.open_settings:
-                    logger.info("User chose to configure API keys")
-                    # 不需要在这里打开设置窗口，因为它应该已经打开了
-                else:
-                    logger.info("User chose to continue without API keys")
+            show_api_dialog = False
                     
             if current_limited_mode != new_limited_mode:
                 # Mode switch required, reinitialize components
@@ -753,19 +728,14 @@ class GameWikiApp(QObject):
                 mode_switched = True  # Mark that mode switch has occurred
                 if self.tray_icon:
                     if new_limited_mode:
-                        missing_keys = []
-                        if not gemini_api_key:
-                            missing_keys.append("Gemini API Key")
-                        # Only need Gemini API key now
-                        
                         self.tray_icon.show_notification(
                             "GameWiki Assistant",
-                            f"Switched to limited mode\n\nOnly Wiki search is available\n\nMissing API keys: {', '.join(missing_keys)}\nConfigure complete API keys for full functionality"
+                            "Switched to cloud proxy mode\n\nWiki search + remote chat via backend are available."
                         )
                     else:
                         self.tray_icon.show_notification(
                             "GameWiki Assistant",
-                            "Switched to full functionality mode\n\nWiki search and AI guide features are now available\n\nComplete API key configuration detected"
+                            "Switched to full functionality mode\n\nLocal RAG enhancements re-enabled."
                         )
                 
                 logger.info("Mode switch completed")
