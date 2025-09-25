@@ -33,6 +33,10 @@ class BackendClient:
         api_key = self._backend_config.resolved_api_key()
         if api_key:
             headers["x-api-key"] = api_key
+            masked = f"{api_key[:4]}***{api_key[-2:]}" if len(api_key) > 6 else "***"
+            logger.debug("BackendClient 准备请求，已使用 API Key: %s", masked)
+        else:
+            logger.warning("BackendClient 未找到 API Key，将无法访问需要认证的接口")
         return headers
 
     def fetch_remote_config(self) -> Optional[Dict]:
@@ -83,4 +87,3 @@ class BackendClient:
 
     def close(self) -> None:
         self._session.close()
-
