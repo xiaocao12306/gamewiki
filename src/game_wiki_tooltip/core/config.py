@@ -98,6 +98,7 @@ class BackendConfig:
     api_key: str = ""
     config_endpoint: str = "/api/v1/config"
     events_endpoint: str = "/api/v1/events"
+    chat_endpoint: str = "/api/v1/chat"
     timeout: float = 10.0
 
     def resolved_base_url(self) -> str:
@@ -123,6 +124,7 @@ class AppSettings:
     window_geometry: WindowGeometryConfig = field(default_factory=WindowGeometryConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     backend: BackendConfig = field(default_factory=BackendConfig)
+    remote_config: Dict[str, Any] = field(default_factory=dict)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
@@ -182,6 +184,8 @@ class SettingsManager:
         # Update backend settings
         if 'backend' in new_settings:
             self._settings.backend = BackendConfig(**new_settings['backend'])
+        if 'remote_config' in new_settings:
+            self._settings.remote_config = new_settings['remote_config']
         # Update analytics settings
         if 'analytics' in new_settings:
             self._settings.analytics = AnalyticsConfig(**new_settings['analytics'])

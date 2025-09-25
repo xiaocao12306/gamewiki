@@ -19,6 +19,7 @@ from PyQt6.QtGui import QIcon
 import qasync
 
 from src.game_wiki_tooltip.core.config import SettingsManager, GameConfigManager
+from src.game_wiki_tooltip.core.backend_client import BackendClient
 from src.game_wiki_tooltip.core.analytics import AnalyticsManager
 from src.game_wiki_tooltip.qt_tray_icon import QtTrayIcon
 from src.game_wiki_tooltip.qt_settings_window import QtSettingsWindow
@@ -242,6 +243,10 @@ class GameWikiApp(QObject):
             
         # Initialize managers
         self.settings_mgr = SettingsManager(SETTINGS_PATH)
+        self.backend_client = BackendClient(self.settings_mgr)
+        self.remote_config = {}
+        self._sync_remote_config()
+
         self.analytics_mgr = AnalyticsManager(self.settings_mgr)
         self.game_cfg_mgr = GameConfigManager(GAMES_CONFIG_PATH)
         
@@ -267,7 +272,33 @@ class GameWikiApp(QObject):
         
         # Check if first run
         self._check_first_run()
-        
+
+    def _sync_remote_config(self):
+        """Fetch remote configuration from backend and cache locally"""
+        config = self.backend_client.fetch_remote_config()
+        current = self.settings_mgr.settings.remote_config or {}
+
+        if not config:
+            if current:
+                logger.info("Using cached remote configuration (backend fetch unavailable)")
+                self.remote_config = current
+            else:
+                logger.info("Remote configuration unavailable; proceeding with local defaults")
+                self.remote_config = {}
+            return
+
+        if config != current:
+            logger.info("Remote configuration updated from backend")
+            self.settings_mgr.update({'remote_config': config})
+            try:
+                self.settings_mgr.save()
+            except Exception as exc:
+                logger.warning(f"Failed to persist remote configuration: {exc}")
+        else:
+            logger.info("Remote configuration matches cached version")
+
+        self.remote_config = config
+
     def _preload_icons(self):
         """Preload icon resources to avoid runtime errors"""
         try:
@@ -958,6 +989,12 @@ class GameWikiApp(QObject):
                 self.analytics_mgr.shutdown()
             except Exception as exc:
                 logger.warning(f"AnalyticsManager shutdown failed: {exc}")
+
+        if hasattr(self, 'backend_client') and self.backend_client:
+            try:
+                self.backend_client.close()
+            except Exception as exc:
+                logger.warning(f"BackendClient shutdown failed: {exc}")
 
         # Quit
         logger.info("Application exiting...")
