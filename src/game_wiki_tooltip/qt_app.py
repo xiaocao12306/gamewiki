@@ -646,11 +646,19 @@ class GameWikiApp(QObject):
         """Handle settings applied"""
         try:
             logger.info("Settings applied, checking component initialization status")
+            settings = self.settings_mgr.get()
+            api_config = settings.get('api', {})
+            gemini_api_key = (
+                api_config.get('gemini_api_key') or 
+                os.getenv('GEMINI_API_KEY') or 
+                os.getenv('GOOGLE_API_KEY')
+            )
+            has_api_key = bool(gemini_api_key)
             
             # Check if components are already initialized
             if not hasattr(self, 'assistant_ctrl') or self.assistant_ctrl is None:
                 logger.info("Components not initialized yet, initializing now...")
-                self._initialize_components()
+                self._initialize_components(limited_mode=not has_api_key)
                 return
             
             logger.info("Components already initialized, updating settings...")
@@ -661,20 +669,6 @@ class GameWikiApp(QObject):
                 self.assistant_ctrl.rag_integration.reload_for_language_change()
             
             # 检查当前API key配置，决定是否需要切换模式
-            settings = self.settings_mgr.get()
-            api_config = settings.get('api', {})
-            
-            # Check Gemini API key from both sources
-            gemini_api_key = (
-                api_config.get('gemini_api_key') or 
-                os.getenv('GEMINI_API_KEY') or 
-                os.getenv('GOOGLE_API_KEY')
-            )
-            
-            # No longer need separate Jina API key
-            
-            # 检查是否有API key
-            has_api_key = bool(gemini_api_key)
             dont_remind = settings.get('dont_remind_api_missing', False)
             
             # 检查是否需要切换模式
