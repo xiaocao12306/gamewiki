@@ -1703,11 +1703,23 @@ class RAGIntegration(QObject):
                     top_k,
                 )
             elif getattr(rag_instance, "hybrid_retriever", None):
-                search_response = await asyncio.to_thread(
-                    rag_instance.hybrid_retriever.search,
-                    query,
-                    top_k,
-                )
+                if getattr(rag_instance, "google_api_key", None):
+                    search_response = await asyncio.to_thread(
+                        rag_instance.hybrid_retriever.search,
+                        query,
+                        top_k,
+                    )
+                else:
+                    bm25_indexer = getattr(rag_instance.hybrid_retriever, "bm25_indexer", None)
+                    if not bm25_indexer:
+                        logger.debug("BM25 indexer unavailable, skip context")
+                        return []
+                    bm25_results = await asyncio.to_thread(
+                        bm25_indexer.search,
+                        query,
+                        max(top_k, 5),
+                    )
+                    search_response = {"results": bm25_results}
             else:
                 base_results = await asyncio.to_thread(
                     rag_instance._search_faiss if rag_instance.config and rag_instance.config.get("vector_store_type") == "faiss" else rag_instance._search_qdrant,  # noqa: SLF001

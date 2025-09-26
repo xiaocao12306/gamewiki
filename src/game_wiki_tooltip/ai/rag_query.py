@@ -294,10 +294,19 @@ class EnhancedRagQuery:
             logger.info("Initializing enhanced RAG system...")
             
             if not BATCH_EMBEDDING_AVAILABLE:
-                error_msg = "Vector search feature unavailable: batch embedding module import failed. Please check if the following dependencies are correctly installed:\n1. numpy\n2. faiss-cpu\n3. other embedding related dependencies"
-                print(f"❌ [RAG-DEBUG] {error_msg}")
-                logger.error(error_msg)
-                raise VectorStoreUnavailableError(error_msg)
+                if not self.google_api_key:
+                    logger.warning(
+                        "Batch embedding unavailable 且未配置 API key，尝试离线加载向量索引"
+                    )
+                else:
+                    error_msg = (
+                        "Vector search feature unavailable: batch embedding module import failed. "
+                        "Please check if the following dependencies are correctly installed:\n"
+                        "1. numpy\n2. faiss-cpu\n3. other embedding related dependencies"
+                    )
+                    print(f"❌ [RAG-DEBUG] {error_msg}")
+                    logger.error(error_msg)
+                    raise VectorStoreUnavailableError(error_msg)
             
             # Determine vector store path
             if self.vector_store_path is None and game_name:
@@ -337,15 +346,32 @@ class EnhancedRagQuery:
             
             # Load vector store
             try:
-                self.processor = BatchEmbeddingProcessor(api_key=self.google_api_key)
-                self.vector_store = self.processor.load_vector_store(self.vector_store_path)
-                
+                if self.google_api_key:
+                    self.processor = BatchEmbeddingProcessor(api_key=self.google_api_key)
+                    self.vector_store = self.processor.load_vector_store(self.vector_store_path)
+                else:
+                    logger.info("Loading vector store in offline mode (no API key provided)")
+                    self.processor = None
+                    self.vector_store = {"metadata": None, "index_path": None}
+
                 # Load configuration and metadata
                 with open(self.vector_store_path, 'r', encoding='utf-8') as f:
                     self.config = json.load(f)
-                
+                if isinstance(self.vector_store, dict):
+                    self.vector_store["index_path"] = self.config.get("index_path")
+
                 if self.config["vector_store_type"] == "faiss":
-                    self.metadata = self.vector_store["metadata"]
+                    if isinstance(self.vector_store, dict):
+                        self.metadata = self.vector_store.get("metadata")
+                        if not self.metadata:
+                            index_dir = Path(self.vector_store_path).parent / Path(self.config["index_path"]).name
+                            metadata_path = index_dir / "metadata.json"
+                            if metadata_path.exists():
+                                with open(metadata_path, 'r', encoding='utf-8') as meta_file:
+                                    self.metadata = json.load(meta_file)
+                                self.vector_store["metadata"] = self.metadata
+                    else:
+                        self.metadata = self.vector_store["metadata"]
                 
                 logger.info(f"Vector store loaded: {self.config['chunk_count']} chunks")
                 
