@@ -495,90 +495,73 @@ class RAGIntegration(QObject):
         """Ensure AI components are loaded (called before actual use)"""
         if self.limited_mode and not allow_partial:
             return False
-            
-        # If AI modules are loading, wait but don't block UI
+
         if _ai_modules_loading:
             logger.info("⏳ AI modules are loading in background...")
-            # For UI operations, return immediately
-            # The actual query processing will handle waiting
             if not _ai_modules_loaded:
                 return False
-        
-        # Try to load AI modules
+
         if not _lazy_load_ai_modules():
             logger.error("❌ AI module loading failed")
             return False
-            
-        # Initialize only when first called
-        if hasattr(self, '_ai_initialized') and self._ai_initialized:
+
+        if allow_partial:
+            if getattr(self, "_ai_partial_ready", False):
+                return True
+            try:
+                settings = self.settings_manager.get()
+                current_language = settings.get('language', 'en')
+                response_language = current_language if current_language in ['zh', 'en'] else 'en'
+                self._current_language = current_language
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"Partial AI init language sync failed: {exc}")
+                current_language = 'en'
+                response_language = 'en'
+
+            if not getattr(self, '_llm_config', None):
+                self._llm_config = LLMSettings(
+                    api_key=(os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')),
+                    model='gemini-2.5-flash-lite',
+                    response_language=response_language,
+                )
+            else:
+                self._llm_config.response_language = response_language
+
+            self._ai_partial_ready = True
+            logger.info("🧩 Partial AI initialization ready: vector retrieval available without Gemini key")
             return True
-            
+
+        if getattr(self, '_ai_initialized', False):
+            return True
+
         try:
-            # Get API settings
             settings = self.settings_manager.get()
             api_settings = settings.get('api', {})
             gemini_api_key = api_settings.get('gemini_api_key', '')
-            
-            # Check environment variables
             if not gemini_api_key:
                 gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-            # Gemini API key is used for both LLM and embeddings
-            
-            # Check if API key is available
-            has_api_key = bool(gemini_api_key)
-            
-            if has_api_key:
-                logger.info("✅ Complete API key configuration detected, initializing AI components")
-                
-                # Get current language setting for AI response
-                current_language = settings.get('language', 'en')
-                response_language = current_language if current_language in ['zh', 'en'] else 'en'
-                logger.info(f"🌐 AI language setting: interface={current_language}, response={response_language}")
-                
-                llm_config = LLMSettings(
-                    api_key=gemini_api_key,
-                    model='gemini-2.5-flash-lite',
-                    response_language=response_language
-                )
-                
-                # Store LLM configuration for other methods
-                self._llm_config = llm_config
-                
-                # Initialize query processor - remove, we will directly use process_query_unified function
-                # if process_query_unified:
-                #     self.query_processor = process_query_unified(llm_config=llm_config)
-                
-                # Don't read game window at startup - wait for user interaction
-                logger.info("✅ AI components configuration ready, RAG will be initialized on demand")
-                self._last_game_window = None
-                self._last_vector_game_name = None
-            elif allow_partial:
-                logger.info("🧩 Partial AI initialization：使用检索功能但跳过 Gemini 依赖")
 
-                current_language = settings.get('language', 'en')
-                response_language = current_language if current_language in ['zh', 'en'] else 'en'
-
-                llm_config = LLMSettings(
-                    api_key=gemini_api_key or None,
-                    model='gemini-2.5-flash-lite',
-                    response_language=response_language
-                )
-
-                self._llm_config = llm_config
-                self._last_game_window = None
-                self._last_vector_game_name = None
-            else:
-                missing_keys = []
-                if not gemini_api_key:
-                    missing_keys.append("Gemini API Key")
-                
-                logger.warning(f"❌ Missing required API keys: {', '.join(missing_keys)}")
+            if not gemini_api_key:
+                logger.warning("❌ Missing required API keys: Gemini API Key")
                 return False
-                    
+
+            current_language = settings.get('language', 'en')
+            response_language = current_language if current_language in ['zh', 'en'] else 'en'
+            logger.info(f"🌐 AI language setting: interface={current_language}, response={response_language}")
+
+            self._llm_config = LLMSettings(
+                api_key=gemini_api_key,
+                model='gemini-2.5-flash-lite',
+                response_language=response_language,
+            )
+            self._last_game_window = None
+            self._last_vector_game_name = None
+            logger.info("✅ AI components configuration ready, RAG will be initialized on demand")
+
         except Exception as e:
             logger.error(f"Failed to initialize AI components: {e}")
             return False
-            
+
         self._ai_initialized = True
         return True
     
