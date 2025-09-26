@@ -984,21 +984,46 @@ class RAGIntegration(QObject):
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Cloud preprocessing request failed: {exc}")
+            self._track_event(
+                analytics_events.CLOUD_PREPROCESSING_FAILED,
+                {
+                    "reason": "request_error",
+                    "error_type": exc.__class__.__name__,
+                },
+            )
             return None
 
         if not response or not response.get("content"):
             logger.warning("Cloud preprocessing returned empty content")
+            self._track_event(
+                analytics_events.CLOUD_PREPROCESSING_FAILED,
+                {"reason": "empty_content"},
+            )
             return None
 
         content = response.get("content", "").strip()
         data = self._parse_backend_json(content)
         if not data:
             logger.warning("Cloud preprocessing JSON parse failed")
+            self._track_event(
+                analytics_events.CLOUD_PREPROCESSING_FAILED,
+                {
+                    "reason": "json_parse_failed",
+                    "content_preview": content[:120],
+                },
+            )
             return None
 
         intent_value = (data.get("intent") or "").lower()
         if intent_value not in {"wiki", "guide"}:
             logger.debug(f"Unsupported intent value from backend: {intent_value}")
+            self._track_event(
+                analytics_events.CLOUD_PREPROCESSING_FAILED,
+                {
+                    "reason": "invalid_intent",
+                    "raw_intent": intent_value,
+                },
+            )
             return None
 
         translated_query = data.get("translated_query") or query
@@ -1037,6 +1062,18 @@ class RAGIntegration(QObject):
             unified_result.translation_applied,
         )
 
+        self._track_event(
+            analytics_events.CLOUD_PREPROCESSING_SUCCESS,
+            {
+                "intent": intent_value,
+                "confidence": confidence,
+                "search_type": search_type,
+                "translation_applied": unified_result.translation_applied,
+                "rewrite_applied": unified_result.rewrite_applied,
+                "detected_language": detected_language,
+            },
+        )
+
         return QueryIntent(
             intent_type=intent_value,
             confidence=confidence,
@@ -1060,20 +1097,33 @@ class RAGIntegration(QObject):
                 lines = lines[1:]
             text = "\n".join(lines).strip()
 
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            candidate = text[start : end + 1]
+        candidates: List[str] = []
+        depth = 0
+        start_idx = None
+        for idx, ch in enumerate(text):
+            if ch == '{':
+                if depth == 0:
+                    start_idx = idx
+                depth += 1
+            elif ch == '}':
+                if depth > 0:
+                    depth -= 1
+                    if depth == 0 and start_idx is not None:
+                        candidates.append(text[start_idx : idx + 1])
+                        start_idx = None
+
+        # Fallback to the entire text if we didn't capture anything
+        if not candidates and text:
+            candidates.append(text)
+
+        for candidate in candidates:
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
-                logger.debug("Primary JSON block parsing failed")
+                continue
 
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            logger.debug("Fallback JSON parsing failed")
-            return None
+        logger.debug("Fallback JSON parsing failed for all candidates")
+        return None
             
     async def prepare_wiki_search_async(self, query: str, game_context: str = None) -> tuple[str, str]:
         """Prepare wiki search, return search URL and initial title, real URL will be obtained through JavaScript callback"""
