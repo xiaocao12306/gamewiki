@@ -1737,6 +1737,12 @@ class RAGIntegration(QObject):
             )
             context_message = self._format_context_message(context_snippets, game_context)
             if context_message:
+                preview_titles = [snippet.get("title") or f"Snippet {idx+1}" for idx, snippet in enumerate(context_snippets)]
+                logger.debug(
+                    "📎 Injecting context system prompt (len=%s chars) titles=%s",
+                    len(context_message),
+                    preview_titles,
+                )
                 messages.insert(
                     1,
                     {
@@ -1746,6 +1752,15 @@ class RAGIntegration(QObject):
                 )
         preferred_model, provider = self._resolve_model_preferences()
         provider_hint = provider or "unknown"
+
+        if not context_snippets:
+            logger.info("📭 No context snippets available, fallback to wiki in limited mode")
+            await self._fallback_to_wiki(
+                query,
+                game_context,
+                reason="no_context",
+            )
+            return
 
         loop = asyncio.get_running_loop()
         try:
@@ -1909,6 +1924,7 @@ class RAGIntegration(QObject):
 
         results = search_response.get("results", [])
         if not results:
+            logger.debug("🔍 Context search produced no results")
             return []
 
         snippets: List[Dict[str, Any]] = []
@@ -1935,6 +1951,14 @@ class RAGIntegration(QObject):
             snippets.append(snippet)
             if len(snippets) >= top_k:
                 break
+
+        if snippets:
+            logger.info(
+                "📚 Context snippets ready count=%s game=%s titles=%s",
+                len(snippets),
+                game_context or "unknown",
+                [snippet.get("title") for snippet in snippets],
+            )
 
         return snippets
 
@@ -1963,22 +1987,36 @@ class RAGIntegration(QObject):
 
         return "\n".join(lines).strip()
 
-    async def _fallback_to_wiki(self, query: str, game_context: Optional[str]) -> None:
+    async def _fallback_to_wiki(
+        self,
+        query: str,
+        game_context: Optional[str],
+        *,
+        reason: str = "cloud_fallback",
+    ) -> None:
         from src.game_wiki_tooltip.core.i18n import get_current_language
 
         # 当云端代理失败时，一方面告知用户转回 Wiki，另一方面发送回退埋点
         current_lang = get_current_language()
-        if current_lang == 'zh':
-            self.streaming_chunk_ready.emit("💡 云端模型暂不可用，已为您切换到 Wiki 搜索模式...\n\n")
+        if reason == "no_context":
+            if current_lang == 'zh':
+                notice = "📭 暂未找到本地参考资料，已为您切换到 Wiki 搜索模式...\n\n"
+            else:
+                notice = "📭 No local references available, switching to Wiki search...\n\n"
         else:
-            self.streaming_chunk_ready.emit("💡 Cloud model is unavailable, switching to Wiki search...\n\n")
+            if current_lang == 'zh':
+                notice = "💡 云端模型暂不可用，已为您切换到 Wiki 搜索模式...\n\n"
+            else:
+                notice = "💡 Cloud model is unavailable, switching to Wiki search...\n\n"
+
+        self.streaming_chunk_ready.emit(notice)
 
         self._track_event(
             analytics_events.MODEL_FALLBACK_TRIGGERED,
             {
                 "provider": "deepseek",
                 "limited_mode": self.limited_mode,
-                "reason": "cloud_fallback",
+                "reason": reason,
             },
         )
 
