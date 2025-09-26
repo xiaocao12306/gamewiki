@@ -296,6 +296,7 @@ class RAGIntegration(QObject):
         self.query_processor = None
         self._pending_wiki_update = None  # Store wiki link information to be updated
         self._llm_config = None  # Store configured LLM configuration
+        self._lightweight_rag_cache = {}
         
         # RAG initialization state tracking
         self._rag_initializing = False  # Flag to prevent duplicate initializations
@@ -467,9 +468,9 @@ class RAGIntegration(QObject):
         # Just log that we'll initialize on demand - don't actually initialize anything
         logger.info("📌 AI components will be initialized on first use (lazy loading)")
         
-    def _ensure_ai_components_loaded(self):
+    def _ensure_ai_components_loaded(self, allow_partial: bool = False):
         """Ensure AI components are loaded (called before actual use)"""
-        if self.limited_mode:
+        if self.limited_mode and not allow_partial:
             return False
             
         # If AI modules are loading, wait but don't block UI
@@ -526,6 +527,21 @@ class RAGIntegration(QObject):
                 
                 # Don't read game window at startup - wait for user interaction
                 logger.info("✅ AI components configuration ready, RAG will be initialized on demand")
+                self._last_game_window = None
+                self._last_vector_game_name = None
+            elif allow_partial:
+                logger.info("🧩 Partial AI initialization：使用检索功能但跳过 Gemini 依赖")
+
+                current_language = settings.get('language', 'en')
+                response_language = current_language if current_language in ['zh', 'en'] else 'en'
+
+                llm_config = LLMSettings(
+                    api_key=gemini_api_key or None,
+                    model='gemini-2.5-flash-lite',
+                    response_language=response_language
+                )
+
+                self._llm_config = llm_config
                 self._last_game_window = None
                 self._last_vector_game_name = None
             else:
@@ -1003,7 +1019,18 @@ class RAGIntegration(QObject):
         """
         # Limited mode 下使用后端模型代理
         if self.limited_mode:
-            await self._generate_via_backend(query, original_query, game_context, stop_flag)
+            context_snippets = await self._collect_context_snippets(
+                query=query,
+                game_context=game_context,
+                unified_query_result=unified_query_result,
+            )
+            await self._generate_via_backend(
+                query,
+                original_query,
+                game_context,
+                stop_flag,
+                context_snippets=context_snippets,
+            )
             return
             
         if not self.rag_engine:
@@ -1489,7 +1516,15 @@ class RAGIntegration(QObject):
                 return False
         return False
 
-    async def _generate_via_backend(self, query: str, original_query: Optional[str], game_context: Optional[str], stop_flag) -> None:
+    async def _generate_via_backend(
+        self,
+        query: str,
+        original_query: Optional[str],
+        game_context: Optional[str],
+        stop_flag,
+        *,
+        context_snippets: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
         """Use backend chat proxy to generate responses in limited mode"""
         # 云端代理流程：请求前后都要判断停止标记，并记录埋点
         if self._is_stop_requested(stop_flag):
@@ -1497,6 +1532,16 @@ class RAGIntegration(QObject):
             return
 
         messages = self._build_chat_messages(query, original_query, game_context)
+        if context_snippets:
+            context_message = self._format_context_message(context_snippets, game_context)
+            if context_message:
+                messages.insert(
+                    1,
+                    {
+                        "role": "system",
+                        "content": context_message,
+                    },
+                )
         preferred_model, provider = self._resolve_model_preferences()
         provider_hint = provider or "unknown"
 
@@ -1553,6 +1598,150 @@ class RAGIntegration(QObject):
             return
 
         self.streaming_chunk_ready.emit(content if content.endswith("\n") else f"{content}\n")
+
+    async def _collect_context_snippets(
+        self,
+        *,
+        query: str,
+        game_context: Optional[str],
+        unified_query_result: Optional[Any],
+        top_k: int = 3,
+    ) -> List[Dict[str, Any]]:
+        """检索本地向量库，返回用于云端代理的上下文片段"""
+
+        if not query or not _lazy_load_ai_modules():
+            return []
+
+        try:
+            self._ensure_ai_components_loaded(allow_partial=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Partial AI init failed, skip local context: {exc}")
+            return []
+
+        from src.game_wiki_tooltip.ai.rag_query import (  # Local import to avoid circular cost
+            EnhancedRagQuery,
+            VectorStoreUnavailableError,
+            map_window_title_to_game_name,
+        )
+
+        vector_game_name = None
+        try:
+            vector_game_name = map_window_title_to_game_name(game_context) if game_context else None
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Map window title to game failed: {exc}")
+
+        if not vector_game_name:
+            logger.debug("No vector game mapping available, skip context")
+            return []
+
+        rag_instance = self._lightweight_rag_cache.get(vector_game_name)
+
+        if not rag_instance:
+            try:
+                rag_config = get_default_config() if callable(get_default_config) else None
+            except Exception:  # noqa: BLE001
+                rag_config = None
+
+            if rag_config:
+                rag_config.summarization.enabled = False
+                rag_config.intent_reranking.enabled = False
+                rag_config.query_processing.enable_query_rewrite = False
+
+            rag_instance = EnhancedRagQuery(
+                rag_config=rag_config,
+                enable_hybrid_search=True,
+                enable_summarization=False,
+                enable_intent_reranking=False,
+                enable_query_rewrite=False,
+            )
+            try:
+                await rag_instance.initialize(vector_game_name)
+            except VectorStoreUnavailableError as exc:
+                logger.warning(f"Vector store unavailable for game {vector_game_name}: {exc}")
+                return []
+            self._lightweight_rag_cache[vector_game_name] = rag_instance
+        elif not rag_instance.is_initialized:
+            try:
+                await rag_instance.initialize(vector_game_name)
+            except VectorStoreUnavailableError as exc:
+                logger.warning(f"Vector store init failed for game {vector_game_name}: {exc}")
+                return []
+
+        search_response: Dict[str, Any] = {"results": []}
+
+        try:
+            if unified_query_result:
+                search_response = await asyncio.to_thread(
+                    rag_instance._search_hybrid_with_processed_query,  # noqa: SLF001
+                    unified_query_result,
+                    top_k,
+                )
+            elif getattr(rag_instance, "hybrid_retriever", None):
+                search_response = await asyncio.to_thread(
+                    rag_instance.hybrid_retriever.search,
+                    query,
+                    top_k,
+                )
+            else:
+                base_results = await asyncio.to_thread(
+                    rag_instance._search_faiss if rag_instance.config and rag_instance.config.get("vector_store_type") == "faiss" else rag_instance._search_qdrant,  # noqa: SLF001
+                    query,
+                    top_k,
+                )
+                search_response = {"results": base_results}
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Collecting context snippets failed: {exc}")
+            return []
+
+        results = search_response.get("results", [])
+        if not results:
+            return []
+
+        snippets: List[Dict[str, Any]] = []
+        for idx, item in enumerate(results):
+            chunk = item.get("chunk", item)
+            summary = chunk.get("summary") or chunk.get("text")
+            if not summary:
+                continue
+            snippet = {
+                "title": chunk.get("topic") or chunk.get("title") or f"Snippet {idx + 1}",
+                "summary": summary,
+                "source": chunk.get("video_title") or chunk.get("source"),
+                "url": chunk.get("video_url") or chunk.get("source_url"),
+            }
+            score = item.get("score")
+            if score is not None:
+                snippet["score"] = float(score)
+            snippets.append(snippet)
+            if len(snippets) >= top_k:
+                break
+
+        return snippets
+
+    def _format_context_message(
+        self,
+        snippets: List[Dict[str, Any]],
+        game_context: Optional[str],
+    ) -> str:
+        if not snippets:
+            return ""
+
+        header = "以下是根据当前游戏检索到的参考资料，请结合这些内容回答用户问题："
+        if game_context:
+            header = f"以下是关于 {game_context} 的参考资料，请结合这些内容回答用户问题："
+
+        lines: List[str] = [header]
+        for idx, snippet in enumerate(snippets, 1):
+            title = snippet.get("title") or f"片段 {idx}"
+            lines.append(f"{idx}. {title}")
+            lines.append(snippet.get("summary", "").strip())
+            if snippet.get("source"):
+                lines.append(f"来源：{snippet['source']}")
+            if snippet.get("url"):
+                lines.append(f"链接：{snippet['url']}")
+            lines.append("")
+
+        return "\n".join(lines).strip()
 
     async def _fallback_to_wiki(self, query: str, game_context: Optional[str]) -> None:
         from src.game_wiki_tooltip.core.i18n import get_current_language
