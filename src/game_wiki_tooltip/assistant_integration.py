@@ -3,6 +3,7 @@ Integration layer between the new unified UI and existing RAG/Wiki systems.
 """
 
 import asyncio
+import json
 import logging
 import threading
 import time
@@ -17,6 +18,7 @@ from src.game_wiki_tooltip.core.backend_client import BackendClient
 from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.core import events as analytics_events
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
+from src.game_wiki_tooltip.ai.unified_query_processor import UnifiedQueryResult
 from src.game_wiki_tooltip.core.utils import get_foreground_title
 from src.game_wiki_tooltip.core.smart_interaction_manager import SmartInteractionManager, InteractionMode
 
@@ -817,12 +819,19 @@ class RAGIntegration(QObject):
         
         # In cloud proxy模式下使用简化意图识别，允许继续调用后端模型
         if self.limited_mode:
-            logger.info("🌐 Limited mode active，using lightweight intent detection")
+            logger.info("🌐 Limited mode active，trying cloud preprocessing pipeline")
+            backend_intent = await self._process_query_via_backend(query, game_context)
+            if backend_intent:
+                return backend_intent
+            logger.warning("Cloud preprocessing unavailable, falling back to lightweight detection")
             return self._simple_intent_detection(query)
             
         # Ensure AI components are loaded (lazy loading)
         if not self._ensure_ai_components_loaded():
-            logger.error("❌ AI component loading failed, switch to wiki mode")
+            logger.error("❌ AI component loading failed, attempting cloud preprocessing fallback")
+            backend_intent = await self._process_query_via_backend(query, game_context)
+            if backend_intent:
+                return backend_intent
             return QueryIntent(
                 intent_type='wiki',
                 confidence=0.9,
@@ -931,6 +940,140 @@ class RAGIntegration(QObject):
                 rewritten_query=query,
                 translated_query=query
             )
+    
+    async def _process_query_via_backend(self, query: str, game_context: Optional[str]) -> Optional[QueryIntent]:
+        """Use backend proxy model to perform translation/intent/rewriting"""
+
+        if not self.backend_client:
+            logger.debug("Backend client unavailable, cannot run cloud preprocessing")
+            return None
+
+        system_prompt = (
+            "You are a preprocessing helper for a game wiki assistant. "
+            "Analyze the incoming player query and respond with STRICT JSON (no extra text) containing:\n"
+            "{\n"
+            "  \"detected_language\": string (iso code like zh/en/other),\n"
+            "  \"translated_query\": string (English translation or original),\n"
+            "  \"rewritten_query\": string (optimized for semantic search),\n"
+            "  \"bm25_optimized_query\": string (keywords for BM25),\n"
+            "  \"intent\": string (wiki or guide),\n"
+            "  \"confidence\": number between 0 and 1,\n"
+            "  \"search_type\": string (semantic, keyword, or hybrid),\n"
+            "  \"reasoning\": short explanation\n"
+            "}\n"
+            "The JSON must be parsable and contain all keys."
+        )
+
+        user_prompt = (
+            f"User query: {query}\n"
+            f"Game context: {game_context or 'unknown'}\n"
+            "Return JSON ONLY."
+        )
+
+        loop = asyncio.get_running_loop()
+        try:
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.backend_client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.1,
+                ),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Cloud preprocessing request failed: {exc}")
+            return None
+
+        if not response or not response.get("content"):
+            logger.warning("Cloud preprocessing returned empty content")
+            return None
+
+        content = response.get("content", "").strip()
+        data = self._parse_backend_json(content)
+        if not data:
+            logger.warning("Cloud preprocessing JSON parse failed")
+            return None
+
+        intent_value = (data.get("intent") or "").lower()
+        if intent_value not in {"wiki", "guide"}:
+            logger.debug(f"Unsupported intent value from backend: {intent_value}")
+            return None
+
+        translated_query = data.get("translated_query") or query
+        rewritten_query = data.get("rewritten_query") or translated_query
+        bm25_query = data.get("bm25_optimized_query") or translated_query
+        confidence = data.get("confidence")
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.6
+        confidence = max(0.0, min(1.0, confidence))
+
+        search_type = data.get("search_type") or "semantic"
+        reasoning = data.get("reasoning") or ""
+        detected_language = data.get("detected_language") or "unknown"
+
+        unified_result = UnifiedQueryResult(
+            original_query=query,
+            detected_language=detected_language,
+            translated_query=translated_query,
+            rewritten_query=rewritten_query,
+            bm25_optimized_query=bm25_query,
+            intent=intent_value,
+            confidence=confidence,
+            search_type=search_type,
+            reasoning=reasoning,
+            translation_applied=translated_query != query,
+            rewrite_applied=rewritten_query != translated_query,
+            processing_time=0.0,
+        )
+
+        logger.info(
+            "Cloud preprocessing success: intent=%s confidence=%.2f translation_applied=%s",
+            intent_value,
+            confidence,
+            unified_result.translation_applied,
+        )
+
+        return QueryIntent(
+            intent_type=intent_value,
+            confidence=confidence,
+            rewritten_query=rewritten_query,
+            translated_query=translated_query,
+            unified_query_result=unified_result,
+        )
+
+    @staticmethod
+    def _parse_backend_json(content: str) -> Optional[Dict[str, Any]]:
+        """Parse JSON content returned by backend preprocessing"""
+
+        if not content:
+            return None
+
+        text = content.strip()
+        if text.startswith("```"):
+            # Remove code fences if present
+            lines = [line for line in text.splitlines() if not line.strip().startswith("```")]
+            if lines and lines[0].lower().startswith("json"):
+                lines = lines[1:]
+            text = "\n".join(lines).strip()
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            candidate = text[start : end + 1]
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                logger.debug("Primary JSON block parsing failed")
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            logger.debug("Fallback JSON parsing failed")
+            return None
             
     async def prepare_wiki_search_async(self, query: str, game_context: str = None) -> tuple[str, str]:
         """Prepare wiki search, return search URL and initial title, real URL will be obtained through JavaScript callback"""
