@@ -312,6 +312,89 @@ class RAGIntegration(QObject):
             logger.info("🚨 RAG Integration running in limited mode, skipping AI component initialization")
         else:
             self._init_ai_components()
+
+    # ----- telemetry helpers -----
+    def _telemetry_base(self) -> Dict[str, Any]:
+        """构建默认埋点上下文，确保后端能够识别设备与模式"""
+
+        base: Dict[str, Any] = {"app_mode": "cloud" if self.limited_mode else "local"}
+
+        # 尝试补充来自客户端的设备信息，便于排查问题
+        if self.backend_client:
+            try:
+                base.update(self.backend_client.telemetry_context())
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"telemetry_context 生成失败: {exc}")
+
+        # 确保基础字段存在，避免后端解析报错
+        base.setdefault("ip", "127.0.0.1")
+        base.setdefault("device_id", None)
+        return base
+
+    def _track_event(self, name: str, properties: Optional[Dict[str, Any]] = None) -> None:
+        """统一封装埋点上报，避免在调用处散落 try/except"""
+
+        if not self.analytics_mgr:
+            return
+
+        try:
+            payload = self._telemetry_base()
+            if properties:
+                payload.update(properties)
+            self.analytics_mgr.track(name, payload)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Analytics track failed: {exc}")
+
+    def _track_model_event(
+        self,
+        provider: Optional[str],
+        success: bool,
+        model: Optional[str] = None,
+        fallback_used: bool = False,
+        reason: Optional[str] = None,
+    ) -> None:
+        """记录模型调用结果，区分不同厂商与回退场景"""
+
+        if not provider:
+            provider = "unknown"
+
+        event_name = None
+        provider_lower = provider.lower()
+        if provider_lower == "deepseek":
+            event_name = (
+                analytics_events.DEEPSEEK_CALL_SUCCESS
+                if success
+                else analytics_events.DEEPSEEK_CALL_FAILED
+            )
+        elif provider_lower == "gemini":
+            event_name = (
+                analytics_events.GEMINI_CALL_SUCCESS
+                if success
+                else analytics_events.GEMINI_CALL_FAILED
+            )
+
+        properties = {
+            "provider": provider,
+            "model": model,
+            "limited_mode": self.limited_mode,
+            "fallback_used": fallback_used,
+        }
+        if reason:
+            properties["reason"] = reason
+
+        if event_name:
+            self._track_event(event_name, properties)
+        else:
+            # 未知厂商统一归入 fallback 埋点，便于后端聚合分析
+            self._track_event(
+                analytics_events.MODEL_FALLBACK_TRIGGERED,
+                {
+                    "provider": provider,
+                    "model": model,
+                    "limited_mode": self.limited_mode,
+                    "reason": reason or ("success" if success else "failure"),
+                },
+            )
             
     def _get_localized_message(self, message_key: str) -> str:
         """Get localized message based on current language setting"""
