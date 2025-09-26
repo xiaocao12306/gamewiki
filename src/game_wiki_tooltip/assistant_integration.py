@@ -6,7 +6,7 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import os
 
@@ -15,6 +15,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
 from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType, WindowState
 from src.game_wiki_tooltip.core.backend_client import BackendClient
 from src.game_wiki_tooltip.core.config import SettingsManager
+from src.game_wiki_tooltip.core import events as analytics_events
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
 from src.game_wiki_tooltip.core.utils import get_foreground_title
 from src.game_wiki_tooltip.core.smart_interaction_manager import SmartInteractionManager, InteractionMode
@@ -283,11 +284,13 @@ class RAGIntegration(QObject):
         self,
         settings_manager: SettingsManager,
         backend_client: BackendClient,
+        analytics_mgr=None,
         limited_mode: bool = False,
     ):
         super().__init__()
         self.settings_manager = settings_manager
         self.backend_client = backend_client
+        self.analytics_mgr = analytics_mgr
         self.limited_mode = limited_mode
         self.rag_engine = None
         self.query_processor = None
@@ -1018,6 +1021,12 @@ class RAGIntegration(QObject):
                                         
                                         self.streaming_chunk_ready.emit(chunk)
                                     
+                                    self._track_model_event(
+                                        provider="gemini",
+                                        success=True,
+                                        model=fallback_llm_config.model,
+                                        fallback_used=False,
+                                    )
                                     return
                                     
                                 except Exception as e:
@@ -1055,6 +1064,13 @@ class RAGIntegration(QObject):
                     else:
                         # No API key available, switch to wiki search
                         logger.info("No API key configured, switching to wiki search")
+                        self._track_model_event(
+                            provider="gemini",
+                            success=False,
+                            model=getattr(self._llm_config, "model", "gemini"),
+                            fallback_used=True,
+                            reason="api_key_missing",
+                        )
                         from src.game_wiki_tooltip.core.i18n import get_current_language
                         current_lang = get_current_language()
                         
@@ -1125,6 +1141,12 @@ class RAGIntegration(QObject):
                                     
                                     self.streaming_chunk_ready.emit(chunk)
                                 
+                                self._track_model_event(
+                                    provider="gemini",
+                                    success=True,
+                                    model=fallback_llm_config.model,
+                                    fallback_used=False,
+                                )
                                 return
                                 
                             except Exception as e:
@@ -1135,6 +1157,13 @@ class RAGIntegration(QObject):
                     from src.game_wiki_tooltip.core.i18n import t
                     error_msg = t("game_not_supported", window=game_context)
                     self.error_occurred.emit(error_msg)
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=False,
+                        reason="game_not_supported",
+                    )
                     return
             else:
                 from src.game_wiki_tooltip.core.i18n import t
@@ -1191,6 +1220,13 @@ class RAGIntegration(QObject):
                         return
                         
                     logger.info(f"🔄 RAG query has no output, may need to switch to wiki mode: '{query}'")
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=True,
+                        reason="no_output",
+                    )
                     
                     from src.game_wiki_tooltip.core.i18n import get_current_language
                     current_lang = get_current_language()
@@ -1217,6 +1253,13 @@ class RAGIntegration(QObject):
                             self.streaming_chunk_ready.emit("❌ Auto Wiki search failed, please click Wiki search button manually\n")
                     return
                 
+                # 成功完成本地 RAG 结果，记录成功埋点
+                self._track_model_event(
+                    provider="gemini",
+                    success=True,
+                    model=getattr(self._llm_config, "model", "gemini"),
+                    fallback_used=False,
+                )
                 logger.info("✅ Streaming RAG query completed")
                 return
                     
@@ -1249,17 +1292,38 @@ class RAGIntegration(QObject):
                             "Please wait a moment and try again, or consider upgrading to a paid account for higher quotas."
                         )
                     self.streaming_chunk_ready.emit(error_msg)
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=False,
+                        reason="rate_limit",
+                    )
                     return
                 elif isinstance(e, VectorStoreUnavailableError):
                     if current_lang == 'zh':
                         error_msg = f"❌ {t('rag_vector_store_error')}: {str(e)}"
                     else:
                         error_msg = f"❌ {t('rag_vector_store_error')}: {str(e)}"
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=True,
+                        reason="vector_store_unavailable",
+                    )
                 elif isinstance(e, BM25UnavailableError):
                     if current_lang == 'zh':
                         error_msg = f"❌ {t('rag_bm25_error')}: {str(e)}"
                     else:
                         error_msg = f"❌ {t('rag_bm25_error')}: {str(e)}"
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=True,
+                        reason="bm25_unavailable",
+                    )
                 else:
                     # General error - try to switch to wiki mode automatically
                     logger.error(f"Streaming RAG query failed: {e}")
@@ -1270,6 +1334,13 @@ class RAGIntegration(QObject):
                         return
                         
                     logger.info("Trying to switch to Wiki search mode...")
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=True,
+                        reason=str(e),
+                    )
                     
                     try:
                         # 如果流式查询失败，自动切换到wiki搜索
@@ -1297,6 +1368,13 @@ class RAGIntegration(QObject):
                 if 'error_msg' in locals():
                     logger.error(f"Send error information to chat window: {error_msg}")
                     self.streaming_chunk_ready.emit(error_msg)
+                    self._track_model_event(
+                        provider="gemini",
+                        success=False,
+                        model=getattr(self._llm_config, "model", "gemini"),
+                        fallback_used=False,
+                        reason=str(e),
+                    )
                 return
             finally:
                 # Ensure asynchronous generator is properly closed
@@ -1330,12 +1408,14 @@ class RAGIntegration(QObject):
 
     async def _generate_via_backend(self, query: str, original_query: Optional[str], game_context: Optional[str], stop_flag) -> None:
         """Use backend chat proxy to generate responses in limited mode"""
+        # 云端代理流程：请求前后都要判断停止标记，并记录埋点
         if self._is_stop_requested(stop_flag):
             logger.info("Cloud chat aborted before request (stop flag set)")
             return
 
         messages = self._build_chat_messages(query, original_query, game_context)
         preferred_model, provider = self._resolve_model_preferences()
+        provider_hint = provider or "unknown"
 
         loop = asyncio.get_running_loop()
         try:
@@ -1349,6 +1429,7 @@ class RAGIntegration(QObject):
             )
         except Exception as exc:
             logger.error(f"Cloud chat request failed: {exc}")
+            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="request_error")
             await self._fallback_to_wiki(query, game_context)
             return
 
@@ -1358,12 +1439,14 @@ class RAGIntegration(QObject):
 
         if not response or not response.get("content"):
             logger.warning("Cloud chat returned empty payload, fallback to wiki")
+            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="empty_response")
             await self._fallback_to_wiki(query, game_context)
             return
 
         content = response.get("content", "").strip()
         if not content:
             logger.warning("Cloud chat content empty, fallback to wiki")
+            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="empty_content")
             await self._fallback_to_wiki(query, game_context)
             return
 
@@ -1372,6 +1455,14 @@ class RAGIntegration(QObject):
             response.get("provider"),
             response.get("model"),
             response.get("fallback_used"),
+        )
+
+        resolved_provider = response.get("provider") or provider_hint
+        self._track_model_event(
+            resolved_provider,
+            True,
+            response.get("model") or preferred_model,
+            fallback_used=response.get("fallback_used", False),
         )
 
         if self._is_stop_requested(stop_flag):
@@ -1383,11 +1474,21 @@ class RAGIntegration(QObject):
     async def _fallback_to_wiki(self, query: str, game_context: Optional[str]) -> None:
         from src.game_wiki_tooltip.core.i18n import get_current_language
 
+        # 当云端代理失败时，一方面告知用户转回 Wiki，另一方面发送回退埋点
         current_lang = get_current_language()
         if current_lang == 'zh':
             self.streaming_chunk_ready.emit("💡 云端模型暂不可用，已为您切换到 Wiki 搜索模式...\n\n")
         else:
             self.streaming_chunk_ready.emit("💡 Cloud model is unavailable, switching to Wiki search...\n\n")
+
+        self._track_event(
+            analytics_events.MODEL_FALLBACK_TRIGGERED,
+            {
+                "provider": "deepseek",
+                "limited_mode": self.limited_mode,
+                "reason": "cloud_fallback",
+            },
+        )
 
         search_url, search_title = await self.prepare_wiki_search_async(query, game_context)
         self.wiki_result_ready.emit(search_url, search_title)
@@ -1449,13 +1550,15 @@ class IntegratedAssistantController(AssistantController):
     # Class-level global instance reference
     _global_instance = None
     
-    def __init__(self, settings_manager: SettingsManager, backend_client, limited_mode: bool = False):
+    def __init__(self, settings_manager: SettingsManager, backend_client, analytics_mgr=None, limited_mode: bool = False):
         super().__init__(settings_manager)
         self.limited_mode = limited_mode
         self.backend_client = backend_client
+        self.analytics_mgr = analytics_mgr
         self.rag_integration = RAGIntegration(
             settings_manager,
             backend_client,
+            analytics_mgr,
             limited_mode=limited_mode,
         )
         self._setup_connections()
@@ -1482,6 +1585,84 @@ class IntegratedAssistantController(AssistantController):
             # Schedule AI preload immediately after initialization (with a small delay to avoid blocking)
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(100, self._schedule_ai_preload_on_startup)
+
+    # ----- analytics helpers -----
+    def _telemetry_base(self) -> Dict[str, Any]:
+        """构建所有埋点默认需要包含的上下文"""
+
+        base: Dict[str, Any] = {
+            "game_window": getattr(self, "current_game_window", None),
+            "app_mode": "cloud" if self.limited_mode else "local",
+        }
+
+        if self.backend_client:
+            base.update(self.backend_client.telemetry_context())
+
+        # 若 backend_client 无法推断 IP，会返回 127.0.0.1，后端可再次校验
+        base.setdefault("ip", "127.0.0.1")
+        return base
+
+    def _track_event(self, name: str, properties: Optional[Dict[str, Any]] = None) -> None:
+        if not self.analytics_mgr:
+            return
+        try:
+            payload = self._telemetry_base()
+            if properties:
+                payload.update(properties)
+            self.analytics_mgr.track(name, payload)
+        except Exception as exc:
+            logger.debug(f"Analytics track failed: {exc}")
+
+    def _track_model_event(
+        self,
+        provider: Optional[str],
+        success: bool,
+        model: Optional[str] = None,
+        fallback_used: bool = False,
+        reason: Optional[str] = None,
+    ) -> None:
+        """统一埋点模型调用结果，区分成功/失败/回退"""
+
+        if not provider:
+            provider = "unknown"
+
+        event_name = None
+        provider_lower = provider.lower()
+        if provider_lower == "deepseek":
+            event_name = (
+                analytics_events.DEEPSEEK_CALL_SUCCESS
+                if success
+                else analytics_events.DEEPSEEK_CALL_FAILED
+            )
+        elif provider_lower == "gemini":
+            event_name = (
+                analytics_events.GEMINI_CALL_SUCCESS
+                if success
+                else analytics_events.GEMINI_CALL_FAILED
+            )
+
+        properties = {
+            "provider": provider,
+            "model": model,
+            "limited_mode": self.limited_mode,
+            "fallback_used": fallback_used,
+        }
+        if reason:
+            properties["reason"] = reason
+
+        if event_name:
+            self._track_event(event_name, properties)
+        else:
+            # Unknown provider，统一记录到 fallback 事件中
+            self._track_event(
+                analytics_events.MODEL_FALLBACK_TRIGGERED,
+                {
+                    "provider": provider,
+                    "model": model,
+                    "limited_mode": self.limited_mode,
+                    "reason": reason or ("success" if success else "failure"),
+                },
+            )
         
     def _schedule_ai_preload_on_startup(self):
         """Schedule AI preload on startup if not already scheduled"""

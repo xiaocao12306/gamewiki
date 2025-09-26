@@ -438,6 +438,7 @@ class GameWikiApp(QObject):
             self.assistant_ctrl = IntegratedAssistantController(
                 self.settings_mgr,
                 self.backend_client,
+                analytics_mgr=self.analytics_mgr,
                 limited_mode=limited_mode,
             )
             
