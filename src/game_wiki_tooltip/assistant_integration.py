@@ -327,6 +327,27 @@ class RAGIntegration(QObject):
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"telemetry_context 生成失败: {exc}")
 
+        # 标记当前窗口信息 & 映射游戏识别
+        current_window = getattr(self, "current_game_window", None)
+        base["game_window"] = current_window
+
+        detected_game = None
+        try:
+            detected_game = getattr(self.rag_integration, "_current_rag_game", None)
+        except Exception:  # noqa: BLE001
+            detected_game = None
+
+        if not detected_game and current_window:
+            try:
+                from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+
+                detected_game = map_window_title_to_game_name(current_window)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"game mapping failed: {exc}")
+
+        if detected_game:
+            base["game_detected"] = detected_game
+
         # 确保基础字段存在，避免后端解析报错
         base.setdefault("ip", "127.0.0.1")
         base.setdefault("device_id", None)
@@ -1533,6 +1554,11 @@ class RAGIntegration(QObject):
 
         messages = self._build_chat_messages(query, original_query, game_context)
         if context_snippets:
+            logger.info(
+                "🔁 Limited mode context prepared: game=%s snippets=%s",
+                game_context or "unknown",
+                len(context_snippets),
+            )
             context_message = self._format_context_message(context_snippets, game_context)
             if context_message:
                 messages.insert(
@@ -1703,6 +1729,12 @@ class RAGIntegration(QObject):
             summary = chunk.get("summary") or chunk.get("text")
             if not summary:
                 continue
+            logger.debug(
+                "Snippet #%s score=%s title=%s",
+                idx + 1,
+                item.get("score"),
+                chunk.get("topic") or chunk.get("title"),
+            )
             snippet = {
                 "title": chunk.get("topic") or chunk.get("title") or f"Snippet {idx + 1}",
                 "summary": summary,
