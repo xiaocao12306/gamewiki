@@ -7,7 +7,7 @@ import sys
 import logging
 import time
 import pathlib
-from typing import Optional, Callable, List, Dict, Any, Tuple
+from typing import Optional, Callable, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -2551,7 +2551,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 logger.debug(f"执行付费墙 banner 回调失败: {exc}")
 
     @staticmethod
-    def _split_banner_message(message: str) -> Tuple[str, str]:
+    def _split_banner_message(message: str):
         if not message:
             return "", ""
         parts = [part.strip() for part in message.split("·", 1)]
