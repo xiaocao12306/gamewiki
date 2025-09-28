@@ -2453,7 +2453,7 @@ class IntegratedAssistantController(AssistantController):
                 copy_config = decision.config.copy or {}
                 button_text = copy_config.get("highlight") or "查看付费选项"
                 prefix = copy_config.get("title") or "AI 使用限制"
-                banner_message = f"{prefix} · {message}" if prefix else message
+                banner_message = f"{prefix}·{message}" if prefix else message
                 self.main_window.show_paywall_banner(
                     message=banner_message,
                     button_text=button_text,
@@ -2530,7 +2530,7 @@ class IntegratedAssistantController(AssistantController):
         try:
             button_text = copy_config.get("highlight") or "查看付费选项"
             prefix = copy_config.get("title") or "AI 使用限制"
-            banner_message = f"{prefix} · {fallback_body}" if prefix else fallback_body
+            banner_message = f"{prefix}·{fallback_body}" if prefix else fallback_body
             self.main_window.show_paywall_banner(
                 message=banner_message,
                 button_text=button_text,

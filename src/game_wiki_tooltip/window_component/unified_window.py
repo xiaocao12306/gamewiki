@@ -307,30 +307,35 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner.setObjectName("paywallBanner")
         self.paywall_banner.hide()
 
-        banner_layout = QHBoxLayout(self.paywall_banner)
-        banner_layout.setContentsMargins(12, 8, 12, 8)
-        banner_layout.setSpacing(12)
+        banner_layout = QGridLayout(self.paywall_banner)
+        banner_layout.setContentsMargins(12, 10, 12, 10)
+        banner_layout.setHorizontalSpacing(12)
+        banner_layout.setVerticalSpacing(6)
 
-        self.paywall_banner_icon = QLabel("⚠", self.paywall_banner)
+        self.paywall_banner_icon = QLabel(self.paywall_banner)
         self.paywall_banner_icon.setObjectName("paywallBannerIcon")
         font = self.paywall_banner_icon.font()
         font.setPointSize(font.pointSize() + 2)
         self.paywall_banner_icon.setFont(font)
-        banner_layout.addWidget(self.paywall_banner_icon, 0, Qt.AlignmentFlag.AlignTop)
+        self.paywall_banner_icon.setText("⚠")
+        banner_layout.addWidget(self.paywall_banner_icon, 0, 0, 2, 1, Qt.AlignmentFlag.AlignVCenter)
 
-        self.paywall_banner_label = QLabel("", self.paywall_banner)
-        self.paywall_banner_label.setWordWrap(True)
-        self.paywall_banner_label.setObjectName("paywallBannerLabel")
+        self.paywall_banner_primary = QLabel("", self.paywall_banner)
+        self.paywall_banner_primary.setObjectName("paywallBannerPrimary")
+        self.paywall_banner_primary.setWordWrap(True)
+        banner_layout.addWidget(self.paywall_banner_primary, 0, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+
+        self.paywall_banner_secondary = QLabel("", self.paywall_banner)
+        self.paywall_banner_secondary.setObjectName("paywallBannerSecondary")
+        self.paywall_banner_secondary.setWordWrap(True)
+        banner_layout.addWidget(self.paywall_banner_secondary, 1, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
         self.paywall_banner_button.setObjectName("paywallBannerButton")
         self.paywall_banner_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.paywall_banner_button.setMinimumHeight(32)
+        self.paywall_banner_button.setMinimumHeight(36)
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
-
-        banner_layout.addWidget(self.paywall_banner_label, 1)
-        banner_layout.addStretch(1)
-        banner_layout.addWidget(self.paywall_banner_button, 0)
+        banner_layout.addWidget(self.paywall_banner_button, 0, 2, 2, 1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
@@ -634,10 +639,15 @@ class UnifiedAssistantWindow(QMainWindow):
             border-radius: 12px;
         }
 
-        #paywallBannerLabel {
-            color: #253270;
+        #paywallBannerPrimary {
+            color: #11193d;
             font-size: 13px;
-            line-height: 1.5em;
+            font-weight: 600;
+        }
+
+        #paywallBannerSecondary {
+            color: #363f69;
+            font-size: 12px;
         }
 
         #paywallBannerButton {
@@ -2522,7 +2532,9 @@ class UnifiedAssistantWindow(QMainWindow):
         button_text: Optional[str] = None,
         callback: Optional[Callable[[], None]] = None,
     ) -> None:
-        self.paywall_banner_label.setText(message)
+        title, body = self._split_banner_message(message)
+        self.paywall_banner_primary.setText(title)
+        self.paywall_banner_secondary.setText(body)
         self.paywall_banner_button.setText(button_text or "查看付费选项")
         self._paywall_banner_callback = callback
         self.paywall_banner.show()
@@ -2537,6 +2549,15 @@ class UnifiedAssistantWindow(QMainWindow):
                 self._paywall_banner_callback()
             except Exception as exc:
                 logger.debug(f"执行付费墙 banner 回调失败: {exc}")
+
+    @staticmethod
+    def _split_banner_message(message: str) -> Tuple[str, str]:
+        if not message:
+            return "", ""
+        parts = [part.strip() for part in message.split("·", 1)]
+        if len(parts) == 2:
+            return parts[0], parts[1]
+        return message, ""
 
     def stop_generation(self):
         """Stop current generation"""
