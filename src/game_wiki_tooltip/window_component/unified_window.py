@@ -296,7 +296,9 @@ class UnifiedAssistantWindow(QMainWindow):
         # Input area - create integrated search bar following frameless_blur_window design
         self.input_container = QFrame()
         self.input_container.setObjectName("inputContainer")
-        self.input_container.setFixedHeight(115)  # Adjusted height for two-row design
+        # Remove fixed height to allow dynamic sizing based on content
+        self.input_container.setMinimumHeight(115)
+        self.input_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         
         input_layout = QVBoxLayout(self.input_container)
         input_layout.setContentsMargins(20, 10, 20, 10)
@@ -499,7 +501,7 @@ class UnifiedAssistantWindow(QMainWindow):
         # Add to main layout with stretch factor
         main_layout.addWidget(self.content_stack, 1)  # Stretch factor 1, occupy all available space
         # Removed shortcut_container - shortcuts now in popup
-        main_layout.addWidget(self.input_container, 0)     # Stretch factor 0, keep fixed height
+        main_layout.addWidget(self.input_container, 0)     # Stretch factor 0, minimum height based on content
         
         # Apply transparent styles
         self.setup_transparent_styles()
@@ -649,17 +651,21 @@ class UnifiedAssistantWindow(QMainWindow):
             background: #f5f7ff;
             border: 1px solid #dbe1ff;
             border-radius: 12px;
+            max-width: 100%;
+            margin: 0px;
         }
 
         #paywallBannerPrimary {
             color: #11193d;
             font-size: 13px;
             font-weight: 600;
+            word-wrap: break-word;
         }
 
         #paywallBannerSecondary {
             color: #363f69;
             font-size: 12px;
+            word-wrap: break-word;
         }
 
         #paywallBannerButton {
@@ -670,6 +676,7 @@ class UnifiedAssistantWindow(QMainWindow):
             padding: 6px 18px;
             font-weight: 600;
             min-width: 120px;
+            max-width: 150px;
         }
 
         #paywallBannerButton:hover {
@@ -1206,12 +1213,22 @@ class UnifiedAssistantWindow(QMainWindow):
             self.content_stack.hide()
             self.input_container.show()
             
-            # For CHAT_ONLY mode, completely disable resizing by setting fixed size
+            # For CHAT_ONLY mode, calculate size based on actual content
+            # Check if paywall banner is visible to adjust height accordingly
+            base_size = self._get_chat_only_size()
+            target_width = base_size.width()
+            
+            # Calculate actual required height based on input_container content
+            self.input_container.adjustSize()  # Ensure layout is calculated
+            actual_input_height = self.input_container.sizeHint().height()
+            target_height = max(base_size.height(), actual_input_height + 20)  # Add some margin
+            
+            target_size = QSize(target_width, target_height)
+            
             # Only call setFixedSize if the size has changed to avoid BlurWindow issues
-            target_size = self._get_chat_only_size()
             if self.size() != target_size:
                 self.setFixedSize(target_size)
-                logging.info(f"Setting CHAT_ONLY fixed size to: {target_size.width()}x{target_size.height()}")
+                logging.info(f"Setting CHAT_ONLY size to: {target_size.width()}x{target_size.height()} (content-based)")
 
             # Update main container style for full rounded corners
             self.update_container_style(full_rounded=True)
@@ -2551,10 +2568,16 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_button.setText(button_text or "查看付费选项")
         self._paywall_banner_callback = callback
         self.paywall_banner.show()
+        
+        # Adjust window size if in CHAT_ONLY mode
+        self._adjust_window_size_for_paywall_banner()
 
     def hide_paywall_banner(self) -> None:
         self.paywall_banner.hide()
         self._paywall_banner_callback = None
+        
+        # Adjust window size if in CHAT_ONLY mode
+        self._adjust_window_size_for_paywall_banner()
 
     def _on_paywall_banner_clicked(self) -> None:
         if self._paywall_banner_callback:
@@ -2562,6 +2585,32 @@ class UnifiedAssistantWindow(QMainWindow):
                 self._paywall_banner_callback()
             except Exception as exc:
                 logger.debug(f"执行付费墙 banner 回调失败: {exc}")
+
+    def _adjust_window_size_for_paywall_banner(self) -> None:
+        """Adjust window size when paywall banner is shown/hidden, especially in CHAT_ONLY mode"""
+        if self.current_state == WindowState.CHAT_ONLY:
+            try:
+                # Force layout update
+                QApplication.processEvents()
+                
+                # Recalculate size based on current content
+                base_size = self._get_chat_only_size()
+                target_width = base_size.width()
+                
+                # Calculate actual required height based on input_container content
+                self.input_container.adjustSize()
+                actual_input_height = self.input_container.sizeHint().height()
+                target_height = max(base_size.height(), actual_input_height + 20)  # Add some margin
+                
+                target_size = QSize(target_width, target_height)
+                
+                # Apply new size if different
+                if self.size() != target_size:
+                    self.setFixedSize(target_size)
+                    logging.info(f"Adjusted CHAT_ONLY size for paywall banner: {target_size.width()}x{target_size.height()}")
+                    
+            except Exception as e:
+                logging.error(f"Failed to adjust window size for paywall banner: {e}")
 
     @staticmethod
     def _split_banner_message(message: str):
