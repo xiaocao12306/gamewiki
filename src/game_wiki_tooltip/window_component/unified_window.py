@@ -7,7 +7,7 @@ import sys
 import logging
 import time
 import pathlib
-from typing import Optional, Callable, List, Dict, Any
+from typing import Optional, Callable, List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
