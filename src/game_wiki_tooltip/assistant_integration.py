@@ -376,6 +376,8 @@ class RAGIntegration(QObject):
         model: Optional[str] = None,
         fallback_used: bool = False,
         reason: Optional[str] = None,
+        duration_ms: Optional[float] = None,
+        context_attached: Optional[bool] = None,
     ) -> None:
         """记录模型调用结果，区分不同厂商与回退场景"""
 
@@ -405,6 +407,10 @@ class RAGIntegration(QObject):
         }
         if reason:
             properties["reason"] = reason
+        if duration_ms is not None:
+            properties["duration_ms"] = round(duration_ms, 2)
+        if context_attached is not None:
+            properties["context_attached"] = context_attached
 
         if event_name:
             self._track_event(event_name, properties)
@@ -417,6 +423,8 @@ class RAGIntegration(QObject):
                     "model": model,
                     "limited_mode": self.limited_mode,
                     "reason": reason or ("success" if success else "failure"),
+                    **({"duration_ms": round(duration_ms, 2)} if duration_ms is not None else {}),
+                    **({"context_attached": context_attached} if context_attached is not None else {}),
                 },
             )
             
@@ -1763,6 +1771,8 @@ class RAGIntegration(QObject):
             return
 
         loop = asyncio.get_running_loop()
+        import time
+        start_ts = time.perf_counter()
         try:
             response = await loop.run_in_executor(
                 None,
@@ -1773,8 +1783,17 @@ class RAGIntegration(QObject):
                 ),
             )
         except Exception as exc:
+            duration_ms = (time.perf_counter() - start_ts) * 1000
             logger.error(f"Cloud chat request failed: {exc}")
-            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="request_error")
+            self._track_model_event(
+                provider_hint,
+                False,
+                preferred_model,
+                fallback_used=True,
+                reason="request_error",
+                duration_ms=duration_ms,
+                context_attached=bool(context_snippets),
+            )
             await self._fallback_to_wiki(query, game_context)
             return
 
@@ -1783,15 +1802,33 @@ class RAGIntegration(QObject):
             return
 
         if not response or not response.get("content"):
+            duration_ms = (time.perf_counter() - start_ts) * 1000
             logger.warning("Cloud chat returned empty payload, fallback to wiki")
-            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="empty_response")
+            self._track_model_event(
+                provider_hint,
+                False,
+                preferred_model,
+                fallback_used=True,
+                reason="empty_response",
+                duration_ms=duration_ms,
+                context_attached=bool(context_snippets),
+            )
             await self._fallback_to_wiki(query, game_context)
             return
 
         content = response.get("content", "").strip()
         if not content:
+            duration_ms = (time.perf_counter() - start_ts) * 1000
             logger.warning("Cloud chat content empty, fallback to wiki")
-            self._track_model_event(provider_hint, False, preferred_model, fallback_used=True, reason="empty_content")
+            self._track_model_event(
+                provider_hint,
+                False,
+                preferred_model,
+                fallback_used=True,
+                reason="empty_content",
+                duration_ms=duration_ms,
+                context_attached=bool(context_snippets),
+            )
             await self._fallback_to_wiki(query, game_context)
             return
 
@@ -1803,11 +1840,14 @@ class RAGIntegration(QObject):
         )
 
         resolved_provider = response.get("provider") or provider_hint
+        duration_ms = (time.perf_counter() - start_ts) * 1000
         self._track_model_event(
             resolved_provider,
             True,
             response.get("model") or preferred_model,
             fallback_used=response.get("fallback_used", False),
+            duration_ms=duration_ms,
+            context_attached=bool(context_snippets),
         )
 
         if self._is_stop_requested(stop_flag):
