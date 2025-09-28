@@ -126,6 +126,8 @@ class AppSettings:
     backend: BackendConfig = field(default_factory=BackendConfig)
     remote_config: Dict[str, Any] = field(default_factory=dict)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
+    # 持久化配额/实验分组状态（QuotaManager 使用）
+    usage_quota: Dict[str, Any] = field(default_factory=dict)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
     shortcuts: List[Dict[str, Any]] = field(default_factory=list)
     audio_device_index: Optional[int] = None  # Audio device index for voice recognition
@@ -186,6 +188,10 @@ class SettingsManager:
             self._settings.backend = BackendConfig(**new_settings['backend'])
         if 'remote_config' in new_settings:
             self._settings.remote_config = new_settings['remote_config']
+        # Update usage_quota (for QuotaManager persistence)
+        if 'usage_quota' in new_settings:
+            # 保持为普通 dict，避免 dataclass 化
+            self._settings.usage_quota = new_settings['usage_quota']
         # Update analytics settings
         if 'analytics' in new_settings:
             self._settings.analytics = AnalyticsConfig(**new_settings['analytics'])
@@ -274,6 +280,7 @@ class SettingsManager:
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
                 backend=BackendConfig(**merged_data.get('backend', {})),
                 analytics=AnalyticsConfig(**merged_data.get('analytics', {})),
+                usage_quota=merged_data.get('usage_quota', {}),
                 shortcuts=merged_data.get('shortcuts', []),
                 audio_device_index=merged_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=merged_data.get('auto_voice_on_hotkey', False),
@@ -303,6 +310,7 @@ class SettingsManager:
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
                 backend=BackendConfig(**default_data.get('backend', {})),
                 analytics=AnalyticsConfig(**default_data.get('analytics', {})),
+                usage_quota=default_data.get('usage_quota', {}),
                 shortcuts=default_data.get('shortcuts', []),
                 audio_device_index=default_data.get('audio_device_index', None),
                 auto_voice_on_hotkey=default_data.get('auto_voice_on_hotkey', False),

@@ -11,6 +11,7 @@ from .chat_widgets import MessageWidget, StatusMessageWidget, StreamingMessageWi
 from .chat_view import ChatView
 from .wiki_view import WikiView
 from .quick_access_popup import QuickAccessPopup, ExpandableIconButton
+from .paywall_dialog import PaywallDialog
 from .window_controller import AssistantController
 from .voice_recognition import VoiceRecognitionThread, is_voice_recognition_available, get_audio_input_devices
 from .vosk_model_manager import VoskModelManager
@@ -24,6 +25,7 @@ __all__ = [
     'WindowState',
     'QuickAccessPopup',
     'ExpandableIconButton',
+    'PaywallDialog',
     'ChatMessage',
     'TransitionMessages',
     'StatusMessageWidget',

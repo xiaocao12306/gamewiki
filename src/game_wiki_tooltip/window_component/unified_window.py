@@ -7,7 +7,7 @@ import sys
 import logging
 import time
 import pathlib
-from typing import Optional
+from typing import Optional, Callable, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ from src.game_wiki_tooltip.window_component import (
     ChatView,
     VoiceRecognitionThread,
     is_voice_recognition_available,
+    PaywallDialog,
 )
 
 try:
@@ -102,6 +103,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.is_generating = False
         self.streaming_widget = None
         self.current_game_window = None  # Record current game window title
+        self.paywall_dialog: Optional[PaywallDialog] = None
         
         # Window state management
         self.current_state = WindowState.FULL_CONTENT  # Default state
@@ -2381,7 +2383,71 @@ class UnifiedAssistantWindow(QMainWindow):
         self.send_button.style().unpolish(self.send_button)
         self.send_button.style().polish(self.send_button)
         self.send_button.update()
-    
+
+    def set_chat_enabled(self, enabled: bool, reason: str = ""):
+        """启用/禁用输入与发送按钮，用于配额/冷却等场景。
+
+        参数：
+        - enabled: 是否可交互
+        - reason: 可选，调试/日志用途
+        """
+        try:
+            self.input_field.setEnabled(enabled)
+            self.send_button.setEnabled(enabled)
+            # 可根据需要在状态栏或占位符提示
+            if not enabled and reason:
+                self.chat_view.show_status(reason)
+            elif enabled:
+                self.chat_view.hide_status()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"set_chat_enabled 失败: {e}")
+
+    def show_paywall(
+        self,
+        *,
+        copy_config: Dict[str, Any],
+        ctas: List[Dict[str, Any]],
+        on_cta: Optional[Callable[[Dict[str, Any]], None]] = None,
+        on_closed: Optional[Callable[[], None]] = None,
+    ) -> None:
+        """展示付费墙弹窗"""
+        try:
+            if self.paywall_dialog and self.paywall_dialog.isVisible():
+                self.paywall_dialog.close()
+
+            self.paywall_dialog = PaywallDialog(
+                copy_config=copy_config,
+                ctas=ctas,
+                parent=self,
+            )
+
+            if on_cta:
+                self.paywall_dialog.cta_clicked.connect(on_cta)  # type: ignore[arg-type]
+
+            def _cleanup_dialog() -> None:
+                self.paywall_dialog = None
+
+            self.paywall_dialog.dismissed.connect(_cleanup_dialog)
+
+            if on_closed:
+                self.paywall_dialog.dismissed.connect(on_closed)
+
+            self.paywall_dialog.show()
+            self.paywall_dialog.raise_()
+            self.paywall_dialog.activateWindow()
+        except Exception as exc:
+            logger.warning(f"展示付费墙弹窗失败: {exc}")
+
+    def close_paywall(self) -> None:
+        if self.paywall_dialog:
+            try:
+                self.paywall_dialog.close()
+            except Exception:
+                pass
+            finally:
+                self.paywall_dialog = None
+
     def stop_generation(self):
         """Stop current generation"""
         print("🛑 User requested to stop generation")
@@ -2512,7 +2578,10 @@ class UnifiedAssistantWindow(QMainWindow):
         # Stop voice recording if active
         if self.is_voice_recording:
             self.stop_voice_recording()
-        
+
+        # 关闭可能存在的付费墙弹窗
+        self.close_paywall()
+
         # Save geometry information and persist to disk
         try:
             self.save_geometry()

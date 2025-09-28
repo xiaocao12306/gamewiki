@@ -11,10 +11,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import os
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QThread, Qt, QPoint, QUrl
+from PyQt6.QtGui import QDesktopServices
 
 from src.game_wiki_tooltip.window_component import AssistantController, TransitionMessages, MessageType, WindowState
 from src.game_wiki_tooltip.core.backend_client import BackendClient
+from src.game_wiki_tooltip.core.quota_manager import QuotaManager, QuotaDecision
 from src.game_wiki_tooltip.core.config import SettingsManager
 from src.game_wiki_tooltip.core import events as analytics_events
 from src.game_wiki_tooltip.ai.rag_config import LLMSettings
@@ -2149,6 +2151,14 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🚨 运行在云端代理模式：Wiki 搜索 + 远端聊天")
         else:
             logger.info("✅ 运行在本地增强模式：支持 Wiki 搜索与本地 RAG 功能")
+        self._active_paywall_decision: Optional[QuotaDecision] = None
+        # Initialize quota manager (after remote_config synced by GameWikiApp)
+        try:
+            self.quota_manager = QuotaManager(settings_manager, backend_client)
+            logger.info("QuotaManager 初始化完成")
+        except Exception as e:
+            self.quota_manager = None
+            logger.warning(f"QuotaManager 初始化失败: {e}")
             # Don't preload AI modules immediately, wait for first window display
             self._ai_preload_scheduled = False
             
@@ -2410,7 +2420,147 @@ class IntegratedAssistantController(AssistantController):
     def set_settings_window_callback(self, callback):
         """Set the callback function to show settings window"""
         self._settings_window_callback = callback
-    
+
+    # ----- quota / paywall helpers -----
+    def _append_status_message(self, text: str) -> None:
+        if not self.main_window:
+            return
+
+        try:
+            messages = getattr(self.main_window.chat_view, "messages", [])
+            if messages:
+                last_widget = messages[-1]
+                last_message = getattr(last_widget, "message", None)
+                if last_message and last_message.type == MessageType.STATUS and last_message.content == text:
+                    return
+            self.main_window.chat_view.add_message(MessageType.STATUS, text)
+        except Exception as exc:
+            logger.debug(f"追加状态消息失败: {exc}")
+
+    def _handle_quota_block(self, decision: QuotaDecision) -> None:
+        if not self.main_window:
+            return
+
+        if decision.reason == "cooldown":
+            message = self._format_cooldown_message(decision)
+            try:
+                self.main_window.set_chat_enabled(False, message)
+            except Exception as exc:
+                logger.debug(f"展示冷却提示失败: {exc}")
+            self._append_status_message(message)
+            return
+
+        dialog_visible = bool(
+            getattr(self.main_window, "paywall_dialog", None)
+            and self.main_window.paywall_dialog
+            and self.main_window.paywall_dialog.isVisible()
+        )
+        same_plan = (
+            self._active_paywall_decision is not None
+            and self._active_paywall_decision.config.plan_id == decision.config.plan_id
+            and self._active_paywall_decision.variant == decision.variant
+        )
+
+        if dialog_visible and same_plan:
+            self._active_paywall_decision = decision
+            try:
+                self.main_window.paywall_dialog.raise_()
+                self.main_window.paywall_dialog.activateWindow()
+            except Exception:
+                pass
+            return
+
+        self._active_paywall_decision = decision
+
+        if decision.analytics_payload:
+            self._track_event("paywall_shown", decision.analytics_payload)
+
+        try:
+            if self.quota_manager:
+                self.quota_manager.record_paywall_shown(None)
+        except Exception as exc:
+            logger.debug(f"record_paywall_shown 失败: {exc}")
+
+        fallback_body = (decision.config.copy or {}).get("body") or "AI usage limit reached"
+
+        try:
+            if decision.config.restrictions.get("disable_chat_after_trigger", True):
+                self.main_window.set_chat_enabled(False, fallback_body)
+        except Exception as exc:
+            logger.debug(f"禁用聊天失败: {exc}")
+
+        self._present_paywall(decision, fallback_body)
+
+    def _present_paywall(self, decision: QuotaDecision, fallback_body: str) -> None:
+        if not self.main_window:
+            return
+
+        copy_config = decision.config.copy or {}
+        ctas = decision.config.cta or []
+
+        try:
+            self.main_window.show_paywall(
+                copy_config=copy_config,
+                ctas=ctas,
+                on_cta=self._on_paywall_cta,
+                on_closed=self._on_paywall_closed,
+            )
+        except Exception as exc:
+            logger.warning(f"展示付费墙弹窗失败，退回状态提示: {exc}")
+            title = copy_config.get("title") or "Usage limit"
+            self._append_status_message(f"{title}: {fallback_body}")
+
+    def _on_paywall_cta(self, cta_item: Dict[str, Any]) -> None:
+        payload: Optional[Dict[str, Any]] = None
+        try:
+            if self.quota_manager:
+                payload = self.quota_manager.handle_cta(cta_item)
+        except Exception as exc:
+            logger.warning(f"处理 CTA 失败: {exc}")
+            payload = None
+
+        event_name = payload.get("event") if payload else None
+        properties = payload.get("properties") if payload else None
+        action = (payload or {}).get("action") or cta_item.get("action")
+        action_payload = (payload or {}).get("payload") or cta_item.get("payload")
+
+        if event_name:
+            self._track_event(event_name, properties)
+
+        if action == "open_url" and action_payload:
+            try:
+                QDesktopServices.openUrl(QUrl(str(action_payload)))
+            except Exception as exc:
+                logger.warning(f"打开 CTA 链接失败: {exc}")
+
+    def _on_paywall_closed(self) -> None:
+        decision = self._active_paywall_decision
+        if not decision:
+            return
+
+        try:
+            restrictions = decision.config.restrictions or {}
+            copy_config = decision.config.copy or {}
+            reminder = copy_config.get("body") or "AI usage limit reached"
+
+            if self.main_window and restrictions.get("show_reminder_on_close", True):
+                self._append_status_message(reminder)
+        except Exception as exc:
+            logger.debug(f"展示付费墙关闭提醒失败: {exc}")
+        finally:
+            self._active_paywall_decision = None
+
+    @staticmethod
+    def _format_cooldown_message(decision: QuotaDecision) -> str:
+        remaining = decision.cooldown_seconds or 0
+        if remaining <= 0:
+            return "付费墙冷却中，请稍后再试。"
+
+        minutes = remaining // 60
+        if minutes >= 1:
+            return f"付费墙冷却中，请 {minutes} 分钟后重试。"
+        return "付费墙冷却中，请稍后重试（不到 1 分钟）。"
+
     def handle_query(self, query: str, mode: str = "auto"):
         """Override to handle query with RAG integration"""
         # Store search mode
@@ -2445,6 +2595,23 @@ class IntegratedAssistantController(AssistantController):
             self._check_rag_init_status()
             return
         
+        # 付费墙/配额拦截：在提交 QueryWorker 前
+        try:
+            if self.quota_manager:
+                decision = self.quota_manager.should_show_paywall()
+                if decision.blocked:
+                    self._handle_quota_block(decision)
+                    return
+        except Exception as e:
+            logger.warning(f"Quota check failed, continue without blocking: {e}")
+
+        # 通过配额校验，先自增计数（MVP 简化，不回滚）
+        try:
+            if self.quota_manager:
+                self.quota_manager.increment_usage()
+        except Exception:
+            pass
+
         # RAG engine is ready, process query normally
         self._process_query_immediately(query)
         
