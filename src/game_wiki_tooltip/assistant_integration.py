@@ -2448,6 +2448,21 @@ class IntegratedAssistantController(AssistantController):
             except Exception as exc:
                 logger.debug(f"展示冷却提示失败: {exc}")
             self._append_status_message(message)
+
+            try:
+                copy_config = decision.config.copy or {}
+                button_text = copy_config.get("highlight") or "查看付费选项"
+                prefix = copy_config.get("title") or "AI 使用限制"
+                banner_message = f"{prefix} · {message}" if prefix else message
+                self.main_window.show_paywall_banner(
+                    message=banner_message,
+                    button_text=button_text,
+                    callback=lambda dec=decision: self._open_paywall_dialog(dec, from_reopen=True),
+                )
+            except Exception as exc:
+                logger.debug(f"展示冷却横幅失败: {exc}")
+
+            self._active_paywall_decision = decision
             return
 
         dialog_visible = bool(
