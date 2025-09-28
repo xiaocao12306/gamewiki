@@ -308,9 +308,9 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner.hide()
 
         banner_layout = QGridLayout(self.paywall_banner)
-        banner_layout.setContentsMargins(12, 10, 12, 10)
+        banner_layout.setContentsMargins(16, 14, 16, 14)
         banner_layout.setHorizontalSpacing(12)
-        banner_layout.setVerticalSpacing(6)
+        banner_layout.setVerticalSpacing(4)
 
         self.paywall_banner_icon = QLabel(self.paywall_banner)
         self.paywall_banner_icon.setObjectName("paywallBannerIcon")
@@ -323,11 +323,13 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_primary = QLabel("", self.paywall_banner)
         self.paywall_banner_primary.setObjectName("paywallBannerPrimary")
         self.paywall_banner_primary.setWordWrap(True)
+        self.paywall_banner_primary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         banner_layout.addWidget(self.paywall_banner_primary, 0, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.paywall_banner_secondary = QLabel("", self.paywall_banner)
         self.paywall_banner_secondary.setObjectName("paywallBannerSecondary")
         self.paywall_banner_secondary.setWordWrap(True)
+        self.paywall_banner_secondary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         banner_layout.addWidget(self.paywall_banner_secondary, 1, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
@@ -336,6 +338,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_button.setMinimumHeight(36)
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
         banner_layout.addWidget(self.paywall_banner_button, 0, 2, 2, 1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        banner_layout.setColumnStretch(1, 1)
+        banner_layout.setColumnStretch(2, 0)
         input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
