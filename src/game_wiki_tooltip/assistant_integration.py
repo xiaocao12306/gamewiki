@@ -2514,7 +2514,8 @@ class IntegratedAssistantController(AssistantController):
         # 展示提醒 banner，方便用户再次打开弹窗
         try:
             button_text = copy_config.get("highlight") or "查看付费选项"
-            banner_message = fallback_body
+            prefix = copy_config.get("title") or "AI 使用限制"
+            banner_message = f"{prefix} · {fallback_body}" if prefix else fallback_body
             self.main_window.show_paywall_banner(
                 message=banner_message,
                 button_text=button_text,
