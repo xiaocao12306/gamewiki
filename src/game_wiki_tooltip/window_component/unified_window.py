@@ -307,10 +307,11 @@ class UnifiedAssistantWindow(QMainWindow):
         # Paywall banner（默认隐藏，付费墙触发后展示）
         self.paywall_banner = QFrame()
         self.paywall_banner.setObjectName("paywallBanner")
+        self.paywall_banner.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.paywall_banner.hide()
 
         banner_layout = QHBoxLayout(self.paywall_banner)
-        banner_layout.setContentsMargins(12, 10, 12, 10)
+        banner_layout.setContentsMargins(16, 10, 16, 10)
         banner_layout.setSpacing(12)
 
         self.paywall_banner_icon = QLabel(self.paywall_banner)
@@ -653,7 +654,7 @@ class UnifiedAssistantWindow(QMainWindow):
             background: #f5f7ff;
             border: 1px solid #dbe1ff;
             border-radius: 10px;
-            max-width: 100%;
+            width: 100%;
             margin: 0px;
             min-height: 50px;
         }
