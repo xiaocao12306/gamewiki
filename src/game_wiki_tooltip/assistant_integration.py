@@ -2489,14 +2489,15 @@ class IntegratedAssistantController(AssistantController):
         except Exception as exc:
             logger.debug(f"禁用聊天失败: {exc}")
 
-        self._present_paywall(decision, fallback_body)
+        self._open_paywall_dialog(decision, from_reopen=False)
 
-    def _present_paywall(self, decision: QuotaDecision, fallback_body: str) -> None:
+    def _open_paywall_dialog(self, decision: QuotaDecision, *, from_reopen: bool) -> None:
         if not self.main_window:
             return
 
         copy_config = decision.config.copy or {}
         ctas = decision.config.cta or []
+        fallback_body = copy_config.get("body") or "AI usage limit reached"
 
         try:
             self.main_window.show_paywall(
@@ -2509,6 +2510,18 @@ class IntegratedAssistantController(AssistantController):
             logger.warning(f"展示付费墙弹窗失败，退回状态提示: {exc}")
             title = copy_config.get("title") or "Usage limit"
             self._append_status_message(f"{title}: {fallback_body}")
+
+        # 展示提醒 banner，方便用户再次打开弹窗
+        try:
+            button_text = copy_config.get("highlight") or "查看付费选项"
+            banner_message = fallback_body
+            self.main_window.show_paywall_banner(
+                message=banner_message,
+                button_text=button_text,
+                callback=lambda dec=decision: self._open_paywall_dialog(dec, from_reopen=True),
+            )
+        except Exception as exc:
+            logger.debug(f"展示付费墙 banner 失败: {exc}")
 
     def _on_paywall_cta(self, cta_item: Dict[str, Any]) -> None:
         payload: Optional[Dict[str, Any]] = None
@@ -2548,7 +2561,7 @@ class IntegratedAssistantController(AssistantController):
         except Exception as exc:
             logger.debug(f"展示付费墙关闭提醒失败: {exc}")
         finally:
-            self._active_paywall_decision = None
+            self._active_paywall_decision = decision
 
     @staticmethod
     def _format_cooldown_message(decision: QuotaDecision) -> str:

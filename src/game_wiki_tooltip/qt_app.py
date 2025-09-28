@@ -364,8 +364,9 @@ class GameWikiApp(QObject):
         # 修改逻辑：强制显示设置窗口的情况
         if self.force_settings:
             logger.info("Settings window forced by command line argument")
-            self.need_show_settings_after_splash = False  # Don't show twice
-            self._show_settings(initial_setup=False)
+            # 延迟到启动流程完成并关闭启动页后再弹出设置窗口
+            self.need_show_settings_after_splash = True
+            self._initialize_components(limited_mode=not has_api_key)
             return
 
         # 没有 Gemini Key 时默认运行在“云端代理模式”，不再弹出提示

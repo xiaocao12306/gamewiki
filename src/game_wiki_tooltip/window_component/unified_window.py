@@ -104,7 +104,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.streaming_widget = None
         self.current_game_window = None  # Record current game window title
         self.paywall_dialog: Optional[PaywallDialog] = None
-        
+        self._paywall_banner_callback: Optional[Callable[[], None]] = None
+
         # Window state management
         self.current_state = WindowState.FULL_CONTENT  # Default state
         self.has_user_input = False  # Track if user has entered any input
@@ -300,6 +301,29 @@ class UnifiedAssistantWindow(QMainWindow):
         input_layout = QVBoxLayout(self.input_container)
         input_layout.setContentsMargins(20, 10, 20, 10)
         input_layout.setSpacing(10)
+
+        # Paywall banner（默认隐藏，付费墙触发后展示）
+        self.paywall_banner = QFrame()
+        self.paywall_banner.setObjectName("paywallBanner")
+        self.paywall_banner.hide()
+
+        banner_layout = QHBoxLayout(self.paywall_banner)
+        banner_layout.setContentsMargins(12, 8, 12, 8)
+        banner_layout.setSpacing(12)
+
+        self.paywall_banner_label = QLabel("", self.paywall_banner)
+        self.paywall_banner_label.setWordWrap(True)
+        self.paywall_banner_label.setObjectName("paywallBannerLabel")
+
+        self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
+        self.paywall_banner_button.setObjectName("paywallBannerButton")
+        self.paywall_banner_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.paywall_banner_button.setMinimumHeight(32)
+        self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
+
+        banner_layout.addWidget(self.paywall_banner_label, 1)
+        banner_layout.addWidget(self.paywall_banner_button, 0)
+        input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
         search_container = QFrame()
@@ -595,7 +619,35 @@ class UnifiedAssistantWindow(QMainWindow):
             border-bottom-left-radius: 0px;  /* Remove rounded corners */
             border-bottom-right-radius: 0px;  /* Remove rounded corners */
         }
-        
+
+        #paywallBanner {
+            background: rgba(76, 110, 245, 0.1);
+            border: 1px solid rgba(76, 110, 245, 0.35);
+            border-radius: 10px;
+        }
+
+        #paywallBannerLabel {
+            color: #253270;
+            font-size: 13px;
+        }
+
+        #paywallBannerButton {
+            background-color: #4C6EF5;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            font-weight: 600;
+        }
+
+        #paywallBannerButton:hover {
+            background-color: #3B5BDB;
+        }
+
+        #paywallBannerButton:pressed {
+            background-color: #364FC7;
+        }
+
         /* Search container - integrated two-row design */
         #searchContainer {
             background: rgba(0, 0, 0, 10);
@@ -2399,6 +2451,7 @@ class UnifiedAssistantWindow(QMainWindow):
                 self.chat_view.show_status(reason)
             elif enabled:
                 self.chat_view.hide_status()
+                self.hide_paywall_banner()
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"set_chat_enabled 失败: {e}")
@@ -2447,6 +2500,29 @@ class UnifiedAssistantWindow(QMainWindow):
                 pass
             finally:
                 self.paywall_dialog = None
+
+    def show_paywall_banner(
+        self,
+        *,
+        message: str,
+        button_text: Optional[str] = None,
+        callback: Optional[Callable[[], None]] = None,
+    ) -> None:
+        self.paywall_banner_label.setText(message)
+        self.paywall_banner_button.setText(button_text or "查看付费选项")
+        self._paywall_banner_callback = callback
+        self.paywall_banner.show()
+
+    def hide_paywall_banner(self) -> None:
+        self.paywall_banner.hide()
+        self._paywall_banner_callback = None
+
+    def _on_paywall_banner_clicked(self) -> None:
+        if self._paywall_banner_callback:
+            try:
+                self._paywall_banner_callback()
+            except Exception as exc:
+                logger.debug(f"执行付费墙 banner 回调失败: {exc}")
 
     def stop_generation(self):
         """Stop current generation"""
