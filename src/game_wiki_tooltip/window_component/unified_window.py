@@ -307,10 +307,9 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner.setObjectName("paywallBanner")
         self.paywall_banner.hide()
 
-        banner_layout = QGridLayout(self.paywall_banner)
+        banner_layout = QHBoxLayout(self.paywall_banner)
         banner_layout.setContentsMargins(16, 14, 16, 14)
-        banner_layout.setHorizontalSpacing(12)
-        banner_layout.setVerticalSpacing(4)
+        banner_layout.setSpacing(16)
 
         self.paywall_banner_icon = QLabel(self.paywall_banner)
         self.paywall_banner_icon.setObjectName("paywallBannerIcon")
@@ -318,28 +317,36 @@ class UnifiedAssistantWindow(QMainWindow):
         font.setPointSize(font.pointSize() + 2)
         self.paywall_banner_icon.setFont(font)
         self.paywall_banner_icon.setText("⚠")
-        banner_layout.addWidget(self.paywall_banner_icon, 0, 0, 2, 1, Qt.AlignmentFlag.AlignVCenter)
+        banner_layout.addWidget(self.paywall_banner_icon, alignment=Qt.AlignmentFlag.AlignTop)
+
+        text_container = QVBoxLayout()
+        text_container.setContentsMargins(0, 0, 0, 0)
+        text_container.setSpacing(4)
 
         self.paywall_banner_primary = QLabel("", self.paywall_banner)
         self.paywall_banner_primary.setObjectName("paywallBannerPrimary")
         self.paywall_banner_primary.setWordWrap(True)
         self.paywall_banner_primary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        banner_layout.addWidget(self.paywall_banner_primary, 0, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+        self.paywall_banner_primary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        text_container.addWidget(self.paywall_banner_primary)
 
         self.paywall_banner_secondary = QLabel("", self.paywall_banner)
         self.paywall_banner_secondary.setObjectName("paywallBannerSecondary")
         self.paywall_banner_secondary.setWordWrap(True)
         self.paywall_banner_secondary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        banner_layout.addWidget(self.paywall_banner_secondary, 1, 1, 1, 1, Qt.AlignmentFlag.AlignVCenter)
+        self.paywall_banner_secondary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        text_container.addWidget(self.paywall_banner_secondary)
+
+        banner_layout.addLayout(text_container)
+        banner_layout.addStretch(1)
 
         self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
         self.paywall_banner_button.setObjectName("paywallBannerButton")
         self.paywall_banner_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.paywall_banner_button.setMinimumHeight(36)
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
-        banner_layout.addWidget(self.paywall_banner_button, 0, 2, 2, 1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        banner_layout.setColumnStretch(1, 1)
-        banner_layout.setColumnStretch(2, 0)
+        self.paywall_banner_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        banner_layout.addWidget(self.paywall_banner_button, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
@@ -2539,6 +2546,7 @@ class UnifiedAssistantWindow(QMainWindow):
         title, body = self._split_banner_message(message)
         self.paywall_banner_primary.setText(title)
         self.paywall_banner_secondary.setText(body)
+        self.paywall_banner_secondary.setVisible(bool(body))
         self.paywall_banner_button.setText(button_text or "查看付费选项")
         self._paywall_banner_callback = callback
         self.paywall_banner.show()
