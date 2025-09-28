@@ -13,3 +13,4 @@ class MessageType(Enum):
     AI_STREAMING = "ai_streaming"
     WIKI_LINK = "wiki_link"
     TRANSITION = "transition"
+    STATUS = "status"

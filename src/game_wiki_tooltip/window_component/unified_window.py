@@ -311,6 +311,13 @@ class UnifiedAssistantWindow(QMainWindow):
         banner_layout.setContentsMargins(12, 8, 12, 8)
         banner_layout.setSpacing(12)
 
+        self.paywall_banner_icon = QLabel("⚠", self.paywall_banner)
+        self.paywall_banner_icon.setObjectName("paywallBannerIcon")
+        font = self.paywall_banner_icon.font()
+        font.setPointSize(font.pointSize() + 2)
+        self.paywall_banner_icon.setFont(font)
+        banner_layout.addWidget(self.paywall_banner_icon, 0, Qt.AlignmentFlag.AlignTop)
+
         self.paywall_banner_label = QLabel("", self.paywall_banner)
         self.paywall_banner_label.setWordWrap(True)
         self.paywall_banner_label.setObjectName("paywallBannerLabel")
@@ -322,6 +329,7 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
 
         banner_layout.addWidget(self.paywall_banner_label, 1)
+        banner_layout.addStretch(1)
         banner_layout.addWidget(self.paywall_banner_button, 0)
         input_layout.addWidget(self.paywall_banner)
 
@@ -621,23 +629,25 @@ class UnifiedAssistantWindow(QMainWindow):
         }
 
         #paywallBanner {
-            background: rgba(76, 110, 245, 0.1);
-            border: 1px solid rgba(76, 110, 245, 0.35);
-            border-radius: 10px;
+            background: #f5f7ff;
+            border: 1px solid #dbe1ff;
+            border-radius: 12px;
         }
 
         #paywallBannerLabel {
             color: #253270;
             font-size: 13px;
+            line-height: 1.5em;
         }
 
         #paywallBannerButton {
             background-color: #4C6EF5;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
-            padding: 6px 16px;
+            border-radius: 16px;
+            padding: 6px 18px;
             font-weight: 600;
+            min-width: 120px;
         }
 
         #paywallBannerButton:hover {
@@ -646,6 +656,10 @@ class UnifiedAssistantWindow(QMainWindow):
 
         #paywallBannerButton:pressed {
             background-color: #364FC7;
+        }
+
+        #paywallBannerIcon {
+            color: #4C6EF5;
         }
 
         /* Search container - integrated two-row design */
