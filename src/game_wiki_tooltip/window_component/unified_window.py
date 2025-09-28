@@ -310,21 +310,23 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner.hide()
 
         banner_layout = QHBoxLayout(self.paywall_banner)
-        banner_layout.setContentsMargins(16, 14, 16, 14)
-        banner_layout.setSpacing(16)
+        banner_layout.setContentsMargins(12, 10, 12, 10)
+        banner_layout.setSpacing(12)
 
         self.paywall_banner_icon = QLabel(self.paywall_banner)
         self.paywall_banner_icon.setObjectName("paywallBannerIcon")
         font = self.paywall_banner_icon.font()
-        font.setPointSize(font.pointSize() + 2)
+        font.setPointSize(font.pointSize() + 1)
         self.paywall_banner_icon.setFont(font)
         self.paywall_banner_icon.setText("⚠")
-        banner_layout.addWidget(self.paywall_banner_icon, alignment=Qt.AlignmentFlag.AlignTop)
+        self.paywall_banner_icon.setFixedSize(20, 20)
+        self.paywall_banner_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        banner_layout.addWidget(self.paywall_banner_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         text_container = QWidget(self.paywall_banner)
         text_container_layout = QVBoxLayout(text_container)
         text_container_layout.setContentsMargins(0, 0, 0, 0)
-        text_container_layout.setSpacing(4)
+        text_container_layout.setSpacing(2)
 
         self.paywall_banner_primary = QLabel("", text_container)
         self.paywall_banner_primary.setObjectName("paywallBannerPrimary")
@@ -340,16 +342,16 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_secondary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         text_container_layout.addWidget(self.paywall_banner_secondary)
 
-        banner_layout.addWidget(text_container)
-        banner_layout.addStretch(1)
+        banner_layout.addWidget(text_container, 1)  # Give text container more space
 
         self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
         self.paywall_banner_button.setObjectName("paywallBannerButton")
         self.paywall_banner_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.paywall_banner_button.setMinimumHeight(36)
+        self.paywall_banner_button.setMinimumHeight(32)
+        self.paywall_banner_button.setMaximumHeight(32)
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
         self.paywall_banner_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        banner_layout.addWidget(self.paywall_banner_button, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        banner_layout.addWidget(self.paywall_banner_button, alignment=Qt.AlignmentFlag.AlignVCenter)
         input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
@@ -650,33 +652,37 @@ class UnifiedAssistantWindow(QMainWindow):
         #paywallBanner {
             background: #f5f7ff;
             border: 1px solid #dbe1ff;
-            border-radius: 12px;
+            border-radius: 10px;
             max-width: 100%;
             margin: 0px;
+            min-height: 50px;
         }
 
         #paywallBannerPrimary {
             color: #11193d;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             word-wrap: break-word;
+            line-height: 1.3;
         }
 
         #paywallBannerSecondary {
             color: #363f69;
-            font-size: 12px;
+            font-size: 11px;
             word-wrap: break-word;
+            line-height: 1.2;
         }
 
         #paywallBannerButton {
             background-color: #4C6EF5;
             color: #ffffff;
             border: none;
-            border-radius: 16px;
-            padding: 6px 18px;
+            border-radius: 14px;
+            padding: 6px 16px;
             font-weight: 600;
-            min-width: 120px;
-            max-width: 150px;
+            font-size: 11px;
+            min-width: 100px;
+            max-width: 140px;
         }
 
         #paywallBannerButton:hover {
@@ -689,6 +695,7 @@ class UnifiedAssistantWindow(QMainWindow):
 
         #paywallBannerIcon {
             color: #4C6EF5;
+            font-weight: bold;
         }
 
         /* Search container - integrated two-row design */
