@@ -3223,6 +3223,10 @@ class IntegratedAssistantController(AssistantController):
                 logger.info(f"🎮 Interaction mode updated for hotkey: {old_mode.value} -> {new_mode.value}")
         
         # 只检查聊天窗口的可见性，而不是所有窗口
+        if not self.main_window:
+            logger.info("⚠️ Main window not created yet, preparing fallback")
+            self._precreate_main_window_if_needed()
+
         chat_visible = (self.main_window and self.main_window.isVisible())
         action = self.smart_interaction.handle_hotkey_press(chat_visible)
         logger.info(f"🔥 Smart hotkey handling result: {action}")
@@ -3348,8 +3352,16 @@ class IntegratedAssistantController(AssistantController):
             from PyQt6.QtWidgets import QApplication
             QApplication.processEvents()
 
+        if not self.main_window:
+            logger.info("⚠️ Main window not available, preparing fallback creation")
+            self._precreate_main_window_if_needed()
+
+        if not self.main_window:
+            logger.error("❌ Failed to create main window before showing chat")
+            return
+
         # 先决定显示哪种形态
-        if not self.main_window.has_switched_state:
+        if not getattr(self.main_window, 'has_switched_state', False):
             # 如果用户没有切换过形态，显示CHAT_ONLY形态
             logger.info("🎯 Switching to CHAT_ONLY mode (no state switch yet)")
             self.main_window.switch_to_chat_only()
@@ -3379,6 +3391,21 @@ class IntegratedAssistantController(AssistantController):
             QTimer.singleShot(100, self.main_window._set_chat_input_focus)
 
         logger.info("💬 Chat window shown")
+
+    def _precreate_main_window_if_needed(self):
+        """在主窗口缺失时尝试预创建"""
+        try:
+            if self.main_window:
+                return
+
+            from src.game_wiki_tooltip.window_component.unified_window import UnifiedAssistantWindow
+            self.main_window = UnifiedAssistantWindow(self.settings_manager)
+            self.main_window.query_submitted.connect(self.handle_query)
+            self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
+            self.main_window.stop_generation_requested.connect(self.handle_stop_generation)
+            logger.info("✅ Fallback main window created")
+        except Exception as exc:
+            logger.error(f"Fallback main window creation failed: {exc}")
     
     def _ensure_window_interactable(self):
         """确保窗口在显示后是可交互的"""
