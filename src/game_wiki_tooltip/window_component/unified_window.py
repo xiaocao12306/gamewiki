@@ -310,7 +310,8 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.paywall_banner.hide()
 
-        banner_layout = QHBoxLayout(self.paywall_banner)
+        # Use QGridLayout for better responsive control
+        banner_layout = QGridLayout(self.paywall_banner)
         banner_layout.setContentsMargins(16, 10, 16, 10)
         banner_layout.setSpacing(12)
 
@@ -322,37 +323,37 @@ class UnifiedAssistantWindow(QMainWindow):
         self.paywall_banner_icon.setText("⚠")
         self.paywall_banner_icon.setFixedSize(20, 20)
         self.paywall_banner_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        banner_layout.addWidget(self.paywall_banner_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+        banner_layout.addWidget(self.paywall_banner_icon, 0, 0, 2, 1, Qt.AlignmentFlag.AlignTop)
 
-        text_container = QWidget(self.paywall_banner)
-        text_container_layout = QVBoxLayout(text_container)
-        text_container_layout.setContentsMargins(0, 0, 0, 0)
-        text_container_layout.setSpacing(2)
-
-        self.paywall_banner_primary = QLabel("", text_container)
+        self.paywall_banner_primary = QLabel("", self.paywall_banner)
         self.paywall_banner_primary.setObjectName("paywallBannerPrimary")
         self.paywall_banner_primary.setWordWrap(True)
         self.paywall_banner_primary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self.paywall_banner_primary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        text_container_layout.addWidget(self.paywall_banner_primary)
+        banner_layout.addWidget(self.paywall_banner_primary, 0, 1, 1, 1)
 
-        self.paywall_banner_secondary = QLabel("", text_container)
+        self.paywall_banner_secondary = QLabel("", self.paywall_banner)
         self.paywall_banner_secondary.setObjectName("paywallBannerSecondary")
         self.paywall_banner_secondary.setWordWrap(True)
         self.paywall_banner_secondary.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self.paywall_banner_secondary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        text_container_layout.addWidget(self.paywall_banner_secondary)
-
-        banner_layout.addWidget(text_container, 1)  # Give text container more space
+        banner_layout.addWidget(self.paywall_banner_secondary, 1, 1, 1, 1)
 
         self.paywall_banner_button = QPushButton("查看付费选项", self.paywall_banner)
         self.paywall_banner_button.setObjectName("paywallBannerButton")
         self.paywall_banner_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.paywall_banner_button.setMinimumHeight(32)
         self.paywall_banner_button.setMaximumHeight(32)
+        self.paywall_banner_button.setMinimumWidth(90)  # Set minimum width for button
+        self.paywall_banner_button.setMaximumWidth(120)  # Limit maximum width for better layout
         self.paywall_banner_button.clicked.connect(self._on_paywall_banner_clicked)
         self.paywall_banner_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        banner_layout.addWidget(self.paywall_banner_button, alignment=Qt.AlignmentFlag.AlignVCenter)
+        banner_layout.addWidget(self.paywall_banner_button, 0, 2, 2, 1, Qt.AlignmentFlag.AlignCenter)
+
+        # Set column stretch factors for responsive behavior
+        banner_layout.setColumnStretch(0, 0)  # Icon column: fixed width
+        banner_layout.setColumnStretch(1, 1)  # Text column: expand
+        banner_layout.setColumnStretch(2, 0)  # Button column: fixed width
         input_layout.addWidget(self.paywall_banner)
 
         # Integrated search container (two rows)
@@ -679,11 +680,12 @@ class UnifiedAssistantWindow(QMainWindow):
             color: #ffffff;
             border: none;
             border-radius: 14px;
-            padding: 6px 16px;
+            padding: 6px 12px;
             font-weight: 600;
             font-size: 11px;
-            min-width: 100px;
-            max-width: 140px;
+            min-width: 90px;
+            max-width: 120px;
+            text-align: center;
         }
 
         #paywallBannerButton:hover {
@@ -2511,8 +2513,11 @@ class UnifiedAssistantWindow(QMainWindow):
             if not enabled and reason:
                 self.chat_view.show_status(reason)
             elif enabled:
+                # 当重新启用聊天时，自动清理所有相关的UI状态
                 self.chat_view.hide_status()
                 self.hide_paywall_banner()
+                # 恢复正常的占位符文本
+                self.input_field.setPlaceholderText("search for information..." if self.current_mode != "url" else "Enter URL...")
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"set_chat_enabled 失败: {e}")
@@ -2620,6 +2625,22 @@ class UnifiedAssistantWindow(QMainWindow):
             except Exception as e:
                 logging.error(f"Failed to adjust window size for paywall banner: {e}")
 
+    def _check_and_cleanup_banner_if_needed(self) -> None:
+        """Check if paywall banner should be cleaned up automatically"""
+        try:
+            # Auto-cleanup banner if chat is enabled and no longer needed
+            if (self.input_field.isEnabled() and 
+                self.send_button.isEnabled() and 
+                self.paywall_banner.isVisible()):
+                
+                # Additional check: ensure we're not in a generating state that might need the banner
+                if not getattr(self, 'is_generating', False):
+                    logging.debug("Auto-cleaning up paywall banner as chat is now enabled")
+                    self.hide_paywall_banner()
+                    
+        except Exception as e:
+            logging.error(f"Failed to check and cleanup banner: {e}")
+
     @staticmethod
     def _split_banner_message(message: str):
         if not message:
@@ -2701,6 +2722,9 @@ class UnifiedAssistantWindow(QMainWindow):
             else:
                 # Normal behavior - allow auto-focus
                 self.input_field.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        # Check if paywall banner should be cleaned up
+        QTimer.singleShot(100, self._check_and_cleanup_banner_if_needed)
         
         # Load shortcuts and history after window is shown
         if not self.shortcuts_loaded:

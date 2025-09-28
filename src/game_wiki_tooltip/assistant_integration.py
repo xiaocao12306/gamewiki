@@ -2422,6 +2422,29 @@ class IntegratedAssistantController(AssistantController):
         self._settings_window_callback = callback
 
     # ----- quota / paywall helpers -----
+    def _clear_paywall_surface(self) -> None:
+        """关闭弹窗与横幅，重置付费墙状态"""
+
+        self._active_paywall_decision = None
+
+        if not self.main_window:
+            return
+
+        try:
+            self.main_window.hide_paywall_banner()
+        except Exception:
+            pass
+
+        try:
+            self.main_window.close_paywall()
+        except Exception:
+            pass
+
+        try:
+            self.main_window.hide_paywall_banner()
+        except Exception:
+            pass
+
     def _append_status_message(self, text: str) -> None:
         if not self.main_window:
             return
@@ -2440,6 +2463,12 @@ class IntegratedAssistantController(AssistantController):
     def _handle_quota_block(self, decision: QuotaDecision) -> None:
         if not self.main_window:
             return
+
+        # 若已有弹窗显示，优先关闭以避免叠加
+        try:
+            self.main_window.close_paywall()
+        except Exception:
+            pass
 
         if decision.reason == "cooldown":
             message = self._format_cooldown_message(decision)
@@ -2514,6 +2543,10 @@ class IntegratedAssistantController(AssistantController):
         ctas = decision.config.cta or []
         fallback_body = copy_config.get("body") or "AI usage limit reached"
 
+        button_text = copy_config.get("highlight") or "查看付费选项"
+        prefix = copy_config.get("title") or "AI 使用限制"
+        banner_message = f"{prefix}·{fallback_body}" if prefix else fallback_body
+
         try:
             self.main_window.show_paywall(
                 copy_config=copy_config,
@@ -2528,9 +2561,6 @@ class IntegratedAssistantController(AssistantController):
 
         # 展示提醒 banner，方便用户再次打开弹窗
         try:
-            button_text = copy_config.get("highlight") or "查看付费选项"
-            prefix = copy_config.get("title") or "AI 使用限制"
-            banner_message = f"{prefix}·{fallback_body}" if prefix else fallback_body
             self.main_window.show_paywall_banner(
                 message=banner_message,
                 button_text=button_text,
@@ -2564,20 +2594,18 @@ class IntegratedAssistantController(AssistantController):
 
     def _on_paywall_closed(self) -> None:
         decision = self._active_paywall_decision
-        if not decision:
-            return
 
         try:
-            restrictions = decision.config.restrictions or {}
-            copy_config = decision.config.copy or {}
-            reminder = copy_config.get("body") or "AI usage limit reached"
+            restrictions = decision.config.restrictions if decision else {}
+            copy_config = decision.config.copy if decision else {}
+            reminder = (copy_config or {}).get("body") or "AI usage limit reached"
 
-            if self.main_window and restrictions.get("show_reminder_on_close", True):
+            if decision and self.main_window and (restrictions or {}).get("show_reminder_on_close", True):
                 self._append_status_message(reminder)
         except Exception as exc:
             logger.debug(f"展示付费墙关闭提醒失败: {exc}")
         finally:
-            self._active_paywall_decision = decision
+            self._clear_paywall_surface()
 
     @staticmethod
     def _format_cooldown_message(decision: QuotaDecision) -> str:
@@ -2633,6 +2661,9 @@ class IntegratedAssistantController(AssistantController):
                     return
         except Exception as e:
             logger.warning(f"Quota check failed, continue without blocking: {e}")
+
+        # 通过配额校验，清理残留付费墙状态
+        self._clear_paywall_surface()
 
         # 通过配额校验，先自增计数（MVP 简化，不回滚）
         try:
@@ -3403,6 +3434,25 @@ class IntegratedAssistantController(AssistantController):
             self.main_window.query_submitted.connect(self.handle_query)
             self.main_window.wiki_page_found.connect(self.handle_wiki_page_found)
             self.main_window.stop_generation_requested.connect(self.handle_stop_generation)
+            if hasattr(self, 'handle_settings_requested'):
+                try:
+                    self.main_window.settings_requested.connect(self.handle_settings_requested)
+                except Exception:
+                    logger.debug("settings_requested signal connect failed in fallback")
+
+            # 预加载快捷入口与布局，避免热键打开时控件缺失
+            try:
+                self.main_window._load_deferred_content()
+                self.main_window.shortcuts_loaded = True
+            except Exception as exc:
+                logger.debug(f"加载快捷入口失败: {exc}")
+
+            if hasattr(self.main_window, 'set_precreating_mode'):
+                try:
+                    self.main_window.set_precreating_mode(False)
+                except Exception:
+                    pass
+
             logger.info("✅ Fallback main window created")
         except Exception as exc:
             logger.error(f"Fallback main window creation failed: {exc}")
