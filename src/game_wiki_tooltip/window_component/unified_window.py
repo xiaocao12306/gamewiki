@@ -37,7 +37,7 @@ try:
         QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
         QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit,
-        QToolButton, QMenu
+        QToolButton, QMenu, QGridLayout
     )
     from PyQt6.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
