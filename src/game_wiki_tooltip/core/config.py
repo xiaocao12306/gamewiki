@@ -114,6 +114,10 @@ class AnalyticsConfig:
     max_queue_size: int = 50
     max_retry: int = 3
     enabled: bool = True
+    cache_enabled: bool = True
+    cache_file: str = "analytics_cache.json"
+    max_cache_events: int = 500
+    retry_backoff_seconds: float = 2.0
 
 
 @dataclass

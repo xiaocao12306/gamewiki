@@ -99,6 +99,10 @@
         "flush_interval_seconds": 5.0,
         "max_queue_size": 50,
         "max_retry": 3,
-        "enabled": true
+        "enabled": true,
+        "cache_enabled": true,
+        "cache_file": "analytics_cache.json",
+        "max_cache_events": 500,
+        "retry_backoff_seconds": 2.0
     }
 }
