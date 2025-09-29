@@ -217,7 +217,7 @@ class UnifiedAssistantWindow(QMainWindow):
         
     def init_ui(self):
         """Initialize the main window UI"""
-        self.setWindowTitle("GameWiki Assistant")
+        self.setWindowTitle("Guidor")
         
         # Ensure the window can be freely resized, remove any size restrictions
         self.setMinimumSize(300, 200)  # Set a reasonable Minimum size
@@ -524,7 +524,7 @@ class UnifiedAssistantWindow(QMainWindow):
         layout.setContentsMargins(10, 5, 10, 5)
         
         # Title
-        self.title_label = QLabel("GameWiki Assistant")
+        self.title_label = QLabel("Guidor")
         self.title_label.setObjectName("titleLabel")
         layout.addWidget(self.title_label)
         

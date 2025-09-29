@@ -102,8 +102,8 @@ def clean_build():
     
     # 清理便携版目录（如果存在）
     portable_dirs = [
-        'GameWikiAssistant_Portable_onedir',
-        'GameWikiAssistant_Portable_onefile'
+        'GuidorAssistant_Portable_onedir',
+        'GuidorAssistant_Portable_onefile'
     ]
     for dir_name in portable_dirs:
         if os.path.exists(dir_name):
@@ -297,7 +297,7 @@ def build_uninstaller(output_dir):
         print_status("Creating uninstaller.spec...")
         spec_content = '''# -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for GameWikiTooltip Uninstaller
+PyInstaller spec file for GuidorTooltip Uninstaller
 """
 
 a = Analysis(
@@ -361,7 +361,7 @@ exe = EXE(
         return False
     
     # Check if uninstaller was built successfully
-    uninstaller_exe = Path(temp_dist) / "GameWikiUninstaller.exe"
+    uninstaller_exe = Path(temp_dist) / "GuidorUninstaller.exe"
     if not uninstaller_exe.exists():
         print_error("Uninstaller exe not found after build")
         return False
@@ -394,7 +394,7 @@ def build_exe(mode='onedir'):
     print("This may take a few minutes, please wait...")
     
     # 定义最终输出目录
-    final_output_dir = f"GameWikiAssistant_Portable_{mode}"
+    final_output_dir = f"GuidorAssistant_Portable_{mode}"
     
     # 使用 --distpath 参数直接指定输出到最终目录
     spec_file = "game_wiki_tooltip.spec"
@@ -408,8 +408,8 @@ def build_exe(mode='onedir'):
     
     # 检查生成的文件
     if mode == 'onedir':
-        exe_dir = Path(final_output_dir) / "GameWikiAssistant"
-        exe_path = exe_dir / "GameWikiAssistant.exe"
+        exe_dir = Path(final_output_dir) / "GuidorAssistant"
+        exe_path = exe_dir / "GuidorAssistant.exe"
         if exe_dir.exists() and exe_path.exists():
             print_success(f"Build successful! Output directory: {exe_dir.absolute()}")
             # 计算总目录大小
@@ -417,7 +417,7 @@ def build_exe(mode='onedir'):
             print(f"Total size: {total_size / 1024 / 1024:.1f} MB")
             return True
     else:
-        exe_path = Path(final_output_dir) / "GameWikiAssistant.exe"
+        exe_path = Path(final_output_dir) / "GuidorAssistant.exe"
         if exe_path.exists():
             print_success(f"Build successful! exe file location: {exe_path.absolute()}")
             print(f"File size: {exe_path.stat().st_size / 1024 / 1024:.1f} MB")
@@ -435,7 +435,7 @@ def create_portable_package(mode='onedir'):
     print_status(f"Adding portable package files for {mode} build...")
     
     # 最终目录已经由 PyInstaller 直接创建
-    portable_dir = Path(f"GameWikiAssistant_Portable_{mode}")
+    portable_dir = Path(f"GuidorAssistant_Portable_{mode}")
     
     if not portable_dir.exists():
         print_error(f"Target directory not found: {portable_dir}")
@@ -443,23 +443,23 @@ def create_portable_package(mode='onedir'):
     
     # 验证构建文件是否存在
     if mode == 'onedir':
-        exe_path = portable_dir / "GameWikiAssistant" / "GameWikiAssistant.exe"
+        exe_path = portable_dir / "GuidorAssistant" / "GuidorAssistant.exe"
         if not exe_path.exists():
             print_error(f"OneDir build not found: {exe_path}")
             return False
     else:
-        exe_path = portable_dir / "GameWikiAssistant.exe"
+        exe_path = portable_dir / "GuidorAssistant.exe"
         if not exe_path.exists():
             print_error(f"Onefile build not found: {exe_path}")
             return False
     
     # 创建 README 文档
-    readme_content = f"""# GameWiki Assistant Portable ({mode.capitalize()} Mode)
+    readme_content = f"""# Guidor Assistant Portable ({mode.capitalize()} Mode)
 
 ## 使用说明
 
 1. **首次使用必读**：本应用程序使用 WebView2 技术，需要 Microsoft Edge WebView2 Runtime 支持。
-2. {'运行 GameWikiAssistant/GameWikiAssistant.exe' if mode == 'onedir' else '双击 GameWikiAssistant.exe'} 启动程序。
+2. {'运行 GuidorAssistant/GuidorAssistant.exe' if mode == 'onedir' else '双击 GuidorAssistant.exe'} 启动程序。
 3. 如果程序无法启动或显示白屏，请安装 WebView2 Runtime。
 4. 首次运行需要配置 API 密钥（可选）。
 5. 使用快捷键 Ctrl+Q 或设置新的快捷键来激活游戏助手功能。
@@ -469,7 +469,7 @@ def create_portable_package(mode='onedir'):
 **便携版卸载**：
 1. 运行 Uninstall.exe 卸载程序
 2. 程序会自动清理：
-   - 用户数据文件夹 (%APPDATA%\\GameWikiTooltip)
+   - 用户数据文件夹 (%APPDATA%\\GuidorTooltip)
    - 桌面和开始菜单快捷方式
    - 临时文件
    - 程序文件夹（可选）
@@ -607,17 +607,17 @@ def create_inno_setup_script(mode='onedir'):
     
     # Determine source directory based on mode
     if mode == 'onedir':
-        source_dir = f"GameWikiAssistant_Portable_{mode}\\GameWikiAssistant"
+        source_dir = f"GuidorAssistant_Portable_{mode}\\GuidorAssistant"
         files_section = f"""Source: "{source_dir}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs"""
     else:
-        source_dir = f"GameWikiAssistant_Portable_{mode}"
-        files_section = f"""Source: "{source_dir}\\GameWikiAssistant.exe"; DestDir: "{{app}}"; Flags: ignoreversion"""
+        source_dir = f"GuidorAssistant_Portable_{mode}"
+        files_section = f"""Source: "{source_dir}\\GuidorAssistant.exe"; DestDir: "{{app}}"; Flags: ignoreversion"""
     
-    script_content = f"""#define MyAppName "GameWiki Assistant"
+    script_content = f"""#define MyAppName "Guidor Assistant"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "GameWiki Team"
-#define MyAppURL "https://github.com/yourusername/gamewiki"
-#define MyAppExeName "GameWikiAssistant.exe"
+#define MyAppPublisher "Guidor Team"
+#define MyAppURL "http://www.guidor.vip"
+#define MyAppExeName "GuidorAssistant.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -636,7 +636,7 @@ AllowNoIcons=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=installer
-OutputBaseFilename=GameWikiAssistant_Setup_{mode}
+OutputBaseFilename=GuidorAssistant_Setup_{mode}
 SetupIconFile=src\\game_wiki_tooltip\\assets\\app.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -659,18 +659,18 @@ Name: "quicklaunchicon"; Description: "{{cm:CreateQuickLaunchIcon}}"; GroupDescr
 [Files]
 {files_section}
 ; WebView2 Runtime installer
-Source: "GameWikiAssistant_Portable_{mode}\\runtime\\MicrosoftEdgeWebView2Setup.exe"; DestDir: "{{tmp}}"; Flags: deleteafterinstall
+Source: "GuidorAssistant_Portable_{mode}\\runtime\\MicrosoftEdgeWebView2Setup.exe"; DestDir: "{{tmp}}"; Flags: deleteafterinstall
 
 [Icons]
-Name: "{{group}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"
+Name: "{{group}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GuidorAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"
 Name: "{{group}}\\{{cm:UninstallProgram,{{#MyAppName}}}}"; Filename: "{{uninstallexe}}"
-Name: "{{autodesktop}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: desktopicon
-Name: "{{userappdata}}\\Microsoft\\Internet Explorer\\Quick Launch\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: quicklaunchicon
+Name: "{{autodesktop}}\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GuidorAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: desktopicon
+Name: "{{userappdata}}\\Microsoft\\Internet Explorer\\Quick Launch\\{{#MyAppName}}"; Filename: "{{app}}\\{{'GuidorAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Tasks: quicklaunchicon
 
 [Run]
 ; Check and install WebView2 Runtime if not present
 Filename: "{{tmp}}\\MicrosoftEdgeWebView2Setup.exe"; Parameters: "/silent /install"; StatusMsg: "Installing WebView2 Runtime..."; Check: not IsWebView2RuntimeInstalled
-Filename: "{{app}}\\{{'GameWikiAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Description: "{{cm:LaunchProgram,{{#StringChange(MyAppName, '&', '&&')}}}}"; Flags: nowait postinstall skipifsilent
+Filename: "{{app}}\\{{'GuidorAssistant\\' if mode == 'onedir' else ''}}{{#MyAppExeName}}"; Description: "{{cm:LaunchProgram,{{#StringChange(MyAppName, '&', '&&')}}}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function IsWebView2RuntimeInstalled: Boolean;
@@ -699,7 +699,7 @@ Type: filesandordirs; Name: "{{userappdata}}\\game_wiki_tooltip"
 """
     
     # Write the script file
-    script_path = Path(f"GameWikiAssistant_{mode}.iss")
+    script_path = Path(f"GuidorAssistant_{mode}.iss")
     try:
         with open(script_path, 'w', encoding='utf-8') as f:
             f.write(script_content)
@@ -726,7 +726,7 @@ def main():
             pass
     
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='GameWiki Assistant Packaging Tool')
+    parser = argparse.ArgumentParser(description='Guidor Assistant Packaging Tool')
     parser.add_argument('--mode', choices=['onedir', 'onefile'], default='onedir',
                         help='Packaging mode: onedir (faster startup) or onefile (single exe)')
     parser.add_argument('--skip-deps', action='store_true',
@@ -735,7 +735,7 @@ def main():
                         help='Create Inno Setup script for installer')
     args = parser.parse_args()
     
-    print("🚀 GameWiki Assistant Packaging Tool")
+    print("🚀 Guidor Assistant Packaging Tool")
     print(f"📦 Mode: {args.mode}")
     print("=" * 50)
     
@@ -766,9 +766,9 @@ def main():
         # Add build and packaging steps
         steps.extend([
             ("Build exe", lambda: build_exe(args.mode)),
-            ("Build uninstaller", lambda: build_uninstaller(f"GameWikiAssistant_Portable_{args.mode}")),
+            ("Build uninstaller", lambda: build_uninstaller(f"GuidorAssistant_Portable_{args.mode}")),
             ("Add portable package files", lambda: create_portable_package(args.mode)),
-            ("Create WebView2 Runtime installer", lambda: create_webview2_runtime_installer(f"GameWikiAssistant_Portable_{args.mode}")),
+            ("Create WebView2 Runtime installer", lambda: create_webview2_runtime_installer(f"GuidorAssistant_Portable_{args.mode}")),
         ])
         
         # Add Inno Setup script creation if requested
@@ -784,17 +784,17 @@ def main():
         print("\n" + "=" * 50)
         print_success("🎉 Packaging completed!")
         print("\n📦 Generated files:")
-        portable_dir = f"GameWikiAssistant_Portable_{args.mode}"
+        portable_dir = f"GuidorAssistant_Portable_{args.mode}"
         if args.mode == 'onedir':
-            print(f"  - {portable_dir}/GameWikiAssistant/ (application directory)")
+            print(f"  - {portable_dir}/GuidorAssistant/ (application directory)")
         else:
-            print(f"  - {portable_dir}/GameWikiAssistant.exe (standalone exe file)")
+            print(f"  - {portable_dir}/GuidorAssistant.exe (standalone exe file)")
         print(f"  - {portable_dir}/Uninstall.exe (uninstaller)")
         print(f"  - {portable_dir}/README.txt (user guide)")
         print(f"  - {portable_dir}/runtime/ (WebView2 installer)")
         
         if args.create_installer:
-            print(f"  - GameWikiAssistant_{args.mode}.iss (Inno Setup script)")
+            print(f"  - GuidorAssistant_{args.mode}.iss (Inno Setup script)")
         
         print("\n💡 Tips:")
         print(f"  - {args.mode.capitalize()} mode: {'Fast startup, no temp files' if args.mode == 'onedir' else 'Slower startup, creates temp files'}")

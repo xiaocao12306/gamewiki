@@ -193,8 +193,8 @@ class SmartInteractionManager(QObject):
         
         # 排除应用程序自身的窗口
         app_window_keywords = [
-            'gamewiki assistant',
-            'gamewiki',
+            'guidor assistant',
+            'guidor',
             'game wiki assistant',
             'game wiki'
         ]
@@ -409,7 +409,7 @@ class SmartInteractionManager(QObject):
                 if window_state and window_state.window_title:
                     title_lower = window_state.window_title.lower()
                     app_window_keywords = [
-                        'gamewiki assistant', 'gamewiki', 'game wiki assistant', 'game wiki'
+                        'guidor assistant', 'guidor', 'game wiki assistant', 'game wiki'
                     ]
                     if not any(app_keyword in title_lower for app_keyword in app_window_keywords):
                         logger.debug(f"🪟 Current window is not a game: '{window_state.window_title}'")

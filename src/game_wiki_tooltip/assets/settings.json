@@ -104,10 +104,5 @@
         "cache_file": "analytics_cache.json",
         "max_cache_events": 500,
         "retry_backoff_seconds": 2.0
-    },
-    "debug": {
-        "enabled": true,
-        "log_to_status": true,
-        "log_level": "INFO"
     }
 }

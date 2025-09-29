@@ -459,7 +459,7 @@ class WebView2WinRTWidget(QWidget):
             # 1. Prepare user data folder
             user_data_folder = os.path.join(
                 os.environ.get('LOCALAPPDATA', ''),
-                'GameWikiTooltip',
+                'GuidorTooltip',
                 'WebView2'
             )
             os.makedirs(user_data_folder, exist_ok=True)

@@ -32,8 +32,8 @@ def run_as_admin():
 
 class GameWikiUninstaller:
     def __init__(self):
-        self.app_name = "GameWikiTooltip"
-        self.display_name = "GameWiki Assistant"
+        self.app_name = "GuidorTooltip"
+        self.display_name = "Guidor Assistant"
         self.appdata_dir = Path.home() / "AppData" / "Roaming" / self.app_name
         self.install_dir = None
         self.is_portable = False
@@ -45,13 +45,13 @@ class GameWikiUninstaller:
         # First, check if we're running from the installation directory
         current_dir = Path(sys.executable).parent
         
-        # For portable version - check if GameWikiAssistant folder exists in parent directory
-        if (current_dir / "GameWikiAssistant").exists() and (current_dir / "GameWikiAssistant" / "GameWikiAssistant.exe").exists():
+        # For portable version - check if GuidorAssistant folder exists in parent directory
+        if (current_dir / "GuidorAssistant").exists() and (current_dir / "GuidorAssistant" / "GuidorAssistant.exe").exists():
             # Portable onedir version
-            self.install_dir = current_dir / "GameWikiAssistant"
+            self.install_dir = current_dir / "GuidorAssistant"
             self.is_portable = True
             return True
-        elif (current_dir / "GameWikiAssistant.exe").exists():
+        elif (current_dir / "GuidorAssistant.exe").exists():
             # Same directory as uninstaller (onefile or installed version)
             self.install_dir = current_dir
             self.is_portable = True
@@ -59,13 +59,13 @@ class GameWikiUninstaller:
             
         # Check common installation locations (for Inno Setup installed version)
         common_paths = [
-            Path(os.environ.get('PROGRAMFILES', 'C:\\Program Files')) / "GameWiki Assistant",
-            Path(os.environ.get('PROGRAMFILES(X86)', 'C:\\Program Files (x86)')) / "GameWiki Assistant",
-            Path(os.environ.get('LOCALAPPDATA', '')) / "Programs" / "GameWiki Assistant",
+            Path(os.environ.get('PROGRAMFILES', 'C:\\Program Files')) / "Guidor Assistant",
+            Path(os.environ.get('PROGRAMFILES(X86)', 'C:\\Program Files (x86)')) / "Guidor Assistant",
+            Path(os.environ.get('LOCALAPPDATA', '')) / "Programs" / "Guidor Assistant",
         ]
         
         for path in common_paths:
-            if path.exists() and (path / "GameWikiAssistant.exe").exists():
+            if path.exists() and (path / "GuidorAssistant.exe").exists():
                 self.install_dir = path
                 self.is_portable = False
                 return True
@@ -194,7 +194,7 @@ class GameWikiUninstaller:
             uninstaller_parent = Path(sys.executable).parent
             
             # Check if we need to clean up the entire portable directory
-            if self.is_portable and uninstaller_parent.name.startswith("GameWikiAssistant_Portable"):
+            if self.is_portable and uninstaller_parent.name.startswith("GuidorAssistant_Portable"):
                 # We're in the portable directory, need to clean the whole thing
                 self.removed_items.append(f"⚠ Portable folder will be removed after restart: {uninstaller_parent}")
                 self.create_cleanup_batch(uninstaller_parent)
@@ -223,7 +223,7 @@ echo Cleanup complete.
 del "%~f0"
 """
         
-        batch_file = Path(os.environ.get('TEMP', '')) / "gamewiki_cleanup.bat"
+        batch_file = Path(os.environ.get('TEMP', '')) / "guidor_cleanup.bat"
         try:
             batch_file.write_text(batch_content)
             # Start the batch file
@@ -234,7 +234,7 @@ del "%~f0"
 class UninstallerGUI:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("GameWiki Assistant Uninstaller")
+        self.root.title("Guidor Assistant Uninstaller")
         self.root.geometry("500x400")
         self.root.resizable(False, False)
         
@@ -263,7 +263,7 @@ class UninstallerGUI:
         
         title_label = tk.Label(
             title_frame,
-            text="GameWiki Assistant Uninstaller",
+            text="Guidor Assistant Uninstaller",
             font=("Arial", 16, "bold"),
             bg="#2196F3",
             fg="white"
@@ -275,7 +275,7 @@ class UninstallerGUI:
         info_frame.pack(fill=tk.BOTH, expand=True)
         
         info_text = (
-            "This will remove GameWiki Assistant from your computer.\n\n"
+            "This will remove Guidor Assistant from your computer.\n\n"
             "The following will be deleted:\n"
             "• Application files\n"
             "• User settings and data\n"
@@ -337,7 +337,7 @@ class UninstallerGUI:
         # Confirm
         if not messagebox.askyesno(
             "Confirm Uninstall",
-            "Are you sure you want to uninstall GameWiki Assistant?\n\nThis action cannot be undone.",
+            "Are you sure you want to uninstall Guidor Assistant?\n\nThis action cannot be undone.",
             icon='warning'
         ):
             return

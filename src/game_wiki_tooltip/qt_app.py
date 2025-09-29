@@ -110,28 +110,9 @@ class ApiKeyMissingDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
-        
-        # Configure button
-        config_button = QPushButton("Configure API Keys")
-        config_button.setStyleSheet("""
-            QPushButton {
-                background-color: #1976d2;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-        """)
-        config_button.clicked.connect(self._on_configure_clicked)
-        button_layout.addWidget(config_button)
-        
-        # Later button
-        later_button = QPushButton("Maybe Later")
-        later_button.setStyleSheet("""
+
+        close_button = QPushButton("OK")
+        close_button.setStyleSheet("""
             QPushButton {
                 background-color: #757575;
                 color: white;
@@ -144,20 +125,14 @@ class ApiKeyMissingDialog(QDialog):
                 background-color: #616161;
             }
         """)
-        later_button.clicked.connect(self._on_later_clicked)
-        button_layout.addWidget(later_button)
+        close_button.clicked.connect(self._on_close_clicked)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         self.setLayout(layout)
         
-    def _on_configure_clicked(self):
-        """用户点击配置按钮"""
-        self.dont_remind = self.dont_remind_checkbox.isChecked()
-        self.open_settings = True
-        self.accept()
-        
-    def _on_later_clicked(self):
-        """用户点击稍后按钮"""
+    def _on_close_clicked(self):
+        """用户点击关闭按钮"""
         self.dont_remind = self.dont_remind_checkbox.isChecked()
         self.open_settings = False
         self.accept()

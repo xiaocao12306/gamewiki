@@ -157,7 +157,7 @@ class SplashScreen(QWidget):
         bg_layout.addWidget(icon_label)
         
         # Title
-        title_label = QLabel("GameWiki Assistant")
+        title_label = QLabel("Guidor Assistant")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_font = QFont("Arial", 18, QFont.Weight.Bold)
         title_label.setFont(title_font)
@@ -197,7 +197,7 @@ class SplashScreen(QWidget):
         bg_layout.addStretch()
         
         # Copyright
-        copyright_label = QLabel("© 2024 GameWiki Team")
+        copyright_label = QLabel("© 2025 Guidor Team")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         copyright_label.setStyleSheet("color: #666666; font-size: 10px;")
         bg_layout.addWidget(copyright_label)

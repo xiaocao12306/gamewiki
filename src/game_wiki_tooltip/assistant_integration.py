@@ -383,60 +383,6 @@ class RAGIntegration(QObject):
         except Exception as exc:  # noqa: BLE001
             logger.debug(f"Analytics track failed: {exc}")
 
-    def _emit_debug_snapshot(self, context: str, extra: Optional[Dict[str, Any]] = None) -> None:
-        if not self.debug_enabled:
-            return
-
-        snapshot: Dict[str, Any] = {}
-        if self.quota_manager:
-            try:
-                snapshot = self.quota_manager.get_debug_info()
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(f"采集调试信息失败: {exc}")
-                snapshot = {}
-
-        info: Dict[str, Any] = {**snapshot}
-        if extra:
-            info.update(extra)
-
-        info["context"] = context
-
-        settings_path = getattr(self.settings_manager, "path", None)
-        if settings_path:
-            info["settings_path"] = str(settings_path)
-
-        try:
-            logger.info("[DEBUG][%s] %s", context, json.dumps(info, ensure_ascii=False))
-        except TypeError:
-            logger.info("[DEBUG][%s] %s", context, info)
-
-        if not self.debug_log_to_status or not getattr(self, "main_window", None):
-            return
-
-        total_limit = info.get("total_limit") if info.get("total_limit") is not None else "∞"
-        daily_limit = info.get("daily_limit") if info.get("daily_limit") is not None else "∞"
-        message_parts = [
-            f"variant={info.get('variant')}",
-            f"plan={info.get('plan_id')}",
-            f"total={info.get('total_usage')}/{total_limit}",
-            f"daily={info.get('daily_usage')}/{daily_limit}",
-            f"since_last={info.get('since_last_paywall')}",
-        ]
-
-        cooldown_remaining = info.get("cooldown_remaining")
-        if cooldown_remaining is not None:
-            message_parts.append(f"cooldown_left={cooldown_remaining}s")
-
-        if info.get("settings_path"):
-            message_parts.append(f"settings={info.get('settings_path')}")
-
-        message_parts.append(f"context={context}")
-
-        try:
-            self._append_status_message("[调试] " + " | ".join(str(part) for part in message_parts if part))
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(f"状态栏调试信息输出失败: {exc}")
-
     def _track_model_event(
         self,
         provider: Optional[str],
@@ -2224,9 +2170,6 @@ class IntegratedAssistantController(AssistantController):
         self._pending_query_to_track: Optional[Tuple[str, str]] = None
         self._active_paywall_decision: Optional[QuotaDecision] = None
         self._paywall_dialog_entry: str = "trigger"
-        self.debug_config = getattr(settings_manager.settings, "debug", None)
-        self.debug_enabled = bool(getattr(self.debug_config, "enabled", False))
-        self.debug_log_to_status = bool(getattr(self.debug_config, "log_to_status", True))
         # Initialize quota manager (after remote_config synced by GameWikiApp)
         try:
             self.quota_manager = QuotaManager(settings_manager, backend_client)
@@ -2711,15 +2654,6 @@ class IntegratedAssistantController(AssistantController):
             logger.debug(f"追加状态消息失败: {exc}")
 
     def _handle_quota_block(self, decision: QuotaDecision) -> None:
-        self._emit_debug_snapshot(
-            "paywall_block",
-            {
-                "blocked": True,
-                "reason": decision.reason,
-                "cooldown_seconds": decision.cooldown_seconds,
-            },
-        )
-
         if not self.main_window:
             return
 
@@ -2969,14 +2903,6 @@ class IntegratedAssistantController(AssistantController):
         try:
             if self.quota_manager:
                 decision = self.quota_manager.should_show_paywall()
-                self._emit_debug_snapshot(
-                    "quota_check",
-                    {
-                        "blocked": decision.blocked,
-                        "reason": decision.reason,
-                        "cooldown_seconds": decision.cooldown_seconds,
-                    },
-                )
                 if decision.blocked:
                     self._handle_quota_block(decision)
                     self._pending_query_to_track = None
@@ -2994,12 +2920,6 @@ class IntegratedAssistantController(AssistantController):
         try:
             if self.quota_manager:
                 self.quota_manager.increment_usage()
-                self._emit_debug_snapshot(
-                    "post_increment",
-                    {
-                        "blocked": False,
-                    },
-                )
         except Exception:
             pass
 

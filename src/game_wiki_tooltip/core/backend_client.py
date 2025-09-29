@@ -64,7 +64,7 @@ class BackendClient:
 
     def _default_headers(self) -> Dict[str, str]:
         headers: Dict[str, str] = {
-            "User-Agent": "GameWiki-MVP/0.1",
+            "User-Agent": "Guidor-MVP/0.1",
             "x-device-id": self._device_id,
             "x-app-version": self._client_version,
             "x-platform": platform.system().lower(),

@@ -17,7 +17,7 @@ def package_file(relative_path: str) -> Path:
         return assets_dir / relative_path
 
 # ---- constants ----
-APPDATA_DIR = Path.home() / "AppData" / "Roaming" / "GameWikiTooltip"
+APPDATA_DIR = Path.home() / "AppData" / "Roaming" / "GuidorTooltip"
 
 # ---- Win32 helpers ----
 user32   = ctypes.windll.user32

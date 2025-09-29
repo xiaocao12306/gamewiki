@@ -87,28 +87,9 @@ class ApiKeyMissingDialog(QDialog):
         # Button layout
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
-        
-        # Configure button
-        config_button = QPushButton("Configure API Keys")
-        config_button.setStyleSheet("""
-            QPushButton {
-                background-color: #1976d2;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-        """)
-        config_button.clicked.connect(self._on_configure_clicked)
-        button_layout.addWidget(config_button)
-        
-        # Later button
-        later_button = QPushButton("Maybe Later")
-        later_button.setStyleSheet("""
+
+        close_button = QPushButton("OK")
+        close_button.setStyleSheet("""
             QPushButton {
                 background-color: #757575;
                 color: white;
@@ -121,20 +102,14 @@ class ApiKeyMissingDialog(QDialog):
                 background-color: #616161;
             }
         """)
-        later_button.clicked.connect(self._on_later_clicked)
-        button_layout.addWidget(later_button)
+        close_button.clicked.connect(self._on_close_clicked)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         self.setLayout(layout)
         
-    def _on_configure_clicked(self):
-        """User clicked configure button"""
-        self.dont_remind = self.dont_remind_checkbox.isChecked()
-        self.open_settings = True
-        self.accept()
-        
-    def _on_later_clicked(self):
-        """User clicked later button"""
+    def _on_close_clicked(self):
+        """User clicked close button"""
         self.dont_remind = self.dont_remind_checkbox.isChecked()
         self.open_settings = False
         self.accept()
@@ -191,7 +166,6 @@ class QtSettingsWindow(QMainWindow):
         self._create_hotkey_tab()  # General Settings tab
         self._create_shortcuts_tab()  # Add shortcuts tab as second
         self._create_wiki_tab()  # Add wiki tab as third
-        self._create_api_tab()
         
         # Set default tab to hotkey (first tab)
         self.tab_widget.setCurrentIndex(0)
@@ -510,9 +484,8 @@ class QtSettingsWindow(QMainWindow):
                     pass
         
     def switch_to_api_tab(self):
-        """Switch to API configuration tab"""
-        # API configuration tab is the fourth one, index 3 (because Wiki tab is inserted at position 3)
-        self.tab_widget.setCurrentIndex(3)
+        """API 配置页已下线，调用此方法将不执行任何操作"""
+        logger.info("API configuration tab is disabled; switch request ignored.")
         
     def _create_shortcuts_tab(self):
         """Create shortcuts management tab"""
@@ -990,58 +963,6 @@ class QtSettingsWindow(QMainWindow):
         
         self.tab_widget.addTab(tab, t("wiki_tab"))
         
-    def _create_api_tab(self):
-        """Create API configuration tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # Title
-        title = QLabel(t("api_title"))
-        title.setFont(QFont("Microsoft YaHei", 12, QFont.Weight.Bold))
-        layout.addWidget(title)
-        
-        # API keys group
-        group = QGroupBox()
-        group_layout = QVBoxLayout(group)
-        group_layout.setSpacing(15)
-        
-        # Google API key
-        google_layout = QVBoxLayout()
-        google_label = QLabel(t("google_api_label"))
-        google_layout.addWidget(google_label)
-        
-        self.google_api_input = QLineEdit()
-        self.google_api_input.setPlaceholderText(t("google_api_placeholder"))
-        self.google_api_input.setEchoMode(QLineEdit.EchoMode.Password)
-        google_layout.addWidget(self.google_api_input)
-        
-        google_help = QLabel(f'<a href="https://makersuite.google.com/app/apikey">{t("google_api_help")}</a>')
-        google_help.setOpenExternalLinks(True)
-        google_help.setStyleSheet("color: #1668dc;")
-        google_layout.addWidget(google_help)
-        
-        group_layout.addLayout(google_layout)
-        
-        # Separator
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        group_layout.addWidget(separator)
-
-        layout.addWidget(group)
-        
-        # Tips
-        tips_label = QLabel(t("api_tips"))
-        tips_label.setWordWrap(True)
-        tips_label.setStyleSheet("color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 6px;")
-        layout.addWidget(tips_label)
-        
-        layout.addStretch()
-        
-        self.tab_widget.addTab(tab, t("api_tab"))
-        
     def _on_language_changed(self):
         """Handle language selection change"""
         current_index = self.language_combo.currentIndex()
@@ -1077,10 +998,12 @@ class QtSettingsWindow(QMainWindow):
         self.setWindowTitle(t("settings_title"))
         
         # Tab titles
-        self.tab_widget.setTabText(0, "General Settings")  # General Settings tab
-        self.tab_widget.setTabText(1, "Quick Access")  # Shortcuts tab
-        self.tab_widget.setTabText(2, t("wiki_tab"))
-        self.tab_widget.setTabText(3, t("api_tab"))
+        if self.tab_widget.count() > 0:
+            self.tab_widget.setTabText(0, "General Settings")  # General Settings tab
+        if self.tab_widget.count() > 1:
+            self.tab_widget.setTabText(1, "Quick Access")  # Shortcuts tab
+        if self.tab_widget.count() > 2:
+            self.tab_widget.setTabText(2, t("wiki_tab"))
         
         # Buttons
         self.apply_button.setText(t("apply_button"))
@@ -1094,15 +1017,6 @@ class QtSettingsWindow(QMainWindow):
             hotkey_widgets[1].setText(t("modifiers_label"))   # Modifiers
             hotkey_widgets[2].setText(t("main_key_label"))    # Main key
             hotkey_widgets[3].setText(t("hotkey_tips"))       # Tips
-        
-        # API tab (index 3)
-        api_tab = self.tab_widget.widget(3)
-        api_widgets = api_tab.findChildren(QLabel)
-        if len(api_widgets) >= 5:
-            api_widgets[0].setText(t("api_title"))            # Title
-            api_widgets[1].setText(t("google_api_label"))     # Google API
-            api_widgets[2].setText(f'<a href="https://makersuite.google.com/app/apikey">{t("google_api_help")}</a>')
-            api_widgets[5].setText(t("api_tips"))             # Tips
         
         # Audio Settings - Update all audio-related UI elements
         if hasattr(self, 'audio_group'):
@@ -1129,7 +1043,6 @@ class QtSettingsWindow(QMainWindow):
                     break
         
         # Update placeholders
-        self.google_api_input.setPlaceholderText(t("google_api_placeholder"))
         
     def _load_settings(self):
         """Load current settings"""
@@ -1181,19 +1094,6 @@ class QtSettingsWindow(QMainWindow):
         if index >= 0:
             self.key_combo.setCurrentIndex(index)
             
-        # Load API settings (check both settings.json and environment variables)
-        api = settings.get('api', {})
-        
-        # Gemini API key: settings.json -> environment variables
-        gemini_api_key = (
-            api.get('gemini_api_key') or
-            os.getenv('GEMINI_API_KEY') or
-            os.getenv('GOOGLE_API_KEY') or 
-            ''
-        )
-        self.google_api_input.setText(gemini_api_key)
-        
-        
     def _on_apply(self):
         """Apply settings"""
         # Get selected language
@@ -1219,18 +1119,12 @@ class QtSettingsWindow(QMainWindow):
             QMessageBox.warning(self, t("warning"), t("validation_modifier_required"))
             return
             
-        # API 密钥现在为可选项，允许用户清空或留空
-        gemini_api_key_input = self.google_api_input.text().strip()
-
         # Update settings (only save what user explicitly entered)
         settings_update = {
             'language': selected_language,
             'hotkey': {
                 'modifiers': modifiers,
                 'key': self.key_combo.currentText()
-            },
-            'api': {
-                'gemini_api_key': gemini_api_key_input,  # Only save user input
             },
             'shortcuts': self._get_shortcuts_from_list()  # Save shortcuts
         }

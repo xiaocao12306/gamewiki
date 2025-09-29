@@ -151,7 +151,7 @@ class TranslationManager:
         """创建默认的英语翻译"""
         return {
             # Settings window
-            "settings_title": "GameWiki Assistant Settings",
+            "settings_title": "Guidor Assistant Settings",
             "hotkey_tab": "Hotkey Settings",
             "api_tab": "API Configuration",
             "language_tab": "Language Settings",
@@ -224,7 +224,7 @@ class TranslationManager:
             # Tray icon
             "tray_settings": "Settings",
             "tray_exit": "Exit",
-            "tray_tooltip": "GameWiki Assistant",
+            "tray_tooltip": "Guidor",
             "tray_show_overlay": "Show Overlay",
             "tray_hide_overlay": "Hide Overlay",
             
@@ -248,7 +248,7 @@ class TranslationManager:
                                        "Please configure API key in settings window, or set GEMINI_API_KEY environment variable.",
             
             # Welcome message
-            "welcome_title": "🎮 Welcome to GameWiki Assistant!",
+            "welcome_title": "🎮 Welcome to Guidor Assistant!",
             "welcome_features": "💡 **Features:**",
             "welcome_wiki_search": "• **Wiki Search** - Quick access to website Wiki",
             "welcome_ai_guide": "• **AI Guide BETA** - Haven't support context memory; ONLY support Helldivers2/Elden Ring/Don't Starve Together/Civilization VI so far; AI could make mistakes, check the attached video link for validity.)",
@@ -338,7 +338,7 @@ class TranslationManager:
         if language == 'zh':
             return {
                 # Settings window
-                "settings_title": "GameWiki Assistant 设置",
+                "settings_title": "Guidor Assistant 设置",
                 "hotkey_tab": "热键设置",
                 "api_tab": "API配置",
                 "language_tab": "语言设置",
@@ -411,7 +411,7 @@ class TranslationManager:
                 # Tray icon
                 "tray_settings": "设置",
                 "tray_exit": "退出",
-                "tray_tooltip": "GameWiki Assistant",
+                "tray_tooltip": "Guidor Assistant",
                 "tray_show_overlay": "显示悬浮窗",
                 "tray_hide_overlay": "隐藏悬浮窗",
                 
@@ -435,7 +435,7 @@ class TranslationManager:
                                            "请在设置窗口中配置API密钥，或设置环境变量 GEMINI_API_KEY。",
 
                 # Welcome message
-                "welcome_title": "🎮 欢迎使用GameWiki智能助手！",
+                "welcome_title": "🎮 欢迎使用Guidor智能助手！",
                 "welcome_features": "💡 **功能介绍：**",
                 "welcome_wiki_search": "• **Wiki搜索** - 快速查找游戏wiki资料",
                 "welcome_ai_guide": "• **AI攻略BETA** - 智能游戏攻略问答（需要配置API密钥；目前仅支持饥荒/文明6/艾尔登法环/地狱潜兵2）",
