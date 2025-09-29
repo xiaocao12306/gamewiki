@@ -2,7 +2,7 @@ from PyQt6.QtCore import (
     Qt, QTimer, pyqtSignal
 )
 from PyQt6.QtWidgets import (
-    QApplication, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QSizePolicy, QMenu, QPushButton, QSpacerItem
 )
 
@@ -1027,7 +1027,7 @@ class FeedbackPromptWidget(QWidget):
         prompt.setStyleSheet("color: #595959; font-size: 12px;")
         layout.addWidget(prompt)
 
-        layout.addSpacerItem(QSpacerItem(8, 0))
+        layout.addSpacerItem(QSpacerItem(8, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
 
         self.btn_useful = QPushButton("👍 有用", self)
         self.btn_useful.setCursor(Qt.CursorShape.PointingHandCursor)

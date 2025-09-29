@@ -2838,7 +2838,7 @@ class IntegratedAssistantController(AssistantController):
             self._clear_paywall_surface()
 
     def _handle_fake_door_cta(self, payload: Optional[Any], cta_item: Dict[str, Any]) -> None:
-        """Handle fake-door CTA actions by展示占位提示."""
+        """Handle fake-door CTA actions by showing placeholder notice."""
 
         message = "功能即将上线，感谢关注！"
         if isinstance(payload, str):
