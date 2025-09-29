@@ -2332,7 +2332,18 @@ class IntegratedAssistantController(AssistantController):
 
         self._track_event("query_submitted", properties)
 
-    def _emit_query_completed(self, status: str, **extra: Any) -> None:
+    def _sanitize_response_text(self, text: Optional[str]) -> Optional[str]:
+        if not text:
+            return None
+        cleaned = text.strip()
+        if not cleaned:
+            return None
+        max_len = 800
+        if len(cleaned) > max_len:
+            return cleaned[:max_len] + "…"
+        return cleaned
+
+    def _emit_query_completed(self, status: str, *, response_text: Optional[str] = None, **extra: Any) -> None:
         if not self._active_query:
             return
 
@@ -2350,6 +2361,9 @@ class IntegratedAssistantController(AssistantController):
             "game_id": self._active_query.get("game_id"),
             "game_title": self._active_query.get("game_title"),
         }
+        sanitized_response = self._sanitize_response_text(response_text)
+        if sanitized_response:
+            properties["response_text"] = sanitized_response
         properties.update(self._current_cohort_properties())
         properties.update(extra or {})
 
@@ -3092,6 +3106,13 @@ class IntegratedAssistantController(AssistantController):
                 
                 # Show wiki page in the unified window (triggers JavaScript search for real URL)
                 self.main_window.show_wiki_page(url, title)
+                if self._active_query:
+                    self._emit_query_completed(
+                        "success",
+                        response_type="wiki",
+                        response_length=len(title or ""),
+                        response_text=title,
+                    )
             else:
                 if hasattr(self, '_current_transition_msg'):
                     self._current_transition_msg.update_content(TransitionMessages.ERROR_NOT_FOUND)
@@ -3230,8 +3251,13 @@ class IntegratedAssistantController(AssistantController):
         self._waiting_for_rag_output = False
         self._last_status_message = None
         
+        response_text = None
         # Notify streaming message component to quickly display remaining content
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
+            try:
+                response_text = getattr(self._current_streaming_msg, 'full_text', None)
+            except Exception:
+                response_text = None
             self._current_streaming_msg.mark_as_completed()
 
         # Reset UI state
@@ -3243,6 +3269,7 @@ class IntegratedAssistantController(AssistantController):
             "success",
             response_type="guide",
             fallback_used=False,
+            response_text=response_text,
         )
         
     def _on_error(self, error_msg: str):
@@ -3273,6 +3300,7 @@ class IntegratedAssistantController(AssistantController):
         self._emit_query_completed(
             "failure",
             error_reason=error_msg,
+            response_text=error_msg,
         )
 
     def _on_wiki_result(self, url: str, title: str):
@@ -3298,6 +3326,7 @@ class IntegratedAssistantController(AssistantController):
                         "success",
                         response_type="wiki",
                         response_length=len(title or ""),
+                        response_text=title,
                     )
             else:
                 if hasattr(self, '_current_transition_msg'):
