@@ -16,9 +16,10 @@ from src.game_wiki_tooltip.window_component import (
     MessageWidget,
     StreamingMessageWidget,
 )
+from .chat_widgets import FeedbackPromptWidget
 
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 
 from src.game_wiki_tooltip.core.i18n import t
 
@@ -31,6 +32,7 @@ class ChatView(QScrollArea):
         super().__init__(parent)
         self.messages: List[MessageWidget] = []
         self.current_status_widget: Optional[StatusMessageWidget] = None
+        self._feedback_widgets: Dict[str, FeedbackPromptWidget] = {}
 
         # Resize anti-shake mechanism
         self.resize_timer = QTimer()
@@ -199,6 +201,38 @@ class ChatView(QScrollArea):
             QTimer.singleShot(10, lambda: self.setMinimumHeight(0))
 
         return widget
+
+    def add_feedback_prompt(self, query_id: str, callback: Callable[[str], None]) -> Optional[FeedbackPromptWidget]:
+        if not query_id or not callable(callback):
+            return None
+        if query_id in self._feedback_widgets:
+            return self._feedback_widgets[query_id]
+
+        self._check_and_fix_width()
+        widget = FeedbackPromptWidget(self.container)
+
+        def _on_submitted(value: str) -> None:
+            try:
+                callback(value)
+            except Exception as exc:
+                logging.debug(f"反馈回调执行失败: {exc}")
+            widget.show_acknowledge()
+            QTimer.singleShot(1500, lambda: self._remove_feedback_widget(query_id))
+
+        widget.feedback_submitted.connect(_on_submitted)
+        self.layout.insertWidget(self.layout.count() - 1, widget)
+        self._feedback_widgets[query_id] = widget
+        return widget
+
+    def _remove_feedback_widget(self, query_id: str) -> None:
+        widget = self._feedback_widgets.pop(query_id, None)
+        if not widget:
+            return
+        try:
+            self.layout.removeWidget(widget)
+            widget.setParent(None)
+        except Exception as exc:
+            logging.debug(f"移除反馈组件失败: {exc}")
 
     def add_streaming_message(self) -> StreamingMessageWidget:
         """Add a new streaming message"""
@@ -647,7 +681,6 @@ class ChatView(QScrollArea):
         
         if needs_height_calc:
             QTimer.singleShot(50, self._ensureContentComplete)
-
 
 
 

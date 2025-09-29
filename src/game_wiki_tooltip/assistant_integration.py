@@ -2352,6 +2352,8 @@ class IntegratedAssistantController(AssistantController):
         if start_ts is not None:
             elapsed_ms = int((time.time() - start_ts) * 1000)
 
+        query_id = self._active_query.get("id")
+
         properties = {
             "query_id": self._active_query.get("id"),
             "mode": self._active_query.get("mode"),
@@ -2368,6 +2370,10 @@ class IntegratedAssistantController(AssistantController):
         properties.update(extra or {})
 
         self._track_event("query_response_generated", properties)
+
+        if status == "success" and query_id:
+            self._prompt_query_feedback(query_id)
+
         self._active_query = None
 
     def _current_cohort_properties(self) -> Dict[str, Any]:
@@ -2378,6 +2384,34 @@ class IntegratedAssistantController(AssistantController):
             "plan_id": cohort.get("plan_id"),
             "variant": cohort.get("variant"),
         }
+
+    def _prompt_query_feedback(self, query_id: str) -> None:
+        if not self.main_window or not query_id:
+            return
+        prompts = getattr(self, "_feedback_prompted", None)
+        if prompts is None:
+            prompts = set()
+            setattr(self, "_feedback_prompted", prompts)
+        if query_id in prompts:
+            return
+
+        try:
+            widget = self.main_window.chat_view.add_feedback_prompt(
+                query_id,
+                lambda choice: self._on_query_feedback(query_id, choice),
+            )
+            if widget:
+                prompts.add(query_id)
+        except Exception as exc:
+            logger.debug(f"展示反馈提示失败: {exc}")
+
+    def _on_query_feedback(self, query_id: str, feedback_value: str) -> None:
+        props = {
+            "query_id": query_id,
+            "feedback": feedback_value,
+        }
+        props.update(self._current_cohort_properties())
+        self._track_event("query_feedback", props)
         
     def _schedule_ai_preload_on_startup(self):
         """Schedule AI preload on startup if not already scheduled"""
@@ -2771,6 +2805,8 @@ class IntegratedAssistantController(AssistantController):
                 QDesktopServices.openUrl(QUrl(str(action_payload)))
             except Exception as exc:
                 logger.warning(f"打开 CTA 链接失败: {exc}")
+        elif action == "emit_event":
+            self._handle_fake_door_cta(action_payload, cta_item)
 
     def _on_paywall_closed(self, reason: str) -> None:
         decision = self._active_paywall_decision
@@ -2800,6 +2836,25 @@ class IntegratedAssistantController(AssistantController):
             props.update(self._current_cohort_properties())
             self._track_event("paywall_dismissed", props)
             self._clear_paywall_surface()
+
+    def _handle_fake_door_cta(self, payload: Optional[Any], cta_item: Dict[str, Any]) -> None:
+        """Handle fake-door CTA actions by展示占位提示."""
+
+        message = "功能即将上线，感谢关注！"
+        if isinstance(payload, str):
+            key = payload.strip().lower()
+            if key in {"show_comming", "show_coming", "coming_soon"}:
+                message = "服务器管理功能即将上线，感谢你的关注！"
+
+        label = cta_item.get("label")
+        if label:
+            message = f"{label}: {message}"
+
+        self._append_status_message(message)
+        try:
+            self.main_window.close_paywall()
+        except Exception:
+            pass
 
     @staticmethod
     def _format_cooldown_message(decision: QuotaDecision) -> str:

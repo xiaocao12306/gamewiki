@@ -367,7 +367,15 @@ class QuotaManager:
         payload = cta_item.get("payload")
 
         event = "purchase_intent_points_clicked"
-        props = self.build_analytics_payload({"cta_value": value, "cta_action": action})
+        props = self.build_analytics_payload({
+            "cta_value": value,
+            "cta_action": action,
+        })
+
+        if action == "emit_event":
+            event = "paywall_fake_door_triggered"
+            props["cta_payload"] = payload
+
         return {"event": event, "properties": props, "action": action, "payload": payload}
 
     # ----------------- 状态访问 -----------------

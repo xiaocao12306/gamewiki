@@ -2,7 +2,8 @@ from PyQt6.QtCore import (
     Qt, QTimer, pyqtSignal
 )
 from PyQt6.QtWidgets import (
-    QApplication, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy, QMenu
+    QApplication, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
+    QSizePolicy, QMenu, QPushButton, QSpacerItem
 )
 
 import logging
@@ -1006,3 +1007,48 @@ class StreamingMessageWidget(MessageWidget):
         if chat_view:
             # Delay call to ensure content is fully displayed
             QTimer.singleShot(200, lambda: chat_view._update_message_width(self))
+
+
+class FeedbackPromptWidget(QWidget):
+    """Lightweight feedback widget with useful / not useful buttons."""
+
+    feedback_submitted = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._init_ui()
+
+    def _init_ui(self) -> None:
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(8)
+
+        prompt = QLabel("这条回答对你有帮助吗？", self)
+        prompt.setStyleSheet("color: #595959; font-size: 12px;")
+        layout.addWidget(prompt)
+
+        layout.addSpacerItem(QSpacerItem(8, 0))
+
+        self.btn_useful = QPushButton("👍 有用", self)
+        self.btn_useful.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_useful.clicked.connect(lambda: self._submit('useful'))
+        layout.addWidget(self.btn_useful)
+
+        self.btn_not_useful = QPushButton("👎 无用", self)
+        self.btn_not_useful.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_not_useful.clicked.connect(lambda: self._submit('not_useful'))
+        layout.addWidget(self.btn_not_useful)
+
+        layout.addStretch(1)
+
+    def _submit(self, value: str) -> None:
+        if not self.btn_useful.isEnabled():
+            return
+        self.btn_useful.setEnabled(False)
+        self.btn_not_useful.setEnabled(False)
+        self.feedback_submitted.emit(value)
+
+    def show_acknowledge(self, text: str = "感谢反馈！") -> None:
+        self.btn_useful.setText(text)
+        self.btn_useful.setEnabled(False)
+        self.btn_not_useful.hide()
