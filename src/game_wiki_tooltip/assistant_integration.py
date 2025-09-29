@@ -2838,17 +2838,13 @@ class IntegratedAssistantController(AssistantController):
             self._clear_paywall_surface()
 
     def _handle_fake_door_cta(self, payload: Optional[Any], cta_item: Dict[str, Any]) -> None:
-        """Handle fake-door CTA actions by showing placeholder notice."""
+        """Handle fake-door CTA actions by告知 MVP 状态。"""
 
-        message = "功能即将上线，感谢关注！"
+        message = "付费能力仍在筹备中，感谢关注！"
         if isinstance(payload, str):
             key = payload.strip().lower()
-            if key in {"show_comming", "show_coming", "coming_soon"}:
-                message = "服务器管理功能即将上线，感谢你的关注！"
-
-        label = cta_item.get("label")
-        if label:
-            message = f"{label}: {message}"
+            if key in {"show_comming", "show_coming", "coming_soon", "paywall_pending"}:
+                message = "支付功能即将上线，感谢你的关注！"
 
         self._append_status_message(message)
         try:
