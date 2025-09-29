@@ -66,7 +66,10 @@ class QuotaManager:
         "plan_id": "points_default",
         "experiment": {
             "cohort_seed": "local-default",
-            "allocation": [{"variant": "points", "weight": 100}],
+            "allocation": [
+                {"variant": "points", "weight": 70},
+                {"variant": "subscription", "weight": 30},
+            ],
             "fallback_variant": "points",
         },
         "quota": {
@@ -98,17 +101,52 @@ class QuotaManager:
         },
     }
 
+    DEFAULT_SUBSCRIPTION_CONFIG: Dict[str, Any] = {
+        "plan_id": "subscription_default",
+        "quota": {
+            "total_limit": 20,
+            "daily_limit": None,
+            "cooldown_minutes": 30,
+            "grace_messages": 0,
+        },
+        "copy": {
+            "title": "解锁完整订阅权益",
+            "body": "订阅即享无限次 AI 指导、专属攻略与同步更新。",
+            "highlight": "立即订阅，体验旗舰功能",
+        },
+        "cta": [
+            {
+                "label": "订阅月度计划（¥29）",
+                "action": "open_url",
+                "payload": "https://example.com/subscription/monthly",
+                "value": "subscription_monthly",
+            }
+        ],
+        "restrictions": {
+            "disable_chat_after_trigger": True,
+            "show_reminder_on_close": True,
+        },
+        "layout": {
+            "theme": "light",
+            "illustration": None,
+        },
+    }
+
     def __init__(self, settings_manager: SettingsManager, backend_client: BackendClient) -> None:
         self._settings = settings_manager
         self._backend = backend_client
         self._state = self.load_state()
+        self._remote_config: Dict[str, Any] = {}
+        self._variant_configs: Dict[str, Dict[str, Any]] = {}
 
-        # 解析一次配置（使用 settings.remote_config 缓存）
         remote = getattr(self._settings.settings, "remote_config", {}) or {}
+        self._remote_config = remote
         self._config = self.refresh_config(remote)
 
         # 确保分组已分配
         self.assign_variant(remote)
+        # 分配完成后按变体刷新配置
+        self._config = self.refresh_config(remote, override_variant=(self._state.get("cohort", {}) or {}).get("variant"))
 
     # ----------------- 基础读写 -----------------
     def load_state(self) -> Dict[str, Any]:
@@ -184,25 +222,48 @@ class QuotaManager:
                 merged[key] = value
         return merged
 
-    def refresh_config(self, remote_config: Dict[str, Any]) -> QuotaConfig:
-        cfg_raw = (remote_config or {}).get("paywall_points", {}) or {}
-        cfg = self._merge_dict(self.DEFAULT_PAYWALL_CONFIG, cfg_raw)
+    def refresh_config(
+        self,
+        remote_config: Dict[str, Any],
+        *,
+        override_variant: Optional[str] = None,
+    ) -> QuotaConfig:
+        self._remote_config = remote_config or {}
 
-        quota = cfg.get("quota", {}) or {}
+        points_raw = (self._remote_config or {}).get("paywall_points", {}) or {}
+        subscription_raw = (self._remote_config or {}).get("paywall_subscription", {}) or {}
+
+        points_cfg = self._merge_dict(self.DEFAULT_PAYWALL_CONFIG, points_raw)
+        subscription_cfg = self._merge_dict(self.DEFAULT_SUBSCRIPTION_CONFIG, subscription_raw)
+        self._variant_configs = {
+            "points": points_cfg,
+            "subscription": subscription_cfg,
+        }
+
+        fallback_variant = (
+            override_variant
+            or (self._state.get("cohort", {}) or {}).get("variant")
+            or points_cfg.get("experiment", {}).get("fallback_variant")
+            or "points"
+        )
+        selected_cfg = self._variant_configs.get(fallback_variant) or points_cfg
+
+        quota = selected_cfg.get("quota", {}) or {}
         total_limit = quota.get("total_limit")
-        daily_limit = quota.get("daily_limit")  # 可为 None
+        daily_limit = quota.get("daily_limit")
         cooldown_minutes = int(quota.get("cooldown_minutes", 30) or 30)
         grace_messages = int(quota.get("grace_messages", 0) or 0)
 
-        variant = (self._state.get("cohort", {}) or {}).get("variant")
-        plan_id = cfg.get("plan_id")
-        restrictions = cfg.get("restrictions", {}) or {"disable_chat_after_trigger": True, "show_reminder_on_close": True}
-        copy = cfg.get("copy", {}) or {}
-        cta = cfg.get("cta", []) or []
+        restrictions = selected_cfg.get("restrictions", {}) or {
+            "disable_chat_after_trigger": True,
+            "show_reminder_on_close": True,
+        }
+        copy = selected_cfg.get("copy", {}) or {}
+        cta = selected_cfg.get("cta", []) or []
 
-        return QuotaConfig(
-            plan_id=plan_id,
-            variant=variant,  # 先占位，assign_variant 后会更新 state 并在使用处读取
+        config = QuotaConfig(
+            plan_id=selected_cfg.get("plan_id") or points_cfg.get("plan_id"),
+            variant=fallback_variant,
             total_limit=total_limit,
             daily_limit=daily_limit,
             cooldown_minutes=cooldown_minutes,
@@ -212,9 +273,11 @@ class QuotaManager:
             cta=cta,
         )
 
+        return config
+
     def assign_variant(self, remote_config: Dict[str, Any]) -> None:
         points_raw = (remote_config or {}).get("paywall_points", {}) or {}
-        points = self._merge_dict(self.DEFAULT_PAYWALL_CONFIG, points_raw)
+        points = self._variant_configs.get("points") or self._merge_dict(self.DEFAULT_PAYWALL_CONFIG, points_raw)
         plan_id = points.get("plan_id")
         experiment = points.get("experiment", {}) or {}
         cohort_seed = experiment.get("cohort_seed") or "default-seed"
@@ -247,7 +310,7 @@ class QuotaManager:
             self.save_state()
 
         # 同步 config.variant
-        self._config.variant = self._state.get("cohort", {}).get("variant")
+        self._config = self.refresh_config(remote_config, override_variant=self._state.get("cohort", {}).get("variant"))
 
     # ----------------- 计数与决策 -----------------
     def reset_daily_counter(self) -> None:
@@ -366,17 +429,50 @@ class QuotaManager:
         value = cta_item.get("value")
         payload = cta_item.get("payload")
 
+        variant = (self._state.get("cohort", {}) or {}).get("variant")
+
         event = "purchase_intent_points_clicked"
         props = self.build_analytics_payload({
             "cta_value": value,
             "cta_action": action,
         })
 
+        if variant == "subscription":
+            event = "purchase_intent_subscription_clicked"
+
         if action == "emit_event":
             event = "paywall_fake_door_triggered"
             props["cta_payload"] = payload
 
         return {"event": event, "properties": props, "action": action, "payload": payload}
+
+    def get_debug_info(self) -> Dict[str, Any]:
+        self.reset_daily_counter()
+        total = int(self._state["counters"].get("total", 0))
+        daily = int(self._state["counters"]["daily"].get("count", 0))
+        since_last = int(self._state["counters"].get("since_last_paywall", 0))
+        cooldown_active, remaining = self._cooldown_blocked()
+
+        cohort = self._state.get("cohort", {}) or {}
+        last_trigger = self._state.get("last_trigger", {}) or {}
+
+        return {
+            "plan_id": self._config.plan_id,
+            "variant": cohort.get("variant"),
+            "total_usage": total,
+            "total_limit": self._config.total_limit,
+            "daily_usage": daily,
+            "daily_limit": self._config.daily_limit,
+            "since_last_paywall": since_last,
+            "grace_messages": self._config.grace_messages,
+            "cooldown_minutes": self._config.cooldown_minutes,
+            "cooldown_active": cooldown_active,
+            "cooldown_remaining": remaining,
+            "last_trigger_at": last_trigger.get("shown_at"),
+            "trigger_count": last_trigger.get("trigger_count"),
+            "assigned_at": cohort.get("assigned_at"),
+            "available_variants": sorted([k for k, v in self._variant_configs.items() if v]),
+        }
 
     # ----------------- 状态访问 -----------------
     def get_cohort_snapshot(self) -> Dict[str, Any]:

@@ -121,6 +121,13 @@ class AnalyticsConfig:
 
 
 @dataclass
+class DebugConfig:
+    enabled: bool = False
+    log_to_status: bool = True
+    log_level: str = "INFO"
+
+
+@dataclass
 class AppSettings:
     """Application settings"""
     language: str = "en"
@@ -130,6 +137,7 @@ class AppSettings:
     backend: BackendConfig = field(default_factory=BackendConfig)
     remote_config: Dict[str, Any] = field(default_factory=dict)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
+    debug: DebugConfig = field(default_factory=DebugConfig)
     # 持久化配额/实验分组状态（QuotaManager 使用）
     usage_quota: Dict[str, Any] = field(default_factory=dict)
     dont_remind_api_missing: bool = False  # User has selected "Don't remind me again" API missing
@@ -199,6 +207,8 @@ class SettingsManager:
         # Update analytics settings
         if 'analytics' in new_settings:
             self._settings.analytics = AnalyticsConfig(**new_settings['analytics'])
+        if 'debug' in new_settings:
+            self._settings.debug = DebugConfig(**new_settings['debug'])
         # Update "Don't remind me again" settings
         if 'dont_remind_api_missing' in new_settings:
             self._settings.dont_remind_api_missing = new_settings['dont_remind_api_missing']
@@ -284,6 +294,7 @@ class SettingsManager:
                 dont_remind_api_missing=merged_data.get('dont_remind_api_missing', False),
                 backend=BackendConfig(**merged_data.get('backend', {})),
                 analytics=AnalyticsConfig(**merged_data.get('analytics', {})),
+                debug=DebugConfig(**merged_data.get('debug', {})),
                 usage_quota=merged_data.get('usage_quota', {}),
                 shortcuts=merged_data.get('shortcuts', []),
                 audio_device_index=merged_data.get('audio_device_index', None),
@@ -314,6 +325,7 @@ class SettingsManager:
                 dont_remind_api_missing=default_data.get('dont_remind_api_missing', False),
                 backend=BackendConfig(**default_data.get('backend', {})),
                 analytics=AnalyticsConfig(**default_data.get('analytics', {})),
+                debug=DebugConfig(**default_data.get('debug', {})),
                 usage_quota=default_data.get('usage_quota', {}),
                 shortcuts=default_data.get('shortcuts', []),
                 audio_device_index=default_data.get('audio_device_index', None),
