@@ -7,6 +7,8 @@ import json
 import logging
 import threading
 import time
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import os
@@ -322,7 +324,13 @@ class RAGIntegration(QObject):
     def _telemetry_base(self) -> Dict[str, Any]:
         """构建默认埋点上下文，确保后端能够识别设备与模式"""
 
-        base: Dict[str, Any] = {"app_mode": "cloud" if self.limited_mode else "local"}
+        base: Dict[str, Any] = {
+            "session_id": self.session_id,
+            "app_mode": "cloud" if self.limited_mode else "local",
+            "limited_mode": self.limited_mode,
+            "game_id": getattr(self, "current_game_id", None),
+            "game_window": getattr(self, "current_game_window", None),
+        }
 
         # 尝试补充来自客户端的设备信息，便于排查问题
         if self.backend_client:
@@ -332,8 +340,7 @@ class RAGIntegration(QObject):
                 logger.debug(f"telemetry_context 生成失败: {exc}")
 
         # 标记当前窗口信息 & 映射游戏识别
-        current_window = getattr(self, "current_game_window", None)
-        base["game_window"] = current_window
+        current_window = base.get("game_window")
 
         detected_game = None
         try:
@@ -351,6 +358,11 @@ class RAGIntegration(QObject):
 
         if detected_game:
             base["game_detected"] = detected_game
+
+        if self.quota_manager:
+            cohort = self.quota_manager.get_cohort_snapshot()
+            base.setdefault("plan_id", cohort.get("plan_id"))
+            base.setdefault("variant", cohort.get("variant"))
 
         # 确保基础字段存在，避免后端解析报错
         base.setdefault("ip", "127.0.0.1")
@@ -2151,7 +2163,13 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🚨 运行在云端代理模式：Wiki 搜索 + 远端聊天")
         else:
             logger.info("✅ 运行在本地增强模式：支持 Wiki 搜索与本地 RAG 功能")
+        self.session_id = uuid.uuid4().hex
+        self.current_game_id: Optional[str] = None
+        self._active_query: Optional[Dict[str, Any]] = None
+        self._last_assistant_open_source: str = "unknown"
+        self._pending_query_to_track: Optional[Tuple[str, str]] = None
         self._active_paywall_decision: Optional[QuotaDecision] = None
+        self._paywall_dialog_entry: str = "trigger"
         # Initialize quota manager (after remote_config synced by GameWikiApp)
         try:
             self.quota_manager = QuotaManager(settings_manager, backend_client)
@@ -2171,12 +2189,20 @@ class IntegratedAssistantController(AssistantController):
         """构建所有埋点默认需要包含的上下文"""
 
         base: Dict[str, Any] = {
+            "session_id": self.session_id,
             "game_window": getattr(self, "current_game_window", None),
+            "game_id": getattr(self, "current_game_id", None),
             "app_mode": "cloud" if self.limited_mode else "local",
+            "limited_mode": self.limited_mode,
         }
 
         if self.backend_client:
             base.update(self.backend_client.telemetry_context())
+
+        if self.quota_manager:
+            cohort = self.quota_manager.get_cohort_snapshot()
+            base.setdefault("plan_id", cohort.get("plan_id"))
+            base.setdefault("variant", cohort.get("variant"))
 
         # 若 backend_client 无法推断 IP，会返回 127.0.0.1，后端可再次校验
         base.setdefault("ip", "127.0.0.1")
@@ -2243,6 +2269,101 @@ class IntegratedAssistantController(AssistantController):
                     "reason": reason or ("success" if success else "failure"),
                 },
             )
+
+    def _capture_game_context(self, source: str, *, allow_last_known: bool = True) -> None:
+        if not hasattr(self, 'smart_interaction') or not self.smart_interaction:
+            return
+
+        try:
+            title = self.smart_interaction.get_current_game_window()
+        except Exception as exc:
+            logger.debug(f"获取当前前台窗口失败: {exc}")
+            title = None
+
+        detected = False
+        mapped_game = None
+        if title:
+            from src.game_wiki_tooltip.ai.rag_query import map_window_title_to_game_name
+
+            mapped_game = map_window_title_to_game_name(title)
+            detected = mapped_game is not None
+
+        if detected:
+            self.current_game_window = title
+            self.current_game_id = mapped_game
+        elif allow_last_known and self.current_game_id:
+            source = f"{source}_last_known"
+        else:
+            self.current_game_id = None
+
+        self._track_event(
+            "game_detected",
+            {
+                "source": source,
+                "detected": detected,
+                "game_title": getattr(self, "current_game_window", None),
+                "game_id": self.current_game_id,
+            },
+        )
+
+    def _begin_query(self, query: str, mode: str) -> None:
+        query_id = uuid.uuid4().hex
+        cohort = self._current_cohort_properties()
+
+        self._active_query = {
+            "id": query_id,
+            "query": query,
+            "mode": mode,
+            "start_ts": time.time(),
+            "game_id": getattr(self, "current_game_id", None),
+            "game_title": getattr(self, "current_game_window", None),
+            "response_chars": 0,
+        }
+
+        properties = {
+            "query_id": query_id,
+            "user_query": query,
+            "mode": mode,
+            "game_id": self._active_query["game_id"],
+            "game_title": self._active_query["game_title"],
+            "source": "manual",
+        }
+        properties.update(cohort)
+
+        self._track_event("query_submitted", properties)
+
+    def _emit_query_completed(self, status: str, **extra: Any) -> None:
+        if not self._active_query:
+            return
+
+        elapsed_ms = None
+        start_ts = self._active_query.get("start_ts")
+        if start_ts is not None:
+            elapsed_ms = int((time.time() - start_ts) * 1000)
+
+        properties = {
+            "query_id": self._active_query.get("id"),
+            "mode": self._active_query.get("mode"),
+            "response_status": status,
+            "latency_ms": elapsed_ms,
+            "response_length": self._active_query.get("response_chars"),
+            "game_id": self._active_query.get("game_id"),
+            "game_title": self._active_query.get("game_title"),
+        }
+        properties.update(self._current_cohort_properties())
+        properties.update(extra or {})
+
+        self._track_event("query_response_generated", properties)
+        self._active_query = None
+
+    def _current_cohort_properties(self) -> Dict[str, Any]:
+        cohort = {}
+        if self.quota_manager:
+            cohort = self.quota_manager.get_cohort_snapshot()
+        return {
+            "plan_id": cohort.get("plan_id"),
+            "variant": cohort.get("variant"),
+        }
         
     def _schedule_ai_preload_on_startup(self):
         """Schedule AI preload on startup if not already scheduled"""
@@ -2295,6 +2416,9 @@ class IntegratedAssistantController(AssistantController):
             self.main_window.set_generating_state(False)
             # Hide any status messages when generation is stopped
             self.main_window.chat_view.hide_status()
+
+        if self._active_query:
+            self._emit_query_completed("cancelled", error_reason="user_stop")
         
     def _on_ai_modules_loaded(self, success: bool):
         """Callback when AI modules are loaded"""
@@ -2367,6 +2491,16 @@ class IntegratedAssistantController(AssistantController):
         
         if vector_game_name:
             logger.info(f"🎮 Detected game window, preparing to initialize RAG engine: {vector_game_name}")
+            self.current_game_id = vector_game_name
+            self._track_event(
+                "game_detected",
+                {
+                    "source": "rag_init",
+                    "detected": True,
+                    "game_title": game_window_title,
+                    "game_id": vector_game_name,
+                },
+            )
             # Check if game needs to be switched
             if not hasattr(self, '_current_vector_game') or self._current_vector_game != vector_game_name:
                 logger.info(f"🔄 Switch RAG engine: {getattr(self, '_current_vector_game', 'None')} -> {vector_game_name}")
@@ -2377,6 +2511,16 @@ class IntegratedAssistantController(AssistantController):
                 logger.info(f"✓ Game not switched, continue using current RAG engine: {vector_game_name}")
         else:
             logger.info(f"⚠️ Window '{game_window_title}' is not a supported game")
+            self.current_game_id = None
+            self._track_event(
+                "game_detected",
+                {
+                    "source": "rag_init",
+                    "detected": False,
+                    "game_title": game_window_title,
+                    "game_id": None,
+                },
+            )
             # Clear current game context if window changed to unsupported game
             if hasattr(self, '_current_vector_game'):
                 logger.info(f"🔄 Clearing game context due to unsupported window")
@@ -2426,6 +2570,7 @@ class IntegratedAssistantController(AssistantController):
         """关闭弹窗与横幅，重置付费墙状态"""
 
         self._active_paywall_decision = None
+        self._paywall_dialog_entry = "trigger"
 
         if not self.main_window:
             return
@@ -2517,7 +2662,11 @@ class IntegratedAssistantController(AssistantController):
         self._active_paywall_decision = decision
 
         if decision.analytics_payload:
-            self._track_event("paywall_shown", decision.analytics_payload)
+            payload = dict(decision.analytics_payload)
+            if decision.reason:
+                payload["trigger_reason"] = decision.reason
+            payload["from_banner"] = False
+            self._track_event("paywall_shown", payload)
 
         try:
             if self.quota_manager:
@@ -2546,6 +2695,13 @@ class IntegratedAssistantController(AssistantController):
         button_text = copy_config.get("highlight") or "查看付费选项"
         prefix = copy_config.get("title") or "AI 使用限制"
         banner_message = f"{prefix}·{fallback_body}" if prefix else fallback_body
+        self._paywall_dialog_entry = "banner" if from_reopen else "trigger"
+
+        if from_reopen and decision.analytics_payload:
+            reopen_payload = dict(decision.analytics_payload)
+            reopen_payload["trigger_reason"] = "banner_reopen"
+            reopen_payload["from_banner"] = True
+            self._track_event("paywall_shown", reopen_payload)
 
         try:
             self.main_window.show_paywall(
@@ -2583,8 +2739,18 @@ class IntegratedAssistantController(AssistantController):
         action = (payload or {}).get("action") or cta_item.get("action")
         action_payload = (payload or {}).get("payload") or cta_item.get("payload")
 
-        if event_name:
+        if event_name and properties:
             self._track_event(event_name, properties)
+
+        paywall_props = {
+            "cta_value": cta_item.get("value"),
+            "cta_action": action,
+            "cta_label": cta_item.get("label"),
+            "cta_payload": action_payload,
+            "source": f"paywall_dialog:{self._paywall_dialog_entry}",
+        }
+        paywall_props.update(self._current_cohort_properties())
+        self._track_event("paywall_cta_clicked", paywall_props)
 
         if action == "open_url" and action_payload:
             try:
@@ -2592,7 +2758,7 @@ class IntegratedAssistantController(AssistantController):
             except Exception as exc:
                 logger.warning(f"打开 CTA 链接失败: {exc}")
 
-    def _on_paywall_closed(self) -> None:
+    def _on_paywall_closed(self, reason: str) -> None:
         decision = self._active_paywall_decision
 
         try:
@@ -2605,6 +2771,20 @@ class IntegratedAssistantController(AssistantController):
         except Exception as exc:
             logger.debug(f"展示付费墙关闭提醒失败: {exc}")
         finally:
+            banner_visible = False
+            if self.main_window and hasattr(self.main_window, "paywall_banner"):
+                try:
+                    banner_visible = self.main_window.paywall_banner.isVisible()  # type: ignore[attr-defined]
+                except Exception:
+                    banner_visible = False
+
+            props = {
+                "reason": reason or "close",
+                "banner_visible": banner_visible,
+                "entry": self._paywall_dialog_entry,
+            }
+            props.update(self._current_cohort_properties())
+            self._track_event("paywall_dismissed", props)
             self._clear_paywall_surface()
 
     @staticmethod
@@ -2622,6 +2802,8 @@ class IntegratedAssistantController(AssistantController):
         """Override to handle query with RAG integration"""
         # Store search mode
         self._search_mode = mode
+        self._capture_game_context('query_submit', allow_last_known=True)
+        self._pending_query_to_track = (query, mode)
         
         # Check if the last message in chat view is already this user query
         # to avoid duplication (since it may have been added in the UI already)
@@ -2658,12 +2840,16 @@ class IntegratedAssistantController(AssistantController):
                 decision = self.quota_manager.should_show_paywall()
                 if decision.blocked:
                     self._handle_quota_block(decision)
+                    self._pending_query_to_track = None
                     return
         except Exception as e:
             logger.warning(f"Quota check failed, continue without blocking: {e}")
 
         # 通过配额校验，清理残留付费墙状态
         self._clear_paywall_surface()
+
+        self._begin_query(query, mode)
+        self._pending_query_to_track = None
 
         # 通过配额校验，先自增计数（MVP 简化，不回滚）
         try:
@@ -2748,6 +2934,11 @@ class IntegratedAssistantController(AssistantController):
         # Save query for potential web search
         self._last_user_query = query
         self._last_game_context = getattr(self, 'current_game_window', None)
+
+        if not self._active_query and self._pending_query_to_track:
+            pending_query, pending_mode = self._pending_query_to_track
+            self._begin_query(pending_query, pending_mode)
+            self._pending_query_to_track = None
         
         # Stop any existing worker and reset UI state
         if self._current_worker and self._current_worker.isRunning():
@@ -2904,6 +3095,11 @@ class IntegratedAssistantController(AssistantController):
             else:
                 if hasattr(self, '_current_transition_msg'):
                     self._current_transition_msg.update_content(TransitionMessages.ERROR_NOT_FOUND)
+                if self._active_query:
+                    self._emit_query_completed(
+                        "failure",
+                        error_reason="wiki_not_found",
+                    )
                     
         except Exception as e:
             logger.error(f"Wiki result handling error: {e}")
@@ -2976,6 +3172,8 @@ class IntegratedAssistantController(AssistantController):
         if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
             print(f"📝 [STREAMING-DEBUG] Add content chunk to streaming message component")
             self._current_streaming_msg.append_chunk(chunk)
+            if self._active_query:
+                self._active_query["response_chars"] = self._active_query.get("response_chars", 0) + len(chunk)
         else:
             print(f"⚠️ [STREAMING-DEBUG] No streaming message component, cannot add content chunk")
             # Try to create streaming message component immediately (fallback mechanism)
@@ -2984,6 +3182,8 @@ class IntegratedAssistantController(AssistantController):
                 self._setup_streaming_message()
                 if hasattr(self, '_current_streaming_msg') and self._current_streaming_msg:
                     self._current_streaming_msg.append_chunk(chunk)
+                    if self._active_query:
+                        self._active_query["response_chars"] = self._active_query.get("response_chars", 0) + len(chunk)
     
     def _update_rag_status(self):
         """Update RAG processing status message"""
@@ -3038,6 +3238,12 @@ class IntegratedAssistantController(AssistantController):
         if self.main_window:
             self.main_window.set_generating_state(False)
             logger.info("✅ UI state reset to non-generating state")
+
+        self._emit_query_completed(
+            "success",
+            response_type="guide",
+            fallback_used=False,
+        )
         
     def _on_error(self, error_msg: str):
         """Handle error"""
@@ -3064,6 +3270,11 @@ class IntegratedAssistantController(AssistantController):
             f"❌ {error_msg}"
         )
         
+        self._emit_query_completed(
+            "failure",
+            error_reason=error_msg,
+        )
+
     def _on_wiki_result(self, url: str, title: str):
         """Handle wiki search result from RAG integration"""
         try:
@@ -3081,6 +3292,13 @@ class IntegratedAssistantController(AssistantController):
                 
                 # Show wiki page in the unified window (triggers JavaScript search for real URL)
                 self.main_window.show_wiki_page(url, title)
+
+                if self._active_query:
+                    self._emit_query_completed(
+                        "success",
+                        response_type="wiki",
+                        response_length=len(title or ""),
+                    )
             else:
                 if hasattr(self, '_current_transition_msg'):
                     self._current_transition_msg.update_content(TransitionMessages.ERROR_NOT_FOUND)
@@ -3263,6 +3481,8 @@ class IntegratedAssistantController(AssistantController):
         logger.info(f"🔥 Smart hotkey handling result: {action}")
         
         if action == 'show_chat':
+            self._last_assistant_open_source = 'hotkey'
+            self._capture_game_context('hotkey')
             # 立即设置游戏窗口信息到assistant（只更新UI，不初始化RAG）
             if current_game_window:
                 logger.info(f"🎮 Pre-setting game window for UI: '{current_game_window}'")
@@ -3324,6 +3544,7 @@ class IntegratedAssistantController(AssistantController):
         
         # 清除记录的游戏窗口
         self.current_game_window = None
+        self.current_game_id = None
         
         # 清除 RAG 引擎的当前游戏
         if hasattr(self, '_current_vector_game'):
@@ -3369,6 +3590,8 @@ class IntegratedAssistantController(AssistantController):
     def show_chat_window(self):
         """显示聊天窗口，隐藏悬浮窗"""
         logger.info("💬 Show chat window requested")
+
+        self._capture_game_context('show_chat')
         
         # 标记窗口刚刚显示，激活保护期
         if hasattr(self, 'smart_interaction') and self.smart_interaction:
@@ -3422,6 +3645,12 @@ class IntegratedAssistantController(AssistantController):
             QTimer.singleShot(100, self.main_window._set_chat_input_focus)
 
         logger.info("💬 Chat window shown")
+        self._track_event(
+            "assistant_opened",
+            {
+                "source": getattr(self, "_last_assistant_open_source", "unknown"),
+            },
+        )
 
     def _precreate_main_window_if_needed(self):
         """在主窗口缺失时尝试预创建"""
@@ -3476,6 +3705,14 @@ class IntegratedAssistantController(AssistantController):
         if self.main_window:
             self.main_window.hide()
             logger.info("💬 Chat window hidden")
+
+        self._track_event(
+            "assistant_closed",
+            {
+                "reason": "hide",
+            },
+        )
+        self._last_assistant_open_source = "unknown"
     
     def show_mouse_for_interaction(self):
         """显示鼠标以便与聊天窗口互动"""

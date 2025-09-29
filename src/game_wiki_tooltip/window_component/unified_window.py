@@ -37,7 +37,7 @@ try:
         QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QTextEdit, QFrame, QStackedWidget,
         QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLineEdit,
-        QToolButton, QMenu, QGridLayout
+        QToolButton, QMenu
     )
     from PyQt6.QtGui import (
         QPainter, QColor, QBrush, QPen, QFont, QLinearGradient,
@@ -2544,7 +2544,7 @@ class UnifiedAssistantWindow(QMainWindow):
             if on_cta:
                 self.paywall_dialog.cta_clicked.connect(on_cta)  # type: ignore[arg-type]
 
-            def _cleanup_dialog() -> None:
+            def _cleanup_dialog(_reason: str) -> None:
                 self.paywall_dialog = None
 
             self.paywall_dialog.dismissed.connect(_cleanup_dialog)

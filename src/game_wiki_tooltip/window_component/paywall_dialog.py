@@ -22,7 +22,7 @@ class PaywallDialog(QDialog):
     """积分墙弹窗：支持标题、高亮、正文与多 CTA 的完整布局"""
 
     cta_clicked = pyqtSignal(dict)
-    dismissed = pyqtSignal()
+    dismissed = pyqtSignal(str)
 
     def __init__(
         self,
@@ -41,6 +41,7 @@ class PaywallDialog(QDialog):
 
         self._copy = copy_config or {}
         self._ctas = ctas or []
+        self._close_reason = "close"
 
         self._init_ui()
         self._populate_content()
@@ -72,7 +73,7 @@ class PaywallDialog(QDialog):
         self.close_button.setObjectName("paywallCloseButton")
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_button.setFixedSize(28, 28)
-        self.close_button.clicked.connect(self.reject)
+        self.close_button.clicked.connect(self._on_close_clicked)
         header.addWidget(self.close_button, alignment=Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(header)
@@ -130,7 +131,7 @@ class PaywallDialog(QDialog):
         self.dismiss_button.setObjectName("paywallDismissButton")
         self.dismiss_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.dismiss_button.setMinimumHeight(32)
-        self.dismiss_button.clicked.connect(self.reject)
+        self.dismiss_button.clicked.connect(self._on_dismiss_clicked)
         footer.addWidget(self.dismiss_button)
 
         layout.addLayout(footer)
@@ -253,7 +254,8 @@ class PaywallDialog(QDialog):
     # ------------------------------------------------------------------
     def closeEvent(self, event):
         super().closeEvent(event)
-        self.dismissed.emit()
+        self.dismissed.emit(self._close_reason)
+        self._close_reason = "close"
 
     def _create_cta_button(self, cta_item: Dict[str, Any], *, primary: bool) -> QPushButton:
         label = cta_item.get("label") or "了解更多"
@@ -264,3 +266,11 @@ class PaywallDialog(QDialog):
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.clicked.connect(lambda _, data=cta_item: self.cta_clicked.emit(data))  # type: ignore[arg-type]
         return button
+
+    def _on_close_clicked(self) -> None:
+        self._close_reason = "close"
+        self.reject()
+
+    def _on_dismiss_clicked(self) -> None:
+        self._close_reason = "later"
+        self.reject()

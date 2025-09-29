@@ -370,3 +370,11 @@ class QuotaManager:
         props = self.build_analytics_payload({"cta_value": value, "cta_action": action})
         return {"event": event, "properties": props, "action": action, "payload": payload}
 
+    # ----------------- 状态访问 -----------------
+    def get_cohort_snapshot(self) -> Dict[str, Any]:
+        cohort = self._state.get("cohort", {}) or {}
+        return {
+            "variant": cohort.get("variant"),
+            "plan_id": cohort.get("plan_id"),
+            "assigned_at": cohort.get("assigned_at"),
+        }

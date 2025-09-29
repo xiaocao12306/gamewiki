@@ -7,6 +7,7 @@ import logging
 import threading
 import time
 from collections import deque
+from datetime import datetime, timezone
 from typing import Deque, Dict, Optional
 
 from .backend_client import BackendClient
@@ -40,8 +41,9 @@ class AnalyticsManager:
 
         event = {
             "name": name,
-            "properties": properties or {},
+            "properties": properties.copy() if properties else {},
             "timestamp": time.time(),
+            "client_ts": datetime.now(timezone.utc).isoformat(),
         }
 
         with self._lock:
@@ -100,4 +102,3 @@ class AnalyticsManager:
             self._worker.join(timeout=2.0)
         self.flush()
         self._backend_client.close()
-
