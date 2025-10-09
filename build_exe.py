@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-GameWiki Assistant Packaging Script
+Guidor Assistant Packaging Script (MVP Release)
 
-This script is used to package GameWiki Assistant into a standalone exe file.
-Supports both onefile and onedir modes, with optional Inno Setup integration.
+用于将 Guidor Assistant 打包为可商用分发的可执行文件，支持 onedir/onefile
+两种模式，并可选择生成 Inno Setup 安装脚本，便于发布正式安装包。
 """
 
 import os
