@@ -131,8 +131,9 @@ if not vosk_path.exists():
 
 if vosk_path.exists():
     print(f"[INFO] Found Vosk at: {vosk_path}")
-    # Add Vosk DLL files to the vosk directory in output
-    datas.append((str(vosk_path), "vosk"))
+    # Add Vosk DLL files to the _internal/vosk directory to match the path vosk expects
+    # This fixes the "FileNotFoundError: _internal\vosk" error
+    datas.append((str(vosk_path), "_internal/vosk"))
 else:
     print(f"[WARNING] Vosk not found at expected location: {vosk_path}")
 
