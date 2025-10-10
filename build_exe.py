@@ -12,6 +12,7 @@ import sys
 import shutil
 import subprocess
 import argparse
+import json
 from pathlib import Path
 
 def print_status(message):
@@ -25,6 +26,51 @@ def print_error(message):
 def print_success(message):
     """Print success information"""
     print(f"✅ {message}")
+
+
+SETTINGS_FILE = Path("src/game_wiki_tooltip/assets/settings.json")
+PROD_BACKEND_BASE_URL = "https://admin.test.guidor.vip"
+
+
+def apply_environment_settings(env: str) -> str | None:
+    """Adjust settings.json based on target environment. Returns original content when modified."""
+
+    if env != "prod":
+        return None
+
+    if not SETTINGS_FILE.exists():
+        print_error(f"Settings file not found: {SETTINGS_FILE}")
+        return None
+
+    try:
+        original_text = SETTINGS_FILE.read_text(encoding="utf-8")
+        data = json.loads(original_text)
+    except Exception as exc:  # noqa: BLE001
+        print_error(f"Failed to load settings.json: {exc}")
+        return None
+
+    backend = data.get("backend", {})
+    backend["base_url"] = PROD_BACKEND_BASE_URL
+    data["backend"] = backend
+
+    try:
+        SETTINGS_FILE.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+        print_status(f"Applied production backend base_url -> {PROD_BACKEND_BASE_URL}")
+    except Exception as exc:  # noqa: BLE001
+        print_error(f"Failed to update settings.json: {exc}")
+        return None
+
+    return original_text
+
+
+def restore_settings(original_text: str | None) -> None:
+    if original_text is None:
+        return
+    try:
+        SETTINGS_FILE.write_text(original_text, encoding="utf-8")
+        print_status("Restored original settings.json")
+    except Exception as exc:  # noqa: BLE001
+        print_error(f"Failed to restore settings.json: {exc}")
 
 def run_command(command, cwd=None):
     """Execute command and return result"""
@@ -729,6 +775,8 @@ def main():
     parser = argparse.ArgumentParser(description='Guidor Assistant Packaging Tool')
     parser.add_argument('--mode', choices=['onedir', 'onefile'], default='onedir',
                         help='Packaging mode: onedir (faster startup) or onefile (single exe)')
+    parser.add_argument('--env', choices=['dev', 'prod'], default='dev',
+                        help='Target environment: dev keeps local settings, prod rewrites backend base_url for release')
     parser.add_argument('--skip-deps', action='store_true',
                         help='Skip dependency installation')
     parser.add_argument('--create-installer', action='store_true',
@@ -737,6 +785,7 @@ def main():
     
     print("🚀 Guidor Assistant Packaging Tool")
     print(f"📦 Mode: {args.mode}")
+    print(f"🌍 Environment: {args.env}")
     print("=" * 50)
     
     # Check Python version
@@ -749,6 +798,8 @@ def main():
         print_error("Please run this script in the project root directory")
         return 1
     
+    original_settings = apply_environment_settings(args.env)
+
     try:
         # Define build steps based on options
         steps = [
@@ -774,13 +825,13 @@ def main():
         # Add Inno Setup script creation if requested
         if args.create_installer:
             steps.append(("Create Inno Setup script", lambda: create_inno_setup_script(args.mode)))
-        
+
         for step_name, step_func in steps:
             print(f"\n📋 Step: {step_name}")
             if not step_func():
                 print_error(f"Step '{step_name}' failed")
                 return 1
-        
+
         print("\n" + "=" * 50)
         print_success("🎉 Packaging completed!")
         print("\n📦 Generated files:")
@@ -792,10 +843,10 @@ def main():
         print(f"  - {portable_dir}/Uninstall.exe (uninstaller)")
         print(f"  - {portable_dir}/README.txt (user guide)")
         print(f"  - {portable_dir}/runtime/ (WebView2 installer)")
-        
+
         if args.create_installer:
             print(f"  - GuidorAssistant_{args.mode}.iss (Inno Setup script)")
-        
+
         print("\n💡 Tips:")
         print(f"  - {args.mode.capitalize()} mode: {'Fast startup, no temp files' if args.mode == 'onedir' else 'Slower startup, creates temp files'}")
         print(f"  - You can compress the {portable_dir} directory and distribute it to other users")
@@ -806,13 +857,15 @@ def main():
             print("\n🔧 Next step: Use Inno Setup to compile the installer script")
         
         return 0
-        
+
     except KeyboardInterrupt:
         print_error("User interrupted the build process")
         return 1
     except Exception as e:
         print_error(f"Unexpected error occurred during build: {e}")
         return 1
+    finally:
+        restore_settings(original_settings)
 
 if __name__ == "__main__":
     exit_code = main()

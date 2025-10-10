@@ -49,7 +49,7 @@ python build_exe.py [--mode onedir|onefile] [--skip-deps] [--create-installer]
 ### 2.1 onedir 模式（默认，推荐）
 
 ```powershell
-python build_exe.py
+python build_exe.py --env dev
 ```
 
 输出目录：`GuidorAssistant_Portable_onedir/`
@@ -64,7 +64,7 @@ python build_exe.py
 ### 2.2 onefile 模式（单文件 EXE）
 
 ```powershell
-python build_exe.py --mode onefile
+python build_exe.py --mode onefile --env dev
 ```
 
 输出目录：`GuidorAssistant_Portable_onefile/GuidorAssistant.exe`
@@ -75,9 +75,9 @@ python build_exe.py --mode onefile
 ### 2.3 生成安装向导（Inno Setup）
 
 ```powershell
-python build_exe.py --create-installer
+python build_exe.py --env prod --create-installer
 # 或结合单文件：
-python build_exe.py --mode onefile --create-installer
+python build_exe.py --mode onefile --create-installer --env prod
 ```
 
 脚本会在项目根目录生成 `GuidorAssistant_onedir.iss`（或 `GuidorAssistant_onefile.iss`）。后续步骤：
@@ -93,6 +93,8 @@ python build_exe.py --mode onefile --create-installer
 
 | 参数 | 说明 |
 | --- | --- |
+| `--env dev` | 使用本地 `settings.json` 的 backend 配置（适用于调试） |
+| `--env prod` | 打包时将 `backend.base_url` 改为 `https://admin.test.guidor.vip`（发布环境） |
 | `--skip-deps` | 跳过 `pip install` 步骤（适用于离线环境或已安装依赖时） |
 | `--mode onedir` | 输出目录结构（默认） |
 | `--mode onefile` | 输出单体 EXE |
@@ -139,3 +141,4 @@ python build_exe.py --mode onefile --create-installer
 - 若计划集成自动更新，可在安装包中嵌入更新器或添加任务计划脚本。
 
 如需进一步自动化（CI/CD 构建、自动签名、内部发布系统联动），可基于当前脚本制作 PowerShell/Python Pipeline，欢迎与工程团队讨论需求。***
+- **环境开关**：`--env prod` 会在打包期间临时修改 `src/game_wiki_tooltip/assets/settings.json`，将 `backend.base_url` 指向 `https://admin.test.guidor.vip`，打包完成后自动恢复原始内容。
