@@ -460,24 +460,37 @@ def build_exe(mode='onedir'):
     
     # 修改 PyInstaller 命令，直接输出到最终目录
     success, output = run_command(f"pyinstaller {spec_file} --clean --noconfirm --distpath {final_output_dir}")
-    
+
     if not success:
         print_error(f"Build failed: {output}")
         return False
-    
+    if output:
+        print(output)
+
     # 检查生成的文件
     if mode == 'onedir':
-        pyinstaller_dir = Path(final_output_dir) / "GuidorAssistant"
+        pyinstaller_dir = Path(final_output_dir) / "GameWikiAssistant"
         target_dir = Path(final_output_dir) / "GuidorAssistant"
 
         if pyinstaller_dir.exists():
             if target_dir.exists():
                 shutil.rmtree(target_dir, ignore_errors=True)
             pyinstaller_dir.rename(target_dir)
+        else:
+            # Fallback: try to locate the output directory automatically
+            alt_dir = None
+            for candidate in Path(final_output_dir).glob("*/GameWikiAssistant.exe"):
+                alt_dir = candidate.parent
+                break
+            if alt_dir:
+                print_status(f"Detected PyInstaller output at {alt_dir}")
+                if target_dir.exists():
+                    shutil.rmtree(target_dir, ignore_errors=True)
+                alt_dir.rename(target_dir)
 
         exe_dir = target_dir
         exe_path = exe_dir / "GuidorAssistant.exe"
-        alt_exe_path = exe_dir / "GuidorAssistant.exe"
+        alt_exe_path = exe_dir / "GameWikiAssistant.exe"
 
         if not exe_path.exists() and alt_exe_path.exists():
             alt_exe_path.rename(exe_path)
@@ -487,8 +500,15 @@ def build_exe(mode='onedir'):
             total_size = sum(f.stat().st_size for f in exe_dir.rglob('*') if f.is_file())
             print(f"Total size: {total_size / 1024 / 1024:.1f} MB")
             return True
+        else:
+            if Path(final_output_dir).exists():
+                print_status("Contents of dist directory:")
+                for item in Path(final_output_dir).iterdir():
+                    print(f"  - {item}")
+            else:
+                print_status(f"Output directory missing: {Path(final_output_dir).resolve()}")
     else:
-        pyinstaller_exe = Path(final_output_dir) / "GuidorAssistant.exe"
+        pyinstaller_exe = Path(final_output_dir) / "GameWikiAssistant.exe"
         target_exe = Path(final_output_dir) / "GuidorAssistant.exe"
 
         if pyinstaller_exe.exists():
