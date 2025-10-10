@@ -16,9 +16,12 @@ try:
     import queue
     from vosk import Model, KaldiRecognizer, SetLogLevel
     VOSK_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError) as exc:
     VOSK_AVAILABLE = False
-    logging.warning("Vosk or sounddevice not available. Voice input will be disabled.")
+    logging.warning(
+        "Vosk or sounddevice not available. Voice input will be disabled. Details: %s",
+        exc,
+    )
 
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
