@@ -97,6 +97,10 @@ datas = [
 # Collect binary files (will be populated later)
 binaries = []
 
+def _collect_dest(path: Path) -> str:
+    """Normalize destination path for PyInstaller collect stage."""
+    return str(path).replace("\\", "/")
+
 # Add WebView2 Core DLL for WinRT
 import site
 webview2_dll_found = False
@@ -167,6 +171,21 @@ for root in unique_roots:
 
 if vosk_path:
     print(f"[INFO] Found Vosk at: {vosk_path}")
+
+    # Ensure platform DLL dependencies that Vosk expects are always included
+    dependency_names = {
+        "libvosk.dll",
+        "libwinpthread-1.dll",
+        "libgcc_s_seh-1.dll",
+        "libstdc++-6.dll",
+    }
+    for dep_name in dependency_names:
+        dep_file = vosk_path / dep_name
+        if dep_file.exists():
+            binaries.append((str(dep_file), _collect_dest(Path("_internal") / "vosk")))
+        else:
+            print(f"[WARNING] Vosk dependency missing: {dep_file}")
+
     for root, _, files in os.walk(vosk_path):
         rel_root = Path(root).relative_to(vosk_path)
         if str(rel_root) == '.' or str(rel_root) == '':
@@ -178,9 +197,9 @@ if vosk_path:
             src_file = Path(root) / filename
             suffix = src_file.suffix.lower()
             if suffix in {'.dll', '.pyd', '.so'}:
-                binaries.append((str(src_file), str(data_target)))
+                binaries.append((str(src_file), _collect_dest(data_target)))
             else:
-                datas.append((str(src_file), str(data_target)))
+                datas.append((str(src_file), _collect_dest(data_target)))
 else:
     print('[WARNING] Vosk not found in any candidate path.')
     print(f'[WARNING] Checked locations: {unique_roots}')

@@ -7,6 +7,7 @@ import logging
 import os
 import argparse
 import asyncio
+import io
 
 import win32con
 import win32gui
@@ -32,6 +33,17 @@ from src.game_wiki_tooltip.core.i18n import init_translations, t
 MOD_CONTROL = 0x0002
 VK_X = 0x58
 HOTKEY_ID = 1
+
+# Configure standard streams to prefer UTF-8 (avoids GBK encoding issues on Windows consoles)
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    else:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 # Configure logging
 logging.basicConfig(
