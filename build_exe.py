@@ -407,8 +407,15 @@ exe = EXE(
         return False
     
     # Check if uninstaller was built successfully
-    uninstaller_exe = Path(temp_dist) / "GuidorUninstaller.exe"
-    if not uninstaller_exe.exists():
+    candidate_paths = [
+        Path(temp_dist) / "GuidorUninstaller.exe",
+        Path(temp_dist) / "Uninstall.exe",
+        Path(temp_dist) / "GuidorUninstaller" / "GuidorUninstaller.exe",
+        Path(temp_dist) / "Uninstall" / "Uninstall.exe",
+    ]
+    uninstaller_exe = next((path for path in candidate_paths if path.exists()), None)
+
+    if not uninstaller_exe:
         print_error("Uninstaller exe not found after build")
         return False
     
