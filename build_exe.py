@@ -416,8 +416,14 @@ exe = EXE(
     uninstaller_exe = next((path for path in candidate_paths if path.exists()), None)
 
     if not uninstaller_exe:
-        print_error("Uninstaller exe not found after build")
-        return False
+        exe_candidates = list(Path(temp_dist).rglob("*.exe")) if Path(temp_dist).exists() else []
+        if exe_candidates:
+            uninstaller_exe = exe_candidates[0]
+        else:
+            print_error("Uninstaller exe not found after build")
+            print_status(f"Contents of {temp_dist}: {list(Path(temp_dist).iterdir()) if Path(temp_dist).exists() else 'directory missing'}")
+            print_status(f"PyInstaller output:\n{output}")
+            return False
     
     # Copy uninstaller to the output directory
     output_path = Path(output_dir)
