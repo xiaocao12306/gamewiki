@@ -169,13 +169,18 @@ if vosk_path:
     print(f"[INFO] Found Vosk at: {vosk_path}")
     for root, _, files in os.walk(vosk_path):
         rel_root = Path(root).relative_to(vosk_path)
-        target_dir = Path("_internal") / "vosk" / rel_root if str(rel_root) != "." else Path("_internal") / "vosk"
+        if str(rel_root) == '.' or str(rel_root) == '':
+            data_target = Path('_internal') / 'vosk'
+        else:
+            data_target = Path('_internal') / 'vosk' / rel_root
+
         for filename in files:
             src_file = Path(root) / filename
-            if src_file.suffix.lower() in {'.dll', '.pyd', '.so'}:
-                binaries.append((str(src_file), str(target_dir)))
+            suffix = src_file.suffix.lower()
+            if suffix in {'.dll', '.pyd', '.so'}:
+                binaries.append((str(src_file), str(data_target)))
             else:
-                datas.append((str(src_file), str(target_dir)))
+                datas.append((str(src_file), str(data_target)))
 else:
     print('[WARNING] Vosk not found in any candidate path.')
     print(f'[WARNING] Checked locations: {unique_roots}')
