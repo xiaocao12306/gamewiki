@@ -94,6 +94,9 @@ datas = [
     # Note: WebView2 SDK files no longer needed with WinRT implementation
 ]
 
+# Collect binary files (will be populated later)
+binaries = []
+
 # Add WebView2 Core DLL for WinRT
 import site
 webview2_dll_found = False
@@ -176,9 +179,6 @@ if vosk_path:
 else:
     print('[WARNING] Vosk not found in any candidate path.')
     print(f'[WARNING] Checked locations: {unique_roots}')
-
-# Collect binary files
-binaries = []
 
 # Add comprehensive Windows runtime libraries for PyQt6 compatibility
 try:
