@@ -118,30 +118,61 @@ if not webview2_dll_found:
 
 # Add Vosk library files and models
 # Note: site is already imported above
-site_packages = site.getsitepackages()[0] if site.getsitepackages() else None
-if not site_packages:
-    # Try to find venv site-packages
-    import sysconfig
-    site_packages = sysconfig.get_paths()["purelib"]
+import sysconfig
 
-vosk_path = Path(site_packages) / "vosk"
-if not vosk_path.exists():
-    # Try venv path
-    vosk_path = Path(".venv") / "Lib" / "site-packages" / "vosk"
+candidate_roots: list[str] = []
 
-if vosk_path.exists():
+try:
+    candidate_roots.extend(site.getsitepackages())
+except Exception:
+    pass
+
+try:
+    user_site = site.getusersitepackages()
+    if user_site:
+        candidate_roots.append(user_site)
+except Exception:
+    pass
+
+try:
+    candidate_roots.append(sysconfig.get_paths()["purelib"])
+except Exception:
+    pass
+
+for path_entry in sys.path:
+    if not path_entry:
+        continue
+    path_obj = Path(path_entry)
+    if path_obj.exists():
+        candidate_roots.append(str(path_obj))
+
+candidate_roots.append(str(Path(".venv") / "Lib" / "site-packages"))
+
+seen_roots: set[str] = set()
+unique_roots: list[str] = []
+for root in candidate_roots:
+    if root and root not in seen_roots:
+        unique_roots.append(root)
+        seen_roots.add(root)
+
+vosk_path = None
+for root in unique_roots:
+    candidate = Path(root) / "vosk"
+    if candidate.exists():
+        vosk_path = candidate
+        break
+
+if vosk_path:
     print(f"[INFO] Found Vosk at: {vosk_path}")
     for root, _, files in os.walk(vosk_path):
         rel_root = Path(root).relative_to(vosk_path)
-        if str(rel_root) == ".":
-            target_dir = Path("_internal") / "vosk"
-        else:
-            target_dir = Path("_internal") / "vosk" / rel_root
+        target_dir = Path("_internal") / "vosk" / rel_root if str(rel_root) != "." else Path("_internal") / "vosk"
         for filename in files:
             src_file = Path(root) / filename
             datas.append((str(src_file), str(target_dir)))
 else:
-    print(f"[WARNING] Vosk not found at expected location: {vosk_path}")
+    print('[WARNING] Vosk not found in any candidate path.')
+    print(f'[WARNING] Checked locations: {unique_roots}')
 
 # Collect binary files
 binaries = []
