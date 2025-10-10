@@ -249,7 +249,6 @@ exclude_patterns = [
     '*.pyc',       # Python bytecode files
     '__pycache__', # Python cache directories
     '*.pyo',       # Python optimized bytecode
-    '*.pyd',       # Python extension modules (will be handled separately)
     'data/**/*',   # Exclude entire data folder (knowledge chunks, prompts)
     '*.log',       # Log files
     '*.tmp',       # Temporary files
