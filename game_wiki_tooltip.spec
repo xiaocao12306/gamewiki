@@ -3,6 +3,8 @@ import os
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import Tree
+
 # Get project root directory - use current working directory
 project_root = Path.cwd()
 src_path = project_root / "src"
@@ -131,9 +133,9 @@ if not vosk_path.exists():
 
 if vosk_path.exists():
     print(f"[INFO] Found Vosk at: {vosk_path}")
-    # Add Vosk DLL files to the _internal/vosk directory to match the path vosk expects
-    # This fixes the "FileNotFoundError: _internal\vosk" error
-    datas.append((str(vosk_path), "_internal/vosk"))
+    # Add the entire Vosk package tree under _internal/vosk so DLL lookup succeeds
+    vosk_tree = Tree(str(vosk_path), prefix="_internal/vosk")
+    datas += list(vosk_tree)
 else:
     print(f"[WARNING] Vosk not found at expected location: {vosk_path}")
 
