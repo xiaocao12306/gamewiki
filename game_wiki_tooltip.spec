@@ -169,7 +169,10 @@ if vosk_path:
         target_dir = Path("_internal") / "vosk" / rel_root if str(rel_root) != "." else Path("_internal") / "vosk"
         for filename in files:
             src_file = Path(root) / filename
-            datas.append((str(src_file), str(target_dir)))
+            if src_file.suffix.lower() in {'.dll', '.pyd', '.so'}:
+                binaries.append((str(src_file), str(target_dir)))
+            else:
+                datas.append((str(src_file), str(target_dir)))
 else:
     print('[WARNING] Vosk not found in any candidate path.')
     print(f'[WARNING] Checked locations: {unique_roots}')
