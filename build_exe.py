@@ -467,7 +467,7 @@ def build_exe(mode='onedir'):
     
     # 检查生成的文件
     if mode == 'onedir':
-        pyinstaller_dir = Path(final_output_dir) / "GameWikiAssistant"
+        pyinstaller_dir = Path(final_output_dir) / "GuidorAssistant"
         target_dir = Path(final_output_dir) / "GuidorAssistant"
 
         if pyinstaller_dir.exists():
@@ -477,7 +477,7 @@ def build_exe(mode='onedir'):
 
         exe_dir = target_dir
         exe_path = exe_dir / "GuidorAssistant.exe"
-        alt_exe_path = exe_dir / "GameWikiAssistant.exe"
+        alt_exe_path = exe_dir / "GuidorAssistant.exe"
 
         if not exe_path.exists() and alt_exe_path.exists():
             alt_exe_path.rename(exe_path)
@@ -488,7 +488,7 @@ def build_exe(mode='onedir'):
             print(f"Total size: {total_size / 1024 / 1024:.1f} MB")
             return True
     else:
-        pyinstaller_exe = Path(final_output_dir) / "GameWikiAssistant.exe"
+        pyinstaller_exe = Path(final_output_dir) / "GuidorAssistant.exe"
         target_exe = Path(final_output_dir) / "GuidorAssistant.exe"
 
         if pyinstaller_exe.exists():
