@@ -454,19 +454,38 @@ def build_exe(mode='onedir'):
     
     # 检查生成的文件
     if mode == 'onedir':
-        exe_dir = Path(final_output_dir) / "GuidorAssistant"
+        pyinstaller_dir = Path(final_output_dir) / "GameWikiAssistant"
+        target_dir = Path(final_output_dir) / "GuidorAssistant"
+
+        if pyinstaller_dir.exists():
+            if target_dir.exists():
+                shutil.rmtree(target_dir, ignore_errors=True)
+            pyinstaller_dir.rename(target_dir)
+
+        exe_dir = target_dir
         exe_path = exe_dir / "GuidorAssistant.exe"
+        alt_exe_path = exe_dir / "GameWikiAssistant.exe"
+
+        if not exe_path.exists() and alt_exe_path.exists():
+            alt_exe_path.rename(exe_path)
+
         if exe_dir.exists() and exe_path.exists():
             print_success(f"Build successful! Output directory: {exe_dir.absolute()}")
-            # 计算总目录大小
             total_size = sum(f.stat().st_size for f in exe_dir.rglob('*') if f.is_file())
             print(f"Total size: {total_size / 1024 / 1024:.1f} MB")
             return True
     else:
-        exe_path = Path(final_output_dir) / "GuidorAssistant.exe"
-        if exe_path.exists():
-            print_success(f"Build successful! exe file location: {exe_path.absolute()}")
-            print(f"File size: {exe_path.stat().st_size / 1024 / 1024:.1f} MB")
+        pyinstaller_exe = Path(final_output_dir) / "GameWikiAssistant.exe"
+        target_exe = Path(final_output_dir) / "GuidorAssistant.exe"
+
+        if pyinstaller_exe.exists():
+            if target_exe.exists():
+                target_exe.unlink()
+            pyinstaller_exe.rename(target_exe)
+
+        if target_exe.exists():
+            print_success(f"Build successful! exe file location: {target_exe.absolute()}")
+            print(f"File size: {target_exe.stat().st_size / 1024 / 1024:.1f} MB")
             return True
     
     print_error("Build completed but output not found")
