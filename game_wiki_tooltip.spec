@@ -357,7 +357,7 @@ if build_mode == "onefile":
         upx=False,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=True,
+        console=False,
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,
@@ -380,7 +380,7 @@ else:
         upx=False,  # Disable UPX for onedir mode (doesn't help much)
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=True,  # Hide console window for better user experience
+        console=False,  # Hide console window for better user experience
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,
