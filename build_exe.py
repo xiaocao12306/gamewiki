@@ -29,13 +29,13 @@ def print_success(message):
 
 
 SETTINGS_FILE = Path("src/game_wiki_tooltip/assets/settings.json")
-PROD_BACKEND_BASE_URL = "https://admin.test.guidor.vip"
-
+PROD_BACKEND_BASE_URL = "https://admin.guidor.vip"
+TEST_BACKEND_BASE_URL = "https://admin.test.guidor.vip"
 
 def apply_environment_settings(env: str) -> str | None:
     """Adjust settings.json based on target environment. Returns original content when modified."""
 
-    if env != "prod":
+    if env != "prod" and env != "test":
         return None
 
     if not SETTINGS_FILE.exists():
@@ -51,6 +51,8 @@ def apply_environment_settings(env: str) -> str | None:
 
     backend = data.get("backend", {})
     backend["base_url"] = PROD_BACKEND_BASE_URL
+    if env == "test":
+        backend["base_url"] = TEST_BACKEND_BASE_URL
     data["backend"] = backend
 
     try:
