@@ -97,12 +97,11 @@ class QuotaManager:
         }
     ],
     "layout": {
-        "theme": "light",
-        "illustration": null
+        "theme": "light"
     },
     "restrictions": {
-        "disable_chat_after_trigger": false,
-        "show_reminder_on_close": false
+        "disable_chat_after_trigger": False,
+        "show_reminder_on_close": False
     }
     }
 
@@ -141,12 +140,11 @@ class QuotaManager:
     }
   ],
   "layout": {
-    "theme": "light",
-    "illustration": null
+    "theme": "light"
   },
   "restrictions": {
-    "disable_chat_after_trigger": false,
-    "show_reminder_on_close": false
+    "disable_chat_after_trigger": False,
+    "show_reminder_on_close": False
   }
     }
 
