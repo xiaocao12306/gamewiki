@@ -1130,66 +1130,89 @@ class RAGIntegration(QObject):
         return None
             
     async def prepare_wiki_search_async(self, query: str, game_context: str = None) -> tuple[str, str]:
-        """Prepare wiki search, return search URL and initial title, real URL will be obtained through JavaScript callback"""
+        """准备维基搜索，返回搜索URL和初始标题，真实URL将通过JavaScript回调获取"""
         try:
             from urllib.parse import quote, urlparse
             
-            # Use the incoming game context, if not get the current game window title
-            game_title = game_context or get_selected_game_title()
-            logger.info(f"🎮 Current game window title: {game_title}")
+            normalized_query = (query or "").strip().lower()
+            if normalized_query:
+                guidor_keywords = ["guidor", "guidor ai", "guidor助手", "guidor ai助手"]
+                server_keywords = [
+                    "游戏服务器",
+                    "游戏服",
+                    "联机",
+                    "开黑",
+                    "租服",
+                    "开服",
+                    "服务器租赁",
+                ]
+
+                if any(keyword in normalized_query for keyword in guidor_keywords):
+                    logger.info("🔗 Detected Guidor brand search, redirecting to official site")
+                    self._pending_wiki_update = None
+                    return "https://guidor.vip", "Guidor 官网"
+
+                if any(keyword in normalized_query for keyword in server_keywords):
+                    logger.info("🔗 Detected game server search intent, redirecting to RealmGame")
+                    self._pending_wiki_update = None
+                    return "https://realmgame.cn", "RealmGame 游戏服务器"
             
-            # Find game configuration - use instance variable
+            # 使用传入的游戏上下文，如果没有则获取当前游戏窗口标题
+            game_title = game_context or get_selected_game_title()
+            logger.info(f"🎮 当前游戏窗口标题: {game_title}")
+            
+            # 查找游戏配置 - 使用实例变量
             game_config = self.game_cfg_mgr.for_title(game_title)
             
             if not game_config:
-                logger.warning(f"Game configuration not found: {game_title}")
-                # Fallback to general search
+                logger.warning(f"未找到游戏配置: {game_title}")
+                # 回退到通用搜索
                 search_query = f"{game_title} {query} wiki"
                 ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
-                # Store wiki information to be updated (marked as DuckDuckGo search)
+                # 存储待更新的维基信息（标记为DuckDuckGo搜索）
                 self._pending_wiki_update = {
                     "initial_url": ddg_url,
                     "query": query,
-                    "title": f"Search: {query}",
+                    "title": f"搜索: {query}",
                     "status": "searching"
                 }
             else:
-                logger.info(f"Game configuration found: {game_config}")
+                logger.info(f"找到游戏配置: {game_config}")
                 
-                # Get base URL
+                # 获取基础URL
                 base_url = game_config.BaseUrl
-                logger.info(f"Game base URL: {base_url}")
+                logger.info(f"游戏基础URL: {base_url}")
                 
-                # Extract domain
+                # 提取域名
                 if base_url.startswith(('http://', 'https://')):
                     domain = urlparse(base_url).hostname or ''
                 else:
-                    # If there is no protocol prefix, use base_url as domain
-                    domain = base_url.split('/')[0]  # Remove path part
+                    # 如果没有协议前缀，使用base_url作为域名
+                    domain = base_url.split('/')[0]  # 移除路径部分
                 
-                logger.info(f"Extracted domain: {domain}")
+                logger.info(f"提取的域名: {domain}")
                 
-                # Build correct search query: site:domain user query
+                # 构建正确的搜索查询: site:域名 用户查询
                 search_query = f"site:{domain} {query}"
                 ddg_url = f"https://duckduckgo.com/?q=!ducky+{quote(search_query)}"
                 
-                logger.info(f"Built search query: {search_query}")
+                logger.info(f"构建的搜索查询: {search_query}")
                 logger.info(f"DuckDuckGo URL: {ddg_url}")
                 
-                # Store wiki information to be updated
+                # 存储待更新的维基信息
                 self._pending_wiki_update = {
                     "initial_url": ddg_url,
                     "query": query,
-                    "title": f"Search: {query}",
+                    "title": f"搜索: {query}",
                     "domain": domain,
                     "status": "searching"
                 }
             
-            # Return search URL and temporary title, real URL will be updated through JavaScript callback
-            return ddg_url, f"Search: {query}"
+            # 返回搜索URL和临时标题，真实URL将通过JavaScript回调更新
+            return ddg_url, f"搜索: {query}"
                     
         except Exception as e:
-            logger.error(f"Wiki search preparation failed: {e}")
+            logger.error(f"维基搜索准备失败: {e}")
             return "", query
             
     def on_wiki_found(self, real_url: str, real_title: str = None):
