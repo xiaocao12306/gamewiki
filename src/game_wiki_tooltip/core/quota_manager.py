@@ -65,71 +65,89 @@ class QuotaManager:
     DEFAULT_PAYWALL_CONFIG: Dict[str, Any] = {
         "plan_id": "points_default",
         "experiment": {
-            "cohort_seed": "local-default",
-            "allocation": [
-                {"variant": "points", "weight": 70},
-                {"variant": "subscription", "weight": 30},
-            ],
-            "fallback_variant": "points",
+        "cohort_seed": "2025-10-points",
+        "allocation": [
+        {
+            "variant": "points",
+            "weight": 80
         },
-        "quota": {
-            "total_limit": 20,
-            "daily_limit": None,
-            "cooldown_minutes": 30,
-            "grace_messages": 0,
-        },
-        "copy": {
-            "title": "AI 使用次数已达上限",
-            "body": "升级套餐或稍后重试，以继续使用 AI 服务。",
-            "highlight": "获取更多积分即可立即解锁",
-        },
-        "cta": [
-            {
-                "label": "了解积分套餐",
-                "action": "open_url",
-                "payload": "https://example.com/points",
-                "value": "points_pack_default",
-            }
+        {
+            "variant": "subscription",
+            "weight": 20
+        }
         ],
-        "restrictions": {
-            "disable_chat_after_trigger": True,
-            "show_reminder_on_close": True,
-        },
-        "layout": {
-            "theme": "light",
-            "illustration": None,
-        },
+        "fallback_variant": "points"
+    },
+    "quota": {
+        "total_limit": 15,
+        "daily_limit": 10,
+        "cooldown_minutes": 1,
+        "grace_messages": 0
+    },
+    "copy": {
+        "title": "AI 算力不足",
+        "body": "购买点数包，继续使用智能问答。"
+    },
+    "cta": [
+        {
+        "label": "购买 1000 点 (预计 ¥6)",
+        "action": "emit_event",
+        "payload": "show_comming",
+        "value": "points_pack_1000"
+        }
+    ],
+    "layout": {
+        "theme": "light",
+        "illustration": null
+    },
+    "restrictions": {
+        "disable_chat_after_trigger": false,
+        "show_reminder_on_close": false
+    }
     }
 
     DEFAULT_SUBSCRIPTION_CONFIG: Dict[str, Any] = {
         "plan_id": "subscription_default",
-        "quota": {
-            "total_limit": 20,
-            "daily_limit": None,
-            "cooldown_minutes": 30,
-            "grace_messages": 0,
-        },
-        "copy": {
-            "title": "解锁完整订阅权益",
-            "body": "订阅即享无限次 AI 指导、专属攻略与同步更新。",
-            "highlight": "立即订阅，体验旗舰功能",
-        },
-        "cta": [
-            {
-                "label": "订阅月度计划（¥29）",
-                "action": "open_url",
-                "payload": "https://example.com/subscription/monthly",
-                "value": "subscription_monthly",
-            }
-        ],
-        "restrictions": {
-            "disable_chat_after_trigger": True,
-            "show_reminder_on_close": True,
-        },
-        "layout": {
-            "theme": "light",
-            "illustration": None,
-        },
+        "experiment": {
+    "cohort_seed": "2025-10-subscription",
+    "allocation": [
+      {
+        "variant": "subscription",
+        "weight": 80
+      },
+      {
+        "variant": "points",
+        "weight": 20
+      }
+    ],
+    "fallback_variant": "subscription"
+  },
+  "quota": {
+    "total_limit": 15,
+    "daily_limit": 10,
+    "cooldown_minutes": 1,
+    "grace_messages": 0
+  },
+  "copy": {
+    "title": "升级到专业版",
+    "body": "解锁无限次 AI 问答与更多高级功能。"
+  },
+  "cta": [
+    {
+      "label": "月度订阅 (预计 ¥15/月)",
+      "action": "emit_event",
+      "payload": "show_comming",
+      "value": "subscription_monthly"
+    }
+  ],
+  "layout": {
+    "theme": "light",
+    "illustration": null
+  },
+  "restrictions": {
+    "disable_chat_after_trigger": false,
+    "show_reminder_on_close": false
+  }
     }
 
     def __init__(self, settings_manager: SettingsManager, backend_client: BackendClient) -> None:

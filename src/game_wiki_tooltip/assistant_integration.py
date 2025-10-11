@@ -292,17 +292,20 @@ class RAGIntegration(QObject):
         backend_client: BackendClient,
         analytics_mgr=None,
         limited_mode: bool = False,
+        session_id: Optional[str] = None,
     ):
         super().__init__()
         self.settings_manager = settings_manager
         self.backend_client = backend_client
         self.analytics_mgr = analytics_mgr
         self.limited_mode = limited_mode
+        self.session_id = session_id or uuid.uuid4().hex
         self.rag_engine = None
         self.query_processor = None
         self._pending_wiki_update = None  # Store wiki link information to be updated
         self._llm_config = None  # Store configured LLM configuration
         self._lightweight_rag_cache = {}
+        self.quota_manager = None
         
         # RAG initialization state tracking
         self._rag_initializing = False  # Flag to prevent duplicate initializations
@@ -342,11 +345,7 @@ class RAGIntegration(QObject):
         # 标记当前窗口信息 & 映射游戏识别
         current_window = base.get("game_window")
 
-        detected_game = None
-        try:
-            detected_game = getattr(self.rag_integration, "_current_rag_game", None)
-        except Exception:  # noqa: BLE001
-            detected_game = None
+        detected_game = getattr(self, "_current_rag_game", None)
 
         if not detected_game and current_window:
             try:
@@ -2139,11 +2138,13 @@ class IntegratedAssistantController(AssistantController):
         self.limited_mode = limited_mode
         self.backend_client = backend_client
         self.analytics_mgr = analytics_mgr
+        self.session_id = uuid.uuid4().hex
         self.rag_integration = RAGIntegration(
             settings_manager,
             backend_client,
             analytics_mgr,
             limited_mode=limited_mode,
+            session_id=self.session_id,
         )
         self._setup_connections()
         self._current_worker = None
@@ -2163,7 +2164,6 @@ class IntegratedAssistantController(AssistantController):
             logger.info("🚨 运行在云端代理模式：Wiki 搜索 + 远端聊天")
         else:
             logger.info("✅ 运行在本地增强模式：支持 Wiki 搜索与本地 RAG 功能")
-        self.session_id = uuid.uuid4().hex
         self.current_game_id: Optional[str] = None
         self._active_query: Optional[Dict[str, Any]] = None
         self._last_assistant_open_source: str = "unknown"
@@ -2174,8 +2174,10 @@ class IntegratedAssistantController(AssistantController):
         try:
             self.quota_manager = QuotaManager(settings_manager, backend_client)
             logger.info("QuotaManager 初始化完成")
+            self.rag_integration.quota_manager = self.quota_manager
         except Exception as e:
             self.quota_manager = None
+            self.rag_integration.quota_manager = None
             logger.warning(f"QuotaManager 初始化失败: {e}")
             # Don't preload AI modules immediately, wait for first window display
             self._ai_preload_scheduled = False

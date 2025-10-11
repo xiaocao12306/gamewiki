@@ -51,27 +51,27 @@
     },
     "shortcuts": [
         {
-            "name": "Google",
-            "url": "https://www.google.com/",
-            "icon": "assets/icons/google.ico",
+            "name": "Bing",
+            "url": "https://www.bing.com/",
+            "icon": "assets/icons/bing.ico",
             "visible": true
         },
         {
-            "name": "YouTube",
-            "url": "https://www.youtube.com/",
-            "icon": "assets/icons/youtube.png",
+            "name": "饥荒 Wiki",
+            "url": "https://dontstarve.huijiwiki.com/wiki/%E9%A6%96%E9%A1%B5",
+            "icon": "assets/icons/dstwiki.ico",
             "visible": true
         },
         {
-            "name": "Instagram",
-            "url": "https://www.instagram.com/",
-            "icon": "assets/icons/instagram.png",
+            "name": "MC百科",
+            "url": "https://www.mcmod.cn/",
+            "icon": "assets/icons/mcmod.ico",
             "visible": true
         },
         {
-            "name": "Reddit",
-            "url": "https://www.reddit.com/",
-            "icon": "assets/icons/reddit.ico",
+            "name": "贴吧",
+            "url": "https://tieba.baidu.com/",
+            "icon": "assets/icons/baidu.ico",
             "visible": true
         },
         {

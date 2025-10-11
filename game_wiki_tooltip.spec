@@ -10,6 +10,11 @@ src_path = project_root / "src"
 # Add source code path to sys.path
 sys.path.insert(0, str(src_path))
 
+# Determine build mode (default to onedir for backwards compatibility)
+build_mode = os.environ.get("GUIDOR_BUILD_MODE", "onedir").lower()
+if build_mode not in {"onedir", "onefile"}:
+    build_mode = "onedir"
+
 # Collect hidden imports
 hiddenimports = [
     # PyQt6 related
@@ -337,38 +342,63 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
-# OneDir mode for faster startup (no extraction needed)
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],  # Empty list for onedir mode
-    exclude_binaries=True,  # Important for onedir mode
-    name='GameWikiAssistant',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=False,  # Disable UPX for onedir mode (doesn't help much)
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,  # Hide console window for better user experience
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=str(src_path / "game_wiki_tooltip" / "assets" / "app.ico"),
-    version_file=None,
-    manifest='GameWikiAssistant.manifest',  # Add manifest for DPI awareness and compatibility
-)
+if build_mode == "onefile":
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name='GameWikiAssistant',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=True,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=str(src_path / "game_wiki_tooltip" / "assets" / "app.ico"),
+        version_file=None,
+        manifest='GameWikiAssistant.manifest',
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],  # Empty list for onedir mode
+        exclude_binaries=True,  # Important for onedir mode
+        name='GameWikiAssistant',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,  # Disable UPX for onedir mode (doesn't help much)
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=True,  # Hide console window for better user experience
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=str(src_path / "game_wiki_tooltip" / "assets" / "app.ico"),
+        version_file=None,
+        manifest='GameWikiAssistant.manifest',  # Add manifest for DPI awareness and compatibility
+    )
 
-# Create the collection for onedir mode
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=False,  # Disable UPX for DLLs
-    upx_exclude=[],
-    name='GameWikiAssistant',
-) 
+    # Create the collection for onedir mode
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=False,  # Disable UPX for DLLs
+        upx_exclude=[],
+        name='GameWikiAssistant',
+    ) 

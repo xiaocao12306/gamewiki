@@ -74,7 +74,7 @@ def restore_settings(original_text: str | None) -> None:
     except Exception as exc:  # noqa: BLE001
         print_error(f"Failed to restore settings.json: {exc}")
 
-def run_command(command, cwd=None):
+def run_command(command, cwd=None, env=None):
     """Execute command and return result"""
     import locale
     
@@ -90,7 +90,8 @@ def run_command(command, cwd=None):
             capture_output=True,
             text=True,
             encoding=system_encoding,
-            errors='replace'  # Handle encoding errors with replacement characters
+            errors='replace',  # Handle encoding errors with replacement characters
+            env=env,
         )
         return True, result.stdout
     except subprocess.CalledProcessError as e:
@@ -109,7 +110,8 @@ def run_command(command, cwd=None):
                 capture_output=True,
                 text=True,
                 encoding='utf-8',
-                errors='replace'
+                errors='replace',
+                env=env,
             )
             return True, result.stdout
         except subprocess.CalledProcessError as e2:
@@ -461,7 +463,12 @@ def build_exe(mode='onedir'):
     spec_file = "game_wiki_tooltip.spec"
     
     # 修改 PyInstaller 命令，直接输出到最终目录
-    success, output = run_command(f"pyinstaller {spec_file} --clean --noconfirm --distpath {final_output_dir}")
+    command_env = os.environ.copy()
+    command_env["GUIDOR_BUILD_MODE"] = mode
+    success, output = run_command(
+        f"pyinstaller {spec_file} --clean --noconfirm --distpath {final_output_dir}",
+        env=command_env,
+    )
 
     if not success:
         print_error(f"Build failed: {output}")

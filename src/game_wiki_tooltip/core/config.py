@@ -123,7 +123,7 @@ class AnalyticsConfig:
 @dataclass
 class AppSettings:
     """Application settings"""
-    language: str = "en"
+    language: str = "zh"
     hotkey: HotkeyConfig = field(default_factory=HotkeyConfig)
     window_geometry: WindowGeometryConfig = field(default_factory=WindowGeometryConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
