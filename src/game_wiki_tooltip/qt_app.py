@@ -893,11 +893,15 @@ class GameWikiApp(QObject):
             
             # Stop any running workers
             if hasattr(self.assistant_ctrl, '_current_worker') and self.assistant_ctrl._current_worker:
+                worker = self.assistant_ctrl._current_worker
                 try:
                     logger.info("Stopping current worker thread...")
-                    if self.assistant_ctrl._current_worker.isRunning():
-                        self.assistant_ctrl._current_worker.stop()
-                        self.assistant_ctrl._current_worker.wait()
+                    if worker.isRunning():
+                        worker.stop()
+                        if not worker.wait(3000):
+                            logger.warning("Worker thread did not exit within timeout, forcing terminate()")
+                            worker.terminate()
+                            worker.wait(1000)
                     logger.info("Worker thread stopped")
                 except Exception as e:
                     logger.warning(f"Error stopping worker thread: {e}")
