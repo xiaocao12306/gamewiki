@@ -546,6 +546,10 @@ class EnhancedRagQuery:
             print(f"⚠️ [VECTOR-DEBUG] Vector store or metadata not initialized")
             logger.warning("Vector store or metadata not initialized")
             return []
+        if not self.processor:
+            print("⚠️ [VECTOR-DEBUG] Embedding processor not initialized, skip FAISS search")
+            logger.warning("Embedding processor not initialized, skip FAISS search")
+            return []
         
         try:
             # Get query vector - use query directly without duplication
@@ -666,6 +670,10 @@ class EnhancedRagQuery:
         if not self.vector_store or not QDRANT_AVAILABLE:
             print(f"⚠️ [VECTOR-DEBUG] Qdrant vector store not initialized or not available")
             logger.warning("Qdrant vector store not initialized or not available")
+            return []
+        if not self.processor:
+            print("⚠️ [VECTOR-DEBUG] Embedding processor not initialized, skip Qdrant search")
+            logger.warning("Embedding processor not initialized, skip Qdrant search")
             return []
         
         try:
