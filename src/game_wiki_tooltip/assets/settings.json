@@ -89,8 +89,8 @@
     ],
     "auto_send_voice_input": false,
     "backend": {
-        "base_url": "http://100.108.63.97:8000",
-        "api_key": "TkFW7YR6GhcC2OJHSzAY6FJoTRgQJDcY",
+        "base_url": "",
+        "api_key": "",
         "config_endpoint": "/api/v1/config",
         "events_endpoint": "/api/v1/events",
         "timeout": 10.0
