@@ -36,23 +36,11 @@ MOD_CONTROL = 0x0002
 VK_X = 0x58
 HOTKEY_ID = 1
 
-# Configure standard streams to prefer UTF-8 (avoids GBK encoding issues on Windows consoles)
-try:
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    else:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-except Exception:
-    pass
-
 # Configure logging (file + optional console)
 log_dir = APPDATA_DIR / "logs"
 try:
     log_dir.mkdir(parents=True, exist_ok=True)
 except Exception:
-    # 目录创建失败时退回到临时目录
     fallback_dir = Path(os.getenv("TEMP", ".")) / "GuidorLogs"
     fallback_dir.mkdir(parents=True, exist_ok=True)
     log_dir = fallback_dir
@@ -75,13 +63,52 @@ file_handler = RotatingFileHandler(
 file_handler.setFormatter(log_formatter)
 handlers.append(file_handler)
 
-# 在开发环境或者设置 GUIDOR_ENABLE_CONSOLE_LOG=1 时仍输出到控制台
-if os.getenv("GUIDOR_ENABLE_CONSOLE_LOG", "1") != "0":
+console_enabled = os.getenv("GUIDOR_ENABLE_CONSOLE_LOG", "1") != "0"
+if console_enabled:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
     handlers.append(console_handler)
 
-logging.basicConfig(level=logging.INFO, handlers=handlers)
+logging.basicConfig(level=logging.INFO, handlers=handlers, force=True)
+
+
+class _LoggerStream(io.TextIOBase):
+    """Redirect print output into logging while optionally mirroring original stream."""
+
+    def __init__(self, level: int, mirror=None, logger_name: str = "PRINT"):
+        super().__init__()
+        self.level = level
+        self.mirror = mirror if hasattr(mirror, "write") else None
+        self.logger = logging.getLogger(logger_name)
+
+    def write(self, message: str) -> int:
+        if not message:
+            return 0
+        if self.mirror:
+            try:
+                self.mirror.write(message)
+            except Exception:
+                self.mirror = None
+        text = message.rstrip()
+        if text:
+            self.logger.log(self.level, text)
+        return len(message)
+
+    def flush(self) -> None:
+        if self.mirror:
+            try:
+                self.mirror.flush()
+            except Exception:
+                self.mirror = None
+
+
+if os.getenv("GUIDOR_CAPTURE_PRINT", "1") != "0":
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    mirror_stdout = original_stdout if not console_enabled else None
+    mirror_stderr = original_stderr if not console_enabled else None
+    sys.stdout = _LoggerStream(logging.INFO, mirror_stdout)
+    sys.stderr = _LoggerStream(logging.ERROR, mirror_stderr)
 
 # 抑制markdown库的重复调试信息
 try:
