@@ -36,6 +36,9 @@ MOD_CONTROL = 0x0002
 VK_X = 0x58
 HOTKEY_ID = 1
 
+ORIGINAL_STDOUT = sys.stdout
+ORIGINAL_STDERR = sys.stderr
+
 # Configure logging (file + optional console)
 log_dir = APPDATA_DIR / "logs"
 try:
@@ -63,13 +66,16 @@ file_handler = RotatingFileHandler(
 file_handler.setFormatter(log_formatter)
 handlers.append(file_handler)
 
-console_enabled = os.getenv("GUIDOR_ENABLE_CONSOLE_LOG", "1") != "0"
+console_env = os.getenv("GUIDOR_ENABLE_CONSOLE_LOG", "0")
+has_console_stream = getattr(ORIGINAL_STDERR, "write", None) is not None
+console_enabled = console_env == "1" and has_console_stream
 if console_enabled:
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(ORIGINAL_STDERR)
     console_handler.setFormatter(log_formatter)
     handlers.append(console_handler)
 
 logging.basicConfig(level=logging.INFO, handlers=handlers, force=True)
+logging.raiseExceptions = False
 
 
 class _LoggerStream(io.TextIOBase):
@@ -91,7 +97,14 @@ class _LoggerStream(io.TextIOBase):
                 self.mirror = None
         text = message.rstrip()
         if text:
-            self.logger.log(self.level, text)
+            try:
+                self.logger.log(self.level, text)
+            except Exception:
+                if self.mirror:
+                    try:
+                        self.mirror.write(text + "\n")
+                    except Exception:
+                        pass
         return len(message)
 
     def flush(self) -> None:
@@ -103,10 +116,8 @@ class _LoggerStream(io.TextIOBase):
 
 
 if os.getenv("GUIDOR_CAPTURE_PRINT", "1") != "0":
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
-    mirror_stdout = original_stdout if not console_enabled else None
-    mirror_stderr = original_stderr if not console_enabled else None
+    mirror_stdout = ORIGINAL_STDOUT if getattr(ORIGINAL_STDOUT, "write", None) else None
+    mirror_stderr = ORIGINAL_STDERR if getattr(ORIGINAL_STDERR, "write", None) else None
     sys.stdout = _LoggerStream(logging.INFO, mirror_stdout)
     sys.stderr = _LoggerStream(logging.ERROR, mirror_stderr)
 
