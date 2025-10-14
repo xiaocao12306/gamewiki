@@ -8,6 +8,8 @@ import os
 import argparse
 import asyncio
 import io
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 import win32con
 import win32gui
@@ -45,11 +47,41 @@ try:
 except Exception:
     pass
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+# Configure logging (file + optional console)
+log_dir = APPDATA_DIR / "logs"
+try:
+    log_dir.mkdir(parents=True, exist_ok=True)
+except Exception:
+    # 目录创建失败时退回到临时目录
+    fallback_dir = Path(os.getenv("TEMP", ".")) / "GuidorLogs"
+    fallback_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = fallback_dir
+
+log_file = log_dir / "guidor.log"
+
+log_formatter = logging.Formatter(
+    fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+handlers = []
+
+file_handler = RotatingFileHandler(
+    log_file,
+    maxBytes=5 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",
+)
+file_handler.setFormatter(log_formatter)
+handlers.append(file_handler)
+
+# 在开发环境或者设置 GUIDOR_ENABLE_CONSOLE_LOG=1 时仍输出到控制台
+if os.getenv("GUIDOR_ENABLE_CONSOLE_LOG", "1") != "0":
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    handlers.append(console_handler)
+
+logging.basicConfig(level=logging.INFO, handlers=handlers)
 
 # 抑制markdown库的重复调试信息
 try:

@@ -1,13 +1,13 @@
 """
-Enhanced RAG query interface - integrated batch embedding and vector store retrieval
+增强的RAG查询接口 - 集成批量嵌入和向量存储检索
 ============================================
 
-Features:
-1. Load pre-built vector store
-2. Perform semantic retrieval
-3. Support LLM query rewriting
-4. Hybrid search (vector + BM25)
-5. Return relevant game strategy information
+功能特性:
+1. 加载预构建的向量存储
+2. 执行语义检索
+3. 支持LLM查询重写
+4. 混合搜索（向量 + BM25）
+5. 返回相关游戏策略信息
 """
 
 import logging
@@ -21,50 +21,50 @@ import sys
 import os
 
 class VectorStoreUnavailableError(Exception):
-    """Vector store unavailable error"""
+    """向量存储不可用错误"""
     pass
 
 def get_resource_path(relative_path: str) -> Path:
     """
-    Get absolute path for resource files, compatible with development and PyInstaller packaging
+    获取资源文件的绝对路径，兼容开发和PyInstaller打包环境
     
     Args:
-        relative_path: Path relative to project root
+        relative_path: 相对于项目根目录的路径
         
     Returns:
-        Absolute path for resource files
+        资源文件的绝对路径
     """
     try:
-        # PyInstaller packaged environment
+        # PyInstaller打包环境
         base_path = Path(sys._MEIPASS)
-        # In PyInstaller environment, assets are packaged under src/game_wiki_tooltip/ path
+        # 在PyInstaller环境中，资源文件打包在src/game_wiki_tooltip/路径下
         resource_path = base_path / "src" / "game_wiki_tooltip" / relative_path
-        print(f"🔧 [RAG-DEBUG] Using PyInstaller environment: {base_path}")
-        print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
+        print(f"🔧 [RAG-DEBUG] 使用PyInstaller环境: {base_path}")
+        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
     except AttributeError:
-        # Development environment: find project root from current file location
+        # 开发环境：从当前文件位置查找项目根目录
         current_file = Path(__file__).parent  # .../ai/
-        project_root = current_file.parent.parent.parent  # Go up to project root
+        project_root = current_file.parent.parent.parent  # 向上到项目根目录
         resource_path = project_root / "src" / "game_wiki_tooltip" / relative_path
-        print(f"🔧 [RAG-DEBUG] Using development environment")
-        print(f"🔧 [RAG-DEBUG] Project root: {project_root}")
-        print(f"🔧 [RAG-DEBUG] Building resource path: {resource_path}")
+        print(f"🔧 [RAG-DEBUG] 使用开发环境")
+        print(f"🔧 [RAG-DEBUG] 项目根目录: {project_root}")
+        print(f"🔧 [RAG-DEBUG] 构建资源路径: {resource_path}")
     
     return resource_path
 
-# Import batch embedding processor
+# 导入批量嵌入处理器
 try:
     from .batch_embedding import BatchEmbeddingProcessor
     BATCH_EMBEDDING_AVAILABLE = True
 except ImportError:
     BATCH_EMBEDDING_AVAILABLE = False
-    logging.warning("Batch embedding module not available")
+    logging.warning("批量嵌入模块不可用")
 
-# Vector store support - lazy import to avoid startup crashes
+# 向量存储支持 - 延迟导入以避免启动崩溃
 FAISS_AVAILABLE = None
 
 def _check_faiss_available():
-    """Check and lazy import faiss"""
+    """检查并延迟导入faiss"""
     global FAISS_AVAILABLE
     if FAISS_AVAILABLE is None:
         try:
@@ -72,7 +72,7 @@ def _check_faiss_available():
             FAISS_AVAILABLE = True
         except ImportError:
             FAISS_AVAILABLE = False
-            logging.warning("FAISS not available")
+            logging.warning("FAISS不可用")
     return FAISS_AVAILABLE
 
 try:
@@ -80,26 +80,26 @@ try:
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
-    logging.warning("Qdrant not available")
+    logging.warning("Qdrant不可用")
 
-# Import Gemini summarizer
+# 导入Gemini摘要器
 try:
     from .gemini_summarizer import create_gemini_summarizer, GeminiSummarizer
     from .rag_config import SummarizationConfig
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    logging.warning("Gemini summarization module not available")
+    logging.warning("Gemini摘要模块不可用")
 
-# Import intent-aware reranker
+# 导入意图感知重排序器
 try:
     from .intent_aware_reranker import IntentAwareReranker
     RERANKER_AVAILABLE = True
 except ImportError:
     RERANKER_AVAILABLE = False
-    logging.warning("Intent reranking module not available")
+    logging.warning("意图重排序模块不可用")
 
-# Import hybrid retriever and BM25 error class
+# 导入混合检索器和BM25错误类
 try:
     from .hybrid_retriever import HybridSearchRetriever, VectorRetrieverAdapter
     from .enhanced_bm25_indexer import BM25UnavailableError
@@ -107,49 +107,49 @@ try:
 except ImportError as e:
     HybridSearchRetriever = None
     VectorRetrieverAdapter = None
-    BM25UnavailableError = Exception  # Fallback to base exception class
+    BM25UnavailableError = Exception  # 回退到基础异常类
     HYBRID_RETRIEVER_AVAILABLE = False
-    logging.warning(f"Hybrid retriever module not available: {e}")
+    logging.warning(f"混合检索器模块不可用: {e}")
 
-# Import configuration and query rewrite
+# 导入配置和查询重写
 from .rag_config import LLMSettings
 from .rag_config import RAGConfig, get_default_config
 
 logger = logging.getLogger(__name__)
 
-# Global cache for vector store mapping configuration
+# 向量存储映射配置的全局缓存
 _vector_mappings_cache = None
 _vector_mappings_last_modified = None
 
 def load_vector_mappings() -> Dict[str, str]:
     """
-    Load vector store mapping configuration
+    加载向量存储映射配置
     
     Returns:
-        Mapping dictionary from window title to vector store name
+        从窗口标题到向量存储名称的映射字典
     """
     global _vector_mappings_cache, _vector_mappings_last_modified
     
     try:
-        # Use get_resource_path to handle packaged environment correctly
+        # 使用get_resource_path正确处理打包环境
         mapping_file = get_resource_path("assets/vector_mappings.json")
         
-        # Check if file exists
+        # 检查文件是否存在
         if not mapping_file.exists():
-            logger.warning(f"Vector store mapping configuration file does not exist: {mapping_file}")
-            return {}  # Return empty dict instead of None
+            logger.warning(f"向量存储映射配置文件不存在: {mapping_file}")
+            return {}  # 返回空字典而不是None
         
-        # Check file modification time, implement cache mechanism
+        # 检查文件修改时间，实现缓存机制
         current_modified = mapping_file.stat().st_mtime
         if (_vector_mappings_cache is not None and 
             _vector_mappings_last_modified == current_modified):
             return _vector_mappings_cache
         
-        # Read configuration file
+        # 读取配置文件
         with open(mapping_file, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
-        # Build mapping dictionary
+        # 构建映射字典
         mappings = {}
         for mapping in config.get("mappings", []):
             vector_db_name = mapping.get("vector_db_name")
@@ -158,49 +158,49 @@ def load_vector_mappings() -> Dict[str, str]:
             for title in window_titles:
                 mappings[title.lower()] = vector_db_name
         
-        # Update cache
+        # 更新缓存
         _vector_mappings_cache = mappings
         _vector_mappings_last_modified = current_modified
         
-        logger.info(f"Successfully loaded vector store mapping configuration, containing {len(mappings)} mappings")
+        logger.info(f"成功加载向量存储映射配置，包含{len(mappings)}个映射")
         return mappings
     except Exception as e:
-        logger.error(f"Failed to load vector store mapping configuration: {e}")
-        return {}  # Return empty dict instead of None
+        logger.error(f"加载向量存储映射配置失败: {e}")
+        return {}  # 返回空字典而不是None
 
 def map_window_title_to_game_name(window_title: str) -> Optional[str]:
     """
-    Map window title to vector store file name
+    将窗口标题映射到向量存储文件名
     
     Args:
-        window_title: Window title
+        window_title: 窗口标题
         
     Returns:
-        Corresponding vector store file name (without .json extension), if not found return None
+        对应的向量存储文件名（不含.json扩展名），如果未找到则返回None
     """
-    # Convert to lowercase for matching
+    # 转换为小写进行匹配
     title_lower = window_title.lower()
     
-    # Load vector store mapping configuration
+    # 加载向量存储映射配置
     title_to_vectordb_mapping = load_vector_mappings()
     
-    # Additional safety check - though load_vector_mappings() should never return None now
+    # 额外的安全检查 - 虽然load_vector_mappings()现在应该永远不会返回None
     if not title_to_vectordb_mapping:
-        logger.warning(f"Vector mapping configuration is empty or invalid")
+        logger.warning(f"向量映射配置为空或无效")
         return None
     
-    # Try exact match
+    # 尝试精确匹配
     for title_key, vectordb_name in title_to_vectordb_mapping.items():
         if title_key in title_lower:
-            logger.info(f"Window title '{window_title}' mapped to vector store '{vectordb_name}'")
+            logger.info(f"窗口标题'{window_title}'映射到向量存储'{vectordb_name}'")
             return vectordb_name
     
-    # If no mapping found, record warning and return None
-    logger.warning(f"No mapping found for window title '{window_title}'")
+    # 如果未找到映射，记录警告并返回None
+    logger.warning(f"未找到窗口标题'{window_title}'的映射")
     return None
 
 class EnhancedRagQuery:
-    """Enhanced RAG query interface, supporting vector store retrieval and LLM query rewriting"""
+    """增强的RAG查询接口，支持向量存储检索和LLM查询重写"""
     
     def __init__(self, vector_store_path: Optional[str] = None,
                  enable_hybrid_search: bool = True,
@@ -214,18 +214,18 @@ class EnhancedRagQuery:
                  reranking_config: Optional[Dict] = None,
                  rag_config: Optional[RAGConfig] = None):
         """
-        Initialize RAG query
+        初始化RAG查询
         
         Args:
-            vector_store_path: Vector store path, if None use default path
-            enable_hybrid_search: Whether to enable hybrid search
-            hybrid_config: Hybrid search configuration
-            llm_config: LLM configuration
-            enable_query_rewrite: Whether to enable query rewriting
-            enable_summarization: Whether to enable Gemini summary
-            summarization_config: Summary configuration
-            enable_intent_reranking: Whether to enable intent-aware reranking
-            reranking_config: Reranking configuration
+            vector_store_path: 向量存储路径，如果为None则使用默认路径
+            enable_hybrid_search: 是否启用混合搜索
+            hybrid_config: 混合搜索配置
+            llm_config: LLM配置
+            enable_query_rewrite: 是否启用查询重写
+            enable_summarization: 是否启用Gemini摘要
+            summarization_config: 摘要配置
+            enable_intent_reranking: 是否启用意图感知重排序
+            reranking_config: 重排序配置
         """
         self.is_initialized = False
         self.vector_store_path = vector_store_path
@@ -240,10 +240,10 @@ class EnhancedRagQuery:
             "bm25_weight": 0.5,
             "rrf_k": 60
         }
-        # Use RAGConfig if provided, otherwise create from individual parameters
+        # 如果提供了RAGConfig则使用，否则从单独参数创建
         if rag_config:
             self.rag_config = rag_config
-            # Override individual settings from RAGConfig
+            # 从RAGConfig覆盖单独设置
             self.llm_config = rag_config.llm_settings
             self.enable_hybrid_search = rag_config.hybrid_search.enabled
             self.hybrid_config = rag_config.hybrid_search.to_dict()
@@ -253,7 +253,7 @@ class EnhancedRagQuery:
             self.reranking_config = rag_config.intent_reranking.to_dict()
             self.enable_query_rewrite = rag_config.query_processing.enable_query_rewrite
         else:
-            # Use individual parameters for backward compatibility
+            # 使用单独参数以保持向后兼容性
             self.rag_config = None
             self.llm_config = llm_config
         
@@ -261,12 +261,12 @@ class EnhancedRagQuery:
         self.enable_query_rewrite = enable_query_rewrite
         self.hybrid_retriever = None
         
-        # Summary configuration
+        # 摘要配置
         self.enable_summarization = enable_summarization and GEMINI_AVAILABLE
         self.summarization_config = summarization_config or SummarizationConfig()
         self.summarizer = None
         
-        # Intent reranking configuration
+        # 意图重排序配置
         self.enable_intent_reranking = enable_intent_reranking and RERANKER_AVAILABLE
         self.reranking_config = reranking_config or {
             "intent_weight": 0.4,
@@ -274,29 +274,29 @@ class EnhancedRagQuery:
         }
         self.reranker = None
         
-        # Initialize summarizer
+        # 初始化摘要器
         if self.enable_summarization:
             self._initialize_summarizer()
             
-        # Initialize reranker
+        # 初始化重排序器
         if self.enable_intent_reranking:
             self._initialize_reranker()
         
     async def initialize(self, game_name: Optional[str] = None):
         """
-        Initialize RAG system
+        初始化RAG系统
         
         Args:
-            game_name: Game name, used to automatically find vector store
+            game_name: 游戏名称，用于自动查找向量存储
         """
         try:
-            print(f"🔧 [RAG-DEBUG] Starting to initialize RAG system - game: {game_name}")
-            logger.info("Initializing enhanced RAG system...")
+            print(f"🔧 [RAG-DEBUG] 开始初始化RAG系统 - 游戏: {game_name}")
+            logger.info("正在初始化增强RAG系统...")
             
             if not BATCH_EMBEDDING_AVAILABLE:
                 if not self.google_api_key:
                     logger.warning(
-                        "Batch embedding unavailable 且未配置 API key，尝试离线加载向量索引"
+                        "批量嵌入不可用且未配置API密钥，尝试离线加载向量索引"
                     )
                 else:
                     error_msg = (
@@ -308,53 +308,53 @@ class EnhancedRagQuery:
                     logger.error(error_msg)
                     raise VectorStoreUnavailableError(error_msg)
             
-            # Determine vector store path
+            # 确定向量存储路径
             if self.vector_store_path is None and game_name:
-                # Automatically find vector store - use resource path function
+                # 自动查找向量存储 - 使用资源路径函数
                 vector_dir = get_resource_path("ai/vectorstore")
                 
-                print(f"🔍 [RAG-DEBUG] Finding vector store directory: {vector_dir}")
-                logger.info(f"Finding vector store directory: {vector_dir}")
+                print(f"🔍 [RAG-DEBUG] 查找向量存储目录: {vector_dir}")
+                logger.info(f"查找向量存储目录: {vector_dir}")
                 config_files = list(vector_dir.glob(f"{game_name}_vectors_config.json"))
                 
                 if config_files:
                     self.vector_store_path = str(config_files[0])
-                    print(f"✅ [RAG-DEBUG] Found vector store configuration: {self.vector_store_path}")
-                    logger.info(f"Found vector store configuration: {self.vector_store_path}")
+                    print(f"✅ [RAG-DEBUG] 找到向量存储配置: {self.vector_store_path}")
+                    logger.info(f"找到向量存储配置: {self.vector_store_path}")
                 else:
-                    error_msg = f"Vector store not found: No vector store configuration file found for game '{game_name}'\nSearch path: {vector_dir}\nSearch pattern: {game_name}_vectors_config.json"
+                    error_msg = f"未找到向量存储: 未找到游戏'{game_name}'的向量存储配置文件\n搜索路径: {vector_dir}\n搜索模式: {game_name}_vectors_config.json"
                     
-                    # List existing files for debugging
+                    # 列出现有文件用于调试
                     try:
                         existing_files = list(vector_dir.glob("*_vectors_config.json"))
                         if existing_files:
                             available_games = [f.stem.replace("_vectors_config", "") for f in existing_files]
-                            error_msg += f"\nAvailable vector stores: {', '.join(available_games)}"
+                            error_msg += f"\n可用的向量存储: {', '.join(available_games)}"
                         else:
-                            error_msg += "\nNo vector store configuration files found"
+                            error_msg += "\n未找到向量存储配置文件"
                     except Exception as e:
-                        error_msg += f"\nFailed to list existing files: {e}"
+                        error_msg += f"\n列出现有文件失败: {e}"
                     
                     print(f"❌ [RAG-DEBUG] {error_msg}")
                     logger.error(error_msg)
                     raise VectorStoreUnavailableError(error_msg)
             
             if not self.vector_store_path or not Path(self.vector_store_path).exists():
-                error_msg = f"Vector store configuration file not found: {self.vector_store_path}"
+                error_msg = f"向量存储配置文件未找到: {self.vector_store_path}"
                 logger.error(error_msg)
                 raise VectorStoreUnavailableError(error_msg)
             
-            # Load vector store
+            # 加载向量存储
             try:
                 if self.google_api_key:
                     self.processor = BatchEmbeddingProcessor(api_key=self.google_api_key)
                     self.vector_store = self.processor.load_vector_store(self.vector_store_path)
                 else:
-                    logger.info("Loading vector store in offline mode (no API key provided)")
+                    logger.info("以离线模式加载向量存储（未提供API密钥）")
                     self.processor = None
                     self.vector_store = {"metadata": None, "index_path": None}
 
-                # Load configuration and metadata
+                # 加载配置和元数据
                 with open(self.vector_store_path, 'r', encoding='utf-8') as f:
                     self.config = json.load(f)
                 if isinstance(self.vector_store, dict):
@@ -375,10 +375,10 @@ class EnhancedRagQuery:
                 
                 logger.info(f"Vector store loaded: {self.config['chunk_count']} chunks")
                 
-                # Store game name from initial parameter
+                # 存储来自初始参数的游戏名称
                 self.game_name = game_name
                 
-                # Initialize hybrid retriever
+                # 初始化混合检索器
                 if self.enable_hybrid_search:
                     self._initialize_hybrid_retriever()
                     
@@ -391,7 +391,7 @@ class EnhancedRagQuery:
             logger.info("Enhanced RAG system initialized")
             
         except VectorStoreUnavailableError:
-            # Re-throw vector store specific error
+            # 重新抛出向量存储特定错误
             self.is_initialized = False
             raise
         except Exception as e:
@@ -417,7 +417,7 @@ class EnhancedRagQuery:
             raise VectorStoreUnavailableError(error_msg)
         
         try:
-            # Check if BM25 index file exists - fix path parsing problem
+            # 检查BM25索引文件是否存在 - 修复路径解析问题
             from pathlib import Path
             bm25_index_path = self.config.get("bm25_index_path")
             if not bm25_index_path:
@@ -425,18 +425,18 @@ class EnhancedRagQuery:
                 logger.error(error_msg)
                 raise VectorStoreUnavailableError(error_msg)
             
-            # If it's a relative path, build absolute path based on resource path
+            # 如果是相对路径，基于资源路径构建绝对路径
             bm25_path = Path(bm25_index_path)
             if not bm25_path.is_absolute():
-                # Use resource path function to build path
+                # 使用资源路径函数构建路径
                 vectorstore_dir = get_resource_path("ai/vectorstore")
-                # Try to build path based on vectorstore directory
+                # 尝试基于向量存储目录构建路径
                 bm25_path = vectorstore_dir / bm25_index_path
             
-            # Create vector retriever adapter
+            # 创建向量检索器适配器
             vector_retriever = VectorRetrieverAdapter(self)
             
-            # Create hybrid retriever - read unified processing settings from configuration
+            # 创建混合检索器 - 从配置中读取统一处理设置
             enable_unified_processing = self.hybrid_config.get("enable_unified_processing", True)
             enable_query_rewrite = self.hybrid_config.get("enable_query_rewrite", self.enable_query_rewrite)
             
@@ -448,7 +448,7 @@ class EnhancedRagQuery:
                 bm25_weight=self.hybrid_config.get("bm25_weight", 0.5),
                 rrf_k=self.hybrid_config.get("rrf_k", 60),
                 llm_config=self.llm_config,
-                enable_unified_processing=enable_unified_processing,  # Read from configuration
+                enable_unified_processing=enable_unified_processing,  # 从配置中读取
                 enable_query_rewrite=enable_query_rewrite
             )
             
@@ -458,12 +458,12 @@ class EnhancedRagQuery:
                 logger.info("Hybrid retriever initialized successfully (independent processing mode, unified processing disabled)")
             
         except BM25UnavailableError as e:
-            # BM25 specific error, re-wrap as vector store error
+            # BM25特定错误，重新包装为向量存储错误
             error_msg = f"Hybrid search initialization failed: {e}"
             logger.error(error_msg)
             raise VectorStoreUnavailableError(error_msg)
         except (FileNotFoundError, RuntimeError) as e:
-            # File not found or other runtime error
+            # 文件未找到或其他运行时错误
             error_msg = f"Hybrid search initialization failed: {e}"
             logger.error(error_msg)
             raise VectorStoreUnavailableError(error_msg)
@@ -473,11 +473,11 @@ class EnhancedRagQuery:
             raise VectorStoreUnavailableError(error_msg)
     
     def _initialize_summarizer(self):
-        """Initialize Gemini summarizer"""
+        """初始化Gemini摘要器"""
         try:
             import os
             
-            # Get API key from centralized config
+            # 从集中配置获取API密钥
             api_key = self.google_api_key
             
             if not api_key:
@@ -521,7 +521,7 @@ class EnhancedRagQuery:
             self.enable_summarization = False
     
     def _initialize_reranker(self):
-        """Initialize intent-aware reranker"""
+        """初始化意图感知重排序器"""
         try:
             self.reranker = IntentAwareReranker()
             logger.info("Intent-aware reranker initialized successfully")
@@ -1023,7 +1023,7 @@ class EnhancedRagQuery:
             yield self._format_simple_answer(results)
 
     def _format_simple_answer(self, results: List[Dict[str, Any]]) -> str:
-        """Simple format answer (for fallback when summary fails)"""
+        """简单格式化答案（摘要失败时的回退方案）"""
         if not results:
             return "No related information found."
         
